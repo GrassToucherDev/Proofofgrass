@@ -39,8 +39,10 @@ export default function ResultCard({ imageSrc }) {
     setCopied(false);
   }, []);
 
+  const HANDLE = "@XTouchGrass";
+
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(caption).then(() => {
+    navigator.clipboard.writeText(`${caption}\n\n${HANDLE}`).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -228,10 +230,10 @@ export default function ResultCard({ imageSrc }) {
       ctx.shadowColor = "rgba(74,222,128,0.9)";
       ctx.shadowBlur = 8;
       ctx.fillStyle = "#4ade80";
-      ctx.font = "700 11px monospace";
+      ctx.font = "700 15px monospace";
       ctx.letterSpacing = "5px";
       ctx.textAlign = "center";
-      ctx.fillText("✦  OFFICIAL CERTIFICATE  ✦", CX, tagY + 18);
+      ctx.fillText("✦  OFFICIAL CERTIFICATE  ✦", CX, tagY + 19);
       ctx.restore();
 
       // ── GLOWING TITLE LINE ──
@@ -263,7 +265,7 @@ export default function ResultCard({ imageSrc }) {
 
       // ── DATE ──
       ctx.fillStyle = "rgba(74,222,128,0.45)";
-      ctx.font = "600 10.5px monospace";
+      ctx.font = "600 15px monospace";
       ctx.letterSpacing = "3px";
       ctx.textAlign = "center";
       ctx.fillText("DATE OF CERTIFICATION", CX, 346);
@@ -272,9 +274,9 @@ export default function ResultCard({ imageSrc }) {
       ctx.shadowColor = "rgba(74,222,128,0.3)";
       ctx.shadowBlur = 10;
       ctx.fillStyle = "#d1fae5";
-      ctx.font = "400 20px monospace";
+      ctx.font = "400 28px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(dateStr, CX, 380);
+      ctx.fillText(dateStr, CX, 384);
       ctx.restore();
 
       // ── DIVIDER ──
@@ -282,7 +284,7 @@ export default function ResultCard({ imageSrc }) {
 
       // ── STREAK LABEL ──
       ctx.fillStyle = "rgba(74,222,128,0.45)";
-      ctx.font = "600 10.5px monospace";
+      ctx.font = "600 15px monospace";
       ctx.letterSpacing = "3px";
       ctx.textAlign = "center";
       ctx.fillText("CURRENT STREAK", CX, 454);
@@ -302,10 +304,10 @@ export default function ResultCard({ imageSrc }) {
       ctx.shadowColor = "rgba(74,222,128,0.35)";
       ctx.shadowBlur = 10;
       ctx.fillStyle = "#4ade80";
-      ctx.font = "400 15px monospace";
+      ctx.font = "400 21px monospace";
       ctx.letterSpacing = "2px";
       ctx.textAlign = "center";
-      ctx.fillText("🌿  KEEP GOING. TOUCH MORE.", CX, 614);
+      ctx.fillText("🌿  KEEP GOING. TOUCH MORE.", CX, 618);
       ctx.restore();
 
       // ── CORNER BRACKETS — right panel ──
@@ -326,24 +328,49 @@ export default function ResultCard({ imageSrc }) {
       ctx.shadowColor = "rgba(74,222,128,0.3)";
       ctx.shadowBlur = 12;
       ctx.fillStyle = "rgba(209,250,229,0.72)";
-      ctx.font = "italic 400 21px 'Georgia', serif";
+      ctx.font = "italic 400 26px 'Georgia', serif";
       ctx.letterSpacing = "0.5px";
       ctx.textAlign = "center";
-      ctx.fillText('"We do touch grass… it\'s the new trend."', W / 2, H - 28);
+      ctx.fillText('"We do touch grass… it\'s the new trend."', W / 2, H - 24);
       ctx.restore();
 
       // ─── WATERMARK ─────────────────────────────────────────────────
       ctx.fillStyle = "rgba(74,222,128,0.12)";
-      ctx.font = "700 11px monospace";
+      ctx.font = "700 15px monospace";
       ctx.letterSpacing = "3px";
       ctx.textAlign = "left";
-      ctx.fillText("PROOF-OF-GRASS", 44, H - 28);
+      ctx.fillText("PROOF-OF-GRASS", 44, H - 24);
 
       ctx.fillStyle = "rgba(74,222,128,0.12)";
       ctx.textAlign = "right";
-      ctx.fillText("BLOCKCHAIN VERIFIED", W - 44, H - 28);
+      ctx.fillText("BLOCKCHAIN VERIFIED", W - 44, H - 24);
 
-      setDownloadUrl(canvas.toDataURL("image/png"));
+      // ─── LOGO ──────────────────────────────────────────────────────
+      const logo = new Image();
+      logo.onload = () => {
+        const logoSize = 100;
+        const logoX = SPLIT / 2 - logoSize / 2;
+        const logoY = H - logoSize - 18;
+
+        // Soft glow behind logo
+        const logoGlow = ctx.createRadialGradient(
+          logoX + logoSize / 2, logoY + logoSize / 2, 10,
+          logoX + logoSize / 2, logoY + logoSize / 2, logoSize
+        );
+        logoGlow.addColorStop(0,   "rgba(74,222,128,0.22)");
+        logoGlow.addColorStop(1,   "rgba(74,222,128,0)");
+        ctx.fillStyle = logoGlow;
+        ctx.fillRect(logoX - logoSize / 2, logoY - logoSize / 2, logoSize * 2, logoSize * 2);
+
+        ctx.save();
+        ctx.globalAlpha = 0.92;
+        ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
+        ctx.restore();
+
+        setDownloadUrl(canvas.toDataURL("image/png"));
+      };
+      logo.onerror = () => setDownloadUrl(canvas.toDataURL("image/png"));
+      logo.src = "/touchgrass.jpg";
     };
     img.src = imageSrc;
   }, [imageSrc, dateStr]);
@@ -407,6 +434,9 @@ export default function ResultCard({ imageSrc }) {
             transition-all duration-300
           ">
             {caption}
+          </p>
+          <p className="font-mono text-[12px] text-[#4ade80] text-center mt-2 opacity-50 tracking-wider">
+            {HANDLE}
           </p>
         </div>
 
