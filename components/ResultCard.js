@@ -348,9 +348,12 @@ export default function ResultCard({ imageSrc }) {
       // ─── LOGO ──────────────────────────────────────────────────────
       const logo = new Image();
       logo.onload = () => {
-        const logoSize = 100;
-        const logoX = SPLIT / 2 - logoSize / 2;
-        const logoY = H - logoSize - 18;
+        const logoSize = 160;
+        // Vertically centered in the gap between sub-label (618) and bottom bar (H-64=836)
+        const gapTop = 638;
+        const gapBot = H - 64;
+        const logoX = CX - logoSize / 2;
+        const logoY = gapTop + (gapBot - gapTop) / 2 - logoSize / 2;
 
         // Soft glow behind logo
         const logoGlow = ctx.createRadialGradient(
@@ -370,7 +373,7 @@ export default function ResultCard({ imageSrc }) {
         setDownloadUrl(canvas.toDataURL("image/png"));
       };
       logo.onerror = () => setDownloadUrl(canvas.toDataURL("image/png"));
-      logo.src = "/touchgrass.jpg";
+      logo.src = "/touchgrass-transparent.png";
     };
     img.src = imageSrc;
   }, [imageSrc, dateStr]);
