@@ -26,12 +26,21 @@ export default function Home() {
         <p className="mt-4 text-[#6b8f6e] text-sm max-w-sm mx-auto">
           Upload your evidence. Receive your certificate. Touch more grass.
         </p>
+  
+        {/* 🔥 Leaderboard Link (ADDED HERE) */}
+        <a
+          href="/leaderboard"
+          className="mt-6 inline-block text-[#4ade80] text-sm tracking-widest uppercase border border-[#4ade80]/40 px-4 py-2 rounded hover:bg-[#4ade80]/10 transition"
+        >
+          🌱 View Leaderboard
+        </a>
+  
         <div className="mt-5 h-px w-24 bg-[#4ade80] mx-auto opacity-40" />
       </div>
-
+  
       {/* Upload */}
       <UploadBox onUpload={handleImageUpload} />
-
+  
       {/* Result */}
       {imageSrc && (
         <div ref={resultRef} className="mt-16 w-full max-w-4xl">
@@ -41,10 +50,10 @@ export default function Home() {
           <ResultCard imageSrc={imageSrc} />
         </div>
       )}
-
+  
       <footer className="mt-24 text-[#334d35] text-xs text-center">
         © {new Date().getFullYear()} Proof of Grass · All rights reserved
       </footer>
     </main>
   );
-}
+      }

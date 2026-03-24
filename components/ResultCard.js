@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from "react";
+import { supabase } from "../utils/supabase";
 
 const CAPTIONS = [
   "Just touched grass. My character arc is complete. 🌿",
@@ -34,6 +35,12 @@ export default function ResultCard({ imageSrc }) {
   const [caption, setCaption] = useState(() => pickCaption(null));
   const [copied, setCopied] = useState(false);
 
+  // Leaderboard form state
+  const [username, setUsername] = useState("");
+  const [tweetUrl, setTweetUrl] = useState("");
+  const [submitStatus, setSubmitStatus] = useState(null); // null | "loading" | "success" | "error"
+  const [submitError, setSubmitError] = useState("");
+
   const handleNewCaption = useCallback(() => {
     setCaption((prev) => pickCaption(prev));
     setCopied(false);
@@ -47,6 +54,99 @@ export default function ResultCard({ imageSrc }) {
       setTimeout(() => setCopied(false), 2000);
     });
   }, [caption]);
+
+  const handleSubmit = useCallback(async () => {
+    if (!username.trim()) {
+      setSubmitError("Enter your username.");
+      setSubmitStatus("error");
+      return;
+    }
+    if (!tweetUrl.trim()) {
+      setSubmitError("Enter your post URL.");
+      setSubmitStatus("error");
+      return;
+    }
+    setSubmitStatus("loading");
+    setSubmitError("");
+
+    // Build UTC date boundaries for today
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
+    const todayDateStr = todayStart.toISOString().slice(0, 10);
+    const yesterdayDateStr = new Date(todayStart.getTime() - 86400000)
+      .toISOString().slice(0, 10);
+
+    // 1. Duplicate check — one submission per username per UTC day
+    const { data: existing, error: checkError } = await supabase
+      .from("Submissions")
+      .select("id")
+      .eq("username", username.trim())
+      .gte("created_at", todayStart.toISOString())
+      .lt("created_at", tomorrowStart.toISOString())
+      .limit(1);
+
+    if (checkError) {
+      setSubmitError("Could not verify submission. Try again.");
+      setSubmitStatus("error");
+      return;
+    }
+
+    if (existing && existing.length > 0) {
+      setSubmitError("You\'ve already submitted today. Come back tomorrow. 🌿");
+      setSubmitStatus("error");
+      return;
+    }
+
+    // 2. Insert submission
+    const { error: insertError } = await supabase
+      .from("Submissions")
+      .insert([{ username: username.trim(), tweet_url: tweetUrl.trim() }]);
+
+    if (insertError) {
+      if (insertError.code === "23505") {
+        setSubmitError("You\'ve already submitted today. Come back tomorrow. 🌿");
+      } else {
+        setSubmitError(insertError.message || "Something went wrong. Try again.");
+      }
+      setSubmitStatus("error");
+      return;
+    }
+
+    // 3. Upsert streak
+    const { data: streakRow } = await supabase
+      .from("Streaks")
+      .select("current_streak, last_submission_date")
+      .eq("username", username.trim())
+      .maybeSingle();
+
+    let newStreak = 1;
+    if (streakRow) {
+      const last = streakRow.last_submission_date; // "YYYY-MM-DD"
+      if (last === todayDateStr) {
+        // Already counted (shouldn't reach here, but safe guard)
+        newStreak = streakRow.current_streak;
+      } else if (last === yesterdayDateStr) {
+        // Consecutive day — increment
+        newStreak = streakRow.current_streak + 1;
+      } else {
+        // Gap — reset
+        newStreak = 1;
+      }
+    }
+
+    await supabase.from("Streaks").upsert({
+      username: username.trim(),
+      current_streak: newStreak,
+      last_submission_date: todayDateStr,
+    }, { onConflict: "username" });
+
+    setSubmitStatus("success");
+    setUsername("");
+    setTweetUrl("");
+  }, [username, tweetUrl]);
 
   const today = new Date();
   const dateStr = today.toLocaleDateString("en-US", {
@@ -67,7 +167,6 @@ export default function ResultCard({ imageSrc }) {
     img.onload = () => {
 
       // ─── BACKGROUND ───────────────────────────────────────────────
-      // Deep radial gradient: near-black center → very dark forest edges
       const bgGrad = ctx.createRadialGradient(W * 0.42, H * 0.5, 80, W * 0.5, H * 0.5, W * 0.72);
       bgGrad.addColorStop(0,   "#0e1f10");
       bgGrad.addColorStop(0.5, "#080f09");
@@ -75,7 +174,6 @@ export default function ResultCard({ imageSrc }) {
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, W, H);
 
-      // Subtle noise-texture layer via tiny semi-transparent dots
       ctx.save();
       for (let i = 0; i < 18000; i++) {
         const nx = Math.random() * W;
@@ -86,7 +184,6 @@ export default function ResultCard({ imageSrc }) {
       ctx.restore();
 
       // ─── GREEN GLOW SOURCES ────────────────────────────────────────
-      // Large ambient glow, top-right
       const glowTR = ctx.createRadialGradient(W * 0.78, H * 0.1, 0, W * 0.78, H * 0.1, 480);
       glowTR.addColorStop(0,   "rgba(74,222,128,0.13)");
       glowTR.addColorStop(0.5, "rgba(74,222,128,0.04)");
@@ -94,14 +191,12 @@ export default function ResultCard({ imageSrc }) {
       ctx.fillStyle = glowTR;
       ctx.fillRect(0, 0, W, H);
 
-      // Accent glow, bottom-left
       const glowBL = ctx.createRadialGradient(W * 0.2, H * 0.9, 0, W * 0.2, H * 0.9, 380);
       glowBL.addColorStop(0,   "rgba(52,211,153,0.10)");
       glowBL.addColorStop(1,   "rgba(52,211,153,0)");
       ctx.fillStyle = glowBL;
       ctx.fillRect(0, 0, W, H);
 
-      // Small intense glow behind the badge area (right panel)
       const glowBadge = ctx.createRadialGradient(W * 0.73, H * 0.38, 0, W * 0.73, H * 0.38, 220);
       glowBadge.addColorStop(0,   "rgba(74,222,128,0.18)");
       glowBadge.addColorStop(1,   "rgba(74,222,128,0)");
@@ -142,7 +237,6 @@ export default function ResultCard({ imageSrc }) {
       const dx = PAD + (imgAreaW - dw) / 2;
       const dy = PAD + (imgAreaH - dh) / 2;
 
-      // Photo glow
       const photoGlow = ctx.createRadialGradient(
         dx + dw / 2, dy + dh / 2, Math.min(dw, dh) * 0.3,
         dx + dw / 2, dy + dh / 2, Math.max(dw, dh) * 0.8
@@ -153,7 +247,6 @@ export default function ResultCard({ imageSrc }) {
       ctx.fillStyle = photoGlow;
       ctx.fillRect(dx - 40, dy - 40, dw + 80, dh + 80);
 
-      // Photo drop-shadow
       ctx.save();
       ctx.shadowColor = "rgba(0,0,0,0.8)";
       ctx.shadowBlur = 60;
@@ -161,7 +254,6 @@ export default function ResultCard({ imageSrc }) {
       ctx.drawImage(img, dx, dy, dw, dh);
       ctx.restore();
 
-      // Photo border — glowing green line
       ctx.save();
       ctx.shadowColor = "rgba(74,222,128,0.7)";
       ctx.shadowBlur = 18;
@@ -170,7 +262,6 @@ export default function ResultCard({ imageSrc }) {
       ctx.strokeRect(dx, dy, dw, dh);
       ctx.restore();
 
-      // Thin inner highlight (top + left edges)
       ctx.save();
       ctx.strokeStyle = "rgba(255,255,255,0.08)";
       ctx.lineWidth = 1;
@@ -182,7 +273,6 @@ export default function ResultCard({ imageSrc }) {
       ctx.restore();
 
       // ─── DIVIDER ───────────────────────────────────────────────────
-      // Glowing vertical line
       const divGrad = ctx.createLinearGradient(SPLIT, 0, SPLIT, H);
       divGrad.addColorStop(0,   "rgba(74,222,128,0)");
       divGrad.addColorStop(0.2, "rgba(74,222,128,0.4)");
@@ -203,9 +293,8 @@ export default function ResultCard({ imageSrc }) {
       // ─── RIGHT PANEL ───────────────────────────────────────────────
       const RX = SPLIT + 68;
       const RW = W - SPLIT - 90;
-      const CX = RX + RW / 2; // center x of right panel
+      const CX = RX + RW / 2;
 
-      // Panel background — very subtle frosted card
       ctx.save();
       ctx.fillStyle = "rgba(255,255,255,0.012)";
       roundRect(ctx, SPLIT + 28, 38, W - SPLIT - 56, H - 76, 16);
@@ -246,7 +335,6 @@ export default function ResultCard({ imageSrc }) {
       ctx.fillText("VERIFIED", CX, 198);
       ctx.restore();
 
-      // Green gradient text: GRASS TOUCHER
       const grassGrad = ctx.createLinearGradient(CX - 260, 0, CX + 260, 0);
       grassGrad.addColorStop(0,   "#6ee7b7");
       grassGrad.addColorStop(0.5, "#4ade80");
@@ -260,7 +348,6 @@ export default function ResultCard({ imageSrc }) {
       ctx.fillText("GRASS TOUCHER", CX, 268);
       ctx.restore();
 
-      // ── DIVIDER RULE ──
       drawGlowRule(ctx, CX, 298, 340);
 
       // ── DATE ──
@@ -279,17 +366,15 @@ export default function ResultCard({ imageSrc }) {
       ctx.fillText(dateStr, CX, 384);
       ctx.restore();
 
-      // ── DIVIDER ──
       drawGlowRule(ctx, CX, 408, 260);
 
-      // ── STREAK LABEL ──
+      // ── STREAK ──
       ctx.fillStyle = "rgba(74,222,128,0.45)";
       ctx.font = "600 15px monospace";
       ctx.letterSpacing = "3px";
       ctx.textAlign = "center";
       ctx.fillText("CURRENT STREAK", CX, 454);
 
-      // BIG DAY NUMBER — glowing
       ctx.save();
       ctx.shadowColor = "rgba(74,222,128,0.65)";
       ctx.shadowBlur = 40;
@@ -299,7 +384,6 @@ export default function ResultCard({ imageSrc }) {
       ctx.fillText("DAY 1", CX, 570);
       ctx.restore();
 
-      // Sub-label
       ctx.save();
       ctx.shadowColor = "rgba(74,222,128,0.35)";
       ctx.shadowBlur = 10;
@@ -310,20 +394,18 @@ export default function ResultCard({ imageSrc }) {
       ctx.fillText("🌿  KEEP GOING. TOUCH MORE.", CX, 618);
       ctx.restore();
 
-      // ── CORNER BRACKETS — right panel ──
       drawBrackets(ctx, SPLIT + 36, 46, W - 44, H - 46, 26);
 
-      // ─── TICKER / BOTTOM BAR ───────────────────────────────────────
+      // ─── BOTTOM BAR ────────────────────────────────────────────────
       const barY = H - 64;
       const barGrad = ctx.createLinearGradient(0, barY, W, barY);
-      barGrad.addColorStop(0,   "rgba(74,222,128,0.0)");
+      barGrad.addColorStop(0,    "rgba(74,222,128,0.0)");
       barGrad.addColorStop(0.15, "rgba(74,222,128,0.14)");
       barGrad.addColorStop(0.85, "rgba(74,222,128,0.14)");
-      barGrad.addColorStop(1,   "rgba(74,222,128,0.0)");
+      barGrad.addColorStop(1,    "rgba(74,222,128,0.0)");
       ctx.fillStyle = barGrad;
       ctx.fillRect(0, barY - 1, W, 1);
 
-      // Caption
       ctx.save();
       ctx.shadowColor = "rgba(74,222,128,0.3)";
       ctx.shadowBlur = 12;
@@ -334,7 +416,6 @@ export default function ResultCard({ imageSrc }) {
       ctx.fillText('"We do touch grass… it\'s the new trend."', W / 2, H - 24);
       ctx.restore();
 
-      // ─── WATERMARK ─────────────────────────────────────────────────
       ctx.fillStyle = "rgba(74,222,128,0.12)";
       ctx.font = "700 15px monospace";
       ctx.letterSpacing = "3px";
@@ -349,13 +430,11 @@ export default function ResultCard({ imageSrc }) {
       const logo = new Image();
       logo.onload = () => {
         const logoSize = 160;
-        // Vertically centered in the gap between sub-label (618) and bottom bar (H-64=836)
         const gapTop = 638;
         const gapBot = H - 64;
         const logoX = CX - logoSize / 2;
         const logoY = gapTop + (gapBot - gapTop) / 2 - logoSize / 2;
 
-        // Soft glow behind logo
         const logoGlow = ctx.createRadialGradient(
           logoX + logoSize / 2, logoY + logoSize / 2, 10,
           logoX + logoSize / 2, logoY + logoSize / 2, logoSize
@@ -409,7 +488,6 @@ export default function ResultCard({ imageSrc }) {
 
       {/* Caption Generator */}
       <div className="w-full max-w-2xl mt-2">
-        {/* Label */}
         <div className="flex items-center gap-2 mb-3">
           <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
           <span className="text-[10px] font-mono tracking-[0.3em] text-[#3a5e3d] uppercase">
@@ -418,19 +496,16 @@ export default function ResultCard({ imageSrc }) {
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
         </div>
 
-        {/* Caption card */}
         <div className="
           relative rounded-sm border border-[#1a3520]
           bg-[#0a140b]
           shadow-[inset_0_1px_0_rgba(74,222,128,0.06),0_0_24px_rgba(0,0,0,0.4)]
           px-6 py-5
         ">
-          {/* Corner accents */}
           <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-30" />
           <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-30" />
           <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-30" />
           <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
-
           <p className="
             font-mono text-[15px] text-[#d1fae5] leading-relaxed
             text-center min-h-[2.5rem] flex items-center justify-center
@@ -443,7 +518,6 @@ export default function ResultCard({ imageSrc }) {
           </p>
         </div>
 
-        {/* Action buttons */}
         <div className="flex items-center gap-3 mt-3">
           <button
             onClick={handleNewCaption}
@@ -459,7 +533,6 @@ export default function ResultCard({ imageSrc }) {
           >
             <span className="text-base leading-none">↺</span> New Caption
           </button>
-
           <button
             onClick={handleCopy}
             className={`
@@ -477,6 +550,123 @@ export default function ResultCard({ imageSrc }) {
               <><span className="text-base leading-none">✓</span> Copied!</>
             ) : (
               <><span className="text-base leading-none">⎘</span> Copy Caption</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Leaderboard Submission */}
+      <div className="w-full max-w-2xl mt-2">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
+          <span className="text-[10px] font-mono tracking-[0.3em] text-[#3a5e3d] uppercase">
+            Submit to Leaderboard
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
+        </div>
+
+        <div className="
+          relative rounded-sm border border-[#1a3520]
+          bg-[#0a140b]
+          shadow-[inset_0_1px_0_rgba(74,222,128,0.06),0_0_24px_rgba(0,0,0,0.4)]
+          px-6 py-5 flex flex-col gap-4
+        ">
+          <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-30" />
+          <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-30" />
+          <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-30" />
+          <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
+
+          {/* X Username */}
+          <div className="flex flex-col gap-1.5">
+            <label className="font-mono text-[10px] tracking-[0.25em] text-[#4ade80] uppercase opacity-60">
+              X Username
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => { setUsername(e.target.value); setSubmitStatus(null); }}
+              placeholder="@yourhandle"
+              disabled={submitStatus === "loading" || submitStatus === "success"}
+              className="
+                w-full bg-[#060e07] border border-[#1f3d22]
+                text-[#d1fae5] font-mono text-sm
+                px-4 py-2.5 rounded-sm
+                placeholder:text-[#2a4a2d]
+                focus:outline-none focus:border-[#4ade80]
+                focus:shadow-[0_0_12px_rgba(74,222,128,0.15)]
+                disabled:opacity-40 disabled:cursor-not-allowed
+                transition-all duration-200
+              "
+            />
+          </div>
+
+          {/* X Post URL */}
+          <div className="flex flex-col gap-1.5">
+            <label className="font-mono text-[10px] tracking-[0.25em] text-[#4ade80] uppercase opacity-60">
+              X Post URL
+            </label>
+            <input
+              type="url"
+              value={tweetUrl}
+              onChange={(e) => { setTweetUrl(e.target.value); setSubmitStatus(null); }}
+              placeholder="https://x.com/yourhandle/status/..."
+              disabled={submitStatus === "loading" || submitStatus === "success"}
+              className="
+                w-full bg-[#060e07] border border-[#1f3d22]
+                text-[#d1fae5] font-mono text-sm
+                px-4 py-2.5 rounded-sm
+                placeholder:text-[#2a4a2d]
+                focus:outline-none focus:border-[#4ade80]
+                focus:shadow-[0_0_12px_rgba(74,222,128,0.15)]
+                disabled:opacity-40 disabled:cursor-not-allowed
+                transition-all duration-200
+              "
+            />
+          </div>
+
+          {/* Status messages */}
+          {submitStatus === "success" && (
+            <div className="
+              flex items-center gap-2 px-4 py-2.5
+              bg-[#0d2b14] border border-[#166534] rounded-sm
+              font-mono text-xs text-[#4ade80] tracking-wide
+            ">
+              <span>✓</span> Submission received. Welcome to the leaderboard.
+            </div>
+          )}
+          {submitStatus === "error" && submitError && (
+            <div className="
+              flex items-center gap-2 px-4 py-2.5
+              bg-[#1f0a0a] border border-[#7f1d1d] rounded-sm
+              font-mono text-xs text-[#f87171] tracking-wide
+            ">
+              <span>✕</span> {submitError}
+            </div>
+          )}
+
+          {/* Submit button */}
+          <button
+            onClick={handleSubmit}
+            disabled={submitStatus === "loading" || submitStatus === "success"}
+            className={`
+              w-full flex items-center justify-center gap-2
+              py-3 px-4
+              font-mono text-xs font-bold tracking-widest uppercase rounded-sm
+              transition-all duration-200
+              ${submitStatus === "success"
+                ? "bg-[#166534] border border-[#4ade80] text-[#4ade80] cursor-not-allowed opacity-70"
+                : submitStatus === "loading"
+                ? "bg-[#1a3520] border border-[#2d5e30] text-[#4ade80] cursor-not-allowed opacity-60"
+                : "bg-transparent border border-[#4ade80] text-[#4ade80] hover:bg-[#0d2b14] hover:shadow-[0_0_20px_rgba(74,222,128,0.2)]"
+              }
+            `}
+          >
+            {submitStatus === "loading" ? (
+              <><span className="animate-pulse">●</span> Submitting…</>
+            ) : submitStatus === "success" ? (
+              <><span>✓</span> Submitted</>
+            ) : (
+              <><span>⬆</span> Submit to Leaderboard</>
             )}
           </button>
         </div>
