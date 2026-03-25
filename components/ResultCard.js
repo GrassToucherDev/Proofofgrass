@@ -1,31 +1,59 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { supabase } from "../utils/supabase";
 
-const CAPTIONS = [
-  "Just touched grass. My character arc is complete. 🌿",
-  "Skill issue? More like skill grass. Ratio + grass touched.",
-  "Certified grass toucher. NPC behavior detected in myself.",
-  "Left the metaverse for 10 minutes. 10/10 would recommend.",
-  "Touched grass. The frame rate was insane.",
-  "GM from outside. Yes, outside. The big open-world map.",
-  "Real-world XP farming session complete. Grass: confirmed.",
-  "Grass touched. Vitamin D loaded. Serotonin +500.",
-  "My therapist said 'go outside.' My therapist was right.",
-  "Not financial advice, but touch grass. This is my proof.",
-  "Finally minted something that matters. #ProofOfGrass",
-  "Floor is: literally the ground. And I touched it.",
-  "Skill check passed. Grass interaction: successful.",
-  "Main character moment. Outside. No lag. No respawn.",
-  "Just airdropped myself into nature. Still bullish.",
-  "Offline for 20 minutes. Came back with grass on my shoes.",
-  "Disconnected from Wi-Fi. Connected to chlorophyll.",
-  "Grass touched. Clouds witnessed. Life confirmed.",
-  "Dev update: shipped a walk. Zero bugs. No merge conflicts.",
-  "The outdoor meta is undefeated. I've joined the ecosystem.",
-];
+// Caption pools tiered by streak length
+const CAPTION_POOLS = {
+  beginner: [
+    "just touched grass. strong start. 🌿",
+    "day one. certified grass toucher.",
+    "left the screen. touched the ground. character arc initiated.",
+    "outside logged. vitamin d detected. streak: active.",
+    "not financial advice, but touch grass. this is my proof.",
+    "skill check passed. grass interaction: successful.",
+    "gm from outside. yes, outside. the big open-world map.",
+    "offline for 20 minutes. came back with grass on my shoes.",
+  ],
+  momentum: [
+    "still going. streak getting real. 🌿",
+    "three days in. the algorithm does not know where i am.",
+    "grass touched again. this might be a habit.",
+    "consistent. outside. undefeated.",
+    "real-world xp farming session complete. streak: locked.",
+    "the outdoor meta is holding. i am staying in.",
+    "disconnected from wi-fi. connected to chlorophyll. again.",
+    "dev update: shipped another walk. zero bugs.",
+  ],
+  strong: [
+    "consistency looking dangerous. 🌿",
+    "one week in. the grass knows my name now.",
+    "seven days of proof. this is no longer a coincidence.",
+    "streak so strong it has its own lore.",
+    "this started as a joke. it is not a joke anymore.",
+    "certified long-term grass enjoyer. data-backed.",
+    "i have touched more grass than most nfts.",
+    "the streak is real. the grass is real. i am real.",
+  ],
+  elite: [
+    "this isn't a phase anymore. it's identity. 🌿",
+    "two weeks of grass. i am the outdoor meta.",
+    "streak unlocked: outdoor main character.",
+    "the leaderboard feared this day.",
+    "some people have lore. i have a streak.",
+    "i do not go outside anymore. i simply return.",
+    "fully on-chain. fully outside. no contradictions.",
+    "elite grass toucher. verified. unstoppable.",
+  ],
+};
 
-function pickCaption(exclude) {
-  const pool = CAPTIONS.filter((c) => c !== exclude);
+function getPool(streak) {
+  if (streak >= 14) return CAPTION_POOLS.elite;
+  if (streak >= 7)  return CAPTION_POOLS.strong;
+  if (streak >= 3)  return CAPTION_POOLS.momentum;
+  return CAPTION_POOLS.beginner;
+}
+
+function pickCaption(streak, exclude) {
+  const pool = getPool(streak).filter((c) => c !== exclude);
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -35,7 +63,7 @@ function pickCaption(exclude) {
 export default function ResultCard({ imageSrc, username, initialStreak = 1, onStreakUpdate }) {
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
-  const [caption, setCaption] = useState(() => pickCaption(null));
+  const [caption, setCaption] = useState(() => pickCaption(initialStreak, null));
   const [copied, setCopied] = useState(false);
 
   // currentStreak is seeded from initialStreak prop
@@ -44,6 +72,8 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   // Keep in sync if parent re-computes streak while component is mounted
   useEffect(() => {
     setCurrentStreak(initialStreak);
+    // Refresh caption pool to match the new streak tier
+    setCaption((prev) => pickCaption(initialStreak, prev));
   }, [initialStreak]);
 
   // Submission form state — no username input here, it comes from props
@@ -52,9 +82,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [submitError, setSubmitError] = useState("");
 
   const handleNewCaption = useCallback(() => {
-    setCaption((prev) => pickCaption(prev));
+    setCaption((prev) => pickCaption(currentStreak, prev));
     setCopied(false);
-  }, []);
+  }, [currentStreak]);
 
   const HANDLE = "@XTouchGrass";
 
@@ -64,6 +94,31 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       setTimeout(() => setCopied(false), 2000);
     });
   }, [caption]);
+
+  const [shared, setShared] = useState(false);
+
+  const handleShareAndPost = useCallback(() => {
+    if (!downloadUrl) return;
+
+    // 1. Trigger image save/download
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = "proof-of-grass.png";
+    a.click();
+
+    // 2. Build the exact tweet text
+    const text = `${caption}\n\nday ${currentStreak}\n@XTouchGrass\n#proofofgrass\nhttps://proofofgrass.vercel.app/`;
+
+    // 3. Copy to clipboard (failure is non-blocking)
+    navigator.clipboard.writeText(text).catch(() => {});
+
+    // 4. Open X compose window
+    const encoded = encodeURIComponent(text);
+    window.open(`https://twitter.com/intent/tweet?text=${encoded}`, "_blank");
+
+    setShared(true);
+    setTimeout(() => setShared(false), 2500);
+  }, [caption, currentStreak, downloadUrl]);
 
   const handleSubmit = useCallback(async () => {
     if (!username) {
@@ -518,6 +573,28 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         >
           ↓ Download Certificate
         </a>
+      )}
+
+      {/* Save + Post to X */}
+      {downloadUrl && (
+        <button
+          onClick={handleShareAndPost}
+          className={`
+            inline-flex items-center gap-3 px-10 py-3.5
+            font-mono text-sm font-bold tracking-widest uppercase rounded-sm
+            transition-all duration-200
+            ${shared
+              ? "bg-[#166534] border border-[#4ade80] text-[#4ade80] shadow-[0_0_20px_rgba(74,222,128,0.2)]"
+              : "bg-transparent border border-[#4ade80] text-[#4ade80] hover:bg-[#0d2b14] hover:shadow-[0_0_24px_rgba(74,222,128,0.25)]"
+            }
+          `}
+        >
+          {shared ? (
+            <><span>✓</span> image saved — posting…</>
+          ) : (
+            <>⬆ save image + post to x</>
+          )}
+        </button>
       )}
 
       {/* Caption Generator */}
