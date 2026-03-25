@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabase";
 
 function normalizeUsername(val) {
-  return val.replace(/@/g, "").toLowerCase().trim();
+  return String(val ?? "").replace(/@/g, "").toLowerCase().trim();
 }
 
 export default function Leaderboard() {
@@ -34,18 +34,20 @@ export default function Leaderboard() {
     // Group submissions by username
     const grouped = {};
     (submissions || []).forEach((item) => {
-      if (!grouped[item.username]) {
-        grouped[item.username] = {
-          username: item.username,
+      const normalized = normalizeUsername(item.username);
+      if (!normalized) return;
+      if (!grouped[normalized]) {
+        grouped[normalized] = {
+          username: normalized,
           count: 0,
           tweet_url: item.tweet_url,
           created_at: item.created_at,
         };
       }
-      grouped[item.username].count += 1;
-      if (new Date(item.created_at) > new Date(grouped[item.username].created_at)) {
-        grouped[item.username].tweet_url = item.tweet_url;
-        grouped[item.username].created_at = item.created_at;
+      grouped[normalized].count += 1;
+      if (new Date(item.created_at) > new Date(grouped[normalized].created_at)) {
+        grouped[normalized].tweet_url = item.tweet_url;
+        grouped[normalized].created_at = item.created_at;
       }
     });
 
@@ -171,7 +173,7 @@ export default function Leaderboard() {
               {/* Main row: #rank @username — X posts — 🔥 Y day streak */}
               <p className={`font-bold font-mono ${isFirst ? "text-[#4ade80] text-lg" : "text-green-400"}`}>
                 {isFirst ? "🥇" : `#${index + 1}`}{" "}
-                {item.username}
+                @{item.username}
                 <span className={`font-normal ${isFirst ? "text-[#86efac]" : "text-green-600"}`}>
                   {" "}— {item.count} post{item.count !== 1 ? "s" : ""}
                 </span>
