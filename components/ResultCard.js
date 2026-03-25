@@ -40,14 +40,14 @@ function computePreviewStreak(streakRow) {
   return 1;
 }
 
-export default function ResultCard({ imageSrc }) {
+// username is already normalized by index.js before being passed in
+export default function ResultCard({ imageSrc, username }) {
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const [caption, setCaption] = useState(() => pickCaption(null));
   const [copied, setCopied] = useState(false);
 
-  // Leaderboard form state
-  const [username, setUsername] = useState("");
+  // Submission form state (username comes from props now)
   const [tweetUrl, setTweetUrl] = useState("");
   const [submitStatus, setSubmitStatus] = useState(null); // null | "loading" | "success" | "error"
   const [submitError, setSubmitError] = useState("");
@@ -68,7 +68,7 @@ export default function ResultCard({ imageSrc }) {
   }, [caption]);
 
   const handleSubmit = useCallback(async () => {
-    if (!username.trim().toLowerCase()) {
+    if (!username) {
       setSubmitError("Enter your username.");
       setSubmitStatus("error");
       return;
@@ -95,7 +95,7 @@ export default function ResultCard({ imageSrc }) {
     const { data: existing, error: checkError } = await supabase
       .from("Submissions")
       .select("id")
-      .eq("username", username.trim().toLowerCase())
+      .eq("username", username)
       .gte("created_at", todayStart.toISOString())
       .lt("created_at", tomorrowStart.toISOString())
       .limit(1);
@@ -115,7 +115,7 @@ export default function ResultCard({ imageSrc }) {
     // 2. Insert submission
     const { error: insertError } = await supabase
       .from("Submissions")
-      .insert([{ username: username.trim().toLowerCase(), tweet_url: tweetUrl.trim() }]);
+      .insert([{ username, tweet_url: tweetUrl.trim() }]);
 
     if (insertError) {
       if (insertError.code === "23505") {
@@ -131,40 +131,35 @@ export default function ResultCard({ imageSrc }) {
     const { data: streakRow } = await supabase
       .from("Streaks")
       .select("current_streak, last_submission_date")
-      .eq("username", username.trim().toLowerCase())
+      .eq("username", username)
       .maybeSingle();
 
     let newStreak = 1;
     if (streakRow) {
-      const last = streakRow.last_submission_date; // "YYYY-MM-DD"
+      const last = streakRow.last_submission_date;
       if (last === todayDateStr) {
-        // Already counted (shouldn't reach here, but safe guard)
         newStreak = streakRow.current_streak;
       } else if (last === yesterdayDateStr) {
-        // Consecutive day — increment
         newStreak = streakRow.current_streak + 1;
       } else {
-        // Gap — reset
         newStreak = 1;
       }
     }
 
     await supabase.from("Streaks").upsert({
-      username: username.trim().toLowerCase(),
+      username,
       current_streak: newStreak,
       last_submission_date: todayDateStr,
     }, { onConflict: "username" });
 
     setCurrentStreak(newStreak);
     setSubmitStatus("success");
-    setUsername("");
     setTweetUrl("");
   }, [username, tweetUrl]);
 
-  // Preload streak preview whenever username changes (debounced 500ms)
+  // Preload streak as soon as username prop is available (debounced 500ms)
   useEffect(() => {
-    const trimmed = username.trim().toLowerCase();
-    if (!trimmed) {
+    if (!username) {
       setCurrentStreak(1);
       return;
     }
@@ -173,7 +168,7 @@ export default function ResultCard({ imageSrc }) {
         const { data } = await supabase
           .from("Streaks")
           .select("current_streak, last_submission_date")
-          .eq("username", trimmed)
+          .eq("username", username)
           .maybeSingle();
         setCurrentStreak(computePreviewStreak(data));
       } catch {
@@ -514,7 +509,7 @@ export default function ResultCard({ imageSrc }) {
             text-[#0d1a0f] bg-[#4ade80]
             rounded-sm transition-all duration-200
             hover:bg-[#86efac] hover:shadow-[0_0_32px_rgba(74,222,128,0.45)]
-            shadow-[0_0_20px_rgba(74,222,128,0.25)]
+            shadow-[0_0_20px_rgba(74,222,128,0.25)] cursor-pointer
           "
         >
           ↓ Download Certificate
@@ -611,29 +606,13 @@ export default function ResultCard({ imageSrc }) {
           <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-30" />
           <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
 
-          {/* X Username */}
-          <div className="flex flex-col gap-1.5">
-            <label className="font-mono text-[10px] tracking-[0.25em] text-[#4ade80] uppercase opacity-60">
-              X Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => { setUsername(e.target.value.replace(/@/g, "").toLowerCase().trim()); setSubmitStatus(null); }}
-              placeholder="yourhandle"
-              disabled={submitStatus === "loading" || submitStatus === "success"}
-              className="
-                w-full bg-[#060e07] border border-[#1f3d22]
-                text-[#d1fae5] font-mono text-sm
-                px-4 py-2.5 rounded-sm
-                placeholder:text-[#2a4a2d]
-                focus:outline-none focus:border-[#4ade80]
-                focus:shadow-[0_0_12px_rgba(74,222,128,0.15)]
-                disabled:opacity-40 disabled:cursor-not-allowed
-                transition-all duration-200
-              "
-            />
-          </div>
+          {/* Submitting as */}
+          <p className="font-mono text-[11px] text-[#3a5e3d] tracking-wide">
+            submitting as{" "}
+            <span className="text-[#4ade80]">@{username}</span>
+            {" "}— streak{" "}
+            <span className="text-[#4ade80]">day {currentStreak}</span>
+          </p>
 
           {/* X Post URL */}
           <div className="flex flex-col gap-1.5">
