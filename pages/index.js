@@ -68,7 +68,19 @@ export default function Home() {
         <p className="mt-4 text-[#6b8f6e] text-sm max-w-sm mx-auto">
           Upload your evidence. Receive your certificate. Touch more grass.
         </p>
-        <div className="mt-5 h-px w-24 bg-[#4ade80] mx-auto opacity-40" />
+        <a
+          href="/leaderboard"
+          className="
+            inline-flex items-center gap-2 mt-5 mb-1
+            font-mono text-xs tracking-widest uppercase
+            text-[#4ade80] opacity-60
+            hover:opacity-100 hover:shadow-[0_0_12px_rgba(74,222,128,0.3)]
+            transition-all duration-200
+          "
+        >
+          🌱 View Leaderboard
+        </a>
+        <div className="mt-3 h-px w-24 bg-[#4ade80] mx-auto opacity-40" />
       </div>
 
       {/* Step 1 — Username */}
