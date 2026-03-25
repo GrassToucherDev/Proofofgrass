@@ -22,6 +22,9 @@ export default function Home() {
   const [rawUsername, setRawUsername] = useState("");
   const [imageSrc, setImageSrc] = useState(null);
   const [currentStreak, setCurrentStreak] = useState(1);
+  const [streakStatus, setStreakStatus] = useState("");
+  const [streakTone, setStreakTone] = useState("neutral"); // neutral | success | warning | reset
+  const [timeUntilReset, setTimeUntilReset] = useState("");
   const resultRef = useRef(null);
 
   const username = normalizeUsername(rawUsername);
@@ -33,6 +36,8 @@ export default function Home() {
   useEffect(() => {
     if (!username) {
       setCurrentStreak(1);
+      setStreakStatus("");
+      setStreakTone("neutral");
       return;
     }
     const timer = setTimeout(async () => {
@@ -78,6 +83,24 @@ export default function Home() {
           }
         }
 
+        // Determine streak status + tone based on latest submission date
+        if (!latestSub?.created_at) {
+          setStreakStatus("start your streak today");
+          setStreakTone("neutral");
+        } else {
+          const subDateStr = new Date(latestSub.created_at).toISOString().slice(0, 10);
+          if (subDateStr === todayStr) {
+            setStreakStatus("streak locked in for today");
+            setStreakTone("success");
+          } else if (subDateStr === yesterdayStr) {
+            setStreakStatus(`you're on day ${finalPreview} — don't break it`);
+            setStreakTone("warning");
+          } else {
+            setStreakStatus("streak lost — start again today");
+            setStreakTone("reset");
+          }
+        }
+
         console.log({ username, streakRow, latestSub, finalPreview });
         setCurrentStreak(finalPreview);
       } catch {
@@ -87,6 +110,22 @@ export default function Home() {
     }, 500);
     return () => clearTimeout(timer);
   }, [username]);
+
+  // Live countdown to next UTC midnight — updates every 30 seconds
+  useEffect(() => {
+    function calcCountdown() {
+      const now = new Date();
+      const nextMidnight = new Date();
+      nextMidnight.setUTCHours(24, 0, 0, 0);
+      const diff = nextMidnight - now;
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setTimeUntilReset(`resets in ${h}h ${m}m`);
+    }
+    calcCountdown();
+    const interval = setInterval(calcCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleImageUpload = (src) => {
     setImageSrc(src);
@@ -158,12 +197,37 @@ export default function Home() {
               transition-all duration-200
             "
           />
-          <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide mt-2">
-            {hasUsername
-              ? `✓ streak loaded for @${username} — day ${currentStreak}`
-              : "enter your username — your streak loads automatically"
-            }
-          </p>
+          {!hasUsername ? (
+            <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide mt-2">
+              enter your username — your streak loads automatically
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1 mt-2">
+              {/* Line 1: streak confirmation — always bright green */}
+              <p className="font-mono text-[10px] text-[#4ade80] tracking-wide">
+                ✓ streak loaded for @{username} — day {currentStreak}
+              </p>
+              {/* Line 2: status with tone-driven icon and color */}
+              {streakStatus && (() => {
+                const toneStyles = {
+                  neutral: { color: "text-[#3a5e3d]",  icon: "🌱" },
+                  success: { color: "text-[#4ade80]",  icon: "✅" },
+                  warning: { color: "text-[#f59e0b]",  icon: "🔥" },
+                  reset:   { color: "text-[#ef4444]",  icon: "💀" },
+                };
+                const { color, icon } = toneStyles[streakTone] ?? toneStyles.neutral;
+                return (
+                  <p className={`font-mono text-[10px] tracking-wide ${color}`}>
+                    {icon} {streakStatus}
+                  </p>
+                );
+              })()}
+              {/* Line 3: live countdown to UTC midnight */}
+              <p className="font-mono text-[10px] text-[#2a4a2d] tracking-wide">
+                {timeUntilReset}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
