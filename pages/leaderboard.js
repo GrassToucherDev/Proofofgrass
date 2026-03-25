@@ -5,6 +5,15 @@ function normalizeUsername(val) {
   return String(val ?? "").replace(/@/g, "").toLowerCase().trim();
 }
 
+function formatUTC(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+  }) + ", " + d.toLocaleTimeString("en-US", {
+    hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC",
+  }) + " UTC";
+}
+
 export default function Leaderboard() {
   const [data, setData] = useState([]);
   const [rankQuery, setRankQuery] = useState("");
@@ -76,9 +85,12 @@ export default function Leaderboard() {
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
-      <h1 className="text-4xl mb-6 text-green-400">
+      <h1 className="text-4xl mb-2 text-green-400">
         🌱 Proof of Grass Leaderboard
       </h1>
+      <p className="font-mono text-[10px] text-green-800 tracking-widest uppercase mb-6">
+        streaks reset at 00:00 UTC
+      </p>
 
       {/* Your Rank lookup */}
       <div className="mb-8">
@@ -192,7 +204,7 @@ export default function Leaderboard() {
               </a>
 
               <p className={`text-sm mt-2 ${isFirst ? "text-[#86efac] opacity-70" : "text-gray-400"}`}>
-                Last post: {new Date(item.created_at).toLocaleString()}
+                Last post: {formatUTC(item.created_at)}
               </p>
             </div>
           );
