@@ -8,10 +8,11 @@ function normalizeUsername(val) {
 }
 
 function computePreviewStreak(streakRow) {
+  if (!streakRow || !streakRow.last_submission_date) return 1;
   const todayStr = new Date().toISOString().slice(0, 10);
   const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  if (!streakRow) return 1;
-  const last = streakRow.last_submission_date;
+  // Normalize to YYYY-MM-DD regardless of whether value is a date or timestamp
+  const last = new Date(streakRow.last_submission_date).toISOString().slice(0, 10);
   if (last === todayStr) return streakRow.current_streak;
   if (last === yesterdayStr) return streakRow.current_streak + 1;
   return 1;
@@ -26,21 +27,63 @@ export default function Home() {
   const username = normalizeUsername(rawUsername);
   const hasUsername = username.length > 0;
 
-  // Preload streak whenever username changes (debounced 500ms)
+  // Preload streak preview whenever username changes (debounced 500ms).
+  // Checks Streaks table first; falls back to latest Submission if no streak row exists yet.
   useEffect(() => {
     if (!username) {
       setCurrentStreak(1);
       return;
     }
     const timer = setTimeout(async () => {
+      // Normalize today and yesterday as UTC YYYY-MM-DD for all comparisons
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
       try {
-        const { data } = await supabase
+        // ── Path A: Streaks row exists ──────────────────────────────
+        // Use computePreviewStreak which normalizes last_submission_date internally.
+        const { data: streakRow } = await supabase
           .from("Streaks")
           .select("current_streak, last_submission_date")
           .eq("username", username)
           .maybeSingle();
-        setCurrentStreak(computePreviewStreak(data));
+
+        if (streakRow) {
+          setCurrentStreak(computePreviewStreak(streakRow));
+          return;
+        }
+
+        // ── Path B: No Streaks row — check latest Submission ────────
+        // Covers users who have posted but whose streak row hasn't been written yet.
+        const { data: latestSub } = await supabase
+          .from("Submissions")
+          .select("created_at")
+          .eq("username", username)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!latestSub) {
+          // No submissions at all — brand new user, start at Day 1
+          setCurrentStreak(1);
+          return;
+        }
+
+        // Normalize the submission timestamp to UTC date string
+        const lastDateStr = new Date(latestSub.created_at).toISOString().slice(0, 10);
+
+        if (lastDateStr === yesterdayStr) {
+          // Last post was yesterday → submitting today would be Day 2
+          setCurrentStreak(2);
+        } else if (lastDateStr === todayStr) {
+          // Already posted today → streak not yet saved, preview stays at Day 1
+          setCurrentStreak(1);
+        } else {
+          // Gap of more than one day → streak resets to Day 1
+          setCurrentStreak(1);
+        }
       } catch {
+        // On any error, fall back safely to Day 1
         setCurrentStreak(1);
       }
     }, 500);
@@ -159,6 +202,20 @@ export default function Home() {
             initialStreak={currentStreak}
             onStreakUpdate={setCurrentStreak}
           />
+          <div className="flex justify-center mt-10">
+            <a
+              href="/leaderboard"
+              className="
+                inline-flex items-center gap-2
+                font-mono text-xs tracking-widest uppercase
+                text-[#4ade80] opacity-60
+                hover:opacity-100 hover:shadow-[0_0_12px_rgba(74,222,128,0.3)]
+                transition-all duration-200
+              "
+            >
+              🌱 View Leaderboard
+            </a>
+          </div>
         </div>
       )}
 
