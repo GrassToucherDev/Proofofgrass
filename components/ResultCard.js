@@ -29,29 +29,27 @@ function pickCaption(exclude) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-// Compute what the streak WILL be after a successful submission today
-function computePreviewStreak(streakRow) {
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  if (!streakRow) return 1;
-  const last = streakRow.last_submission_date;
-  if (last === todayStr) return streakRow.current_streak;
-  if (last === yesterdayStr) return streakRow.current_streak + 1;
-  return 1;
-}
-
-// username is already normalized by index.js before being passed in
-export default function ResultCard({ imageSrc, username }) {
+// username — already normalized by index.js
+// initialStreak — preloaded by index.js before this component mounts
+// onStreakUpdate — callback so index.js stays in sync after submit
+export default function ResultCard({ imageSrc, username, initialStreak = 1, onStreakUpdate }) {
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const [caption, setCaption] = useState(() => pickCaption(null));
   const [copied, setCopied] = useState(false);
 
-  // Submission form state (username comes from props now)
+  // currentStreak is seeded from initialStreak prop
+  const [currentStreak, setCurrentStreak] = useState(initialStreak);
+
+  // Keep in sync if parent re-computes streak while component is mounted
+  useEffect(() => {
+    setCurrentStreak(initialStreak);
+  }, [initialStreak]);
+
+  // Submission form state — no username input here, it comes from props
   const [tweetUrl, setTweetUrl] = useState("");
   const [submitStatus, setSubmitStatus] = useState(null); // null | "loading" | "success" | "error"
   const [submitError, setSubmitError] = useState("");
-  const [currentStreak, setCurrentStreak] = useState(1);
 
   const handleNewCaption = useCallback(() => {
     setCaption((prev) => pickCaption(prev));
@@ -69,7 +67,7 @@ export default function ResultCard({ imageSrc, username }) {
 
   const handleSubmit = useCallback(async () => {
     if (!username) {
-      setSubmitError("Enter your username.");
+      setSubmitError("No username found. Please refresh and try again.");
       setSubmitStatus("error");
       return;
     }
@@ -153,30 +151,10 @@ export default function ResultCard({ imageSrc, username }) {
     }, { onConflict: "username" });
 
     setCurrentStreak(newStreak);
+    onStreakUpdate?.(newStreak);
     setSubmitStatus("success");
     setTweetUrl("");
-  }, [username, tweetUrl]);
-
-  // Preload streak as soon as username prop is available (debounced 500ms)
-  useEffect(() => {
-    if (!username) {
-      setCurrentStreak(1);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      try {
-        const { data } = await supabase
-          .from("Streaks")
-          .select("current_streak, last_submission_date")
-          .eq("username", username)
-          .maybeSingle();
-        setCurrentStreak(computePreviewStreak(data));
-      } catch {
-        setCurrentStreak(1);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [username]);
+  }, [username, tweetUrl, onStreakUpdate]);
 
   const today = new Date();
   const dateStr = today.toLocaleDateString("en-US", {
@@ -606,7 +584,7 @@ export default function ResultCard({ imageSrc, username }) {
           <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-30" />
           <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
 
-          {/* Submitting as */}
+          {/* Submitting as — read-only, sourced from props */}
           <p className="font-mono text-[11px] text-[#3a5e3d] tracking-wide">
             submitting as{" "}
             <span className="text-[#4ade80]">@{username}</span>
