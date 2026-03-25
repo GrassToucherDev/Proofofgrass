@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabase";
 
+function normalizeUsername(val) {
+  return val.replace(/@/g, "").toLowerCase().trim();
+}
+
 export default function Leaderboard() {
   const [data, setData] = useState([]);
+  const [rankQuery, setRankQuery] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -55,12 +60,92 @@ export default function Leaderboard() {
     setData(leaderboard);
   };
 
+  // Derive rank result from existing data — no extra query needed
+  const normalizedQuery = normalizeUsername(rankQuery);
+  const rankResult = normalizedQuery
+    ? (() => {
+        const idx = data.findIndex(
+          (item) => normalizeUsername(item.username) === normalizedQuery
+        );
+        if (idx === -1) return null;
+        return { rank: idx + 1, ...data[idx] };
+      })()
+    : undefined; // undefined = no query yet, null = not found
+
   return (
     <div className="min-h-screen bg-black text-white p-8">
       <h1 className="text-4xl mb-6 text-green-400">
         🌱 Proof of Grass Leaderboard
       </h1>
 
+      {/* Your Rank lookup */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-green-900" />
+          <span className="text-[10px] font-mono tracking-[0.3em] text-green-700 uppercase">
+            Your Rank
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-green-900" />
+        </div>
+
+        <div className="relative rounded-xl border border-green-900 bg-black/50 px-5 py-4">
+          <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-20 rounded-tl-xl" />
+          <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-20 rounded-tr-xl" />
+          <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-20 rounded-bl-xl" />
+          <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-20 rounded-br-xl" />
+
+          <input
+            type="text"
+            value={rankQuery}
+            onChange={(e) => setRankQuery(normalizeUsername(e.target.value))}
+            placeholder="enter your username"
+            className="
+              w-full bg-transparent border-b border-green-900
+              text-green-300 font-mono text-sm
+              pb-2 mb-4
+              placeholder:text-green-900
+              focus:outline-none focus:border-[#4ade80]
+              transition-colors duration-200
+            "
+          />
+
+          {/* Not searched yet */}
+          {rankResult === undefined && (
+            <p className="font-mono text-xs text-green-800">
+              type your username to see where you stand.
+            </p>
+          )}
+
+          {/* Not found */}
+          {rankResult === null && (
+            <p className="font-mono text-xs text-green-700">
+              you're not ranked yet. submit your proof of grass to join the leaderboard.
+            </p>
+          )}
+
+          {/* Found */}
+          {rankResult && (
+            <div className="flex flex-wrap gap-6">
+              <div>
+                <p className="font-mono text-[10px] tracking-widest text-green-700 uppercase mb-1">Your Rank</p>
+                <p className="font-mono text-2xl font-bold text-[#4ade80]">#{rankResult.rank}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[10px] tracking-widest text-green-700 uppercase mb-1">Posts</p>
+                <p className="font-mono text-2xl font-bold text-[#4ade80]">{rankResult.count}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[10px] tracking-widest text-green-700 uppercase mb-1">Streak</p>
+                <p className="font-mono text-2xl font-bold text-[#4ade80]">
+                  🔥 {rankResult.current_streak} day{rankResult.current_streak !== 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Full leaderboard */}
       <div className="space-y-4">
         {data.map((item, index) => {
           const isFirst = index === 0;
@@ -114,4 +199,3 @@ export default function Leaderboard() {
     </div>
   );
 }
-  

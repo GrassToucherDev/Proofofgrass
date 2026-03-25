@@ -29,6 +29,17 @@ function pickCaption(exclude) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+// Compute what the streak WILL be after a successful submission today
+function computePreviewStreak(streakRow) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (!streakRow) return 1;
+  const last = streakRow.last_submission_date;
+  if (last === todayStr) return streakRow.current_streak;
+  if (last === yesterdayStr) return streakRow.current_streak + 1;
+  return 1;
+}
+
 export default function ResultCard({ imageSrc }) {
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
@@ -40,6 +51,7 @@ export default function ResultCard({ imageSrc }) {
   const [tweetUrl, setTweetUrl] = useState("");
   const [submitStatus, setSubmitStatus] = useState(null); // null | "loading" | "success" | "error"
   const [submitError, setSubmitError] = useState("");
+  const [currentStreak, setCurrentStreak] = useState(1);
 
   const handleNewCaption = useCallback(() => {
     setCaption((prev) => pickCaption(prev));
@@ -56,7 +68,7 @@ export default function ResultCard({ imageSrc }) {
   }, [caption]);
 
   const handleSubmit = useCallback(async () => {
-    if (!username.trim()) {
+    if (!username.trim().toLowerCase()) {
       setSubmitError("Enter your username.");
       setSubmitStatus("error");
       return;
@@ -83,7 +95,7 @@ export default function ResultCard({ imageSrc }) {
     const { data: existing, error: checkError } = await supabase
       .from("Submissions")
       .select("id")
-      .eq("username", username.trim())
+      .eq("username", username.trim().toLowerCase())
       .gte("created_at", todayStart.toISOString())
       .lt("created_at", tomorrowStart.toISOString())
       .limit(1);
@@ -103,7 +115,7 @@ export default function ResultCard({ imageSrc }) {
     // 2. Insert submission
     const { error: insertError } = await supabase
       .from("Submissions")
-      .insert([{ username: username.trim(), tweet_url: tweetUrl.trim() }]);
+      .insert([{ username: username.trim().toLowerCase(), tweet_url: tweetUrl.trim() }]);
 
     if (insertError) {
       if (insertError.code === "23505") {
@@ -119,7 +131,7 @@ export default function ResultCard({ imageSrc }) {
     const { data: streakRow } = await supabase
       .from("Streaks")
       .select("current_streak, last_submission_date")
-      .eq("username", username.trim())
+      .eq("username", username.trim().toLowerCase())
       .maybeSingle();
 
     let newStreak = 1;
@@ -138,15 +150,38 @@ export default function ResultCard({ imageSrc }) {
     }
 
     await supabase.from("Streaks").upsert({
-      username: username.trim(),
+      username: username.trim().toLowerCase(),
       current_streak: newStreak,
       last_submission_date: todayDateStr,
     }, { onConflict: "username" });
 
+    setCurrentStreak(newStreak);
     setSubmitStatus("success");
     setUsername("");
     setTweetUrl("");
   }, [username, tweetUrl]);
+
+  // Preload streak preview whenever username changes (debounced 500ms)
+  useEffect(() => {
+    const trimmed = username.trim().toLowerCase();
+    if (!trimmed) {
+      setCurrentStreak(1);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await supabase
+          .from("Streaks")
+          .select("current_streak, last_submission_date")
+          .eq("username", trimmed)
+          .maybeSingle();
+        setCurrentStreak(computePreviewStreak(data));
+      } catch {
+        setCurrentStreak(1);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [username]);
 
   const today = new Date();
   const dateStr = today.toLocaleDateString("en-US", {
@@ -381,7 +416,7 @@ export default function ResultCard({ imageSrc }) {
       ctx.fillStyle = "#ffffff";
       ctx.font = "700 108px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("DAY 1", CX, 570);
+      ctx.fillText(`DAY ${currentStreak}`, CX, 570);
       ctx.restore();
 
       ctx.save();
@@ -455,7 +490,7 @@ export default function ResultCard({ imageSrc }) {
       logo.src = "/touchgrass-transparent.png";
     };
     img.src = imageSrc;
-  }, [imageSrc, dateStr]);
+  }, [imageSrc, dateStr, currentStreak]);
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -584,8 +619,8 @@ export default function ResultCard({ imageSrc }) {
             <input
               type="text"
               value={username}
-              onChange={(e) => { setUsername(e.target.value); setSubmitStatus(null); }}
-              placeholder="@yourhandle"
+              onChange={(e) => { setUsername(e.target.value.replace(/@/g, "").toLowerCase().trim()); setSubmitStatus(null); }}
+              placeholder="yourhandle"
               disabled={submitStatus === "loading" || submitStatus === "success"}
               className="
                 w-full bg-[#060e07] border border-[#1f3d22]
