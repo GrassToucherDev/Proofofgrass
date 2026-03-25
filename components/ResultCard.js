@@ -467,13 +467,39 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
   return (
     <div className="flex flex-col items-center gap-6">
-      {/* Preview */}
-      <div className="w-full overflow-hidden rounded border border-[#1a3a1e] shadow-[0_0_80px_rgba(74,222,128,0.08)]">
-        <canvas
-          ref={canvasRef}
-          className="w-full h-auto block"
-          style={{ aspectRatio: "16/9" }}
-        />
+      {/* Hidden canvas — used only for generation */}
+      <canvas
+        ref={canvasRef}
+        className="hidden"
+        style={{ display: "none" }}
+      />
+
+      {/* Preview — shown as <img> so iPhone users can long-press to save */}
+      <div className="w-full flex flex-col items-center gap-2">
+        <div className="w-full overflow-hidden rounded border border-[#1a3a1e] shadow-[0_0_80px_rgba(74,222,128,0.08)]">
+          {downloadUrl ? (
+            <img
+              src={downloadUrl}
+              alt="Proof of Grass Certificate"
+              className="w-full h-auto block"
+              style={{ aspectRatio: "16/9" }}
+            />
+          ) : (
+            <div
+              className="w-full bg-[#0a140b] flex items-center justify-center"
+              style={{ aspectRatio: "16/9" }}
+            >
+              <span className="font-mono text-[#2a4a2d] text-xs tracking-widest animate-pulse">
+                generating…
+              </span>
+            </div>
+          )}
+        </div>
+        {downloadUrl && (
+          <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide">
+            on iphone: hold the image to save
+          </p>
+        )}
       </div>
 
       {/* Download */}

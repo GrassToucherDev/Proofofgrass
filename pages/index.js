@@ -28,20 +28,20 @@ export default function Home() {
   const hasUsername = username.length > 0;
 
   // Preload streak preview whenever username changes (debounced 500ms).
-  // Queries both Streaks and Submissions in parallel, computes a preview from each,
-  // and uses the higher of the two — so users who posted yesterday always see Day 2.
+  // Single authoritative rule: latest submission date drives the preview,
+  // with the Streaks row used to determine the exact count.
   useEffect(() => {
     if (!username) {
       setCurrentStreak(1);
       return;
     }
     const timer = setTimeout(async () => {
-      // UTC date strings used for all comparisons
+      // All date comparisons use UTC YYYY-MM-DD
       const todayStr = new Date().toISOString().slice(0, 10);
       const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
       try {
-        // Query both tables in parallel
+        // Query both tables in parallel — Streaks for count, Submissions for recency
         const [{ data: streakRow }, { data: latestSub }] = await Promise.all([
           supabase
             .from("Streaks")
@@ -57,42 +57,29 @@ export default function Home() {
             .maybeSingle(),
         ]);
 
-        // ── Preview from Streaks row ────────────────────────────────
-        // Normalizes last_submission_date in case it's a full timestamp
-        let previewFromStreak = 1;
-        if (streakRow?.last_submission_date) {
-          const streakDateStr = new Date(streakRow.last_submission_date).toISOString().slice(0, 10);
-          if (streakDateStr === todayStr) {
-            // Already submitted today — streak is current
-            previewFromStreak = streakRow.current_streak;
-          } else if (streakDateStr === yesterdayStr) {
-            // Posted yesterday — today would extend the streak by 1
-            previewFromStreak = streakRow.current_streak + 1;
-          } else {
-            // Gap — streak resets
-            previewFromStreak = 1;
-          }
-        }
+        let finalPreview = 1;
 
-        // ── Preview from latest Submission ─────────────────────────
-        // Safety net for users with submissions but no Streaks row yet
-        let previewFromSubmission = 1;
-        if (latestSub?.created_at) {
+        if (!latestSub?.created_at) {
+          // No submission history — brand new user, preview Day 1
+          finalPreview = 1;
+        } else {
           const subDateStr = new Date(latestSub.created_at).toISOString().slice(0, 10);
-          if (subDateStr === yesterdayStr) {
-            // Posted yesterday → today would be Day 2
-            previewFromSubmission = 2;
-          } else if (subDateStr === todayStr) {
-            // Already posted today → preview Day 1 (streak not saved yet)
-            previewFromSubmission = 1;
+
+          if (subDateStr === todayStr) {
+            // Already submitted today — show the current saved streak (or 1 if no row yet)
+            finalPreview = streakRow?.current_streak ?? 1;
+          } else if (subDateStr === yesterdayStr) {
+            // Submitted yesterday — today would extend the streak by 1
+            // If no Streaks row exists yet, assume current = 1 so preview = 2
+            finalPreview = (streakRow?.current_streak ?? 1) + 1;
           } else {
-            // Gap — resets to Day 1
-            previewFromSubmission = 1;
+            // Gap of more than one day — streak resets to Day 1
+            finalPreview = 1;
           }
         }
 
-        // Use whichever preview is higher — avoids showing Day 1 when Day 2 is correct
-        setCurrentStreak(Math.max(previewFromStreak, previewFromSubmission));
+        console.log({ username, streakRow, latestSub, finalPreview });
+        setCurrentStreak(finalPreview);
       } catch {
         // On any error, fall back safely to Day 1
         setCurrentStreak(1);
