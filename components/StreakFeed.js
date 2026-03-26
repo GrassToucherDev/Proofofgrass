@@ -67,12 +67,25 @@ export default function StreakFeed() {
 
   return (
     <div className="w-full max-w-md">
+      <style>{`
+        @keyframes livePulse {
+          0%,100% { opacity: 1; transform: scale(1); }
+          50%      { opacity: 0.4; transform: scale(0.75); }
+        }
+        .live-dot { animation: livePulse 2s ease-in-out infinite; }
+      `}</style>
       {/* Section header */}
       <div className="flex items-center gap-2 mb-3">
         <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
-        <span className="text-[10px] font-mono tracking-[0.3em] text-[#3a5e3d] uppercase">
-          Live Activity
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span
+            className="live-dot inline-block w-1.5 h-1.5 rounded-full bg-[#4ade80]"
+            style={{boxShadow:"0 0 6px rgba(74,222,128,0.8)"}}
+          />
+          <span className="text-[10px] font-mono tracking-[0.3em] text-[#3a5e3d] uppercase">
+            Live Activity
+          </span>
+        </div>
         <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
       </div>
 
@@ -90,11 +103,13 @@ export default function StreakFeed() {
             <div
               key={entry.username}
               className="
-                px-4 py-2.5 rounded-sm
-                border border-[#1a3520] bg-[#0a140b]
+                px-4 py-3 rounded-sm
+                border border-[#1a3520] bg-[#07110a]
+                shadow-[inset_0_1px_0_rgba(74,222,128,0.06)]
                 font-mono text-[11px] text-[#4ade80] tracking-wide
                 transition-all duration-200
-                hover:border-[#2d5e30] hover:shadow-[0_0_12px_rgba(74,222,128,0.1)]
+                hover:border-[#2d5e30] hover:bg-[#0a1a0d]
+                hover:shadow-[0_0_18px_rgba(74,222,128,0.12)]
               "
             >
               {(!entry.current_streak || entry.current_streak <= 1)

@@ -136,7 +136,86 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0d1a0f] text-white flex flex-col items-center px-4 py-16 font-mono">
+    <main className="relative min-h-screen bg-[#060e07] text-white flex flex-col items-center px-4 py-16 font-mono overflow-x-hidden">
+
+      {/* Layered ambient glows */}
+      <div className="pointer-events-none fixed inset-0 z-0" aria-hidden="true">
+        {/* Deep radial centre glow */}
+        <div style={{
+          position:"absolute", inset:0,
+          background:"radial-gradient(ellipse 80% 60% at 50% 0%, rgba(74,222,128,0.07) 0%, transparent 70%)",
+        }} />
+        {/* Bottom-left accent */}
+        <div style={{
+          position:"absolute", bottom:0, left:0, width:"55vw", height:"55vw",
+          background:"radial-gradient(circle, rgba(52,211,153,0.06) 0%, transparent 70%)",
+        }} />
+        {/* Top-right accent */}
+        <div style={{
+          position:"absolute", top:0, right:0, width:"45vw", height:"45vw",
+          background:"radial-gradient(circle, rgba(74,222,128,0.05) 0%, transparent 70%)",
+        }} />
+        {/* Subtle noise grid overlay */}
+        <div style={{
+          position:"absolute", inset:0,
+          backgroundImage:"linear-gradient(rgba(74,222,128,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(74,222,128,0.025) 1px, transparent 1px)",
+          backgroundSize:"48px 48px",
+        }} />
+      </div>
+
+      {/* Grass silhouettes — bottom corners */}
+      <div className="pointer-events-none fixed bottom-0 left-0 z-0 opacity-[0.07]" aria-hidden="true">
+        <svg width="220" height="120" viewBox="0 0 220 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 120 Q14 60 20 40 Q26 60 30 120" fill="#4ade80"/>
+          <path d="M28 120 Q34 50 42 25 Q50 50 56 120" fill="#4ade80"/>
+          <path d="M52 120 Q56 70 62 52 Q68 70 72 120" fill="#4ade80"/>
+          <path d="M68 120 Q76 45 86 18 Q96 45 104 120" fill="#4ade80"/>
+          <path d="M100 120 Q106 65 114 48 Q122 65 128 120" fill="#4ade80"/>
+          <path d="M124 120 Q130 72 138 58 Q146 72 152 120" fill="#4ade80"/>
+          <path d="M148 120 Q154 80 160 68 Q166 80 172 120" fill="#4ade80"/>
+          <path d="M168 120 Q174 75 182 60 Q190 75 196 120" fill="#4ade80"/>
+        </svg>
+      </div>
+      <div className="pointer-events-none fixed bottom-0 right-0 z-0 opacity-[0.07]" aria-hidden="true">
+        <svg width="220" height="120" viewBox="0 0 220 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{transform:"scaleX(-1)"}}>
+          <path d="M10 120 Q14 60 20 40 Q26 60 30 120" fill="#4ade80"/>
+          <path d="M28 120 Q34 50 42 25 Q50 50 56 120" fill="#4ade80"/>
+          <path d="M52 120 Q56 70 62 52 Q68 70 72 120" fill="#4ade80"/>
+          <path d="M68 120 Q76 45 86 18 Q96 45 104 120" fill="#4ade80"/>
+          <path d="M100 120 Q106 65 114 48 Q122 65 128 120" fill="#4ade80"/>
+          <path d="M124 120 Q130 72 138 58 Q146 72 152 120" fill="#4ade80"/>
+          <path d="M148 120 Q154 80 160 68 Q166 80 172 120" fill="#4ade80"/>
+          <path d="M168 120 Q174 75 182 60 Q190 75 196 120" fill="#4ade80"/>
+        </svg>
+      </div>
+
+      {/* Animated grass line above footer */}
+      <style>{`
+        @keyframes grassGrow {
+          from { clip-path: inset(0 100% 0 0); opacity: 0; }
+          to   { clip-path: inset(0 0% 0 0);   opacity: 1; }
+        }
+        .grass-line { animation: grassGrow 2.8s cubic-bezier(0.22,1,0.36,1) 0.8s both; }
+        @keyframes livePulse {
+          0%,100% { opacity: 1; transform: scale(1); }
+          50%      { opacity: 0.4; transform: scale(0.75); }
+        }
+        .live-dot { animation: livePulse 2s ease-in-out infinite; }
+        @keyframes certReveal {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .cert-reveal { animation: certReveal 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+        @keyframes uploadShimmer {
+          0%   { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+          50%  { box-shadow: 0 0 28px 4px rgba(74,222,128,0.13); }
+          100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+        }
+        .upload-live { animation: uploadShimmer 3s ease-in-out infinite; }
+      `}</style>
+
+      {/* All page content sits above fixed bg */}
+      <div className="relative z-10 w-full flex flex-col items-center">
 
       {/* Header */}
       <div className="text-center mb-14">
@@ -174,7 +253,7 @@ export default function Home() {
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
         </div>
 
-        <div className="relative rounded-sm border border-[#1a3520] bg-[#0a140b] shadow-[inset_0_1px_0_rgba(74,222,128,0.06)] px-5 py-5">
+        <div className="relative rounded-sm border border-[#1f3d22] bg-[#07110a] shadow-[inset_0_1px_0_rgba(74,222,128,0.1),0_0_20px_rgba(74,222,128,0.05)] px-5 py-5">
           <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-30" />
           <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-30" />
           <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-30" />
@@ -242,7 +321,7 @@ export default function Home() {
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
         </div>
 
-        <div className={`transition-all duration-300 ${hasUsername ? "opacity-100" : "opacity-30 pointer-events-none select-none"}`}>
+        <div className={`transition-all duration-300 rounded-sm ${hasUsername ? "opacity-100 upload-live" : "opacity-30 pointer-events-none select-none"}`}>
           <UploadBox onUpload={handleImageUpload} />
         </div>
 
@@ -260,7 +339,7 @@ export default function Home() {
 
       {/* Certificate */}
       {imageSrc && hasUsername && (
-        <div ref={resultRef} className="mt-8 w-full max-w-4xl">
+        <div ref={resultRef} className="mt-8 w-full max-w-4xl cert-reveal">
           <p className="text-center text-xs tracking-widest text-[#4ade80] uppercase mb-6">
             ✦ Certificate Generated ✦
           </p>
@@ -287,9 +366,22 @@ export default function Home() {
         </div>
       )}
 
-      <footer className="mt-24 text-[#334d35] text-xs text-center">
+      {/* Animated grass line */}
+      <div className="w-full max-w-2xl px-4 mb-6 mt-16" aria-hidden="true">
+        <svg className="grass-line w-full" height="28" viewBox="0 0 600 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.18}}>
+          {[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24].map((i) => {
+            const x = i * 24 + 4;
+            const h = 10 + (i % 3) * 6 + (i % 5) * 3;
+            const cx = x + 4;
+            return <path key={i} d={`M${x} 28 Q${cx} ${28-h} ${x+8} 28`} fill="#4ade80" />;
+          })}
+        </svg>
+      </div>
+
+      <footer className="mt-2 text-[#334d35] text-xs text-center pb-4">
         © {new Date().getFullYear()} Proof of Grass · All rights reserved
       </footer>
+      </div>{/* end z-10 wrapper */}
     </main>
   );
 }
