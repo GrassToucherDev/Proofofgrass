@@ -57,6 +57,14 @@ function pickCaption(streak, exclude) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+function getStreakTitle(streak) {
+  if (streak >= 30) return "👑 grass god";
+  if (streak >= 14) return "🔥 locked in";
+  if (streak >= 7)  return "🌳 rooted";
+  if (streak >= 3)  return "🌿 sprout";
+  return "🌱 seed";
+}
+
 // username — already normalized by index.js
 // initialStreak — preloaded by index.js before this component mounts
 // onStreakUpdate — callback so index.js stays in sync after submit
@@ -98,27 +106,19 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [shared, setShared] = useState(false);
 
   const handleShareAndPost = useCallback(() => {
-    if (!downloadUrl) return;
-
-    // 1. Trigger image save/download
-    const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = "proof-of-grass.png";
-    a.click();
-
-    // 2. Build the exact tweet text
+    // Build the exact tweet text
     const text = `${caption}\n\nday ${currentStreak}\n@XTouchGrass\n#proofofgrass\nhttps://proofofgrass.vercel.app/`;
 
-    // 3. Copy to clipboard (failure is non-blocking)
+    // Copy to clipboard (failure is non-blocking)
     navigator.clipboard.writeText(text).catch(() => {});
 
-    // 4. Open X compose window
+    // Open X compose window
     const encoded = encodeURIComponent(text);
     window.open(`https://twitter.com/intent/tweet?text=${encoded}`, "_blank");
 
     setShared(true);
     setTimeout(() => setShared(false), 2500);
-  }, [caption, currentStreak, downloadUrl]);
+  }, [caption, currentStreak]);
 
   const handleSubmit = useCallback(async () => {
     if (!username) {
@@ -590,9 +590,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           `}
         >
           {shared ? (
-            <><span>✓</span> image saved — posting…</>
+            <><span>✓</span> copied — opening x…</>
           ) : (
-            <>⬆ save image + post to x</>
+            <>⬆ post on x</>
           )}
         </button>
       )}
@@ -688,12 +688,19 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
 
           {/* Submitting as — read-only, sourced from props */}
-          <p className="font-mono text-[11px] text-[#3a5e3d] tracking-wide">
-            submitting as{" "}
-            <span className="text-[#4ade80]">@{username}</span>
-            {" "}— streak{" "}
-            <span className="text-[#4ade80]">day {currentStreak}</span>
-          </p>
+          <div className="flex flex-col gap-0.5">
+            <p className="font-mono text-[11px] text-[#3a5e3d] tracking-wide">
+              submitting as{" "}
+              <span className="text-[#4ade80]">@{username}</span>
+            </p>
+            <p className="font-mono text-[11px] text-[#4ade80] tracking-wide">
+              {getStreakTitle(currentStreak)}
+            </p>
+            <p className="font-mono text-[11px] text-[#3a5e3d] tracking-wide">
+              streak{" "}
+              <span className="text-[#4ade80]">day {currentStreak}</span>
+            </p>
+          </div>
 
           {/* X Post URL */}
           <div className="flex flex-col gap-1.5">
@@ -722,11 +729,13 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           {/* Status messages */}
           {submitStatus === "success" && (
             <div className="
-              flex items-center gap-2 px-4 py-2.5
+              flex flex-col items-center gap-1 px-4 py-3
               bg-[#0d2b14] border border-[#166534] rounded-sm
-              font-mono text-xs text-[#4ade80] tracking-wide
+              shadow-[0_0_16px_rgba(74,222,128,0.1)]
+              font-mono text-xs text-[#4ade80] tracking-wide text-center
             ">
-              <span>✓</span> Submission received. Welcome to the leaderboard.
+              <span className="text-sm">✅ day {currentStreak} locked in</span>
+              <span className="opacity-70">🔥 streak continues</span>
             </div>
           )}
           {submitStatus === "error" && submitError && (

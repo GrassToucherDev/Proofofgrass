@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
 import { supabase } from "../utils/supabase";
+import StreakFeed from "../components/StreakFeed";
 
 function normalizeUsername(val) {
   return String(val ?? "").replace(/@/g, "").toLowerCase().trim();
@@ -250,6 +251,11 @@ export default function Home() {
             enter your username above to unlock this step
           </p>
         )}
+      </div>
+
+      {/* Live Activity Feed */}
+      <div className="w-full max-w-md mb-8">
+        <StreakFeed />
       </div>
 
       {/* Certificate */}
