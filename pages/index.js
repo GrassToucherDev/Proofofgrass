@@ -35,6 +35,7 @@ export default function Home() {
   const [streakStatus, setStreakStatus] = useState("");
   const [streakTone, setStreakTone] = useState("neutral"); // neutral | success | warning | reset
   const [timeUntilReset, setTimeUntilReset] = useState("");
+  const [countdownMs, setCountdownMs] = useState(null);
   const resultRef = useRef(null);
 
   const username = normalizeUsername(rawUsername);
@@ -121,7 +122,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [username]);
 
-  // Live countdown to next UTC midnight — updates every 30 seconds
+  // Live countdown to next UTC midnight — updates every second
   useEffect(() => {
     function calcCountdown() {
       const now = new Date();
@@ -130,7 +131,9 @@ export default function Home() {
       const diff = nextMidnight - now;
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
-      setTimeUntilReset(`resets in ${h}h ${m}m`);
+      const s = Math.floor((diff % 60000) / 1000);
+      setCountdownMs(diff);
+      setTimeUntilReset(`resets in ${h}h ${m}m ${String(s).padStart(2,"0")}s`);
     }
     calcCountdown();
     const interval = setInterval(calcCountdown, 1000);
@@ -327,10 +330,35 @@ export default function Home() {
                   </p>
                 );
               })()}
-              {/* Line 3: live countdown to UTC midnight */}
-              <p className="font-mono text-[10px] text-[#2a4a2d] tracking-wide">
-                {timeUntilReset}
-              </p>
+              {/* Line 3: urgency countdown to UTC midnight */}
+              {(() => {
+                const msLeft = countdownMs ?? Infinity;
+                const minsLeft = Math.floor(msLeft / 60000);
+                let urgencyColor, urgencyMsg;
+                if (msLeft < 3600000) {
+                  // < 1 hour — danger
+                  urgencyColor = "text-[#ef4444]";
+                  urgencyMsg = `🔥 ${minsLeft}m left — don't lose your streak`;
+                } else if (msLeft < 10800000) {
+                  // 1–3 hours — warning
+                  urgencyColor = "text-[#f59e0b]";
+                  urgencyMsg = "⚠️ don't forget to check in today";
+                } else {
+                  // > 3 hours — normal
+                  urgencyColor = "text-[#2a4a2d]";
+                  urgencyMsg = "streak active — keep it going";
+                }
+                return (
+                  <div className="flex flex-col gap-0.5">
+                    <p className={`font-mono text-[10px] tracking-wide ${urgencyColor}`}>
+                      {urgencyMsg}
+                    </p>
+                    <p className={`font-mono text-[10px] tabular-nums tracking-wide ${urgencyColor} opacity-60`}>
+                      {timeUntilReset}
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
