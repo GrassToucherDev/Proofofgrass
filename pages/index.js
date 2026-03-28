@@ -20,7 +20,16 @@ function computePreviewStreak(streakRow) {
 }
 
 export default function Home() {
-  const [rawUsername, setRawUsername] = useState("");
+  const [rawUsername, setRawUsername] = useState(() => {
+    // Seed from localStorage on first render (client-side only)
+    if (typeof window === "undefined") return "";
+    const saved = localStorage.getItem("pog_username");
+    return saved ? normalizeUsername(saved) : "";
+  });
+  const [restoredFromStorage, setRestoredFromStorage] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem("pog_username");
+  });
   const [imageSrc, setImageSrc] = useState(null);
   const [currentStreak, setCurrentStreak] = useState(1);
   const [streakStatus, setStreakStatus] = useState("");
@@ -127,6 +136,16 @@ export default function Home() {
     const interval = setInterval(calcCountdown, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Persist normalized username to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (username) {
+      localStorage.setItem("pog_username", username);
+    } else {
+      localStorage.removeItem("pog_username");
+    }
+  }, [username]);
 
   const handleImageUpload = (src) => {
     setImageSrc(src);
@@ -265,7 +284,7 @@ export default function Home() {
           <input
             type="text"
             value={rawUsername}
-            onChange={(e) => setRawUsername(e.target.value)}
+            onChange={(e) => { setRawUsername(e.target.value); setRestoredFromStorage(false); }}
             placeholder="yourhandle"
             className="
               w-full bg-[#060e07] border border-[#1f3d22]
@@ -283,6 +302,12 @@ export default function Home() {
             </p>
           ) : (
             <div className="flex flex-col gap-1 mt-2">
+              {/* Welcome back line — shown only when username was restored */}
+              {restoredFromStorage && (
+                <p className="font-mono text-[10px] text-[#2a4a2d] tracking-wide">
+                  welcome back @{username}
+                </p>
+              )}
               {/* Line 1: streak confirmation — always bright green */}
               <p className="font-mono text-[10px] text-[#4ade80] tracking-wide">
                 ✓ streak loaded for @{username} — day {currentStreak}

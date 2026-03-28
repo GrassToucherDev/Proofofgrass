@@ -27,7 +27,7 @@ export default function Leaderboard() {
       { data: submissions, error: subError },
       { data: streaks, error: strError },
     ] = await Promise.all([
-      supabase.from("Submissions").select("*").order("created_at", { ascending: false }),
+      supabase.from("Submissions").select("*").eq("status", "approved").order("created_at", { ascending: false }),
       supabase.from("Streaks").select("username, current_streak, last_submission_date"),
     ]);
 
@@ -88,9 +88,10 @@ export default function Leaderboard() {
       <h1 className="text-4xl mb-2 text-green-400">
         🌱 Proof of Grass Leaderboard
       </h1>
-      <p className="font-mono text-[10px] text-green-800 tracking-widest uppercase mb-6">
+      <p className="font-mono text-[10px] text-green-800 tracking-widest uppercase mb-3">
         streaks reset at 00:00 UTC
       </p>
+
 
       {/* Your Rank lookup */}
       <div className="mb-8">

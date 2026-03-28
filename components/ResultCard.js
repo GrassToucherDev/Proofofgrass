@@ -687,6 +687,14 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-30" />
           <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
 
+          {/* Submission guidelines */}
+          <div className="font-mono text-[10px] text-[#2a4a2d] tracking-wide border border-[#1a3520] rounded-sm px-3 py-2.5 bg-[#060e07]">
+            <p className="text-[#3a5e3d] uppercase tracking-widest mb-1">submissions must include:</p>
+            <p>· your proof of grass certificate</p>
+            <p>· a valid x post link</p>
+            <p>· @XTouchGrass</p>
+          </div>
+
           {/* Submitting as — read-only, sourced from props */}
           <div className="flex flex-col gap-0.5">
             <p className="font-mono text-[11px] text-[#3a5e3d] tracking-wide">
