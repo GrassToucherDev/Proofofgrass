@@ -60,13 +60,17 @@ export default function Leaderboard() {
       }
     });
 
-    // Merge + sort by post count descending
+    // Merge streak data, then sort by: streak DESC → posts DESC → last post DESC
     const leaderboard = Object.values(grouped)
       .map((entry) => ({
         ...entry,
         current_streak: streakMap[entry.username] ?? 1,
       }))
-      .sort((a, b) => b.count - a.count);
+      .sort((a, b) => {
+        if (b.current_streak !== a.current_streak) return b.current_streak - a.current_streak;
+        if (b.count !== a.count) return b.count - a.count;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
 
     setData(leaderboard);
   };
