@@ -738,16 +738,51 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             />
           </div>
 
-          {/* Status messages */}
+          {/* Lock-in screen — replaces submit area on success */}
           {submitStatus === "success" && (
             <div className="
-              flex flex-col items-center gap-1 px-4 py-3
-              bg-[#0d2b14] border border-[#166534] rounded-sm
-              shadow-[0_0_16px_rgba(74,222,128,0.1)]
-              font-mono text-xs text-[#4ade80] tracking-wide text-center
+              flex flex-col items-center gap-4 px-5 py-6
+              bg-[#0a1f0c] border border-[#4ade80] rounded-sm
+              shadow-[0_0_32px_rgba(74,222,128,0.18)]
+              font-mono text-center
             ">
-              <span className="text-sm">✅ day {currentStreak} locked in</span>
-              <span className="opacity-70">🔥 streak continues</span>
+              <div className="flex flex-col gap-1">
+                <span className="text-[#4ade80] text-base font-bold tracking-wide">
+                  ✅ day {currentStreak} locked in
+                </span>
+                <span className="text-[#86efac] text-xs opacity-80">🔥 streak continues</span>
+                <span className="text-[#3a5e3d] text-[10px] tracking-wide mt-1">
+                  come back tomorrow or lose it
+                </span>
+              </div>
+              <div className="flex gap-3 flex-wrap justify-center">
+                <a
+                  href="/leaderboard"
+                  className="
+                    inline-flex items-center gap-1.5 px-5 py-2
+                    font-mono text-[11px] tracking-widest uppercase
+                    border border-[#2d5e30] text-[#4ade80]
+                    rounded-sm hover:bg-[#0d2b14]
+                    hover:shadow-[0_0_16px_rgba(74,222,128,0.2)]
+                    transition-all duration-200
+                  "
+                >
+                  🌱 view leaderboard
+                </a>
+                <button
+                  onClick={handleShareAndPost}
+                  className="
+                    inline-flex items-center gap-1.5 px-5 py-2
+                    font-mono text-[11px] tracking-widest uppercase
+                    bg-[#4ade80] text-[#0a1f0c] font-bold
+                    rounded-sm hover:bg-[#86efac]
+                    hover:shadow-[0_0_20px_rgba(74,222,128,0.35)]
+                    transition-all duration-200
+                  "
+                >
+                  ⬆ post on x
+                </button>
+              </div>
             </div>
           )}
           {submitStatus === "error" && submitError && (

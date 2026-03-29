@@ -37,6 +37,9 @@ export default function Home() {
   const [timeUntilReset, setTimeUntilReset] = useState("");
   const [countdownMs, setCountdownMs] = useState(null);
   const [userStats, setUserStats] = useState(null); // { rank, posts, bestStreak } | null
+  const [dailyCount, setDailyCount] = useState(null);
+  const [topStreaker, setTopStreaker] = useState(null); // { username, current_streak }
+  const [hasPostedToday, setHasPostedToday] = useState(null); // null=unknown, true, false
   const resultRef = useRef(null);
 
   const username = normalizeUsername(rawUsername);
@@ -51,6 +54,7 @@ export default function Home() {
       setStreakStatus("");
       setStreakTone("neutral");
       setUserStats(null);
+      setHasPostedToday(null);
       return;
     }
     const timer = setTimeout(async () => {
@@ -114,6 +118,13 @@ export default function Home() {
           }
         }
 
+        // Determine if user has already posted today
+        const todayStr2 = new Date().toISOString().slice(0, 10);
+        const subDateToday = latestSub?.created_at
+          ? new Date(latestSub.created_at).toISOString().slice(0, 10)
+          : null;
+        setHasPostedToday(subDateToday === todayStr2);
+
         console.log({ username, streakRow, latestSub, finalPreview });
         setCurrentStreak(finalPreview);
 
@@ -157,6 +168,37 @@ export default function Home() {
     calcCountdown();
     const interval = setInterval(calcCountdown, 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Fetch daily activity stats on mount — count of today's approved submissions + top streaker
+  useEffect(() => {
+    async function fetchDailyStats() {
+      const todayStart = new Date();
+      todayStart.setUTCHours(0, 0, 0, 0);
+
+      const [{ count }, { data: streakers }] = await Promise.all([
+        supabase
+          .from("Submissions")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "approved")
+          .gte("created_at", todayStart.toISOString()),
+        supabase
+          .from("Streaks")
+          .select("username, current_streak")
+          .order("current_streak", { ascending: false })
+          .limit(1),
+      ]);
+
+      setDailyCount(count ?? 0);
+      if (streakers && streakers.length > 0) {
+        const s = streakers[0];
+        setTopStreaker({
+          username: String(s.username ?? "").replace(/@/g, "").toLowerCase().trim(),
+          current_streak: s.current_streak ?? 1,
+        });
+      }
+    }
+    fetchDailyStats();
   }, []);
 
   // Persist normalized username to localStorage whenever it changes
@@ -282,6 +324,19 @@ export default function Home() {
           🌱 View Leaderboard
         </a>
         <div className="mt-3 h-px w-24 bg-[#4ade80] mx-auto opacity-40" />
+        {/* Daily activity stats */}
+        <div className="mt-4 flex flex-col items-center gap-1">
+          {dailyCount !== null && (
+            <p className="font-mono text-[11px] text-[#3a5e3d] tracking-wide">
+              🌱 <span className="text-[#4ade80]">{dailyCount}</span> {dailyCount === 1 ? "person" : "people"} touched grass today
+            </p>
+          )}
+          {topStreaker && (
+            <p className="font-mono text-[11px] text-[#3a5e3d] tracking-wide">
+              🔥 longest streak: <span className="text-[#4ade80]">@{topStreaker.username}</span> ({topStreaker.current_streak} days)
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Step 1 — Username */}
@@ -378,6 +433,17 @@ export default function Home() {
                   </div>
                 );
               })()}
+              {/* Posted-today check-in message */}
+              {hasPostedToday === false && (
+                <p className="font-mono text-[10px] text-[#f59e0b] tracking-wide">
+                  ⚠️ you haven't checked in today — don't lose your streak
+                </p>
+              )}
+              {hasPostedToday === true && (
+                <p className="font-mono text-[10px] text-[#4ade80] tracking-wide">
+                  ✅ you're locked in for today
+                </p>
+              )}
             </div>
           )}
         </div>
