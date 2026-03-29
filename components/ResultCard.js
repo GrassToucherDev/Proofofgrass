@@ -763,7 +763,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                 shadow-[0_0_40px_rgba(74,222,128,0.22),inset_0_1px_0_rgba(74,222,128,0.12)]
                 font-mono text-center
               ">
-                {/* Headline */}
+                {/* Headline — copy varies by streak day */}
                 <div className="flex flex-col gap-1.5">
                   <span
                     className="text-[#4ade80] text-lg font-bold tracking-wide"
@@ -772,7 +772,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                     ✅ day {currentStreak} locked in
                   </span>
                   <span className="text-[#86efac] text-sm font-semibold">
-                    🔥 your streak is alive
+                    {currentStreak === 1 ? "🌱 your streak starts now" : "🔥 your streak is alive"}
                   </span>
                 </div>
 
