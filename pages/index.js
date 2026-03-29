@@ -19,6 +19,14 @@ function computePreviewStreak(streakRow) {
   return 1;
 }
 
+function getStreakTitle(streak) {
+  if (streak >= 30) return "👑 grass god";
+  if (streak >= 14) return "🔥 locked in";
+  if (streak >= 7)  return "🌳 rooted";
+  if (streak >= 3)  return "🌿 sprout";
+  return "🌱 seed";
+}
+
 export default function Home() {
   const [rawUsername, setRawUsername] = useState(() => {
     // Seed from localStorage on first render (client-side only)
@@ -325,18 +333,21 @@ export default function Home() {
         </a>
         <div className="mt-3 h-px w-24 bg-[#4ade80] mx-auto opacity-40" />
         {/* Daily activity stats */}
-        <div className="mt-4 flex flex-col items-center gap-1">
-          {dailyCount !== null && (
-            <p className="font-mono text-[11px] text-[#3a5e3d] tracking-wide">
-              🌱 <span className="text-[#4ade80]">{dailyCount}</span> {dailyCount === 1 ? "person" : "people"} touched grass today
-            </p>
-          )}
-          {topStreaker && (
-            <p className="font-mono text-[11px] text-[#3a5e3d] tracking-wide">
-              🔥 longest streak: <span className="text-[#4ade80]">@{topStreaker.username}</span> ({topStreaker.current_streak} days)
-            </p>
-          )}
-        </div>
+        {(dailyCount !== null || topStreaker) && (
+          <div className="mt-5 flex flex-col items-center gap-1.5">
+            {dailyCount !== null && (
+              <p className="font-mono text-xs text-[#3a5e3d] tracking-wide">
+                🌱 <span className="text-[#4ade80] font-semibold">{dailyCount}</span> {dailyCount === 1 ? "person" : "people"} touched grass today
+              </p>
+            )}
+            {topStreaker && (
+              <p className="font-mono text-xs text-[#3a5e3d] tracking-wide">
+                🔥 longest streak: <span className="text-[#4ade80] font-semibold">@{topStreaker.username}</span>{" "}
+                <span className="text-[#2a4a2d]">({topStreaker.current_streak} days)</span>
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Step 1 — Username */}
@@ -378,70 +389,71 @@ export default function Home() {
               enter your username — your streak loads automatically
             </p>
           ) : (
-            <div className="flex flex-col gap-1 mt-2">
-              {/* Welcome back line — shown only when username was restored */}
+            <div className="flex flex-col gap-2 mt-3">
+              {/* Welcome back — only on localStorage restore */}
               {restoredFromStorage && (
                 <p className="font-mono text-[10px] text-[#2a4a2d] tracking-wide">
                   welcome back @{username}
                 </p>
               )}
-              {/* Line 1: streak confirmation — always bright green */}
-              <p className="font-mono text-[10px] text-[#4ade80] tracking-wide">
+
+              {/* Primary streak line */}
+              <p className="font-mono text-[11px] text-[#4ade80] tracking-wide font-semibold">
                 ✓ streak loaded for @{username} — day {currentStreak}
+                {" "}<span className="font-normal opacity-60">{getStreakTitle(currentStreak)}</span>
               </p>
-              {/* Line 2: status with tone-driven icon and color */}
-              {streakStatus && (() => {
-                const toneStyles = {
-                  neutral: { color: "text-[#3a5e3d]",  icon: "🌱" },
-                  success: { color: "text-[#4ade80]",  icon: "✅" },
-                  warning: { color: "text-[#f59e0b]",  icon: "🔥" },
-                  reset:   { color: "text-[#ef4444]",  icon: "💀" },
-                };
-                const { color, icon } = toneStyles[streakTone] ?? toneStyles.neutral;
-                return (
-                  <p className={`font-mono text-[10px] tracking-wide ${color}`}>
-                    {icon} {streakStatus}
-                  </p>
-                );
-              })()}
-              {/* Line 3: urgency countdown to UTC midnight */}
-              {(() => {
-                const msLeft = countdownMs ?? Infinity;
-                const minsLeft = Math.floor(msLeft / 60000);
-                let urgencyColor, urgencyMsg;
-                if (msLeft < 3600000) {
-                  // < 1 hour — danger
-                  urgencyColor = "text-[#ef4444]";
-                  urgencyMsg = `🔥 ${minsLeft}m left — don't lose your streak`;
-                } else if (msLeft < 10800000) {
-                  // 1–3 hours — warning
-                  urgencyColor = "text-[#f59e0b]";
-                  urgencyMsg = "⚠️ don't forget to check in today";
-                } else {
-                  // > 3 hours — normal
-                  urgencyColor = "text-[#2a4a2d]";
-                  urgencyMsg = "streak active — keep it going";
-                }
-                return (
-                  <div className="flex flex-col gap-0.5">
-                    <p className={`font-mono text-[10px] tracking-wide ${urgencyColor}`}>
-                      {urgencyMsg}
-                    </p>
-                    <p className={`font-mono text-[10px] tabular-nums tracking-wide ${urgencyColor} opacity-60`}>
-                      {timeUntilReset}
-                    </p>
-                  </div>
-                );
-              })()}
-              {/* Posted-today check-in message */}
-              {hasPostedToday === false && (
-                <p className="font-mono text-[10px] text-[#f59e0b] tracking-wide">
-                  ⚠️ you haven't checked in today — don't lose your streak
-                </p>
-              )}
+
+              {/* Single primary status block — only ONE shown at a time */}
               {hasPostedToday === true && (
-                <p className="font-mono text-[10px] text-[#4ade80] tracking-wide">
-                  ✅ you're locked in for today
+                <div className="flex flex-col gap-0.5">
+                  <p className="font-mono text-[11px] text-[#4ade80] tracking-wide">
+                    ✅ you're locked in for today
+                  </p>
+                  <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide">
+                    come back tomorrow to continue your streak
+                  </p>
+                </div>
+              )}
+
+              {hasPostedToday === false && streakTone !== "reset" && (
+                <div className="flex flex-col gap-1">
+                  <p className="font-mono text-[11px] text-[#f59e0b] tracking-wide">
+                    ⚠️ you haven't checked in today
+                  </p>
+                  {/* Urgent countdown */}
+                  {(() => {
+                    const msLeft = countdownMs ?? Infinity;
+                    const h = Math.floor(msLeft / 3600000);
+                    const m = Math.floor((msLeft % 3600000) / 60000);
+                    const countColor = msLeft < 3600000 ? "text-[#ef4444]" : "text-[#f59e0b]";
+                    const countStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+                    return (
+                      <p className={`font-mono text-[11px] font-semibold tabular-nums tracking-wide ${countColor}`}>
+                        🔥 {countStr} left — don't lose your streak
+                      </p>
+                    );
+                  })()}
+                  <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide mt-1">
+                    ⬇️ submit today's proof below
+                  </p>
+                </div>
+              )}
+
+              {streakTone === "reset" && (
+                <div className="flex flex-col gap-0.5">
+                  <p className="font-mono text-[11px] text-[#ef4444] tracking-wide">
+                    💀 streak reset
+                  </p>
+                  <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide">
+                    start again today
+                  </p>
+                </div>
+              )}
+
+              {/* Neutral / unknown state: show passive countdown */}
+              {hasPostedToday === null && (
+                <p className="font-mono text-[10px] text-[#2a4a2d] tabular-nums tracking-wide">
+                  {timeUntilReset}
                 </p>
               )}
             </div>
@@ -464,12 +476,9 @@ export default function Home() {
             <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Posts</p>
-                <p className="font-mono text-xl font-bold text-[#4ade80]">{userStats.posts}</p>
-              </div>
-              <div>
                 <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Current Streak</p>
                 <p className="font-mono text-xl font-bold text-[#4ade80]">🔥 day {currentStreak}</p>
+                <p className="font-mono text-[9px] text-[#2a4a2d] mt-0.5">{getStreakTitle(currentStreak)}</p>
               </div>
               <div>
                 <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Best Streak</p>
@@ -477,7 +486,13 @@ export default function Home() {
               </div>
               <div>
                 <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Total Posts</p>
-                <p className="font-mono text-xl font-bold text-[#4ade80]">{userStats.posts > 0 ? `${userStats.posts}×` : "—"}</p>
+                <p className="font-mono text-xl font-bold text-[#4ade80]">📊 {userStats.posts}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Rank</p>
+                <p className="font-mono text-xl font-bold text-[#4ade80]">
+                  {userStats.rank ? `🏅 #${userStats.rank}` : "unranked"}
+                </p>
               </div>
             </div>
           </div>
