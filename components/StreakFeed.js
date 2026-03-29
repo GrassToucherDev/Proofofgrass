@@ -8,6 +8,19 @@ function normalizeUsername(val) {
     .trim();
 }
 
+function formatRelativeTime(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60)  return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60)  return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24)  return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7)   return `${d}d ago`;
+  return `${Math.floor(d / 7)}w ago`;
+}
+
 export default function StreakFeed() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +116,7 @@ export default function StreakFeed() {
             <div
               key={entry.username}
               className="
+                flex items-center justify-between gap-2
                 px-4 py-3 rounded-sm
                 border border-[#1a3520] bg-[#07110a]
                 shadow-[inset_0_1px_0_rgba(74,222,128,0.06)]
@@ -112,10 +126,15 @@ export default function StreakFeed() {
                 hover:shadow-[0_0_18px_rgba(74,222,128,0.12)]
               "
             >
-              {(!entry.current_streak || entry.current_streak <= 1)
-                ? `@${entry.username} started their streak 🌱`
-                : `@${entry.username} hit day ${entry.current_streak} 🔥`
-              }
+              <span>
+                {(!entry.current_streak || entry.current_streak <= 1)
+                  ? `@${entry.username} started their streak 🌱`
+                  : `@${entry.username} hit day ${entry.current_streak} 🔥`
+                }
+              </span>
+              <span className="text-[#2a4a2d] ml-2">
+                {formatRelativeTime(entry.created_at)}
+              </span>
             </div>
           ))}
         </div>

@@ -5,13 +5,18 @@ function normalizeUsername(val) {
   return String(val ?? "").replace(/@/g, "").toLowerCase().trim();
 }
 
-function formatUTC(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
-  }) + ", " + d.toLocaleTimeString("en-US", {
-    hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC",
-  }) + " UTC";
+function formatRelativeTime(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60)  return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60)  return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24)  return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7)   return `${d}d ago`;
+  const w = Math.floor(d / 7);
+  return `${w}w ago`;
 }
 
 export default function Leaderboard() {
@@ -28,16 +33,20 @@ export default function Leaderboard() {
       { data: streaks, error: strError },
     ] = await Promise.all([
       supabase.from("Submissions").select("*").eq("status", "approved").order("created_at", { ascending: false }),
-      supabase.from("Streaks").select("username, current_streak, last_submission_date"),
+      supabase.from("Streaks").select("username, current_streak, best_streak, last_submission_date"),
     ]);
 
     if (subError) { console.error(subError); return; }
     if (strError) { console.error(strError); }
 
-    // Build streak lookup — default to 1 if not in Streaks table
+    // Build streak lookups — normalize keys to match grouped submission keys
     const streakMap = {};
+    const bestStreakMap = {};
     (streaks || []).forEach((s) => {
-      streakMap[s.username] = s.current_streak;
+      const normalized = normalizeUsername(s.username);
+      if (!normalized) return;
+      streakMap[normalized] = s.current_streak;
+      bestStreakMap[normalized] = s.best_streak ?? s.current_streak ?? 1;
     });
 
     // Group submissions by username
@@ -65,6 +74,7 @@ export default function Leaderboard() {
       .map((entry) => ({
         ...entry,
         current_streak: streakMap[entry.username] ?? 1,
+        best_streak: bestStreakMap[entry.username] ?? 1,
       }))
       .sort((a, b) => {
         if (b.current_streak !== a.current_streak) return b.current_streak - a.current_streak;
@@ -159,6 +169,12 @@ export default function Leaderboard() {
                   🔥 {rankResult.current_streak} day{rankResult.current_streak !== 1 ? "s" : ""}
                 </p>
               </div>
+              <div>
+                <p className="font-mono text-[10px] tracking-widest text-green-700 uppercase mb-1">Best</p>
+                <p className="font-mono text-2xl font-bold text-[#4ade80]">
+                  🏆 {rankResult.best_streak} day{rankResult.best_streak !== 1 ? "s" : ""}
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -209,7 +225,7 @@ export default function Leaderboard() {
               </a>
 
               <p className={`text-sm mt-2 ${isFirst ? "text-[#86efac] opacity-70" : "text-gray-400"}`}>
-                Last post: {formatUTC(item.created_at)}
+                Last post: {formatRelativeTime(item.created_at)}
               </p>
             </div>
           );

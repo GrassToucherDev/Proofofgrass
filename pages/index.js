@@ -36,6 +36,7 @@ export default function Home() {
   const [streakTone, setStreakTone] = useState("neutral"); // neutral | success | warning | reset
   const [timeUntilReset, setTimeUntilReset] = useState("");
   const [countdownMs, setCountdownMs] = useState(null);
+  const [userStats, setUserStats] = useState(null); // { rank, posts, bestStreak } | null
   const resultRef = useRef(null);
 
   const username = normalizeUsername(rawUsername);
@@ -49,6 +50,7 @@ export default function Home() {
       setCurrentStreak(1);
       setStreakStatus("");
       setStreakTone("neutral");
+      setUserStats(null);
       return;
     }
     const timer = setTimeout(async () => {
@@ -114,6 +116,23 @@ export default function Home() {
 
         console.log({ username, streakRow, latestSub, finalPreview });
         setCurrentStreak(finalPreview);
+
+        // Fetch post count and best streak for the stats panel
+        const [{ count: postCount }, { data: fullStreakRow }] = await Promise.all([
+          supabase
+            .from("Submissions")
+            .select("id", { count: "exact", head: true })
+            .eq("username", username),
+          supabase
+            .from("Streaks")
+            .select("best_streak")
+            .eq("username", username)
+            .maybeSingle(),
+        ]);
+        setUserStats({
+          posts: postCount ?? 0,
+          bestStreak: fullStreakRow?.best_streak ?? finalPreview,
+        });
       } catch {
         // On any error, fall back safely to Day 1
         setCurrentStreak(1);
@@ -363,6 +382,41 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {/* Your Stats Panel */}
+      {hasUsername && userStats && (
+        <div className="w-full max-w-md mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
+            <span className="text-[10px] font-mono tracking-[0.3em] text-[#3a5e3d] uppercase">Your Stats</span>
+            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
+          </div>
+          <div className="relative rounded-sm border border-[#1f3d22] bg-[#07110a] shadow-[inset_0_1px_0_rgba(74,222,128,0.1),0_0_20px_rgba(74,222,128,0.05)] px-5 py-4">
+            <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-30" />
+            <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-30" />
+            <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-30" />
+            <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Posts</p>
+                <p className="font-mono text-xl font-bold text-[#4ade80]">{userStats.posts}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Current Streak</p>
+                <p className="font-mono text-xl font-bold text-[#4ade80]">🔥 day {currentStreak}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Best Streak</p>
+                <p className="font-mono text-xl font-bold text-[#4ade80]">🏆 day {userStats.bestStreak}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Total Posts</p>
+                <p className="font-mono text-xl font-bold text-[#4ade80]">{userStats.posts > 0 ? `${userStats.posts}×` : "—"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Step 2 — Upload */}
       <div className="w-full max-w-md mb-8">

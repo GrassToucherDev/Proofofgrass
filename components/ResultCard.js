@@ -183,7 +183,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     // 3. Upsert streak
     const { data: streakRow } = await supabase
       .from("Streaks")
-      .select("current_streak, last_submission_date")
+      .select("current_streak, best_streak, last_submission_date")
       .eq("username", username)
       .maybeSingle();
 
@@ -199,9 +199,13 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       }
     }
 
+    const existingBest = streakRow?.best_streak ?? streakRow?.current_streak ?? 1;
+    const newBest = Math.max(newStreak, existingBest);
+
     await supabase.from("Streaks").upsert({
       username,
       current_streak: newStreak,
+      best_streak: newBest,
       last_submission_date: todayDateStr,
     }, { onConflict: "username" });
 
