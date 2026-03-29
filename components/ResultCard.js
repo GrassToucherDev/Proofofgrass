@@ -65,6 +65,14 @@ function getStreakTitle(streak) {
   return "🌱 seed";
 }
 
+function getMilestoneMsg(streak) {
+  if (streak === 3)  return "momentum building";
+  if (streak === 5)  return "locked in";
+  if (streak === 7)  return "strong streak";
+  if (streak === 14) return "elite";
+  return null;
+}
+
 // username — already normalized by index.js
 // initialStreak — preloaded by index.js before this component mounts
 // onStreakUpdate — callback so index.js stays in sync after submit
@@ -786,6 +794,13 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                   </p>
                 </div>
 
+                {/* Streak milestone callout */}
+                {getMilestoneMsg(currentStreak) && (
+                  <p className="text-[#f59e0b] text-[10px] tracking-widest uppercase font-semibold">
+                    milestone: {getMilestoneMsg(currentStreak)}
+                  </p>
+                )}
+
                 {/* Next milestone */}
                 <p className="text-[#3a5e3d] text-[10px] tracking-widest uppercase">
                   next milestone: <span className="text-[#4ade80]">day {nextMilestone}</span>
@@ -794,6 +809,17 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                 {/* Reinforcement */}
                 <p className="text-[#2a4a2d] text-[10px] tracking-wide">
                   don't break it tomorrow
+                </p>
+
+                {/* Challenge / share loop CTA */}
+                <p className="text-[#2a4a2d] text-[10px] tracking-wide border-t border-[#1a3520] pt-3 w-full text-center">
+                  challenge someone to beat your streak →{" "}
+                  <button
+                    onClick={handleShareAndPost}
+                    className="text-[#4ade80] underline underline-offset-2 hover:opacity-80 transition-opacity"
+                  >
+                    share on x
+                  </button>
                 </p>
 
                 {/* Buttons — Post on X (primary), View Leaderboard (secondary) */}

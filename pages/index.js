@@ -136,21 +136,34 @@ export default function Home() {
         console.log({ username, streakRow, latestSub, finalPreview });
         setCurrentStreak(finalPreview);
 
-        // Fetch post count and best streak for the stats panel
-        const [{ count: postCount }, { data: fullStreakRow }] = await Promise.all([
+        // Fetch post count, best streak, and rank for the stats panel
+        const [{ count: postCount }, { data: fullStreakRow }, { data: allStreaks }] = await Promise.all([
           supabase
             .from("Submissions")
             .select("id", { count: "exact", head: true })
             .eq("username", username),
           supabase
             .from("Streaks")
-            .select("best_streak")
+            .select("best_streak, current_streak")
             .eq("username", username)
             .maybeSingle(),
+          supabase
+            .from("Streaks")
+            .select("username, current_streak")
+            .order("current_streak", { ascending: false }),
         ]);
+
+        // Derive rank from sorted streaks list
+        const normalizedUser = username;
+        const rankIdx = (allStreaks || []).findIndex(
+          (s) => String(s.username ?? "").replace(/@/g, "").toLowerCase().trim() === normalizedUser
+        );
+        const derivedRank = rankIdx >= 0 ? rankIdx + 1 : null;
+
         setUserStats({
           posts: postCount ?? 0,
           bestStreak: fullStreakRow?.best_streak ?? finalPreview,
+          rank: derivedRank,
         });
       } catch {
         // On any error, fall back safely to Day 1
@@ -420,15 +433,28 @@ export default function Home() {
                   <p className="font-mono text-[11px] text-[#f59e0b] tracking-wide">
                     ⚠️ you haven't checked in today
                   </p>
-                  {/* Urgent countdown */}
+                  {/* Urgent countdown with 3-level escalation */}
                   {(() => {
                     const msLeft = countdownMs ?? Infinity;
                     const h = Math.floor(msLeft / 3600000);
                     const m = Math.floor((msLeft % 3600000) / 60000);
-                    const countColor = msLeft < 3600000 ? "text-[#ef4444]" : "text-[#f59e0b]";
                     const countStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+                    let countColor, shadowStyle;
+                    if (msLeft < 3600000) {
+                      // < 1h — danger red
+                      countColor = "text-[#ef4444]";
+                      shadowStyle = { textShadow: "0 0 10px rgba(239,68,68,0.5)" };
+                    } else if (msLeft < 10800000) {
+                      // 1–3h — amber warning
+                      countColor = "text-[#f59e0b]";
+                      shadowStyle = { textShadow: "0 0 8px rgba(245,158,11,0.4)" };
+                    } else {
+                      // > 3h — muted green
+                      countColor = "text-[#3a5e3d]";
+                      shadowStyle = {};
+                    }
                     return (
-                      <p className={`font-mono text-[11px] font-semibold tabular-nums tracking-wide ${countColor}`}>
+                      <p className={`font-mono text-[11px] font-semibold tabular-nums tracking-wide ${countColor}`} style={shadowStyle}>
                         🔥 {countStr} left — don't lose your streak
                       </p>
                     );

@@ -20,14 +20,48 @@ function formatRelativeTime(dateStr) {
 }
 
 export default function Leaderboard() {
+  const [tab, setTab] = useState("alltime"); // "alltime" | "weekly"
   const [data, setData] = useState([]);
+  const [weeklyData, setWeeklyData] = useState([]);
   const [rankQuery, setRankQuery] = useState("");
 
   useEffect(() => {
     fetchData();
   }, []);
 
+  // Shared helper: group + merge submissions with streak data
+  function buildLeaderboard(submissions, streakMap, bestStreakMap) {
+    const grouped = {};
+    (submissions || []).forEach((item) => {
+      const normalized = normalizeUsername(item.username);
+      if (!normalized) return;
+      if (!grouped[normalized]) {
+        grouped[normalized] = { username: normalized, count: 0, tweet_url: item.tweet_url, created_at: item.created_at };
+      }
+      grouped[normalized].count += 1;
+      if (new Date(item.created_at) > new Date(grouped[normalized].created_at)) {
+        grouped[normalized].tweet_url = item.tweet_url;
+        grouped[normalized].created_at = item.created_at;
+      }
+    });
+    return Object.values(grouped)
+      .map((entry) => ({
+        ...entry,
+        current_streak: streakMap[entry.username] ?? 1,
+        best_streak: bestStreakMap[entry.username] ?? 1,
+      }))
+      .sort((a, b) => {
+        if (b.current_streak !== a.current_streak) return b.current_streak - a.current_streak;
+        if (b.count !== a.count) return b.count - a.count;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+  }
+
   const fetchData = async () => {
+    const weekStart = new Date();
+    weekStart.setUTCHours(0, 0, 0, 0);
+    weekStart.setUTCDate(weekStart.getUTCDate() - 6); // last 7 days
+
     const [
       { data: submissions, error: subError },
       { data: streaks, error: strError },
@@ -39,7 +73,7 @@ export default function Leaderboard() {
     if (subError) { console.error(subError); return; }
     if (strError) { console.error(strError); }
 
-    // Build streak lookups — normalize keys to match grouped submission keys
+    // Build streak lookups — normalize keys
     const streakMap = {};
     const bestStreakMap = {};
     (streaks || []).forEach((s) => {
@@ -49,63 +83,60 @@ export default function Leaderboard() {
       bestStreakMap[normalized] = s.best_streak ?? s.current_streak ?? 1;
     });
 
-    // Group submissions by username
-    const grouped = {};
-    (submissions || []).forEach((item) => {
-      const normalized = normalizeUsername(item.username);
-      if (!normalized) return;
-      if (!grouped[normalized]) {
-        grouped[normalized] = {
-          username: normalized,
-          count: 0,
-          tweet_url: item.tweet_url,
-          created_at: item.created_at,
-        };
-      }
-      grouped[normalized].count += 1;
-      if (new Date(item.created_at) > new Date(grouped[normalized].created_at)) {
-        grouped[normalized].tweet_url = item.tweet_url;
-        grouped[normalized].created_at = item.created_at;
-      }
-    });
+    // All-time leaderboard
+    setData(buildLeaderboard(submissions, streakMap, bestStreakMap));
 
-    // Merge streak data, then sort by: streak DESC → posts DESC → last post DESC
-    const leaderboard = Object.values(grouped)
-      .map((entry) => ({
-        ...entry,
-        current_streak: streakMap[entry.username] ?? 1,
-        best_streak: bestStreakMap[entry.username] ?? 1,
-      }))
-      .sort((a, b) => {
-        if (b.current_streak !== a.current_streak) return b.current_streak - a.current_streak;
-        if (b.count !== a.count) return b.count - a.count;
-        return new Date(b.created_at) - new Date(a.created_at);
-      });
-
-    setData(leaderboard);
+    // Weekly leaderboard — same logic, filtered to last 7 days
+    const weeklySubs = (submissions || []).filter(
+      (s) => new Date(s.created_at) >= weekStart
+    );
+    setWeeklyData(buildLeaderboard(weeklySubs, streakMap, bestStreakMap));
   };
 
-  // Derive rank result from existing data — no extra query needed
+  // Active dataset reflects selected tab
+  const activeData = tab === "weekly" ? weeklyData : data;
+
+  // Rank query searches whichever tab is active
   const normalizedQuery = normalizeUsername(rankQuery);
   const rankResult = normalizedQuery
     ? (() => {
-        const idx = data.findIndex(
+        const idx = activeData.findIndex(
           (item) => normalizeUsername(item.username) === normalizedQuery
         );
         if (idx === -1) return null;
-        return { rank: idx + 1, ...data[idx] };
+        return { rank: idx + 1, ...activeData[idx] };
       })()
-    : undefined; // undefined = no query yet, null = not found
+    : undefined;
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
+    <div className="min-h-screen bg-[#060e07] text-white p-8">
+      <style>{`
+        @keyframes cardHover { to { box-shadow: 0 0 24px rgba(74,222,128,0.18); } }
+        .lb-card:hover { transform: translateY(-1px); box-shadow: 0 0 24px rgba(74,222,128,0.14); transition: all 0.2s; }
+      `}</style>
       <h1 className="text-4xl mb-2 text-green-400">
         🌱 Proof of Grass Leaderboard
       </h1>
-      <p className="font-mono text-[10px] text-green-800 tracking-widest uppercase mb-3">
+      <p className="font-mono text-[10px] text-green-800 tracking-widest uppercase mb-4">
         streaks reset at 00:00 UTC
       </p>
 
+      {/* Tab switcher */}
+      <div className="flex gap-2 mb-6">
+        {["alltime", "weekly"].map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`font-mono text-[10px] tracking-widest uppercase px-4 py-1.5 rounded-sm border transition-all duration-200 ${
+              tab === t
+                ? "bg-[#4ade80] text-[#07110a] border-[#4ade80] font-bold"
+                : "border-green-900 text-green-700 hover:border-green-600 hover:text-green-500"
+            }`}
+          >
+            {t === "alltime" ? "All Time" : "This Week"}
+          </button>
+        ))}
+      </div>
 
       {/* Your Rank lookup */}
       <div className="mb-8">
@@ -181,18 +212,25 @@ export default function Leaderboard() {
       </div>
 
       {/* Full leaderboard */}
-      <div className="space-y-4">
-        {data.map((item, index) => {
+      <div className="space-y-3">
+        {activeData.length === 0 && (
+          <p className="font-mono text-xs text-green-900 text-center py-8">
+            {tab === "weekly" ? "no activity this week yet" : "no entries yet"}
+          </p>
+        )}
+        {activeData.map((item, index) => {
           const isFirst = index === 0;
+          // Rank movement: "new" for weekly tab entries not in all-time top, else "same" placeholder
+          // Full historical tracking would require a backend snapshot — UI-ready for future wiring
+          const movement = item.movement ?? null;
 
           return (
             <div
               key={item.username}
-              className={`
-                relative p-4 rounded-xl overflow-hidden transition-all duration-300
+              className={`lb-card relative p-4 rounded-xl overflow-hidden transition-all duration-200 cursor-default
                 ${isFirst
                   ? "border-2 border-[#4ade80] bg-[#0a1f0c] shadow-[0_0_32px_rgba(74,222,128,0.25)]"
-                  : "border border-green-800 bg-black/50"
+                  : "border border-green-900 bg-[#07110a] hover:border-green-700"
                 }
               `}
             >
@@ -203,14 +241,25 @@ export default function Leaderboard() {
                 </div>
               )}
 
-              {/* Main row: #rank @username — X posts — 🔥 Y day streak */}
+              {/* Rank movement badge — UI-ready, populated when movement data exists */}
+              {movement === "up" && (
+                <span className="absolute top-2 left-2 font-mono text-[9px] text-[#4ade80]">↑</span>
+              )}
+              {movement === "down" && (
+                <span className="absolute top-2 left-2 font-mono text-[9px] text-[#ef4444]">↓</span>
+              )}
+              {movement === "new" && (
+                <span className="absolute top-2 left-2 font-mono text-[9px] text-[#f59e0b]">new</span>
+              )}
+
+              {/* Main row */}
               <p className={`font-bold font-mono ${isFirst ? "text-[#4ade80] text-lg" : "text-green-400"}`}>
                 {isFirst ? "🥇" : `#${index + 1}`}{" "}
                 @{item.username}
-                <span className={`font-normal ${isFirst ? "text-[#86efac]" : "text-green-600"}`}>
+                <span className={`font-normal ${isFirst ? "text-[#86efac]" : "text-green-700"}`}>
                   {" "}— {item.count} post{item.count !== 1 ? "s" : ""}
                 </span>
-                <span className={`font-normal ${isFirst ? "text-[#4ade80]" : "text-green-500"}`}>
+                <span className={`font-normal ${isFirst ? "text-[#4ade80]" : "text-green-600"}`}>
                   {" "}— 🔥 {item.current_streak} day{item.current_streak !== 1 ? "s" : ""} streak
                 </span>
               </p>
@@ -224,7 +273,7 @@ export default function Leaderboard() {
                 View Latest Post
               </a>
 
-              <p className={`text-sm mt-2 ${isFirst ? "text-[#86efac] opacity-70" : "text-gray-400"}`}>
+              <p className={`text-xs mt-2 ${isFirst ? "text-[#86efac] opacity-60" : "text-green-900"}`}>
                 Last post: {formatRelativeTime(item.created_at)}
               </p>
             </div>
