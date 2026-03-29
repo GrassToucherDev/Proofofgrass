@@ -89,6 +89,20 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [submitStatus, setSubmitStatus] = useState(null); // null | "loading" | "success" | "error"
   const [submitError, setSubmitError] = useState("");
 
+  // Local countdown for the lock-in screen (ms until next UTC midnight)
+  const [lockCountdown, setLockCountdown] = useState("");
+  useEffect(() => {
+    function calc() {
+      const diff = new Date().setUTCHours(24,0,0,0) - Date.now();
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setLockCountdown(h > 0 ? `${h}h ${m}m` : `${m}m`);
+    }
+    calc();
+    const id = setInterval(calc, 30000);
+    return () => clearInterval(id);
+  }, []);
+
   const handleNewCaption = useCallback(() => {
     setCaption((prev) => pickCaption(currentStreak, prev));
     setCopied(false);
@@ -739,52 +753,81 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           </div>
 
           {/* Lock-in screen — replaces submit area on success */}
-          {submitStatus === "success" && (
-            <div className="
-              flex flex-col items-center gap-4 px-5 py-6
-              bg-[#0a1f0c] border border-[#4ade80] rounded-sm
-              shadow-[0_0_32px_rgba(74,222,128,0.18)]
-              font-mono text-center
-            ">
-              <div className="flex flex-col gap-1">
-                <span className="text-[#4ade80] text-base font-bold tracking-wide">
-                  ✅ day {currentStreak} locked in
-                </span>
-                <span className="text-[#86efac] text-xs opacity-80">🔥 streak continues</span>
-                <span className="text-[#3a5e3d] text-[10px] tracking-wide mt-1">
-                  come back tomorrow or lose it
-                </span>
+          {submitStatus === "success" && (() => {
+            const s = currentStreak;
+            const nextMilestone = s < 3 ? 3 : s < 5 ? 5 : s < 7 ? 7 : s + 1;
+            return (
+              <div className="
+                flex flex-col items-center gap-5 px-5 py-7
+                bg-[#07110a] border border-[#4ade80] rounded-sm
+                shadow-[0_0_40px_rgba(74,222,128,0.22),inset_0_1px_0_rgba(74,222,128,0.12)]
+                font-mono text-center
+              ">
+                {/* Headline */}
+                <div className="flex flex-col gap-1.5">
+                  <span
+                    className="text-[#4ade80] text-lg font-bold tracking-wide"
+                    style={{textShadow:"0 0 16px rgba(74,222,128,0.6)"}}
+                  >
+                    ✅ day {currentStreak} locked in
+                  </span>
+                  <span className="text-[#86efac] text-sm font-semibold">
+                    🔥 your streak is alive
+                  </span>
+                </div>
+
+                {/* Urgency countdown */}
+                <div>
+                  <p
+                    className="text-[#f59e0b] text-sm font-bold tabular-nums tracking-wide"
+                    style={{textShadow:"0 0 10px rgba(245,158,11,0.4)"}}
+                  >
+                    🔥 {lockCountdown} until reset
+                  </p>
+                </div>
+
+                {/* Next milestone */}
+                <p className="text-[#3a5e3d] text-[10px] tracking-widest uppercase">
+                  next milestone: <span className="text-[#4ade80]">day {nextMilestone}</span>
+                </p>
+
+                {/* Reinforcement */}
+                <p className="text-[#2a4a2d] text-[10px] tracking-wide">
+                  don't break it tomorrow
+                </p>
+
+                {/* Buttons — Post on X (primary), View Leaderboard (secondary) */}
+                <div className="flex flex-col gap-2.5 w-full">
+                  <button
+                    onClick={handleShareAndPost}
+                    className="
+                      w-full inline-flex items-center justify-center gap-2 px-5 py-2.5
+                      font-mono text-xs font-bold tracking-widest uppercase
+                      bg-[#4ade80] text-[#07110a]
+                      rounded-sm hover:bg-[#86efac]
+                      hover:shadow-[0_0_24px_rgba(74,222,128,0.45)]
+                      transition-all duration-200
+                    "
+                  >
+                    ⬆ post on x
+                  </button>
+                  <a
+                    href="/leaderboard"
+                    className="
+                      w-full inline-flex items-center justify-center gap-2 px-5 py-2.5
+                      font-mono text-xs tracking-widest uppercase
+                      border border-[#2d5e30] text-[#4ade80]
+                      rounded-sm hover:bg-[#0d2b14]
+                      hover:shadow-[0_0_16px_rgba(74,222,128,0.15)]
+                      transition-all duration-200
+                    "
+                  >
+                    🌱 view leaderboard
+                  </a>
+                </div>
               </div>
-              <div className="flex gap-3 flex-wrap justify-center">
-                <a
-                  href="/leaderboard"
-                  className="
-                    inline-flex items-center gap-1.5 px-5 py-2
-                    font-mono text-[11px] tracking-widest uppercase
-                    border border-[#2d5e30] text-[#4ade80]
-                    rounded-sm hover:bg-[#0d2b14]
-                    hover:shadow-[0_0_16px_rgba(74,222,128,0.2)]
-                    transition-all duration-200
-                  "
-                >
-                  🌱 view leaderboard
-                </a>
-                <button
-                  onClick={handleShareAndPost}
-                  className="
-                    inline-flex items-center gap-1.5 px-5 py-2
-                    font-mono text-[11px] tracking-widest uppercase
-                    bg-[#4ade80] text-[#0a1f0c] font-bold
-                    rounded-sm hover:bg-[#86efac]
-                    hover:shadow-[0_0_20px_rgba(74,222,128,0.35)]
-                    transition-all duration-200
-                  "
-                >
-                  ⬆ post on x
-                </button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
           {submitStatus === "error" && submitError && (
             <div className="
               flex items-center gap-2 px-4 py-2.5
@@ -814,9 +857,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           >
             {submitStatus === "loading" ? (
               <><span className="animate-pulse">●</span> Submitting…</>
-            ) : submitStatus === "success" ? (
-              <><span>✓</span> Submitted</>
-            ) : (
+            ) : submitStatus === "success" ? null : (
               <><span>⬆</span> Submit to Leaderboard</>
             )}
           </button>
