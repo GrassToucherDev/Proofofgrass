@@ -24,6 +24,8 @@ function formatRelativeTime(dateStr) {
 export default function StreakFeed() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     async function fetchFeed() {
@@ -132,9 +134,11 @@ export default function StreakFeed() {
                   : `@${entry.username} hit day ${entry.current_streak} 🔥`
                 }
               </span>
-              <span className="text-[#2a4a2d] ml-2">
-                {formatRelativeTime(entry.created_at)}
-              </span>
+              {mounted && (
+                <span className="text-[#2a4a2d] ml-2">
+                  {formatRelativeTime(entry.created_at)}
+                </span>
+              )}
             </div>
           ))}
         </div>

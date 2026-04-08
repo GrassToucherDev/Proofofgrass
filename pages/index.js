@@ -48,6 +48,8 @@ export default function Home() {
   const [dailyCount, setDailyCount] = useState(null);
   const [topStreaker, setTopStreaker] = useState(null); // { username, current_streak }
   const [hasPostedToday, setHasPostedToday] = useState(null); // null=unknown, true, false
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const resultRef = useRef(null);
 
   const username = normalizeUsername(rawUsername);
@@ -190,6 +192,7 @@ export default function Home() {
     const interval = setInterval(calcCountdown, 1000);
     return () => clearInterval(interval);
   }, []);
+
 
   // Fetch daily activity stats on mount — count of today's approved submissions + top streaker
   useEffect(() => {
@@ -345,8 +348,8 @@ export default function Home() {
           🌱 View Leaderboard
         </a>
         <div className="mt-3 h-px w-24 bg-[#4ade80] mx-auto opacity-40" />
-        {/* Daily activity stats */}
-        {(dailyCount !== null || topStreaker) && (
+        {/* Daily activity stats — client-only to avoid hydration mismatch */}
+        {mounted && (dailyCount !== null || topStreaker) && (
           <div className="mt-5 flex flex-col items-center gap-1.5">
             {dailyCount !== null && (
               <p className="font-mono text-xs text-[#3a5e3d] tracking-wide">
@@ -397,7 +400,7 @@ export default function Home() {
               transition-all duration-200
             "
           />
-          {!hasUsername ? (
+          {!mounted ? null : !hasUsername ? (
             <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide mt-2">
               enter your username — your streak loads automatically
             </p>
@@ -529,17 +532,17 @@ export default function Home() {
       <div className="w-full max-w-md mb-8">
         <div className="flex items-center gap-2 mb-3">
           <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
-          <span className={`text-[10px] tracking-[0.3em] uppercase transition-colors duration-300 ${hasUsername ? "text-[#3a5e3d]" : "text-[#1a3520]"}`}>
+          <span className={`text-[10px] tracking-[0.3em] uppercase transition-colors duration-300 ${mounted && hasUsername ? "text-[#3a5e3d]" : "text-[#1a3520]"}`}>
             Step 2 — Upload Your Proof
           </span>
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
         </div>
 
-        <div className={`transition-all duration-300 rounded-sm ${hasUsername ? "opacity-100 upload-live" : "opacity-30 pointer-events-none select-none"}`}>
+        <div className={`transition-all duration-300 rounded-sm ${mounted && hasUsername ? "opacity-100 upload-live" : "opacity-30 pointer-events-none select-none"}`}>
           <UploadBox onUpload={handleImageUpload} />
         </div>
 
-        {!hasUsername && (
+        {(!mounted || !hasUsername) && (
           <p className="font-mono text-[10px] text-[#1f3d22] tracking-wide text-center mt-2">
             enter your username above to unlock this step
           </p>
@@ -550,6 +553,7 @@ export default function Home() {
       <div className="w-full max-w-md mb-8">
         <StreakFeed />
       </div>
+
 
       {/* Certificate */}
       {imageSrc && hasUsername && (

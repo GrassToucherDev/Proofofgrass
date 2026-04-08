@@ -99,6 +99,8 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
   // Local countdown for the lock-in screen (ms until next UTC midnight)
   const [lockCountdown, setLockCountdown] = useState("");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   useEffect(() => {
     function calc() {
       const diff = new Date().setUTCHours(24,0,0,0) - Date.now();
@@ -211,12 +213,18 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
     let newStreak = 1;
     if (streakRow) {
-      const last = streakRow.last_submission_date;
+      // Normalize last_submission_date — may be a full timestamp or date string
+      const last = streakRow.last_submission_date
+        ? new Date(streakRow.last_submission_date).toISOString().slice(0, 10)
+        : null;
       if (last === todayDateStr) {
+        // Already submitted today — keep current streak unchanged
         newStreak = streakRow.current_streak;
       } else if (last === yesterdayDateStr) {
+        // Consecutive day — increment
         newStreak = streakRow.current_streak + 1;
       } else {
+        // Gap or first submission — reset to 1
         newStreak = 1;
       }
     }
@@ -237,12 +245,13 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     setTweetUrl("");
   }, [username, tweetUrl, onStreakUpdate]);
 
-  const today = new Date();
-  const dateStr = today.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  }).toUpperCase();
+  // dateStr computed once on client mount to avoid SSR mismatch
+  const [dateStr, setDateStr] = useState("");
+  useEffect(() => {
+    setDateStr(new Date().toLocaleDateString("en-US", {
+      year: "numeric", month: "short", day: "2-digit",
+    }).toUpperCase());
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -784,15 +793,17 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                   </span>
                 </div>
 
-                {/* Urgency countdown */}
-                <div>
-                  <p
-                    className="text-[#f59e0b] text-sm font-bold tabular-nums tracking-wide"
-                    style={{textShadow:"0 0 10px rgba(245,158,11,0.4)"}}
-                  >
-                    🔥 {lockCountdown} until reset
-                  </p>
-                </div>
+                {/* Urgency countdown — client-only */}
+                {mounted && lockCountdown && (
+                  <div>
+                    <p
+                      className="text-[#f59e0b] text-sm font-bold tabular-nums tracking-wide"
+                      style={{textShadow:"0 0 10px rgba(245,158,11,0.4)"}}
+                    >
+                      🔥 {lockCountdown} until reset
+                    </p>
+                  </div>
+                )}
 
                 {/* Streak milestone callout */}
                 {getMilestoneMsg(currentStreak) && (
