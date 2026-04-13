@@ -27,6 +27,12 @@ function getStreakTitle(streak) {
   return "🌱 seed";
 }
 
+function getStreakRewardValue(streak) {
+  if (streak >= 20) return "$15 reward tier";
+  if (streak >= 10) return "$10 reward tier";
+  return "building toward day 10 reward";
+}
+
 export default function Home() {
   const [rawUsername, setRawUsername] = useState(() => {
     // Seed from localStorage on first render (client-side only)
@@ -42,15 +48,29 @@ export default function Home() {
   const [currentStreak, setCurrentStreak] = useState(1);
   const [streakStatus, setStreakStatus] = useState("");
   const [streakTone, setStreakTone] = useState("neutral"); // neutral | success | warning | reset
+  const [shieldEligible, setShieldEligible] = useState(false); // true when missed 1 day + has shields
+  const [missedOneDayNoShield, setMissedOneDayNoShield] = useState(false); // missed exactly 1 day + 0 shields
+  const [shieldStatus, setShieldStatus] = useState(null); // null | "success" | "error"
+  const [loadingShield, setLoadingShield] = useState(false);
+  const [purchaseTxSig, setPurchaseTxSig] = useState("");
+  const [purchaseWallet, setPurchaseWallet] = useState("");
+  const [purchaseStatus, setPurchaseStatus] = useState(null); // null | "loading" | "success" | "error"
+  const [purchaseError, setPurchaseError] = useState("");
+  const [latestPurchase, setLatestPurchase] = useState(null); // { status, tx_signature } | null
+  const [copiedDomain, setCopiedDomain] = useState(false);  // feedback for domain copy
+  const [copiedAddr, setCopiedAddr] = useState(false);      // feedback for raw address copy
+  const [showPasteTip, setShowPasteTip] = useState(false);  // nudge after any copy
   const [timeUntilReset, setTimeUntilReset] = useState("");
   const [countdownMs, setCountdownMs] = useState(null);
   const [userStats, setUserStats] = useState(null); // { rank, posts, bestStreak } | null
   const [dailyCount, setDailyCount] = useState(null);
+  const [totalBurned, setTotalBurned] = useState(null); // approved purchases * 50000
   const [topStreaker, setTopStreaker] = useState(null); // { username, current_streak }
   const [hasPostedToday, setHasPostedToday] = useState(null); // null=unknown, true, false
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const resultRef = useRef(null);
+  const buyShieldRef = useRef(null); // used to scroll to Buy Shield section
 
   const username = normalizeUsername(rawUsername);
   const hasUsername = username.length > 0;
@@ -63,6 +83,12 @@ export default function Home() {
       setCurrentStreak(1);
       setStreakStatus("");
       setStreakTone("neutral");
+      setShieldEligible(false);
+      setMissedOneDayNoShield(false);
+      setShieldStatus(null);
+      setPurchaseStatus(null);
+      setPurchaseError("");
+      setLatestPurchase(null);
       setUserStats(null);
       setHasPostedToday(null);
       return;
@@ -73,89 +99,70 @@ export default function Home() {
       const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
       try {
-        // Query both tables in parallel — Streaks for count, Submissions for recency
-        const [{ data: streakRow }, { data: latestSub }] = await Promise.all([
+        // Single Streaks fetch with all required fields — source of truth for status/shield/dates
+        // Submissions fetched in parallel for post count and rank only
+        const [{ data: streakRow }, { count: postCount }, { data: allStreaks }] = await Promise.all([
           supabase
             .from("Streaks")
-            .select("current_streak, last_submission_date")
+            .select("current_streak, best_streak, last_submission_date, shield_count")
             .eq("username", username)
             .maybeSingle(),
-          supabase
-            .from("Submissions")
-            .select("created_at")
-            .eq("username", username)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-        ]);
-
-        let finalPreview = 1;
-
-        if (!latestSub?.created_at) {
-          // No submission history — brand new user, preview Day 1
-          finalPreview = 1;
-        } else {
-          const subDateStr = new Date(latestSub.created_at).toISOString().slice(0, 10);
-
-          if (subDateStr === todayStr) {
-            // Already submitted today — show the current saved streak (or 1 if no row yet)
-            finalPreview = streakRow?.current_streak ?? 1;
-          } else if (subDateStr === yesterdayStr) {
-            // Submitted yesterday — today would extend the streak by 1
-            // If no Streaks row exists yet, assume current = 1 so preview = 2
-            finalPreview = (streakRow?.current_streak ?? 1) + 1;
-          } else {
-            // Gap of more than one day — streak resets to Day 1
-            finalPreview = 1;
-          }
-        }
-
-        // Determine streak status + tone based on latest submission date
-        if (!latestSub?.created_at) {
-          setStreakStatus("start your streak today");
-          setStreakTone("neutral");
-        } else {
-          const subDateStr = new Date(latestSub.created_at).toISOString().slice(0, 10);
-          if (subDateStr === todayStr) {
-            setStreakStatus("streak locked in for today");
-            setStreakTone("success");
-          } else if (subDateStr === yesterdayStr) {
-            setStreakStatus(`you're on day ${finalPreview} — don't break it`);
-            setStreakTone("warning");
-          } else {
-            setStreakStatus("streak lost — start again today");
-            setStreakTone("reset");
-          }
-        }
-
-        // Determine if user has already posted today
-        const todayStr2 = new Date().toISOString().slice(0, 10);
-        const subDateToday = latestSub?.created_at
-          ? new Date(latestSub.created_at).toISOString().slice(0, 10)
-          : null;
-        setHasPostedToday(subDateToday === todayStr2);
-
-        console.log({ username, streakRow, latestSub, finalPreview });
-        setCurrentStreak(finalPreview);
-
-        // Fetch post count, best streak, and rank for the stats panel
-        const [{ count: postCount }, { data: fullStreakRow }, { data: allStreaks }] = await Promise.all([
           supabase
             .from("Submissions")
             .select("id", { count: "exact", head: true })
             .eq("username", username),
           supabase
             .from("Streaks")
-            .select("best_streak, current_streak")
-            .eq("username", username)
-            .maybeSingle(),
-          supabase
-            .from("Streaks")
             .select("username, current_streak")
             .order("current_streak", { ascending: false }),
         ]);
 
-        // Derive rank from sorted streaks list
+        // ── normalize last_submission_date to UTC YYYY-MM-DD ─────────────────
+        const twoDaysAgoStr = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+        const lastStreakDate = streakRow?.last_submission_date
+          ? new Date(streakRow.last_submission_date).toISOString().slice(0, 10)
+          : null;
+        const shieldCount = streakRow?.shield_count ?? 0;
+
+        // ── actual vs projected streak ───────────────────────────────────────
+        const actualStreak = streakRow?.current_streak ?? 1;
+        const projectedNextStreak = actualStreak + 1;
+
+        // ── status + tone — entirely from Streaks.last_submission_date ────────
+        if (!lastStreakDate) {
+          setStreakStatus("start your streak today");
+          setStreakTone("neutral");
+        } else if (lastStreakDate === todayStr) {
+          setStreakStatus("streak locked in for today");
+          setStreakTone("success");
+        } else if (lastStreakDate === yesterdayStr) {
+          setStreakStatus(`submit today to reach day ${projectedNextStreak}`);
+          setStreakTone("warning");
+        } else if (lastStreakDate === twoDaysAgoStr) {
+          if (shieldCount > 0) {
+            setStreakStatus(`you're on day ${actualStreak} — shield available`);
+            setStreakTone("reset");
+          } else {
+            setStreakStatus("streak lost — start again today");
+            setStreakTone("reset");
+          }
+        } else {
+          setStreakStatus("streak lost — start again today");
+          setStreakTone("reset");
+        }
+
+        // ── shield eligibility — Streaks.last_submission_date only ───────────
+        const missedOneDay = lastStreakDate === twoDaysAgoStr;
+        setShieldEligible(missedOneDay && shieldCount > 0);
+        setMissedOneDayNoShield(missedOneDay && shieldCount === 0);
+
+        // ── hasPostedToday — Streaks.last_submission_date only ───────────────
+        setHasPostedToday(lastStreakDate === todayStr);
+
+        // ── streak display — always actual, never projected ──────────────────
+        setCurrentStreak(actualStreak);
+
+        // ── stats panel — rank derived from allStreaks ────────────────────────
         const normalizedUser = username;
         const rankIdx = (allStreaks || []).findIndex(
           (s) => String(s.username ?? "").replace(/@/g, "").toLowerCase().trim() === normalizedUser
@@ -164,12 +171,32 @@ export default function Home() {
 
         setUserStats({
           posts: postCount ?? 0,
-          bestStreak: fullStreakRow?.best_streak ?? finalPreview,
+          bestStreak: streakRow?.best_streak ?? actualStreak,
           rank: derivedRank,
+          shields: shieldCount,
         });
-      } catch {
-        // On any error, fall back safely to Day 1
+
+        // Fetch latest shield purchase for status display — non-blocking
+        supabase
+          .from("ShieldPurchases")
+          .select("tx_signature, status, created_at")
+          .eq("username", username)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+          .then(({ data: purchase }) => {
+            setLatestPurchase(purchase ?? null);
+          });
+
+        console.log({ username, streakRow, actualStreak, projectedNextStreak, lastStreakDate, shieldCount, missedOneDay });
+      } catch (err) {
+        console.error("streak preload failed", err);
+        // Reset shield state on error to avoid stale eligible UI
         setCurrentStreak(1);
+        setShieldEligible(false);
+        setMissedOneDayNoShield(false);
+        setStreakTone("neutral");
+        setStreakStatus("");
       }
     }, 500);
     return () => clearTimeout(timer);
@@ -177,6 +204,7 @@ export default function Home() {
 
   // Live countdown to next UTC midnight — updates every second
   useEffect(() => {
+    if (!mounted) return;
     function calcCountdown() {
       const now = new Date();
       const nextMidnight = new Date();
@@ -191,7 +219,7 @@ export default function Home() {
     calcCountdown();
     const interval = setInterval(calcCountdown, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [mounted]);
 
 
   // Fetch daily activity stats on mount — count of today's approved submissions + top streaker
@@ -200,7 +228,7 @@ export default function Home() {
       const todayStart = new Date();
       todayStart.setUTCHours(0, 0, 0, 0);
 
-      const [{ count }, { data: streakers }] = await Promise.all([
+      const [{ count }, { data: streakers }, { count: burnCount }] = await Promise.all([
         supabase
           .from("Submissions")
           .select("id", { count: "exact", head: true })
@@ -211,9 +239,14 @@ export default function Home() {
           .select("username, current_streak")
           .order("current_streak", { ascending: false })
           .limit(1),
+        supabase
+          .from("ShieldPurchases")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "approved"),
       ]);
 
       setDailyCount(count ?? 0);
+      setTotalBurned((burnCount ?? 0) * 50000);
       if (streakers && streakers.length > 0) {
         const s = streakers[0];
         setTopStreaker({
@@ -234,6 +267,137 @@ export default function Home() {
       localStorage.removeItem("pog_username");
     }
   }, [username]);
+
+  const handleUseShield = async () => {
+    if (!username || !shieldEligible || loadingShield) return;
+
+    const confirmed = window.confirm("Use a shield to preserve your streak?");
+    if (!confirmed) return;
+
+    setLoadingShield(true);
+
+    try {
+      const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+      // Step 1: fetch current row to get exact shield_count before decrement
+      const { data: currentRow, error: fetchError } = await supabase
+        .from("Streaks")
+        .select("shield_count, current_streak")
+        .eq("username", username)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error("shield use failed — fetch error", fetchError);
+        setShieldStatus("error");
+        setLoadingShield(false);
+        return;
+      }
+      if (!currentRow) {
+        console.error("shield use failed — no streak row found for", username);
+        setShieldStatus("error");
+        setLoadingShield(false);
+        return;
+      }
+
+      const shieldCountBefore = currentRow.shield_count ?? 1;
+      const newShieldCount = Math.max(0, shieldCountBefore - 1);
+
+      // Step 2: atomic update — set yesterday as last submission, decrement shields
+      const { data: updatedRows, error: updateError } = await supabase
+        .from("Streaks")
+        .update({
+          shield_count: newShieldCount,
+          last_submission_date: yesterdayStr,
+          last_shield_used_at: new Date().toISOString(),
+        })
+        .eq("username", username)
+        .select("username, shield_count, last_submission_date");
+
+      if (updateError) {
+        console.error("shield use failed — update error", updateError);
+        setShieldStatus("error");
+        setLoadingShield(false);
+        return;
+      }
+      if (!updatedRows || updatedRows.length === 0) {
+        console.error("shield use failed — update matched no rows for username:", username);
+        setShieldStatus("error");
+        setLoadingShield(false);
+        return;
+      }
+
+      // Step 3: non-blocking usage log — failure does NOT block shield success
+      supabase.from("ShieldUsageLog").insert([{
+        username,
+        shield_count_before: shieldCountBefore,
+        shield_count_after: newShieldCount,
+        streak_at_use: currentRow.current_streak ?? currentStreak,
+      }]).then(({ error: logError }) => {
+        if (logError) console.error("shield log insert failed (non-blocking)", logError);
+      });
+
+      // Step 4: show success message briefly, then transition to safe-warning state
+      setShieldStatus("success");
+      setUserStats((prev) => prev ? { ...prev, shields: newShieldCount } : prev);
+
+      setTimeout(() => {
+        setShieldEligible(false);
+        setStreakTone("warning");
+        setStreakStatus("post-shield");
+        setHasPostedToday(false);
+        setShieldStatus(null);
+      }, 1800);
+
+    } catch (err) {
+      console.error("shield use failed — unexpected error", err);
+      setShieldStatus("error");
+    } finally {
+      setLoadingShield(false);
+    }
+  };
+
+  const handleBuyShield = async () => {
+    if (!username) { setPurchaseError("enter your username first"); setPurchaseStatus("error"); return; }
+    if (!purchaseTxSig.trim()) { setPurchaseError("tx signature is required"); setPurchaseStatus("error"); return; }
+    setPurchaseStatus("loading");
+    setPurchaseError("");
+    try {
+      const { error } = await supabase.from("ShieldPurchases").insert([{
+        username,
+        wallet_address: purchaseWallet.trim() || null,
+        tx_signature: purchaseTxSig.trim(),
+        token_amount: 50000,
+        status: "pending",
+      }]);
+      if (error) {
+        console.error("shield purchase insert failed", error);
+        const msg = error.message ?? "";
+        const isDuplicate = msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique");
+        setPurchaseError(isDuplicate
+          ? "this transaction has already been submitted"
+          : (msg || "submission failed — try again")
+        );
+        setPurchaseStatus("error");
+        return;
+      }
+      setPurchaseStatus("success");
+      setPurchaseTxSig("");
+      setPurchaseWallet("");
+      // Refresh purchase status display after successful submit
+      supabase
+        .from("ShieldPurchases")
+        .select("tx_signature, status, created_at")
+        .eq("username", username)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data: purchase }) => setLatestPurchase(purchase ?? null));
+    } catch (err) {
+      console.error("shield purchase unexpected error", err);
+      setPurchaseError("something went wrong — try again");
+      setPurchaseStatus("error");
+    }
+  };
 
   const handleImageUpload = (src) => {
     setImageSrc(src);
@@ -298,91 +462,142 @@ export default function Home() {
 
       {/* Animated grass line above footer */}
       <style>{`
+        /* ── Grass grow — decorative line at bottom ─────────────────────────── */
         @keyframes grassGrow {
           from { clip-path: inset(0 100% 0 0); opacity: 0; }
           to   { clip-path: inset(0 0% 0 0);   opacity: 1; }
         }
         .grass-line { animation: grassGrow 2.8s cubic-bezier(0.22,1,0.36,1) 0.8s both; }
+
+        /* ── Live pulse dot ─────────────────────────────────────────────────── */
         @keyframes livePulse {
           0%,100% { opacity: 1; transform: scale(1); }
           50%      { opacity: 0.4; transform: scale(0.75); }
         }
         .live-dot { animation: livePulse 2s ease-in-out infinite; }
+
+        /* ── Certificate reveal ─────────────────────────────────────────────── */
         @keyframes certReveal {
           from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         .cert-reveal { animation: certReveal 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+
+        /* ── Upload area shimmer (tune: change 0.13 for glow strength) ──────── */
         @keyframes uploadShimmer {
           0%   { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
           50%  { box-shadow: 0 0 28px 4px rgba(74,222,128,0.13); }
           100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
         }
         .upload-live { animation: uploadShimmer 3s ease-in-out infinite; }
+
+        /* ── Stat value pulse on load (tune: duration/intensity) ────────────── */
+        @keyframes statFadeIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .stat-val { animation: statFadeIn 0.4s ease both; }
+
+        /* ── Shield icon glow pulse (active shields only) ───────────────────── */
+        @keyframes shieldGlow {
+          0%,100% { filter: drop-shadow(0 0 3px rgba(74,222,128,0.6)); }
+          50%      { filter: drop-shadow(0 0 8px rgba(74,222,128,0.9)); }
+        }
+        .shield-active { animation: shieldGlow 2.4s ease-in-out infinite; }
+
+        /* ── HUD card entrance ──────────────────────────────────────────────── */
+        @keyframes hudIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .hud-card { animation: hudIn 0.35s cubic-bezier(0.22,1,0.36,1) both; }
+
+        /* ── Button press feedback ──────────────────────────────────────────── */
+        .btn-press:active { transform: scale(0.97); }
       `}</style>
 
       {/* All page content sits above fixed bg */}
       <div className="relative z-10 w-full flex flex-col items-center">
 
-      {/* Header */}
-      <div className="text-center mb-14">
-        <span className="text-xs tracking-[0.4em] text-[#4ade80] uppercase mb-3 block">
-          Official Certification System
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="text-center mb-12">
+        {/* Tune: change tracking / color of eyebrow */}
+        <span className="text-[12px] tracking-[0.5em] text-[#4ade80] uppercase mb-3 block opacity-70">
+          $TOUCHGRASS · On-Chain Proof System
         </span>
-        <h1 className="text-5xl font-bold tracking-tight text-white leading-tight">
+        <h1 className="text-6xl font-bold tracking-tight text-white leading-tight"
+          style={{textShadow:"0 0 40px rgba(74,222,128,0.18)"}}>
           Proof of Grass
         </h1>
-        <p className="mt-4 text-[#6b8f6e] text-sm max-w-sm mx-auto">
-          Upload your evidence. Receive your certificate. Touch more grass.
+        <p className="mt-3 text-[#4a6e4d] text-base max-w-xs mx-auto tracking-wide">
+          Touch grass. Log proof. Build your streak. Earn rewards.
         </p>
+
         <a
           href="/leaderboard"
           className="
             inline-flex items-center gap-2 mt-5 mb-1
-            font-mono text-xs tracking-widest uppercase
-            text-[#4ade80] opacity-60
-            hover:opacity-100 hover:shadow-[0_0_12px_rgba(74,222,128,0.3)]
+            font-mono text-[12px] tracking-widest uppercase
+            text-[#4ade80] opacity-50
+            hover:opacity-100 hover:shadow-[0_0_16px_rgba(74,222,128,0.35)]
             transition-all duration-200
           "
         >
-          🌱 View Leaderboard
+          ◈ Rankings
         </a>
-        <div className="mt-3 h-px w-24 bg-[#4ade80] mx-auto opacity-40" />
-        {/* Daily activity stats — client-only to avoid hydration mismatch */}
+
+        <div className="mt-3 h-px w-24 mx-auto"
+          style={{background:"linear-gradient(90deg, transparent, rgba(74,222,128,0.5), transparent)"}} />
+
+        {/* Daily activity stats — client-only, hydration-safe */}
         {mounted && (dailyCount !== null || topStreaker) && (
           <div className="mt-5 flex flex-col items-center gap-1.5">
             {dailyCount !== null && (
-              <p className="font-mono text-xs text-[#3a5e3d] tracking-wide">
-                🌱 <span className="text-[#4ade80] font-semibold">{dailyCount}</span> {dailyCount === 1 ? "person" : "people"} touched grass today
+              <p className="font-mono text-[13px] text-[#3a5e3d] tracking-widest">
+                {/* Tune: adjust color of count */}
+                <span className="text-[#4ade80] font-bold">{dailyCount}</span>
+                {" "}{dailyCount === 1 ? "agent" : "agents"} logged proof today
               </p>
             )}
             {topStreaker && (
-              <p className="font-mono text-xs text-[#3a5e3d] tracking-wide">
-                🔥 longest streak: <span className="text-[#4ade80] font-semibold">@{topStreaker.username}</span>{" "}
-                <span className="text-[#2a4a2d]">({topStreaker.current_streak} days)</span>
+              <p className="font-mono text-[13px] text-[#2a4a2d] tracking-widest">
+                top streak:{" "}
+                <span className="text-[#4ade80] font-semibold">@{topStreaker.username}</span>
+                {" "}·{" "}
+                <span className="text-[#3a5e3d]">{topStreaker.current_streak}d</span>
+              </p>
+            )}
+            {totalBurned !== null && (
+              <p className="font-mono text-[13px] text-[#3a5e3d] tracking-widest">
+                {/* Tune: burned stat color */}
+                🔥 <span className="text-[#4ade80] font-bold">{totalBurned.toLocaleString()}</span> $TOUCHGRASS burned
               </p>
             )}
           </div>
         )}
       </div>
 
-      {/* Step 1 — Username */}
+      {/* ── Step 1: Identify ──────────────────────────────────────────────── */}
       <div className="w-full max-w-md mb-8">
         <div className="flex items-center gap-2 mb-3">
           <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
-          <span className="text-[10px] tracking-[0.3em] text-[#3a5e3d] uppercase">
-            Step 1 — Your Username
+          {/* Tune: section label wording */}
+          <span className="text-[12px] tracking-[0.3em] text-[#3a5e3d] uppercase">
+            Identify
           </span>
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
         </div>
 
-        <div className="relative rounded-sm border border-[#1f3d22] bg-[#07110a] shadow-[inset_0_1px_0_rgba(74,222,128,0.1),0_0_20px_rgba(74,222,128,0.05)] px-5 py-5">
+        {/* Tune: increase shadow spread for more depth */}
+        <div className="relative rounded-sm border border-[#1f4020] bg-[#05100a]
+          shadow-[inset_0_1px_0_rgba(74,222,128,0.12),0_0_32px_rgba(74,222,128,0.07),0_4px_24px_rgba(0,0,0,0.6)]
+          px-5 py-5">
           <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-30" />
           <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-30" />
           <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-30" />
           <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
 
-          <label className="block font-mono text-[10px] tracking-[0.25em] text-[#4ade80] uppercase opacity-60 mb-1.5">
+          <label className="block font-mono text-[12px] tracking-[0.25em] text-[#4ade80] uppercase opacity-60 mb-1.5">
             X Username
           </label>
           <input
@@ -392,7 +607,7 @@ export default function Home() {
             placeholder="yourhandle"
             className="
               w-full bg-[#060e07] border border-[#1f3d22]
-              text-[#d1fae5] font-mono text-sm
+              text-[#d1fae5] font-mono text-base
               px-4 py-2.5 rounded-sm
               placeholder:text-[#2a4a2d]
               focus:outline-none focus:border-[#4ade80]
@@ -401,20 +616,21 @@ export default function Home() {
             "
           />
           {!mounted ? null : !hasUsername ? (
-            <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide mt-2">
-              enter your username — your streak loads automatically
+            <p className="font-mono text-[12px] text-[#2a4a2d] tracking-widest mt-2 uppercase">
+              {/* Tune: hint copy when no username */}
+              enter your handle to load your mission status
             </p>
           ) : (
             <div className="flex flex-col gap-2 mt-3">
               {/* Welcome back — only on localStorage restore */}
               {restoredFromStorage && (
-                <p className="font-mono text-[10px] text-[#2a4a2d] tracking-wide">
+                <p className="font-mono text-[12px] text-[#2a4a2d] tracking-wide">
                   welcome back @{username}
                 </p>
               )}
 
               {/* Primary streak line */}
-              <p className="font-mono text-[11px] text-[#4ade80] tracking-wide font-semibold">
+              <p className="font-mono text-[13px] text-[#4ade80] tracking-wide font-semibold">
                 ✓ streak loaded for @{username} — day {currentStreak}
                 {" "}<span className="font-normal opacity-60">{getStreakTitle(currentStreak)}</span>
               </p>
@@ -422,10 +638,10 @@ export default function Home() {
               {/* Single primary status block — only ONE shown at a time */}
               {hasPostedToday === true && (
                 <div className="flex flex-col gap-0.5">
-                  <p className="font-mono text-[11px] text-[#4ade80] tracking-wide">
+                  <p className="font-mono text-[13px] text-[#4ade80] tracking-wide">
                     ✅ you're locked in for today
                   </p>
-                  <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide">
+                  <p className="font-mono text-[12px] text-[#3a5e3d] tracking-wide">
                     come back tomorrow to continue your streak
                   </p>
                 </div>
@@ -433,8 +649,11 @@ export default function Home() {
 
               {hasPostedToday === false && streakTone !== "reset" && (
                 <div className="flex flex-col gap-1">
-                  <p className="font-mono text-[11px] text-[#f59e0b] tracking-wide">
-                    ⚠️ you haven't checked in today
+                  <p className="font-mono text-[13px] text-[#f59e0b] tracking-wide">
+                    {streakStatus === "post-shield"
+                      ? "your streak is safe"
+                      : "⚠️ you haven't checked in today"
+                    }
                   </p>
                   {/* Urgent countdown with 3-level escalation */}
                   {(() => {
@@ -457,23 +676,79 @@ export default function Home() {
                       shadowStyle = {};
                     }
                     return (
-                      <p className={`font-mono text-[11px] font-semibold tabular-nums tracking-wide ${countColor}`} style={shadowStyle}>
+                      <p className={`font-mono text-[13px] font-semibold tabular-nums tracking-wide ${countColor}`} style={shadowStyle}>
                         🔥 {countStr} left — don't lose your streak
                       </p>
                     );
                   })()}
-                  <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide mt-1">
-                    ⬇️ submit today's proof below
+                  <p className="font-mono text-[12px] text-[#3a5e3d] tracking-wide mt-1">
+                    {streakStatus === "post-shield"
+                      ? "check in today to keep it growing"
+                      : "⬇️ submit today's proof below"
+                    }
                   </p>
                 </div>
               )}
 
-              {streakTone === "reset" && (
+              {streakTone === "reset" && shieldEligible && shieldStatus !== "success" && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-0.5">
+                    <p className="font-mono text-[13px] text-[#f59e0b] font-semibold tracking-wide">
+                      🛡️ you missed yesterday
+                    </p>
+                    <p className="font-mono text-[12px] text-[#ef4444] tracking-wide">
+                      {currentStreak > 1
+                        ? `you're about to lose your ${currentStreak} day streak`
+                        : "you're about to lose your streak"
+                      }
+                    </p>
+                    <p className="font-mono text-[12px] text-[#f59e0b] tracking-wide">
+                      use a shield to preserve it
+                    </p>
+                    <p className="font-mono text-[11px] text-[#2a4a2d] tracking-wide mt-0.5">
+                      🔥 {getStreakRewardValue(currentStreak)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleUseShield}
+                    disabled={loadingShield}
+                    className={`
+                      self-start font-mono text-[12px] font-bold tracking-widest uppercase
+                      px-4 py-1.5 rounded-sm
+                      shadow-[0_0_12px_rgba(74,222,128,0.2)]
+                      transition-all duration-200
+                      ${loadingShield
+                        ? "bg-[#1a3520] text-[#4ade80] border border-[#2d5e30] cursor-not-allowed opacity-60"
+                        : "bg-[#4ade80] text-[#07110a] hover:bg-[#86efac] hover:shadow-[0_0_20px_rgba(74,222,128,0.45)]"
+                      }
+                    `}
+                  >
+                    {loadingShield ? "using..." : "🛡️ use shield"}
+                  </button>
+                  {shieldStatus === "error" && (
+                    <p className="font-mono text-[12px] text-[#ef4444] tracking-wide">
+                      ✕ shield use failed — try again
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {shieldStatus === "success" && (
                 <div className="flex flex-col gap-0.5">
-                  <p className="font-mono text-[11px] text-[#ef4444] tracking-wide">
+                  <p className="font-mono text-[13px] text-[#4ade80] tracking-wide"
+                    style={{textShadow:"0 0 12px rgba(74,222,128,0.5)"}}>
+                    🛡️ shield used — your streak is protected
+                  </p>
+                </div>
+              )}
+
+              {/* Dead reset — missed 3+ days OR missed 1 day with no shields (panic shown separately below) */}
+              {streakTone === "reset" && !shieldEligible && (
+                <div className="flex flex-col gap-0.5">
+                  <p className="font-mono text-[13px] text-[#ef4444] tracking-wide">
                     💀 streak reset
                   </p>
-                  <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide">
+                  <p className="font-mono text-[12px] text-[#3a5e3d] tracking-wide">
                     start again today
                   </p>
                 </div>
@@ -481,7 +756,7 @@ export default function Home() {
 
               {/* Neutral / unknown state: show passive countdown */}
               {hasPostedToday === null && (
-                <p className="font-mono text-[10px] text-[#2a4a2d] tabular-nums tracking-wide">
+                <p className="font-mono text-[12px] text-[#2a4a2d] tabular-nums tracking-wide">
                   {timeUntilReset}
                 </p>
               )}
@@ -490,64 +765,395 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Your Stats Panel */}
-      {hasUsername && userStats && (
+      {/* ── Prove It ─────────────────────────────────────────────────────────── */}
+      <div className="w-full max-w-md mb-8">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
+          {/* Tune: label when locked vs unlocked */}
+          <span className={`text-[12px] tracking-[0.3em] uppercase transition-colors duration-300 ${mounted && hasUsername ? "text-[#3a5e3d]" : "text-[#1a3520]"}`}>
+            Prove You Touched Grass
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
+        </div>
+
+        {/* Tune: upload wrapper glow is controlled by uploadShimmer keyframe above */}
+        <div className={`transition-all duration-300 rounded-sm ${mounted && hasUsername ? "opacity-100 upload-live" : "opacity-30 pointer-events-none select-none"}`}>
+          <UploadBox onUpload={handleImageUpload} />
+        </div>
+
+        {(!mounted || !hasUsername) && (
+          <p className="font-mono text-[12px] text-[#1a2e1c] tracking-widest uppercase text-center mt-2">
+            {/* Tune: locked state hint */}
+            identify first to unlock
+          </p>
+        )}
+      </div>
+
+      {/* ── No-Shield Alert — own card, rendered only when missedOneDayNoShield ── */}
+      {mounted && hasUsername && missedOneDayNoShield && (
         <div className="w-full max-w-md mb-8">
+          {/* Tune: outer border color for danger feel — currently subtle red */}
+          <div className="relative rounded-sm border border-[#7f1d1d] bg-[#100404]
+            shadow-[inset_0_1px_0_rgba(239,68,68,0.08),0_0_24px_rgba(239,68,68,0.07),0_4px_20px_rgba(0,0,0,0.6)]
+            px-5 py-4 flex flex-col gap-3">
+            <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#ef4444] opacity-20" />
+            <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#ef4444] opacity-20" />
+            <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#ef4444] opacity-20" />
+            <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#ef4444] opacity-20" />
+
+            {/* Title — one red line only */}
+            <p className="font-mono text-[13px] text-[#ef4444] font-semibold tracking-wide">
+              ⚠️ no shields available
+            </p>
+
+            {/* Subtext — muted, not all red */}
+            <p className="font-mono text-[12px] text-[#6b2e2e] tracking-wide">
+              {currentStreak > 1
+                ? `your ${currentStreak} day streak resets if you miss today`
+                : "your streak resets if you miss today"
+              }
+            </p>
+
+            {/* Price line */}
+            <p className="font-mono text-[12px] text-[#f59e0b] tracking-wide">
+              {/* Tune: price copy */}
+              buy 1 shield — 50,000 $TOUCHGRASS
+            </p>
+
+            {/* CTA — scrolls to Acquire Shield section */}
+            <button
+              onClick={() => buyShieldRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="
+                self-start font-mono text-[12px] font-bold tracking-widest uppercase
+                border border-[#ef4444] text-[#ef4444]
+                px-4 py-1.5 rounded-sm
+                hover:bg-[#1f0505] hover:shadow-[0_0_20px_rgba(239,68,68,0.3)]
+                shadow-[0_0_8px_rgba(239,68,68,0.15)]
+                transition-all duration-200 btn-press
+              "
+            >
+              🛡️ buy shield
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Player HUD ──────────────────────────────────────────────────────── */}
+      {mounted && hasUsername && userStats && (
+        <div className="w-full max-w-md mb-8 hud-card">
           <div className="flex items-center gap-2 mb-3">
             <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
-            <span className="text-[10px] font-mono tracking-[0.3em] text-[#3a5e3d] uppercase">Your Stats</span>
+            {/* Tune: HUD label */}
+            <span className="text-[12px] font-mono tracking-[0.3em] text-[#3a5e3d] uppercase">Mission Status</span>
             <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
           </div>
-          <div className="relative rounded-sm border border-[#1f3d22] bg-[#07110a] shadow-[inset_0_1px_0_rgba(74,222,128,0.1),0_0_20px_rgba(74,222,128,0.05)] px-5 py-4">
-            <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-30" />
-            <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-30" />
-            <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-30" />
-            <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Current Streak</p>
-                <p className="font-mono text-xl font-bold text-[#4ade80]">🔥 day {currentStreak}</p>
-                <p className="font-mono text-[9px] text-[#2a4a2d] mt-0.5">{getStreakTitle(currentStreak)}</p>
-              </div>
-              <div>
-                <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Best Streak</p>
-                <p className="font-mono text-xl font-bold text-[#4ade80]">🏆 day {userStats.bestStreak}</p>
-              </div>
-              <div>
-                <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Total Posts</p>
-                <p className="font-mono text-xl font-bold text-[#4ade80]">📊 {userStats.posts}</p>
-              </div>
-              <div>
-                <p className="font-mono text-[9px] tracking-[0.25em] text-[#3a5e3d] uppercase mb-1">Rank</p>
-                <p className="font-mono text-xl font-bold text-[#4ade80]">
-                  {userStats.rank ? `🏅 #${userStats.rank}` : "unranked"}
+
+          {/* Tune: increase outer shadow for more float effect */}
+          <div className="relative rounded-sm border border-[#1f4020] bg-[#05100a]
+            shadow-[inset_0_1px_0_rgba(74,222,128,0.14),0_0_40px_rgba(74,222,128,0.08),0_6px_32px_rgba(0,0,0,0.7)]
+            px-5 py-5">
+            <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-40" />
+            <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-40" />
+            <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-40" />
+            <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-40" />
+
+            {/* Primary stat — streak takes top billing */}
+            <div className="mb-4 pb-3.5 border-b border-[#0f2412]">
+              <p className="font-mono text-[11px] tracking-[0.3em] text-[#3a5e3d] uppercase mb-1">
+                {/* Tune: primary stat label */}
+                Active Streak
+              </p>
+              <div className="flex items-baseline gap-2">
+                <p className="font-mono text-4xl font-bold text-[#4ade80] stat-val"
+                  style={{textShadow:"0 0 20px rgba(74,222,128,0.4)"}}>
+                  day {currentStreak}
                 </p>
+                <span className="font-mono text-[13px] text-[#3a5e3d]">{getStreakTitle(currentStreak)}</span>
+              </div>
+              {/* Tune: reward tier color */}
+              <p className="font-mono text-[11px] text-[#2a4a2d] mt-1 tracking-wide">{getStreakRewardValue(currentStreak)}</p>
+            </div>
+
+            {/* Secondary stats grid */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div>
+                {/* Tune: label copy */}
+                <p className="font-mono text-[10px] tracking-[0.3em] text-[#2a4a2d] uppercase mb-1">Best Run</p>
+                <p className="font-mono text-xl font-bold text-[#4ade80] stat-val">day {userStats.bestStreak}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[10px] tracking-[0.3em] text-[#2a4a2d] uppercase mb-1">
+                  {/* Tune: "Days Logged" or "Total Posts" */}
+                  Days Logged
+                </p>
+                <p className="font-mono text-xl font-bold text-[#4ade80] stat-val">{userStats.posts}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[10px] tracking-[0.3em] text-[#2a4a2d] uppercase mb-1">Global Rank</p>
+                <p className="font-mono text-xl font-bold text-[#4ade80] stat-val">
+                  {userStats.rank ? `#${userStats.rank}` : "—"}
+                </p>
+              </div>
+
+              {/* Shield inventory — visual treatment */}
+              <div>
+                <p className="font-mono text-[10px] tracking-[0.3em] text-[#2a4a2d] uppercase mb-1">Shields</p>
+                {/* Tune: max displayed shields = 5; increase if needed */}
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {Array.from({length: Math.max(1, Math.min(5, userStats.shields || 0))}).map((_, i) => (
+                    <span
+                      key={i}
+                      className={i < (userStats.shields || 0) ? "shield-active" : ""}
+                      style={{
+                        fontSize: "16px",
+                        lineHeight: 1,
+                        /* Tune: dim opacity for inactive shields */
+                        opacity: i < (userStats.shields || 0) ? 1 : 0.15,
+                        filter: i < (userStats.shields || 0)
+                          ? "drop-shadow(0 0 4px rgba(74,222,128,0.7))"
+                          : "none",
+                        transition: "all 0.3s ease",
+                      }}
+                    >🛡️</span>
+                  ))}
+                  {(userStats.shields || 0) === 0 && (
+                    <span className="font-mono text-[11px] text-[#1f3020] tracking-wide">no shields</span>
+                  )}
+                  {(userStats.shields || 0) > 5 && (
+                    <span className="font-mono text-[11px] text-[#3a5e3d]">+{userStats.shields - 5}</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Step 2 — Upload */}
-      <div className="w-full max-w-md mb-8">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
-          <span className={`text-[10px] tracking-[0.3em] uppercase transition-colors duration-300 ${mounted && hasUsername ? "text-[#3a5e3d]" : "text-[#1a3520]"}`}>
-            Step 2 — Upload Your Proof
-          </span>
-          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
-        </div>
+      {/* ── Acquire Shield ───────────────────────────────────────────────────── */}
+      {mounted && hasUsername && (
+        <div ref={buyShieldRef} className="w-full max-w-md mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
+            {/* Tune: section label */}
+            <span className="text-[12px] font-mono tracking-[0.3em] text-[#3a5e3d] uppercase">Acquire Shield</span>
+            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
+          </div>
 
-        <div className={`transition-all duration-300 rounded-sm ${mounted && hasUsername ? "opacity-100 upload-live" : "opacity-30 pointer-events-none select-none"}`}>
-          <UploadBox onUpload={handleImageUpload} />
-        </div>
+          {/* Tune: adjust shadow for card depth */}
+          <div className="relative rounded-sm border border-[#1f4020] bg-[#05100a]
+            shadow-[inset_0_1px_0_rgba(74,222,128,0.1),0_0_32px_rgba(74,222,128,0.06),0_4px_24px_rgba(0,0,0,0.6)]
+            px-5 py-5 flex flex-col gap-4">
+            <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-40" />
+            <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-40" />
+            <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-40" />
+            <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-40" />
 
-        {(!mounted || !hasUsername) && (
-          <p className="font-mono text-[10px] text-[#1f3d22] tracking-wide text-center mt-2">
-            enter your username above to unlock this step
-          </p>
-        )}
-      </div>
+            {/* Price + burn wallet */}
+            <div className="flex flex-col gap-3">
+              <p className="font-mono text-[13px] text-[#4ade80] font-semibold tracking-wide">
+                🛡️ 1 shield — 50,000 $TOUCHGRASS
+              </p>
+
+              {/* Burn wallet block */}
+              <div className="flex flex-col gap-2 border border-[#1a3520] rounded-sm bg-[#030a04] px-4 py-3">
+                <p className="font-mono text-[11px] text-[#3a5e3d] tracking-widest uppercase">
+                  Send 50,000 $TOUCHGRASS to the official burn wallet:
+                </p>
+
+                {/* .sol domain row */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-[13px] text-[#4ade80] font-semibold tracking-wide">
+                    touchgrassburn.sol
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText("touchgrassburn.sol").catch(() => {});
+                      setCopiedDomain(true);
+                      setShowPasteTip(true);
+                      setTimeout(() => setCopiedDomain(false), 1500);
+                    }}
+                    className={`
+                      font-mono text-[11px] tracking-widest uppercase px-2.5 py-1 rounded-sm
+                      transition-all duration-200 btn-press flex-shrink-0
+                      ${copiedDomain
+                        ? "border border-[#4ade80] text-[#4ade80] shadow-[0_0_10px_rgba(74,222,128,0.3)]"
+                        : "border border-[#1f3d22] text-[#3a5e3d] hover:border-[#4ade80] hover:text-[#4ade80]"
+                      }
+                    `}
+                  >
+                    {copiedDomain ? "✓ copied" : "copy"}
+                  </button>
+                </div>
+
+                {/* Raw address row */}
+                <div className="flex flex-col gap-1.5">
+                  <p className="font-mono text-[11px] text-[#2a4a2d] tracking-widest uppercase">Resolves to:</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-mono text-[11px] text-[#3a5e3d] break-all leading-relaxed">
+                      GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText("GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K").catch(() => {});
+                        setCopiedAddr(true);
+                        setShowPasteTip(true);
+                        setTimeout(() => setCopiedAddr(false), 1500);
+                      }}
+                      className={`
+                        font-mono text-[11px] tracking-widest uppercase px-2.5 py-1 rounded-sm
+                        transition-all duration-200 btn-press flex-shrink-0 mt-0.5
+                        ${copiedAddr
+                          ? "border border-[#4ade80] text-[#4ade80] shadow-[0_0_10px_rgba(74,222,128,0.3)]"
+                          : "border border-[#1f3d22] text-[#3a5e3d] hover:border-[#4ade80] hover:text-[#4ade80]"
+                        }
+                      `}
+                    >
+                      {copiedAddr ? "✓ copied" : "copy"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Solscan link */}
+                <a
+                  href="https://solscan.io/account/GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-[11px] text-[#2a4a2d] hover:text-[#3a5e3d] transition-colors tracking-wide self-start"
+                >
+                  View on Solscan ↗
+                </a>
+
+                {/* Verify warning */}
+                <p className="font-mono text-[11px] text-[#1f3020] tracking-wide">
+                  Always verify the address matches before sending.
+                </p>
+
+                {/* Total burned stat — sourced from approved ShieldPurchases * 50000 */}
+                {totalBurned !== null && (
+                  <p className="font-mono text-[11px] text-[#2a4a2d] tracking-wide">
+                    {/* Tune: wording for in-section burned total */}
+                    total burned through shields:{" "}
+                    <span className="text-[#3a5e3d]">{totalBurned.toLocaleString()} $TOUCHGRASS</span>
+                  </p>
+                )}
+
+                {/* Paste nudge - only shown after a copy action */}
+                {showPasteTip && (
+                  <p className="font-mono text-[11px] text-[#2a4a2d] tracking-wide">
+                    paste your transaction below once sent
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {purchaseStatus === "success" ? (
+              <div className="flex flex-col gap-1 py-1">
+                <p className="font-mono text-[13px] text-[#4ade80] tracking-wide"
+                  style={{textShadow:"0 0 10px rgba(74,222,128,0.4)"}}>
+                  ✅ shield request logged — pending verification
+                </p>
+                <p className="font-mono text-[11px] text-[#2a4a2d] tracking-wide">
+                  credits are applied manually after on-chain confirmation
+                </p>
+                <button
+                  onClick={() => setPurchaseStatus(null)}
+                  className="font-mono text-[11px] text-[#2a4a2d] hover:text-[#3a5e3d] transition-colors mt-2 self-start tracking-widest uppercase btn-press"
+                >
+                  + submit another
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* TX signature */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="font-mono text-[11px] tracking-[0.3em] text-[#4ade80] uppercase opacity-50">
+                    {/* Tune: field label */}
+                    Transaction Signature *
+                  </label>
+                  <input
+                    type="text"
+                    value={purchaseTxSig}
+                    onChange={(e) => { setPurchaseTxSig(e.target.value); setPurchaseStatus(null); }}
+                    placeholder="paste your tx hash"
+                    disabled={purchaseStatus === "loading"}
+                    className="
+                      w-full bg-[#030a04] border border-[#1a3520]
+                      text-[#d1fae5] font-mono text-sm
+                      px-4 py-2.5 rounded-sm
+                      placeholder:text-[#1f3520]
+                      focus:outline-none focus:border-[#4ade80]
+                      focus:shadow-[0_0_16px_rgba(74,222,128,0.15)]
+                      disabled:opacity-40 disabled:cursor-not-allowed
+                      transition-all duration-200
+                    "
+                  />
+                </div>
+
+                {/* Wallet address */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="font-mono text-[11px] tracking-[0.3em] text-[#4ade80] uppercase opacity-50">
+                    Wallet <span className="normal-case opacity-60 tracking-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={purchaseWallet}
+                    onChange={(e) => setPurchaseWallet(e.target.value)}
+                    placeholder="solana address"
+                    disabled={purchaseStatus === "loading"}
+                    className="
+                      w-full bg-[#030a04] border border-[#1a3520]
+                      text-[#d1fae5] font-mono text-sm
+                      px-4 py-2.5 rounded-sm
+                      placeholder:text-[#1f3520]
+                      focus:outline-none focus:border-[#4ade80]
+                      focus:shadow-[0_0_16px_rgba(74,222,128,0.15)]
+                      disabled:opacity-40 disabled:cursor-not-allowed
+                      transition-all duration-200
+                    "
+                  />
+                </div>
+
+                {/* Error */}
+                {purchaseStatus === "error" && purchaseError && (
+                  <p className="font-mono text-[12px] text-[#ef4444] tracking-wide">
+                    ✕ {purchaseError}
+                  </p>
+                )}
+
+                {/* Submit — tune: button label */}
+                <button
+                  onClick={handleBuyShield}
+                  disabled={purchaseStatus === "loading"}
+                  className={`
+                    w-full font-mono text-sm font-bold tracking-widest uppercase
+                    py-2.5 rounded-sm transition-all duration-200 btn-press
+                    ${purchaseStatus === "loading"
+                      ? "bg-[#1a3520] border border-[#2d5e30] text-[#4ade80] opacity-60 cursor-not-allowed"
+                      : "bg-transparent border border-[#4ade80] text-[#4ade80] hover:bg-[#0a1f0d] hover:shadow-[0_0_24px_rgba(74,222,128,0.25)] hover:border-[#5efa92]"
+                    }
+                  `}
+                >
+                  {purchaseStatus === "loading" ? "submitting…" : "🛡️ activate shield"}
+                </button>
+
+                {/* Latest purchase status — shown when not in success/error state */}
+                {latestPurchase && purchaseStatus !== "success" && purchaseStatus !== "error" && (
+                  <p className={`font-mono text-[12px] tracking-wide ${
+                    latestPurchase.status === "approved" ? "text-[#4ade80]" :
+                    latestPurchase.status === "rejected" ? "text-[#ef4444]" :
+                    "text-[#f59e0b]"
+                  }`}>
+                    {latestPurchase.status === "approved" && "✅ shield credited to your account"}
+                    {latestPurchase.status === "rejected" && "❌ purchase rejected — check transaction"}
+                    {latestPurchase.status === "pending"  && "⏳ shield purchase pending"}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
 
       {/* Live Activity Feed */}
       <div className="w-full max-w-md mb-8">
@@ -558,7 +1164,7 @@ export default function Home() {
       {/* Certificate */}
       {imageSrc && hasUsername && (
         <div ref={resultRef} className="mt-8 w-full max-w-4xl cert-reveal">
-          <p className="text-center text-xs tracking-widest text-[#4ade80] uppercase mb-6">
+          <p className="text-center text-sm tracking-widest text-[#4ade80] uppercase mb-6">
             ✦ Certificate Generated ✦
           </p>
           <ResultCard
@@ -568,17 +1174,18 @@ export default function Home() {
             onStreakUpdate={setCurrentStreak}
           />
           <div className="flex justify-center mt-10">
+            {/* Tune: leaderboard link wording */}
             <a
               href="/leaderboard"
               className="
                 inline-flex items-center gap-2
-                font-mono text-xs tracking-widest uppercase
-                text-[#4ade80] opacity-60
-                hover:opacity-100 hover:shadow-[0_0_12px_rgba(74,222,128,0.3)]
-                transition-all duration-200
+                font-mono text-[12px] tracking-widest uppercase
+                text-[#4ade80] opacity-50
+                hover:opacity-100 hover:shadow-[0_0_20px_rgba(74,222,128,0.4)]
+                transition-all duration-200 btn-press
               "
             >
-              🌱 View Leaderboard
+              ◈ View Rankings
             </a>
           </div>
         </div>
@@ -596,8 +1203,9 @@ export default function Home() {
         </svg>
       </div>
 
-      <footer className="mt-2 text-[#334d35] text-xs text-center pb-4">
-        © {new Date().getFullYear()} Proof of Grass · All rights reserved
+      <footer className="mt-2 text-[#1f3520] text-[12px] text-center pb-4 tracking-widest uppercase">
+        {/* Tune: footer copy */}
+        © {new Date().getFullYear()} Proof of Grass · $TOUCHGRASS
       </footer>
       </div>{/* end z-10 wrapper */}
     </main>
