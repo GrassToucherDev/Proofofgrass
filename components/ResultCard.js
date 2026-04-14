@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { supabase } from "../utils/supabase";
 
-// Caption pools tiered by streak length
+// Caption pools tiered by streak length — add captions freely to any tier
 const CAPTION_POOLS = {
   beginner: [
     "just touched grass. strong start. 🌿",
@@ -12,6 +12,16 @@ const CAPTION_POOLS = {
     "skill check passed. grass interaction: successful.",
     "gm from outside. yes, outside. the big open-world map.",
     "offline for 20 minutes. came back with grass on my shoes.",
+    "step one: go outside. step two: take photo. step three: this.",
+    "touched grass before checking price. personal record.",
+    "irl visit confirmed. grass: present. cope: absent.",
+    "proof of work. the work was touching grass.",
+    "walked outside. did not refresh x. felt fine.",
+    "logged off. went out. came back stronger.",
+    "fresh air acquired. timestamp verified. day one on the books.",
+    "certified first step. the streak starts now.",
+    "outside for the first time in the timeline. feels different.",
+    "grass touched. wallet not checked. healthy.",
   ],
   momentum: [
     "still going. streak getting real. 🌿",
@@ -22,6 +32,16 @@ const CAPTION_POOLS = {
     "the outdoor meta is holding. i am staying in.",
     "disconnected from wi-fi. connected to chlorophyll. again.",
     "dev update: shipped another walk. zero bugs.",
+    "day after day. grass after grass. no signs of stopping.",
+    "momentum is real. the outdoors keeps paying dividends.",
+    "streak integrity: maintained. grass: touched. witnesses: none needed.",
+    "another one. the commitment is showing.",
+    "the timeline doesn't know where i go every day.",
+    "four days of proof. pattern established.",
+    "i used to doomscroll. now i do this instead.",
+    "building a habit one blade of grass at a time.",
+    "on-chain activity: walking outside. status: profitable.",
+    "no rest days in the grass-touching season.",
   ],
   strong: [
     "consistency looking dangerous. 🌿",
@@ -32,6 +52,16 @@ const CAPTION_POOLS = {
     "certified long-term grass enjoyer. data-backed.",
     "i have touched more grass than most nfts.",
     "the streak is real. the grass is real. i am real.",
+    "one week on the books. the outdoors have accepted me.",
+    "seven consecutive days outside. market still open. didn't check.",
+    "the streak is now a personality trait.",
+    "week one complete. the grass recognizes the dedication.",
+    "daily grass interaction: active. cope: zero.",
+    "i have more streak days than most projects have updates.",
+    "building something real. outside. with my hands. sort of.",
+    "this streak will outlast most alt coins.",
+    "day after day. week after week. no signs of softness.",
+    "the discipline is on-chain now. no going back.",
   ],
   elite: [
     "this isn't a phase anymore. it's identity. 🌿",
@@ -42,6 +72,18 @@ const CAPTION_POOLS = {
     "i do not go outside anymore. i simply return.",
     "fully on-chain. fully outside. no contradictions.",
     "elite grass toucher. verified. unstoppable.",
+    "the streak has a market cap now.",
+    "at this point the grass is just an extension of my wallet.",
+    "two weeks of proof. most tokens don't last this long.",
+    "the outdoor season never ends for me.",
+    "not a visitor anymore. a permanent resident of outside.",
+    "streak so long it's basically vested.",
+    "i have documented more grass than most explorers.",
+    "the data speaks. the streak screams.",
+    "day fourteen and beyond. the others are still inside.",
+    "certified outdoor original. no derivative.",
+    "the protocol is simple: go outside. do it every day. forever.",
+    "i didn't build a streak. i built a ritual.",
   ],
 };
 
@@ -158,38 +200,36 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     setSubmitStatus("loading");
     setSubmitError("");
 
-    // Build UTC date boundaries for today
-    const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setUTCHours(0, 0, 0, 0);
-    const tomorrowStart = new Date(todayStart);
-    tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
-    const todayDateStr = todayStart.toISOString().slice(0, 10);
-    const yesterdayDateStr = new Date(todayStart.getTime() - 86400000)
-      .toISOString().slice(0, 10);
+    // UTC date strings — single source of truth for all comparisons
+    const todayDateStr = new Date().toISOString().slice(0, 10);
+    const yesterdayDateStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
-    // 1. Duplicate check — one submission per username per UTC day
-    const { data: existing, error: checkError } = await supabase
-      .from("Submissions")
-      .select("id")
+    // 1. Fetch Streaks row — primary gate for whether user already posted today
+    const { data: streakRow, error: streakFetchError } = await supabase
+      .from("Streaks")
+      .select("current_streak, best_streak, last_submission_date")
       .eq("username", username)
-      .gte("created_at", todayStart.toISOString())
-      .lt("created_at", tomorrowStart.toISOString())
-      .limit(1);
+      .maybeSingle();
 
-    if (checkError) {
+    if (streakFetchError) {
       setSubmitError("Could not verify submission. Try again.");
       setSubmitStatus("error");
       return;
     }
 
-    if (existing && existing.length > 0) {
+    // Normalize last_submission_date to UTC YYYY-MM-DD regardless of storage format
+    const lastDate = streakRow?.last_submission_date
+      ? new Date(streakRow.last_submission_date).toISOString().slice(0, 10)
+      : null;
+
+    // Gate: if Streaks.last_submission_date is today, user already posted
+    if (lastDate === todayDateStr) {
       setSubmitError("You\'ve already submitted today. Come back tomorrow. 🌿");
       setSubmitStatus("error");
       return;
     }
 
-    // 2. Insert submission
+    // 2. Insert submission (Submissions still used for leaderboard/feed)
     const { error: insertError } = await supabase
       .from("Submissions")
       .insert([{ username, tweet_url: tweetUrl.trim() }]);
@@ -204,23 +244,10 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       return;
     }
 
-    // 3. Upsert streak
-    const { data: streakRow } = await supabase
-      .from("Streaks")
-      .select("current_streak, best_streak, last_submission_date")
-      .eq("username", username)
-      .maybeSingle();
-
+    // 3. Compute new streak from the already-fetched Streaks row
     let newStreak = 1;
     if (streakRow) {
-      // Normalize last_submission_date — may be a full timestamp or date string
-      const last = streakRow.last_submission_date
-        ? new Date(streakRow.last_submission_date).toISOString().slice(0, 10)
-        : null;
-      if (last === todayDateStr) {
-        // Already submitted today — keep current streak unchanged
-        newStreak = streakRow.current_streak;
-      } else if (last === yesterdayDateStr) {
+      if (lastDate === yesterdayDateStr) {
         // Consecutive day — increment
         newStreak = streakRow.current_streak + 1;
       } else {
