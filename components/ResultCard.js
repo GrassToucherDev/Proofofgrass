@@ -107,6 +107,18 @@ function getStreakTitle(streak) {
   return "🌱 seed";
 }
 
+function isValidXStatusUrl(raw) {
+  try {
+    const url = new URL(raw.trim());
+    const validHosts = ["x.com", "www.x.com", "twitter.com", "www.twitter.com"];
+    if (!validHosts.includes(url.hostname.toLowerCase())) return false;
+    // Path must contain /status/ followed by digits anywhere in it
+    return /\/status\/\d+/i.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
 function getMilestoneMsg(streak) {
   if (streak === 3)  return "momentum building";
   if (streak === 5)  return "locked in";
@@ -146,8 +158,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     async function tryClipboard() {
       try {
         const text = await navigator.clipboard.readText();
-        const isXLink = /https?:\/\/(x\.com|twitter\.com)\/.+\/status\//i.test(text.trim());
-        if (isXLink) {
+        if (isValidXStatusUrl(text)) {
           setTweetUrl(text.trim());
           setClipboardDetected(true);
           setClipboardFeedback("detected");
@@ -246,8 +257,8 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       setSubmitStatus("error");
       return;
     }
-    if (!tweetUrl.trim()) {
-      setSubmitError("Enter your post URL.");
+    if (!tweetUrl.trim() || !isValidXStatusUrl(tweetUrl)) {
+      setSubmitError("Enter a valid X post link.");
       setSubmitStatus("error");
       return;
     }
@@ -893,8 +904,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                 onClick={async () => {
                   try {
                     const text = await navigator.clipboard.readText();
-                    const isXLink = /https?:\/\/(x\.com|twitter\.com)\/.+\/status\//i.test(text.trim());
-                    if (isXLink) {
+                    if (isValidXStatusUrl(text)) {
                       setTweetUrl(text.trim());
                       setClipboardDetected(true);
                       setSubmitStatus(null);
