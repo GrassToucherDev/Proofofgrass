@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabase";
-
+ 
 function normalizeUsername(val) {
   return String(val ?? "").replace(/@/g, "").toLowerCase().trim();
 }
-
+ 
 function getTopPercent(streak) {
   if (streak >= 30) return 1;
   if (streak >= 14) return 5;
   if (streak >= 7)  return 10;
   return null;
 }
-
+ 
 function formatRelativeTime(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const s = Math.floor(diff / 1000);
@@ -25,17 +25,17 @@ function formatRelativeTime(dateStr) {
   const w = Math.floor(d / 7);
   return `${w}w ago`;
 }
-
+ 
 export default function Leaderboard() {
   const [tab, setTab] = useState("alltime"); // "alltime" | "weekly"
   const [data, setData] = useState([]);
   const [weeklyData, setWeeklyData] = useState([]);
   const [rankQuery, setRankQuery] = useState("");
-
+ 
   useEffect(() => {
     fetchData();
   }, []);
-
+ 
   // Shared helper: group + merge submissions with streak data
   function buildLeaderboard(submissions, streakMap, bestStreakMap) {
     const grouped = {};
@@ -63,12 +63,12 @@ export default function Leaderboard() {
         return new Date(b.created_at) - new Date(a.created_at);
       });
   }
-
+ 
   const fetchData = async () => {
     const weekStart = new Date();
     weekStart.setUTCHours(0, 0, 0, 0);
     weekStart.setUTCDate(weekStart.getUTCDate() - 6); // last 7 days
-
+ 
     const [
       { data: submissions, error: subError },
       { data: streaks, error: strError },
@@ -76,10 +76,10 @@ export default function Leaderboard() {
       supabase.from("Submissions").select("*").eq("status", "approved").order("created_at", { ascending: false }),
       supabase.from("Streaks").select("username, current_streak, best_streak, last_submission_date"),
     ]);
-
+ 
     if (subError) { console.error(subError); return; }
     if (strError) { console.error(strError); }
-
+ 
     // Build streak lookups — normalize keys
     const streakMap = {};
     const bestStreakMap = {};
@@ -89,20 +89,20 @@ export default function Leaderboard() {
       streakMap[normalized] = s.current_streak;
       bestStreakMap[normalized] = s.best_streak ?? s.current_streak ?? 1;
     });
-
+ 
     // All-time leaderboard
     setData(buildLeaderboard(submissions, streakMap, bestStreakMap));
-
+ 
     // Weekly leaderboard — same logic, filtered to last 7 days
     const weeklySubs = (submissions || []).filter(
       (s) => new Date(s.created_at) >= weekStart
     );
     setWeeklyData(buildLeaderboard(weeklySubs, streakMap, bestStreakMap));
   };
-
+ 
   // Active dataset reflects selected tab
   const activeData = tab === "weekly" ? weeklyData : data;
-
+ 
   // Rank query searches whichever tab is active
   const normalizedQuery = normalizeUsername(rankQuery);
   const rankResult = normalizedQuery
@@ -114,7 +114,7 @@ export default function Leaderboard() {
         return { rank: idx + 1, ...activeData[idx] };
       })()
     : undefined;
-
+ 
   return (
     <div className="min-h-screen bg-[#060e07] text-white p-8">
       <style>{`
@@ -127,7 +127,7 @@ export default function Leaderboard() {
       <p className="font-mono text-[10px] text-green-800 tracking-widest uppercase mb-4">
         streaks reset at 00:00 UTC
       </p>
-
+ 
       {/* Tab switcher */}
       <div className="flex gap-2 mb-6">
         {["alltime", "weekly"].map((t) => (
@@ -144,7 +144,7 @@ export default function Leaderboard() {
           </button>
         ))}
       </div>
-
+ 
       {/* Your Rank lookup */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-3">
@@ -154,13 +154,13 @@ export default function Leaderboard() {
           </span>
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-green-900" />
         </div>
-
+ 
         <div className="relative rounded-xl border border-green-900 bg-black/50 px-5 py-4">
           <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-20 rounded-tl-xl" />
           <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-20 rounded-tr-xl" />
           <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-20 rounded-bl-xl" />
           <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-20 rounded-br-xl" />
-
+ 
           <input
             type="text"
             value={rankQuery}
@@ -175,21 +175,21 @@ export default function Leaderboard() {
               transition-colors duration-200
             "
           />
-
+ 
           {/* Not searched yet */}
           {rankResult === undefined && (
             <p className="font-mono text-xs text-green-800">
               type your username to see where you stand.
             </p>
           )}
-
+ 
           {/* Not found */}
           {rankResult === null && (
             <p className="font-mono text-xs text-green-700">
               you're not ranked yet. submit your proof of grass to join the leaderboard.
             </p>
           )}
-
+ 
           {/* Found */}
           {rankResult && (
             <div className="flex flex-wrap gap-6">
@@ -217,7 +217,7 @@ export default function Leaderboard() {
           )}
         </div>
       </div>
-
+ 
       {/* Full leaderboard */}
       <div className="space-y-3">
         {activeData.length === 0 && (
@@ -230,7 +230,7 @@ export default function Leaderboard() {
           // Rank movement: "new" for weekly tab entries not in all-time top, else "same" placeholder
           // Full historical tracking would require a backend snapshot — UI-ready for future wiring
           const movement = item.movement ?? null;
-
+ 
           return (
             <div
               key={item.username}
@@ -247,7 +247,7 @@ export default function Leaderboard() {
                   👑 Top Toucher
                 </div>
               )}
-
+ 
               {/* Rank movement badge — UI-ready, populated when movement data exists */}
               {movement === "up" && (
                 <span className="absolute top-2 left-2 font-mono text-[9px] text-[#4ade80]">↑</span>
@@ -258,8 +258,8 @@ export default function Leaderboard() {
               {movement === "new" && (
                 <span className="absolute top-2 left-2 font-mono text-[9px] text-[#f59e0b]">new</span>
               )}
-
-              {/* Main row */}
+ 
+              {/* Line 1 — rank + username + stats */}
               <p className={`font-bold font-mono ${isFirst ? "text-[#4ade80] text-lg" : "text-green-400"}`}>
                 {isFirst ? "🥇" : `#${index + 1}`}{" "}
                 @{item.username}
@@ -270,26 +270,38 @@ export default function Leaderboard() {
                   {" "}— 🔥 {item.current_streak} day{item.current_streak !== 1 ? "s" : ""} streak
                 </span>
               </p>
-
-              {/* Top % prestige badge */}
+ 
+              {/* Line 2 — Top % prestige badge (shown only when eligible) */}
               {getTopPercent(item.current_streak) !== null && (
-                <span className={`inline-block font-mono text-[10px] tracking-widest uppercase mt-1 mb-0.5 ${
-                  isFirst ? "text-[#4ade80]" : "text-green-700"
-                }`}>
-                  ✦ top {getTopPercent(item.current_streak)}% grass toucher
-                </span>
+                <div className="mt-2">
+                  <span className={`
+                    inline-flex items-center gap-1
+                    font-mono text-[10px] tracking-widest uppercase
+                    px-2 py-0.5 rounded-sm
+                    ${isFirst
+                      ? "bg-[#0d2b14] border border-[#4ade80] text-[#4ade80] shadow-[0_0_8px_rgba(74,222,128,0.35)]"
+                      : "bg-[#050f07] border border-[#1f4020] text-[#2d7a35] shadow-[0_0_6px_rgba(74,222,128,0.12)]"
+                    }
+                  `}>
+                    ✦ top {getTopPercent(item.current_streak)}% grass toucher
+                  </span>
+                </div>
               )}
-
-              <a
-                href={item.tweet_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`underline text-sm mt-1 inline-block ${isFirst ? "text-[#4ade80] font-semibold" : "text-blue-400"}`}
-              >
-                View Latest Post
-              </a>
-
-              <p className={`text-xs mt-2 ${isFirst ? "text-[#86efac] opacity-60" : "text-green-900"}`}>
+ 
+              {/* Line 3 — View Latest Post */}
+              <div className="mt-2">
+                <a
+                  href={item.tweet_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`underline text-sm ${isFirst ? "text-[#4ade80] font-semibold" : "text-blue-400"}`}
+                >
+                  View Latest Post
+                </a>
+              </div>
+ 
+              {/* Line 4 — timestamp, lowest priority */}
+              <p className={`text-xs mt-1.5 ${isFirst ? "text-[#86efac] opacity-50" : "text-green-900"}`}>
                 Last post: {formatRelativeTime(item.created_at)}
               </p>
             </div>
