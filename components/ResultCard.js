@@ -138,7 +138,26 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [tweetUrl, setTweetUrl] = useState("");
   const [submitStatus, setSubmitStatus] = useState(null); // null | "loading" | "success" | "error"
   const [submitError, setSubmitError] = useState("");
-  const [clipboardStatus, setClipboardStatus] = useState(null); // null | "success" | "error"
+  const [clipboardDetected, setClipboardDetected] = useState(false); // true when valid X link auto-found
+  const [clipboardFeedback, setClipboardFeedback] = useState(null); // null | "detected" | "invalid"
+
+  // Auto-detect X post link from clipboard on mount
+  useEffect(() => {
+    async function tryClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        const isXLink = /https?:\/\/(x\.com|twitter\.com)\/.+\/status\//i.test(text.trim());
+        if (isXLink) {
+          setTweetUrl(text.trim());
+          setClipboardDetected(true);
+          setClipboardFeedback("detected");
+        }
+      } catch {
+        // Clipboard permission denied or unavailable — fail silently
+      }
+    }
+    tryClipboard();
+  }, []);
 
   // Local countdown for the lock-in screen (ms until next UTC midnight)
   const [lockCountdown, setLockCountdown] = useState("");
@@ -818,64 +837,97 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             </p>
           </div>
 
-          {/* X Post URL */}
-          <div className="flex flex-col gap-1.5">
-            <label className="font-mono text-[10px] tracking-[0.25em] text-[#4ade80] uppercase opacity-60">
-              X Post URL
-            </label>
+          {/* X Post URL — with clipboard auto-detect */}
+          <div className="flex flex-col gap-2">
+            {/* Detected state: prominent CTA replaces label */}
+            {clipboardDetected && tweetUrl && submitStatus !== "success" ? (
+              <div className="
+                flex flex-col gap-2 px-3 py-2.5 rounded-sm
+                border border-[#2d5e30] bg-[#050f07]
+                shadow-[0_0_14px_rgba(74,222,128,0.1)]
+              ">
+                <p className="font-mono text-[11px] text-[#4ade80] tracking-wide font-semibold">
+                  📋 post detected
+                </p>
+                <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide break-all">
+                  {tweetUrl.length > 60 ? tweetUrl.slice(0, 60) + "…" : tweetUrl}
+                </p>
+              </div>
+            ) : (
+              <label className="font-mono text-[10px] tracking-[0.25em] text-[#4ade80] uppercase opacity-60">
+                X Post URL
+              </label>
+            )}
+
+            {/* Input — de-emphasised when clipboard detected, always editable */}
             <input
               type="url"
               value={tweetUrl}
-              onChange={(e) => { setTweetUrl(e.target.value); setSubmitStatus(null); setClipboardStatus(null); }}
+              onChange={(e) => {
+                setTweetUrl(e.target.value);
+                setSubmitStatus(null);
+                // Clear detected state if user edits manually
+                if (clipboardDetected) setClipboardDetected(false);
+                setClipboardFeedback(null);
+              }}
               placeholder="https://x.com/yourhandle/status/..."
               disabled={submitStatus === "loading" || submitStatus === "success"}
-              className="
-                w-full bg-[#060e07] border border-[#1f3d22]
-                text-[#d1fae5] font-mono text-sm
+              className={`
+                w-full bg-[#060e07] font-mono text-sm
                 px-4 py-2.5 rounded-sm
                 placeholder:text-[#2a4a2d]
                 focus:outline-none focus:border-[#4ade80]
                 focus:shadow-[0_0_12px_rgba(74,222,128,0.15)]
                 disabled:opacity-40 disabled:cursor-not-allowed
                 transition-all duration-200
-              "
-            />
-            {/* Paste from clipboard */}
-            <button
-              onClick={async () => {
-                try {
-                  const text = await navigator.clipboard.readText();
-                  const isXLink = /https?:\/\/(x\.com|twitter\.com)\/.+\/status\//i.test(text.trim());
-                  if (isXLink) {
-                    setTweetUrl(text.trim());
-                    setSubmitStatus(null);
-                    setClipboardStatus("success");
-                  } else {
-                    setClipboardStatus("error");
-                  }
-                } catch {
-                  setClipboardStatus("error");
+                ${clipboardDetected
+                  ? "border border-[#2d5e30] text-[#3a5e3d] opacity-60"
+                  : "border border-[#1f3d22] text-[#d1fae5]"
                 }
-                setTimeout(() => setClipboardStatus(null), 2000);
-              }}
-              disabled={submitStatus === "loading" || submitStatus === "success"}
-              className="
-                self-start font-mono text-[10px] tracking-widest uppercase
-                text-[#3a5e3d] hover:text-[#4ade80]
-                transition-colors duration-200
-                disabled:opacity-30 disabled:cursor-not-allowed
-              "
-            >
-              📋 paste link from clipboard
-            </button>
-            {clipboardStatus === "success" && (
+              `}
+            />
+
+            {/* Manual paste button — shown when no auto-detect */}
+            {!clipboardDetected && (
+              <button
+                onClick={async () => {
+                  try {
+                    const text = await navigator.clipboard.readText();
+                    const isXLink = /https?:\/\/(x\.com|twitter\.com)\/.+\/status\//i.test(text.trim());
+                    if (isXLink) {
+                      setTweetUrl(text.trim());
+                      setClipboardDetected(true);
+                      setSubmitStatus(null);
+                      setClipboardFeedback("detected");
+                    } else {
+                      setClipboardFeedback("invalid");
+                    }
+                  } catch {
+                    setClipboardFeedback("invalid");
+                  }
+                  setTimeout(() => setClipboardFeedback(null), 2000);
+                }}
+                disabled={submitStatus === "loading" || submitStatus === "success"}
+                className="
+                  self-start font-mono text-[10px] tracking-widest uppercase
+                  text-[#3a5e3d] hover:text-[#4ade80]
+                  transition-colors duration-200
+                  disabled:opacity-30 disabled:cursor-not-allowed
+                "
+              >
+                📋 paste link from clipboard
+              </button>
+            )}
+
+            {/* Feedback messages */}
+            {clipboardFeedback === "detected" && (
               <p className="font-mono text-[10px] text-[#4ade80] tracking-wide">
-                ✓ link pasted from clipboard
+                ✓ link detected from clipboard
               </p>
             )}
-            {clipboardStatus === "error" && (
+            {clipboardFeedback === "invalid" && (
               <p className="font-mono text-[10px] text-[#f59e0b] tracking-wide">
-                no valid x post link found in clipboard
+                no valid x post link found
               </p>
             )}
           </div>
@@ -986,7 +1038,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             </div>
           )}
 
-          {/* Submit button */}
+          {/* Submit button — more prominent when clipboard link detected */}
           <button
             onClick={handleSubmit}
             disabled={submitStatus === "loading" || submitStatus === "success"}
@@ -999,7 +1051,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                 ? "bg-[#166534] border border-[#4ade80] text-[#4ade80] cursor-not-allowed opacity-70"
                 : submitStatus === "loading"
                 ? "bg-[#1a3520] border border-[#2d5e30] text-[#4ade80] cursor-not-allowed opacity-60"
-                : "bg-transparent border border-[#4ade80] text-[#4ade80] hover:bg-[#0d2b14] hover:shadow-[0_0_20px_rgba(74,222,128,0.2)]"
+                : clipboardDetected
+                  ? "bg-[#4ade80] text-[#07110a] hover:bg-[#86efac] hover:shadow-[0_0_28px_rgba(74,222,128,0.5)] shadow-[0_0_16px_rgba(74,222,128,0.3)]"
+                  : "bg-transparent border border-[#4ade80] text-[#4ade80] hover:bg-[#0d2b14] hover:shadow-[0_0_20px_rgba(74,222,128,0.2)]"
               }
             `}
           >
