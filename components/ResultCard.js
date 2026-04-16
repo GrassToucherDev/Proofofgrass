@@ -186,6 +186,25 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     return () => clearInterval(id);
   }, []);
 
+  const handlePasteFromClipboard = useCallback(async () => {
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (isValidXStatusUrl(text)) {
+        setTweetUrl(text);
+        setClipboardDetected(true);
+        setSubmitStatus(null);
+        setSubmitError("");
+        setClipboardFeedback("detected");
+      } else {
+        setClipboardFeedback("invalid");
+      }
+    } catch {
+      // Clipboard permission denied or unavailable
+      setClipboardFeedback("invalid");
+    }
+    setTimeout(() => setClipboardFeedback(null), 2000);
+  }, []);
+
   const handleNewCaption = useCallback(() => {
     setCaption((prev) => pickCaption(currentStreak, prev));
     setCopied(false);
@@ -898,26 +917,11 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
               `}
             />
 
-            {/* Manual paste button — shown when no auto-detect */}
-            {!clipboardDetected && (
+            {/* Manual paste button — always shown so user can re-paste */}
+            {submitStatus !== "success" && (
               <button
-                onClick={async () => {
-                  try {
-                    const text = await navigator.clipboard.readText();
-                    if (isValidXStatusUrl(text)) {
-                      setTweetUrl(text.trim());
-                      setClipboardDetected(true);
-                      setSubmitStatus(null);
-                      setClipboardFeedback("detected");
-                    } else {
-                      setClipboardFeedback("invalid");
-                    }
-                  } catch {
-                    setClipboardFeedback("invalid");
-                  }
-                  setTimeout(() => setClipboardFeedback(null), 2000);
-                }}
-                disabled={submitStatus === "loading" || submitStatus === "success"}
+                onClick={handlePasteFromClipboard}
+                disabled={submitStatus === "loading"}
                 className="
                   self-start font-mono text-[10px] tracking-widest uppercase
                   text-[#3a5e3d] hover:text-[#4ade80]
