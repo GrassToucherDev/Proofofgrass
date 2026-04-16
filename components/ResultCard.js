@@ -170,21 +170,55 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   }, [caption]);
 
   const [shared, setShared] = useState(false);
+  const [shareHint, setShareHint] = useState(false); // "Select X, then tap Post" nudge
 
-  const handleShareAndPost = useCallback(() => {
-    // Build the exact tweet text
-    const text = `${caption}\n\nday ${currentStreak}\n@XTouchGrass\n#proofofgrass\nhttps://proofofgrass.vercel.app/`;
+  const buildShareText = useCallback(() =>
+    `${caption}\n\nday ${currentStreak}\n@XTouchGrass\n#proofofgrass\nhttps://proofofgrass.vercel.app/`,
+  [caption, currentStreak]);
 
-    // Copy to clipboard (failure is non-blocking)
+  const handleShareAndPost = useCallback(async () => {
+    if (!downloadUrl) return;
+    const text = buildShareText();
+
+    // ── Web Share API with file attachment (mobile / supported browsers) ──
+    const canShareFiles =
+      typeof navigator !== "undefined" &&
+      typeof navigator.share === "function" &&
+      typeof navigator.canShare === "function";
+
+    if (canShareFiles) {
+      try {
+        const res = await fetch(downloadUrl);
+        const blob = await res.blob();
+        const file = new File([blob], "proof-of-grass.png", { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          setShareHint(true); // show hint before sheet opens
+          try {
+            await navigator.share({ files: [file], text });
+            setShared(true);
+            setTimeout(() => { setShared(false); setShareHint(false); }, 4000);
+          } catch (innerErr) {
+            if (innerErr?.name === "AbortError") {
+              setShareHint(false); // user cancelled — clear hint
+              return;
+            }
+            // Other share error — clear hint, fall through to fallback
+            setShareHint(false);
+          }
+          return;
+        }
+      } catch (err) {
+        // fetch/blob/canShare error — fall through to intent fallback
+      }
+    }
+
+    // ── Fallback: clipboard + X intent (desktop / unsupported) ─────────
     navigator.clipboard.writeText(text).catch(() => {});
-
-    // Open X compose window
     const encoded = encodeURIComponent(text);
     window.open(`https://twitter.com/intent/tweet?text=${encoded}`, "_blank");
-
     setShared(true);
     setTimeout(() => setShared(false), 2500);
-  }, [caption, currentStreak]);
+  }, [caption, currentStreak, downloadUrl, buildShareText]);
 
   const handleSubmit = useCallback(async () => {
     if (!username) {
@@ -637,26 +671,37 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </a>
       )}
 
-      {/* Save + Post to X */}
+      {/* Share to X — Web Share API on mobile, intent fallback on desktop */}
       {downloadUrl && (
-        <button
-          onClick={handleShareAndPost}
-          className={`
-            inline-flex items-center gap-3 px-10 py-3.5
-            font-mono text-sm font-bold tracking-widest uppercase rounded-sm
-            transition-all duration-200
-            ${shared
-              ? "bg-[#166534] border border-[#4ade80] text-[#4ade80] shadow-[0_0_20px_rgba(74,222,128,0.2)]"
-              : "bg-transparent border border-[#4ade80] text-[#4ade80] hover:bg-[#0d2b14] hover:shadow-[0_0_24px_rgba(74,222,128,0.25)]"
-            }
-          `}
-        >
-          {shared ? (
-            <><span>✓</span> copied — opening x…</>
+        <div className="flex flex-col items-center gap-2">
+          <button
+            onClick={handleShareAndPost}
+            className={`
+              inline-flex items-center gap-3 px-10 py-3.5
+              font-mono text-sm font-bold tracking-widest uppercase rounded-sm
+              transition-all duration-200
+              ${shared
+                ? "bg-[#166534] border border-[#4ade80] text-[#4ade80] shadow-[0_0_20px_rgba(74,222,128,0.2)]"
+                : "bg-transparent border border-[#4ade80] text-[#4ade80] hover:bg-[#0d2b14] hover:shadow-[0_0_24px_rgba(74,222,128,0.25)]"
+              }
+            `}
+          >
+            {shared ? (
+              <><span>✓</span> shared</>
+            ) : (
+              <>📤 share to x</>
+            )}
+          </button>
+          {shareHint ? (
+            <p className="font-mono text-[11px] text-[#4ade80] tracking-wide">
+              select x, then tap post
+            </p>
           ) : (
-            <>⬆ post on x</>
+            <p className="font-mono text-[11px] text-[#2a4a2d] tracking-wide text-center">
+              opens x with your proof attached on supported devices
+            </p>
           )}
-        </button>
+        </div>
       )}
 
       {/* Caption Generator */}
