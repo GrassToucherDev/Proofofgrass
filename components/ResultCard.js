@@ -138,6 +138,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [tweetUrl, setTweetUrl] = useState("");
   const [submitStatus, setSubmitStatus] = useState(null); // null | "loading" | "success" | "error"
   const [submitError, setSubmitError] = useState("");
+  const [clipboardStatus, setClipboardStatus] = useState(null); // null | "success" | "error"
 
   // Local countdown for the lock-in screen (ms until next UTC midnight)
   const [lockCountdown, setLockCountdown] = useState("");
@@ -778,7 +779,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         <div className="flex items-center gap-2 mb-3">
           <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
           <span className="text-[10px] font-mono tracking-[0.3em] text-[#3a5e3d] uppercase">
-            Submit to Leaderboard
+            Lock In Your Streak
           </span>
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
         </div>
@@ -825,7 +826,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             <input
               type="url"
               value={tweetUrl}
-              onChange={(e) => { setTweetUrl(e.target.value); setSubmitStatus(null); }}
+              onChange={(e) => { setTweetUrl(e.target.value); setSubmitStatus(null); setClipboardStatus(null); }}
               placeholder="https://x.com/yourhandle/status/..."
               disabled={submitStatus === "loading" || submitStatus === "success"}
               className="
@@ -839,6 +840,44 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                 transition-all duration-200
               "
             />
+            {/* Paste from clipboard */}
+            <button
+              onClick={async () => {
+                try {
+                  const text = await navigator.clipboard.readText();
+                  const isXLink = /https?:\/\/(x\.com|twitter\.com)\/.+\/status\//i.test(text.trim());
+                  if (isXLink) {
+                    setTweetUrl(text.trim());
+                    setSubmitStatus(null);
+                    setClipboardStatus("success");
+                  } else {
+                    setClipboardStatus("error");
+                  }
+                } catch {
+                  setClipboardStatus("error");
+                }
+                setTimeout(() => setClipboardStatus(null), 2000);
+              }}
+              disabled={submitStatus === "loading" || submitStatus === "success"}
+              className="
+                self-start font-mono text-[10px] tracking-widest uppercase
+                text-[#3a5e3d] hover:text-[#4ade80]
+                transition-colors duration-200
+                disabled:opacity-30 disabled:cursor-not-allowed
+              "
+            >
+              📋 paste link from clipboard
+            </button>
+            {clipboardStatus === "success" && (
+              <p className="font-mono text-[10px] text-[#4ade80] tracking-wide">
+                ✓ link pasted from clipboard
+              </p>
+            )}
+            {clipboardStatus === "error" && (
+              <p className="font-mono text-[10px] text-[#f59e0b] tracking-wide">
+                no valid x post link found in clipboard
+              </p>
+            )}
           </div>
 
           {/* Lock-in screen — replaces submit area on success */}
@@ -967,7 +1006,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             {submitStatus === "loading" ? (
               <><span className="animate-pulse">●</span> Submitting…</>
             ) : submitStatus === "success" ? null : (
-              <><span>⬆</span> Submit to Leaderboard</>
+              <>⚡ lock in streak</>
             )}
           </button>
         </div>
