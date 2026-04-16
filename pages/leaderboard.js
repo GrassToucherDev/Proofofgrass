@@ -5,6 +5,13 @@ function normalizeUsername(val) {
   return String(val ?? "").replace(/@/g, "").toLowerCase().trim();
 }
 
+function getTopPercent(streak) {
+  if (streak >= 30) return 1;
+  if (streak >= 14) return 5;
+  if (streak >= 7)  return 10;
+  return null;
+}
+
 function formatRelativeTime(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const s = Math.floor(diff / 1000);
@@ -263,6 +270,15 @@ export default function Leaderboard() {
                   {" "}— 🔥 {item.current_streak} day{item.current_streak !== 1 ? "s" : ""} streak
                 </span>
               </p>
+
+              {/* Top % prestige badge */}
+              {getTopPercent(item.current_streak) !== null && (
+                <span className={`inline-block font-mono text-[10px] tracking-widest uppercase mt-1 mb-0.5 ${
+                  isFirst ? "text-[#4ade80]" : "text-green-700"
+                }`}>
+                  ✦ top {getTopPercent(item.current_streak)}% grass toucher
+                </span>
+              )}
 
               <a
                 href={item.tweet_url}

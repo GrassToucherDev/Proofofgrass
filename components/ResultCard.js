@@ -119,6 +119,13 @@ function isValidXStatusUrl(raw) {
   }
 }
 
+function getTopPercent(streak) {
+  if (streak >= 30) return 1;
+  if (streak >= 14) return 5;
+  if (streak >= 7)  return 10;
+  return null;
+}
+
 function getMilestoneMsg(streak) {
   if (streak === 3)  return "momentum building";
   if (streak === 5)  return "locked in";
@@ -602,6 +609,20 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.textAlign = "center";
       ctx.fillText("🌿  KEEP GOING. TOUCH MORE.", CX, 618);
       ctx.restore();
+
+      // ─── TOP % PRESTIGE BADGE ──────────────────────────────────────
+      const topPct = getTopPercent(currentStreak);
+      if (topPct !== null) {
+        ctx.save();
+        ctx.shadowColor = "rgba(74,222,128,0.55)";
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = "#4ade80";
+        ctx.font = "700 18px monospace";
+        ctx.letterSpacing = "3px";
+        ctx.textAlign = "center";
+        ctx.fillText(`TOP ${topPct}% GRASS TOUCHER`, CX, 648);
+        ctx.restore();
+      }
 
       drawBrackets(ctx, SPLIT + 36, 46, W - 44, H - 46, 26);
 
