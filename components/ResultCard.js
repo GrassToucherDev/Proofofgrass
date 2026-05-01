@@ -283,8 +283,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       setSubmitStatus("error");
       return;
     }
-    if (!tweetUrl.trim() || !isValidXStatusUrl(tweetUrl)) {
-      setSubmitError("Enter a valid X post link.");
+    // tweetUrl is optional — submit proceeds with null if not provided
+    if (tweetUrl.trim() && !isValidXStatusUrl(tweetUrl)) {
+      setSubmitError("That doesn't look like a valid X post link. You can leave it blank for now.");
       setSubmitStatus("error");
       return;
     }
@@ -323,7 +324,12 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     // 2. Insert submission (Submissions still used for leaderboard/feed)
     const { error: insertError } = await supabase
       .from("Submissions")
-      .insert([{ username, tweet_url: tweetUrl.trim() }]);
+      .insert([{
+        username,
+        tweet_url: tweetUrl.trim() || null,
+        status: "pending",
+        verification_method: "self_attested",
+      }]);
 
     if (insertError) {
       if (insertError.code === "23505") {
@@ -849,7 +855,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         <div className="flex items-center gap-2 mb-3">
           <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
           <span className="text-[10px] font-mono tracking-[0.3em] text-[#3a5e3d] uppercase">
-            Lock In Your Streak
+            Confirm Your Proof
           </span>
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
         </div>
@@ -865,12 +871,10 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-30" />
           <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
 
-          {/* Submission guidelines */}
-          <div className="font-mono text-[10px] text-[#2a4a2d] tracking-wide border border-[#1a3520] rounded-sm px-3 py-2.5 bg-[#060e07]">
-            <p className="text-[#3a5e3d] uppercase tracking-widest mb-1">submissions must include:</p>
-            <p>· your proof of grass certificate</p>
-            <p>· a valid x post link</p>
-            <p>· @XTouchGrass</p>
+          {/* Confirm proof helper */}
+          <div className="flex flex-col gap-1 font-mono text-[10px] text-[#3a5e3d] tracking-wide">
+            <p>After posting on X, tap below to lock in your streak.</p>
+            <p className="text-[#2a4a2d]">Your post should include your certificate, @XTouchGrass, and #proofofgrass.</p>
           </div>
 
           {/* Submitting as — read-only, sourced from props */}
@@ -906,7 +910,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
               </div>
             ) : (
               <label className="font-mono text-[10px] tracking-[0.25em] text-[#4ade80] uppercase opacity-60">
-                X Post URL
+                X Post URL <span className="normal-case opacity-50">(optional)</span>
               </label>
             )}
 
@@ -988,6 +992,12 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                   </span>
                   <span className="text-[#86efac] text-sm font-semibold">
                     {currentStreak === 1 ? "🌱 your streak starts now" : "🔥 your streak is alive"}
+                  </span>
+                  <span className="text-[#3a5e3d] text-[11px] tracking-wide mt-0.5">
+                    pending review
+                  </span>
+                  <span className="text-[#2a4a2d] text-[10px] tracking-wide">
+                    fake or missing proofs may be rejected
                   </span>
                 </div>
 
@@ -1095,7 +1105,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             {submitStatus === "loading" ? (
               <><span className="animate-pulse">●</span> Submitting…</>
             ) : submitStatus === "success" ? null : (
-              <>⚡ lock in streak</>
+              <>✅ I posted my proof</>
             )}
           </button>
         </div>
