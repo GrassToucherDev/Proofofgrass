@@ -283,7 +283,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       setSubmitStatus("error");
       return;
     }
-    // tweetUrl is optional — submit proceeds with null if not provided
+    // tweetUrl is optional — only validate format if one was provided
     if (tweetUrl.trim() && !isValidXStatusUrl(tweetUrl)) {
       setSubmitError("That doesn't look like a valid X post link. You can leave it blank for now.");
       setSubmitStatus("error");
@@ -292,82 +292,39 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     setSubmitStatus("loading");
     setSubmitError("");
 
-    // UTC date strings — single source of truth for all comparisons
-    const todayDateStr = new Date().toISOString().slice(0, 10);
-    const yesterdayDateStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    // Single atomic RPC — handles duplicate check, submission insert,
+    // streak calc, and Streaks upsert in one Postgres transaction.
+    const { data: result, error: rpcError } = await supabase.rpc("lock_in_streak", {
+      p_username:     username,
+      p_tweet_url:    tweetUrl.trim() || null,
+      p_verification: "self_attested",
+    });
 
-    // 1. Fetch Streaks row — primary gate for whether user already posted today
-    const { data: streakRow, error: streakFetchError } = await supabase
-      .from("Streaks")
-      .select("current_streak, best_streak, last_submission_date")
-      .eq("username", username)
-      .maybeSingle();
-
-    if (streakFetchError) {
-      setSubmitError("Could not verify submission. Try again.");
+    if (rpcError) {
+      console.error("lock_in_streak RPC failed", rpcError);
+      setSubmitError("Something went wrong. Try again.");
       setSubmitStatus("error");
       return;
     }
 
-    // Normalize last_submission_date to UTC YYYY-MM-DD regardless of storage format
-    const lastDate = streakRow?.last_submission_date
-      ? new Date(streakRow.last_submission_date).toISOString().slice(0, 10)
-      : null;
-
-    // Gate: if Streaks.last_submission_date is today, user already posted
-    if (lastDate === todayDateStr) {
+    if (result?.status === "already_submitted") {
       setSubmitError("You\'ve already submitted today. Come back tomorrow. 🌿");
       setSubmitStatus("error");
       return;
     }
 
-    // 2. Insert submission (Submissions still used for leaderboard/feed)
-    const { error: insertError } = await supabase
-      .from("Submissions")
-      .insert([{
-        username,
-        tweet_url: tweetUrl.trim() || null,
-        status: "pending",
-        verification_method: "self_attested",
-      }]);
-
-    if (insertError) {
-      if (insertError.code === "23505") {
-        setSubmitError("You\'ve already submitted today. Come back tomorrow. 🌿");
-      } else {
-        setSubmitError(insertError.message || "Something went wrong. Try again.");
-      }
+    if (result?.status !== "success") {
+      setSubmitError("Unexpected response. Try again.");
       setSubmitStatus("error");
       return;
     }
 
-    // 3. Compute new streak from the already-fetched Streaks row
-    let newStreak = 1;
-    if (streakRow) {
-      if (lastDate === yesterdayDateStr) {
-        // Consecutive day — increment
-        newStreak = streakRow.current_streak + 1;
-      } else {
-        // Gap or first submission — reset to 1
-        newStreak = 1;
-      }
-    }
-
-    const existingBest = streakRow?.best_streak ?? streakRow?.current_streak ?? 1;
-    const newBest = Math.max(newStreak, existingBest);
-
-    await supabase.from("Streaks").upsert({
-      username,
-      current_streak: newStreak,
-      best_streak: newBest,
-      last_submission_date: todayDateStr,
-    }, { onConflict: "username" });
-
+    const newStreak = result.current_streak ?? currentStreak;
     setCurrentStreak(newStreak);
     onStreakUpdate?.(newStreak);
     setSubmitStatus("success");
     setTweetUrl("");
-  }, [username, tweetUrl, onStreakUpdate]);
+  }, [username, tweetUrl, currentStreak, onStreakUpdate]);
 
   // dateStr computed once on client mount to avoid SSR mismatch
   const [dateStr, setDateStr] = useState("");
