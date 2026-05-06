@@ -46,6 +46,7 @@ export default function Home() {
   });
   const [imageSrc, setImageSrc] = useState(null);
   const [currentStreak, setCurrentStreak] = useState(1);
+  const [displayStreak, setDisplayStreak] = useState(1); // projected for certificate
   const [streakStatus, setStreakStatus] = useState("");
   const [streakTone, setStreakTone] = useState("neutral"); // neutral | success | warning | reset
   const [shieldEligible, setShieldEligible] = useState(false); // true when missed 1 day + has shields
@@ -81,6 +82,7 @@ export default function Home() {
   useEffect(() => {
     if (!username) {
       setCurrentStreak(1);
+      setDisplayStreak(1);
       setStreakStatus("");
       setStreakTone("neutral");
       setShieldEligible(false);
@@ -127,6 +129,8 @@ export default function Home() {
         // ── actual vs projected streak ───────────────────────────────────────
         const actualStreak = streakRow?.current_streak ?? 1;
         const projectedNextStreak = actualStreak + 1;
+        // displayStreak: what certificate shows before posting (projected if last was yesterday)
+        const displayStreakVal = computePreviewStreak(streakRow);
 
         // ── status + tone — entirely from Streaks.last_submission_date ────────
         if (!lastStreakDate) {
@@ -159,8 +163,9 @@ export default function Home() {
         // ── hasPostedToday — Streaks.last_submission_date only ───────────────
         setHasPostedToday(lastStreakDate === todayStr);
 
-        // ── streak display — always actual, never projected ──────────────────
+        // actualStreak → HUD/status/shields; displayStreakVal → certificate canvas
         setCurrentStreak(actualStreak);
+        setDisplayStreak(displayStreakVal);
 
         // ── stats panel — rank derived from allStreaks ────────────────────────
         const normalizedUser = username;
@@ -1170,7 +1175,7 @@ export default function Home() {
           <ResultCard
             imageSrc={imageSrc}
             username={username}
-            initialStreak={currentStreak}
+            initialStreak={displayStreak}
             onStreakUpdate={setCurrentStreak}
           />
           <div className="flex justify-center mt-10">
