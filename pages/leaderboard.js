@@ -1,17 +1,43 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabase";
- 
+
 function normalizeUsername(val) {
   return String(val ?? "").replace(/@/g, "").toLowerCase().trim();
 }
- 
+
 function getTopPercent(streak) {
   if (streak >= 30) return 1;
   if (streak >= 14) return 5;
   if (streak >= 7)  return 10;
   return null;
 }
- 
+
+function getStreakTier(streak) {
+  if (streak >= 365) return { label: "ETERNAL",   color: "#fff9c4", bg: "#1a1800", border: "#a08000" };
+  if (streak >= 180) return { label: "MYTHIC",    color: "#fbbf24", bg: "#1a1100", border: "#92400e" };
+  if (streak >= 100) return { label: "IMMORTAL",  color: "#f97316", bg: "#1a0e06", border: "#7c2d12" };
+  if (streak >= 50)  return { label: "LEGENDARY", color: "#ffd700", bg: "#1a1200", border: "#7a5c00" };
+  if (streak >= 30)  return { label: "ELITE",     color: "#c084fc", bg: "#140d1f", border: "#6d28d9" };
+  if (streak >= 14)  return { label: "LOCKED IN", color: "#4ade80", bg: "#0a1f0c", border: "#166534" };
+  if (streak >= 7)   return { label: "ROOTED",    color: "#86efac", bg: "#071209", border: "#1f4020" };
+  if (streak >= 3)   return { label: "GROWING",   color: "#6ee7b7", bg: "#05110a", border: "#1a3520" };
+  return null;
+}
+
+function getNextTier(streak) {
+  const tiers = [3, 7, 14, 30, 50, 100, 180, 365];
+  const next = tiers.find(t => streak < t);
+  if (!next) return null; // already at max (365+)
+  return { days: next, remaining: next - streak };
+}
+
+function getRankMedal(index) {
+  if (index === 0) return "🥇";
+  if (index === 1) return "🥈";
+  if (index === 2) return "🥉";
+  return null;
+}
+
 function formatRelativeTime(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const s = Math.floor(diff / 1000);
@@ -25,17 +51,17 @@ function formatRelativeTime(dateStr) {
   const w = Math.floor(d / 7);
   return `${w}w ago`;
 }
- 
+
 export default function Leaderboard() {
   const [tab, setTab] = useState("alltime"); // "alltime" | "weekly"
   const [data, setData] = useState([]);
   const [weeklyData, setWeeklyData] = useState([]);
   const [rankQuery, setRankQuery] = useState("");
- 
+
   useEffect(() => {
     fetchData();
   }, []);
- 
+
   // Shared helper: group + merge submissions with streak data
   function buildLeaderboard(submissions, streakMap, bestStreakMap) {
     const grouped = {};
@@ -63,12 +89,12 @@ export default function Leaderboard() {
         return new Date(b.created_at) - new Date(a.created_at);
       });
   }
- 
+
   const fetchData = async () => {
     const weekStart = new Date();
     weekStart.setUTCHours(0, 0, 0, 0);
     weekStart.setUTCDate(weekStart.getUTCDate() - 6); // last 7 days
- 
+
     const [
       { data: submissions, error: subError },
       { data: streaks, error: strError },
@@ -76,10 +102,10 @@ export default function Leaderboard() {
       supabase.from("Submissions").select("*").eq("status", "approved").order("created_at", { ascending: false }),
       supabase.from("Streaks").select("username, current_streak, best_streak, last_submission_date"),
     ]);
- 
+
     if (subError) { console.error(subError); return; }
     if (strError) { console.error(strError); }
- 
+
     // Build streak lookups — normalize keys
     const streakMap = {};
     const bestStreakMap = {};
@@ -89,20 +115,20 @@ export default function Leaderboard() {
       streakMap[normalized] = s.current_streak;
       bestStreakMap[normalized] = s.best_streak ?? s.current_streak ?? 1;
     });
- 
+
     // All-time leaderboard
     setData(buildLeaderboard(submissions, streakMap, bestStreakMap));
- 
+
     // Weekly leaderboard — same logic, filtered to last 7 days
     const weeklySubs = (submissions || []).filter(
       (s) => new Date(s.created_at) >= weekStart
     );
     setWeeklyData(buildLeaderboard(weeklySubs, streakMap, bestStreakMap));
   };
- 
+
   // Active dataset reflects selected tab
   const activeData = tab === "weekly" ? weeklyData : data;
- 
+
   // Rank query searches whichever tab is active
   const normalizedQuery = normalizeUsername(rankQuery);
   const rankResult = normalizedQuery
@@ -114,7 +140,7 @@ export default function Leaderboard() {
         return { rank: idx + 1, ...activeData[idx] };
       })()
     : undefined;
- 
+
   return (
     <div className="min-h-screen bg-[#060e07] text-white p-8">
       <style>{`
@@ -127,7 +153,7 @@ export default function Leaderboard() {
       <p className="font-mono text-[10px] text-green-800 tracking-widest uppercase mb-4">
         streaks reset at 00:00 UTC
       </p>
- 
+
       {/* Tab switcher */}
       <div className="flex gap-2 mb-6">
         {["alltime", "weekly"].map((t) => (
@@ -144,7 +170,7 @@ export default function Leaderboard() {
           </button>
         ))}
       </div>
- 
+
       {/* Your Rank lookup */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-3">
@@ -154,13 +180,13 @@ export default function Leaderboard() {
           </span>
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-green-900" />
         </div>
- 
+
         <div className="relative rounded-xl border border-green-900 bg-black/50 px-5 py-4">
           <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-20 rounded-tl-xl" />
           <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-20 rounded-tr-xl" />
           <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-20 rounded-bl-xl" />
           <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-20 rounded-br-xl" />
- 
+
           <input
             type="text"
             value={rankQuery}
@@ -175,21 +201,21 @@ export default function Leaderboard() {
               transition-colors duration-200
             "
           />
- 
+
           {/* Not searched yet */}
           {rankResult === undefined && (
             <p className="font-mono text-xs text-green-800">
               type your username to see where you stand.
             </p>
           )}
- 
+
           {/* Not found */}
           {rankResult === null && (
             <p className="font-mono text-xs text-green-700">
               you're not ranked yet. submit your proof of grass to join the leaderboard.
             </p>
           )}
- 
+
           {/* Found */}
           {rankResult && (
             <div className="flex flex-wrap gap-6">
@@ -217,9 +243,9 @@ export default function Leaderboard() {
           )}
         </div>
       </div>
- 
-      {/* Full leaderboard */}
-      <div className="space-y-3">
+
+      {/* Full leaderboard — responsive grid of square cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {activeData.length === 0 && (
           <p className="font-mono text-xs text-green-900 text-center py-8">
             {tab === "weekly" ? "no activity this week yet" : "no entries yet"}
@@ -230,80 +256,137 @@ export default function Leaderboard() {
           // Rank movement: "new" for weekly tab entries not in all-time top, else "same" placeholder
           // Full historical tracking would require a backend snapshot — UI-ready for future wiring
           const movement = item.movement ?? null;
- 
+
+          const tier = getStreakTier(item.current_streak);
+          const medal = getRankMedal(index);
+          // Progress bar: scale to 365 days max
+          const nextTier = getNextTier(item.current_streak);
+          // Bar fills between current tier threshold and next tier threshold
+          const tierThresholds = [0, 3, 7, 14, 30, 50, 100, 180, 365];
+          const prevThresh = [...tierThresholds].reverse().find(t => item.current_streak >= t) ?? 0;
+          const nextThresh = nextTier?.days ?? 365;
+          const rangeSize = nextThresh - prevThresh;
+          const streakBarFill = rangeSize > 0
+            ? Math.min(100, Math.round(((item.current_streak - prevThresh) / rangeSize) * 100))
+            : 100;
+          const barLabel = !nextTier
+            ? "✦ eternal"
+            : `${nextTier.remaining}d to ${getStreakTier(nextTier.days)?.label ?? "next tier"}`;
+
           return (
             <div
               key={item.username}
-              className={`lb-card relative p-4 rounded-xl overflow-hidden transition-all duration-200 cursor-default
-                ${isFirst
-                  ? "border-2 border-[#4ade80] bg-[#0a1f0c] shadow-[0_0_32px_rgba(74,222,128,0.25)]"
-                  : "border border-green-900 bg-[#07110a] hover:border-green-700"
-                }
-              `}
+              className="lb-card relative flex flex-col overflow-hidden transition-all duration-200 cursor-default rounded-xl"
+              style={{
+                background: tier ? tier.bg : "#07110a",
+                border: `1px solid ${isFirst ? "#4ade80" : (tier ? tier.border : "#14401a")}`,
+                boxShadow: isFirst ? "0 0 28px rgba(74,222,128,0.22)" :
+                           item.current_streak >= 100 ? "0 0 20px rgba(249,115,22,0.14)" :
+                           item.current_streak >= 50  ? "0 0 18px rgba(255,215,0,0.12)" :
+                           item.current_streak >= 30  ? "0 0 14px rgba(192,132,252,0.1)" : "none",
+                minHeight: "180px",
+              }}
             >
-              {/* #1 crown banner */}
-              {isFirst && (
-                <div className="absolute top-0 right-0 bg-[#4ade80] text-[#0a1f0c] font-mono text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-bl-lg">
-                  👑 Top Toucher
+              {/* Top accent line */}
+              <div className="w-full h-0.5 flex-shrink-0" style={{
+                background: tier
+                  ? `linear-gradient(90deg, transparent, ${tier.color}, transparent)`
+                  : "transparent",
+                opacity: 0.55,
+              }} />
+
+              {/* Card body */}
+              <div className="flex flex-col flex-1 p-3 gap-1.5">
+
+                {/* Rank + tier row */}
+                <div className="flex items-center justify-between gap-1">
+                  {/* Rank — bright, always legible */}
+                  <span className="font-mono font-bold text-sm leading-none"
+                    style={{ color: tier ? tier.color : "#4ade80", textShadow: tier ? `0 0 8px ${tier.color}90` : "0 0 8px rgba(74,222,128,0.7)" }}>
+                    {medal ?? `#${index + 1}`}
+                  </span>
+                  {/* Tier badge — white text on semi-transparent dark bg so it always reads */}
+                  {tier && (
+                    <span
+                      className="font-mono text-[8px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-sm"
+                      style={{
+                        color: "#ffffff",
+                        border: `1px solid ${tier.color}`,
+                        background: `${tier.color}28`,
+                        textShadow: `0 0 6px ${tier.color}`,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {tier.label}
+                    </span>
+                  )}
                 </div>
-              )}
- 
-              {/* Rank movement badge — UI-ready, populated when movement data exists */}
-              {movement === "up" && (
-                <span className="absolute top-2 left-2 font-mono text-[9px] text-[#4ade80]">↑</span>
-              )}
-              {movement === "down" && (
-                <span className="absolute top-2 left-2 font-mono text-[9px] text-[#ef4444]">↓</span>
-              )}
-              {movement === "new" && (
-                <span className="absolute top-2 left-2 font-mono text-[9px] text-[#f59e0b]">new</span>
-              )}
- 
-              {/* Line 1 — rank + username + stats */}
-              <p className={`font-bold font-mono ${isFirst ? "text-[#4ade80] text-lg" : "text-green-400"}`}>
-                {isFirst ? "🥇" : `#${index + 1}`}{" "}
-                @{item.username}
-                <span className={`font-normal ${isFirst ? "text-[#86efac]" : "text-green-700"}`}>
-                  {" "}— {item.count} post{item.count !== 1 ? "s" : ""}
-                </span>
-                <span className={`font-normal ${isFirst ? "text-[#4ade80]" : "text-green-600"}`}>
-                  {" "}— 🔥 {item.current_streak} day{item.current_streak !== 1 ? "s" : ""} streak
-                </span>
-              </p>
- 
-              {/* Line 2 — Top % prestige badge (shown only when eligible) */}
-              {getTopPercent(item.current_streak) !== null && (
-                <div className="mt-2">
-                  <span className={`
-                    inline-flex items-center gap-1
-                    font-mono text-[10px] tracking-widest uppercase
-                    px-2 py-0.5 rounded-sm
-                    ${isFirst
-                      ? "bg-[#0d2b14] border border-[#4ade80] text-[#4ade80] shadow-[0_0_8px_rgba(74,222,128,0.35)]"
-                      : "bg-[#050f07] border border-[#1f4020] text-[#2d7a35] shadow-[0_0_6px_rgba(74,222,128,0.12)]"
-                    }
-                  `}>
-                    ✦ top {getTopPercent(item.current_streak)}% grass toucher
+
+                {/* Username — enlarged, bright white */}
+                <p className="font-mono font-bold text-sm text-white truncate"
+                  style={{ textShadow: "0 0 12px rgba(255,255,255,0.15)" }}>
+                  @{item.username}
+                </p>
+
+                {/* Streak — hero number */}
+                <div className="flex items-baseline gap-1 mt-auto">
+                  <span
+                    className="font-mono font-black text-2xl leading-none"
+                    style={{
+                      color: tier ? tier.color : "#4ade80",
+                      textShadow: tier ? `0 0 18px ${tier.color}` : "0 0 18px rgba(74,222,128,0.8)",
+                    }}
+                  >
+                    🔥 {item.current_streak}
+                  </span>
+                  <span className="font-mono text-[11px] text-green-500 font-semibold">
+                    day{item.current_streak !== 1 ? "s" : ""}
                   </span>
                 </div>
-              )}
- 
-              {/* Line 3 — View Latest Post */}
-              <div className="mt-2">
-                <a
-                  href={item.tweet_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`underline text-sm ${isFirst ? "text-[#4ade80] font-semibold" : "text-blue-400"}`}
-                >
-                  View Latest Post
-                </a>
+
+                {/* Progress bar — always-visible track + colored fill */}
+                <div className="mt-1.5 h-1.5 rounded-full overflow-hidden"
+                  style={{ background: "rgba(255,255,255,0.10)" }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${streakBarFill}%`,
+                      background: tier
+                        ? `linear-gradient(90deg, ${tier.color}90, ${tier.color})`
+                        : "linear-gradient(90deg, rgba(74,222,128,0.6), #4ade80)",
+                      boxShadow: tier ? `0 0 6px ${tier.color}80` : "0 0 6px rgba(74,222,128,0.6)",
+                    }}
+                  />
+                </div>
+                {/* Bar label — clearly readable */}
+                <p className="font-mono text-[9px] text-green-400 truncate">{barLabel}</p>
+
+                {/* Top % badge */}
+                {getTopPercent(item.current_streak) !== null && (
+                  <span
+                    className="self-start font-mono text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-sm mt-0.5"
+                    style={{
+                      color: "#ffffff",
+                      border: `1px solid ${tier ? tier.color : "#4ade80"}`,
+                      background: `${tier ? tier.color : "#4ade80"}20`,
+                    }}
+                  >
+                    ✦ top {getTopPercent(item.current_streak)}%
+                  </span>
+                )}
               </div>
- 
-              {/* Line 4 — timestamp, lowest priority */}
-              <p className={`text-xs mt-1.5 ${isFirst ? "text-[#86efac] opacity-50" : "text-green-900"}`}>
-                Last post: {formatRelativeTime(item.created_at)}
-              </p>
+
+              {/* Crown — absolute, small */}
+              {isFirst && (
+                <div className="absolute top-0 right-0 bg-[#4ade80] text-[#0a1f0c] font-mono text-[8px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-bl-lg">
+                  👑
+                </div>
+              )}
+
+              {/* Rank movement */}
+              {movement === "up"   && <span className="absolute bottom-1.5 right-2 font-mono text-[8px] text-[#4ade80]">↑</span>}
+              {movement === "down" && <span className="absolute bottom-1.5 right-2 font-mono text-[8px] text-[#ef4444]">↓</span>}
+              {movement === "new"  && <span className="absolute bottom-1.5 right-2 font-mono text-[8px] text-[#f59e0b]">new</span>}
             </div>
           );
         })}

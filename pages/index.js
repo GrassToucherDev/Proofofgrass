@@ -237,7 +237,7 @@ export default function Home() {
         supabase
           .from("Submissions")
           .select("id", { count: "exact", head: true })
-          .eq("status", "approved")
+          .in("status", ["pending", "approved"])
           .gte("created_at", todayStart.toISOString()),
         supabase
           .from("Streaks")
@@ -416,31 +416,46 @@ export default function Home() {
 
       {/* Layered ambient glows */}
       <div className="pointer-events-none fixed inset-0 z-0" aria-hidden="true">
-        {/* Deep radial centre glow */}
+        {/* Base vignette — deep black-green edges */}
         <div style={{
           position:"absolute", inset:0,
-          background:"radial-gradient(ellipse 80% 60% at 50% 0%, rgba(74,222,128,0.07) 0%, transparent 70%)",
+          background:"radial-gradient(ellipse 120% 100% at 50% 50%, transparent 40%, rgba(0,0,0,0.55) 100%)",
         }} />
-        {/* Bottom-left accent */}
-        <div style={{
-          position:"absolute", bottom:0, left:0, width:"55vw", height:"55vw",
-          background:"radial-gradient(circle, rgba(52,211,153,0.06) 0%, transparent 70%)",
-        }} />
-        {/* Top-right accent */}
-        <div style={{
-          position:"absolute", top:0, right:0, width:"45vw", height:"45vw",
-          background:"radial-gradient(circle, rgba(74,222,128,0.05) 0%, transparent 70%)",
-        }} />
-        {/* Subtle noise grid overlay */}
+        {/* Centre top bloom */}
         <div style={{
           position:"absolute", inset:0,
-          backgroundImage:"linear-gradient(rgba(74,222,128,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(74,222,128,0.025) 1px, transparent 1px)",
-          backgroundSize:"48px 48px",
+          background:"radial-gradient(ellipse 90% 55% at 50% 0%, rgba(74,222,128,0.10) 0%, transparent 65%)",
+        }} />
+        {/* Mid-page secondary bloom */}
+        <div style={{
+          position:"absolute", inset:0,
+          background:"radial-gradient(ellipse 70% 50% at 50% 55%, rgba(52,211,153,0.05) 0%, transparent 70%)",
+        }} />
+        {/* Bottom-left corner accent */}
+        <div style={{
+          position:"absolute", bottom:0, left:0, width:"60vw", height:"60vw",
+          background:"radial-gradient(circle, rgba(52,211,153,0.08) 0%, transparent 65%)",
+        }} />
+        {/* Top-right corner accent */}
+        <div style={{
+          position:"absolute", top:0, right:0, width:"50vw", height:"50vw",
+          background:"radial-gradient(circle, rgba(74,222,128,0.07) 0%, transparent 65%)",
+        }} />
+        {/* Fine grid overlay */}
+        <div style={{
+          position:"absolute", inset:0,
+          backgroundImage:"linear-gradient(rgba(74,222,128,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(74,222,128,0.03) 1px, transparent 1px)",
+          backgroundSize:"40px 40px",
+        }} />
+        {/* Diagonal shimmer stripe */}
+        <div style={{
+          position:"absolute", inset:0,
+          background:"linear-gradient(135deg, transparent 40%, rgba(74,222,128,0.025) 50%, transparent 60%)",
         }} />
       </div>
 
       {/* Grass silhouettes — bottom corners */}
-      <div className="pointer-events-none fixed bottom-0 left-0 z-0 opacity-[0.07]" aria-hidden="true">
+      <div className="pointer-events-none fixed bottom-0 left-0 z-0 opacity-[0.10]" aria-hidden="true">
         <svg width="220" height="120" viewBox="0 0 220 120" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M10 120 Q14 60 20 40 Q26 60 30 120" fill="#4ade80"/>
           <path d="M28 120 Q34 50 42 25 Q50 50 56 120" fill="#4ade80"/>
@@ -519,19 +534,68 @@ export default function Home() {
 
         /* ── Button press feedback ──────────────────────────────────────────── */
         .btn-press:active { transform: scale(0.97); }
+
+        /* ── Section card hover lift ────────────────────────────────────────── */
+        .card-hover {
+          transition: box-shadow 0.25s ease, transform 0.25s ease;
+        }
+        .card-hover:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 0 32px rgba(74,222,128,0.12), 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        /* ── Floating glow orb (decorative) ────────────────────────────────── */
+        @keyframes orbFloat {
+          0%,100% { transform: translateY(0) scale(1); opacity: 0.4; }
+          50%      { transform: translateY(-18px) scale(1.06); opacity: 0.6; }
+        }
+        .orb { animation: orbFloat 7s ease-in-out infinite; }
+        .orb-2 { animation: orbFloat 9s ease-in-out 2s infinite; }
+
+        /* ── Section header line pulse ──────────────────────────────────────── */
+        @keyframes linePulse {
+          0%,100% { opacity: 0.4; }
+          50%      { opacity: 0.9; }
+        }
+        .divider-pulse { animation: linePulse 4s ease-in-out infinite; }
+
+        /* ── Number counter tick ────────────────────────────────────────────── */
+        @keyframes tick {
+          from { opacity: 0; transform: translateY(6px) scale(0.95); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .tick-in { animation: tick 0.35s cubic-bezier(0.22,1,0.36,1) both; }
       `}</style>
 
       {/* All page content sits above fixed bg */}
       <div className="relative z-10 w-full flex flex-col items-center">
 
+      {/* ── Decorative floating orbs behind header ─────────────────────────── */}
+      <div className="pointer-events-none absolute top-0 left-0 w-full h-96 overflow-hidden z-0" aria-hidden="true">
+        <div className="orb absolute" style={{
+          width:320, height:320, borderRadius:"50%",
+          background:"radial-gradient(circle, rgba(74,222,128,0.08) 0%, transparent 70%)",
+          top:"-80px", left:"10%",
+        }} />
+        <div className="orb-2 absolute" style={{
+          width:240, height:240, borderRadius:"50%",
+          background:"radial-gradient(circle, rgba(52,211,153,0.06) 0%, transparent 70%)",
+          top:"-40px", right:"8%",
+        }} />
+      </div>
+
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="text-center mb-12">
-        {/* Tune: change tracking / color of eyebrow */}
-        <span className="text-[12px] tracking-[0.5em] text-[#4ade80] uppercase mb-3 block opacity-70">
-          $TOUCHGRASS · On-Chain Proof System
-        </span>
+      <div className="text-center mb-12 relative z-10">
+        {/* Eyebrow */}
+        <div className="inline-flex items-center gap-2 mb-4">
+          <div className="h-px w-8 divider-pulse" style={{background:"linear-gradient(90deg,transparent,#4ade80)"}} />
+          <span className="text-[11px] tracking-[0.5em] text-[#4ade80] uppercase opacity-75">
+            $TOUCHGRASS · On-Chain Proof System
+          </span>
+          <div className="h-px w-8 divider-pulse" style={{background:"linear-gradient(90deg,#4ade80,transparent)"}} />
+        </div>
         <h1 className="text-6xl font-bold tracking-tight text-white leading-tight"
-          style={{textShadow:"0 0 40px rgba(74,222,128,0.18)"}}>
+          style={{textShadow:"0 0 60px rgba(74,222,128,0.25), 0 0 120px rgba(74,222,128,0.08)"}}>
           Proof of Grass
         </h1>
         <p className="mt-3 text-[#4a6e4d] text-base max-w-xs mx-auto tracking-wide">
@@ -594,7 +658,7 @@ export default function Home() {
         </div>
 
         {/* Tune: increase shadow spread for more depth */}
-        <div className="relative rounded-sm border border-[#1f4020] bg-[#05100a]
+        <div className="card-hover relative rounded-sm border border-[#1f4020] bg-[#05100a]
           shadow-[inset_0_1px_0_rgba(74,222,128,0.12),0_0_32px_rgba(74,222,128,0.07),0_4px_24px_rgba(0,0,0,0.6)]
           px-5 py-5">
           <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-30" />

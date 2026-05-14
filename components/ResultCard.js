@@ -1,7 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { supabase } from "../utils/supabase";
 
-// Caption pools tiered by streak length — add captions freely to any tier
+// Caption pools — each tier must be day-count agnostic (no "X days/weeks in" wording)
+// beginner: days 1-2 | momentum: days 3-6 | strong: days 7-13 | elite: days 14+
 const CAPTION_POOLS = {
   beginner: [
     "just touched grass. strong start. 🌿",
@@ -18,14 +19,31 @@ const CAPTION_POOLS = {
     "proof of work. the work was touching grass.",
     "walked outside. did not refresh x. felt fine.",
     "logged off. went out. came back stronger.",
-    "fresh air acquired. timestamp verified. day one on the books.",
+    "fresh air acquired. timestamp verified. streak: initiated.",
     "certified first step. the streak starts now.",
     "outside for the first time in the timeline. feels different.",
     "grass touched. wallet not checked. healthy.",
+    "first log. many more to come.",
+    "touched grass. did not die. will do again.",
+    "the outdoors: visited. the streak: started.",
+    "my phone stayed inside. i did not.",
+    "went outside on purpose. documentation attached.",
+    "first contact with grass. certified and sealed.",
+    "issued certificate of outdoor activity. day one.",
+    "grass detected. proof generated. streak unlocked.",
+    "outside interaction complete. logging for the record.",
+    "nature: acknowledged. streak: initialized.",
+    "the only nft that requires fresh air.",
+    "departure from indoors confirmed. timestamp attached.",
+    "went out. got proof. came back.",
+    "first entry in the outdoor ledger.",
+    "grass: touched. receipt: here.",
+    "beginning of something real.",
+    "started. the hardest part.",
   ],
   momentum: [
     "still going. streak getting real. 🌿",
-    "three days in. the algorithm does not know where i am.",
+    "the algorithm does not know where i am.",
     "grass touched again. this might be a habit.",
     "consistent. outside. undefeated.",
     "real-world xp farming session complete. streak: locked.",
@@ -37,35 +55,69 @@ const CAPTION_POOLS = {
     "streak integrity: maintained. grass: touched. witnesses: none needed.",
     "another one. the commitment is showing.",
     "the timeline doesn't know where i go every day.",
-    "four days of proof. pattern established.",
+    "a pattern is forming. it is green.",
     "i used to doomscroll. now i do this instead.",
     "building a habit one blade of grass at a time.",
     "on-chain activity: walking outside. status: profitable.",
     "no rest days in the grass-touching season.",
+    "still outside. still logging. still winning.",
+    "streak maintained. skill issue averted.",
+    "consecutive days: increasing. excuses: decreasing.",
+    "the outdoors has good retention.",
+    "another submission. another day ahead of the crowd.",
+    "touching grass is the only daily active yield i trust.",
+    "building on-chain history. one field at a time.",
+    "my wallet is degen. my schedule is not.",
+    "outside committed. streak growing. vibe immaculate.",
+    "the streak is compounding.",
+    "not stopping. not slowing. not skipping.",
+    "routine unlocked. execution ongoing.",
+    "daily proof. daily discipline. daily bag.",
+    "the routine is real now.",
+    "this is what consistency looks like.",
+    "touched grass before most people opened their eyes.",
+    "another day, another certificate.",
   ],
   strong: [
     "consistency looking dangerous. 🌿",
-    "one week in. the grass knows my name now.",
-    "seven days of proof. this is no longer a coincidence.",
+    "the grass knows my name now.",
+    "this is no longer a coincidence.",
     "streak so strong it has its own lore.",
     "this started as a joke. it is not a joke anymore.",
     "certified long-term grass enjoyer. data-backed.",
     "i have touched more grass than most nfts.",
     "the streak is real. the grass is real. i am real.",
-    "one week on the books. the outdoors have accepted me.",
-    "seven consecutive days outside. market still open. didn't check.",
-    "the streak is now a personality trait.",
-    "week one complete. the grass recognizes the dedication.",
+    "the outdoors have accepted me.",
     "daily grass interaction: active. cope: zero.",
     "i have more streak days than most projects have updates.",
     "building something real. outside. with my hands. sort of.",
     "this streak will outlast most alt coins.",
-    "day after day. week after week. no signs of softness.",
+    "no signs of softness. no signs of stopping.",
     "the discipline is on-chain now. no going back.",
+    "the streak is now a personality trait.",
+    "outside is not a trip anymore. it is a practice.",
+    "other people have goals. i have proof.",
+    "my streak has better fundamentals than most launches.",
+    "doing this long enough that it stopped feeling hard.",
+    "the outdoors respect the commitment.",
+    "streak confirmed. doubt: evaporating.",
+    "daily execution, no announcements, just logs.",
+    "the protocol runs. i run with it.",
+    "not a tourist. a recurring participant.",
+    "compounding days of outdoor exposure.",
+    "building a track record that speaks for itself.",
+    "the field is my office. i clocked in again.",
+    "consistently certified. no days off.",
+    "the streak has earned its own address.",
+    "showing up beats showing off.",
+    "another proof. another brick in the streak.",
+    "entered, exited, documented. repeat.",
+    "grass touched at scale.",
+    "streak health: excellent.",
   ],
   elite: [
     "this isn't a phase anymore. it's identity. 🌿",
-    "two weeks of grass. i am the outdoor meta.",
+    "i am the outdoor meta.",
     "streak unlocked: outdoor main character.",
     "the leaderboard feared this day.",
     "some people have lore. i have a streak.",
@@ -74,16 +126,32 @@ const CAPTION_POOLS = {
     "elite grass toucher. verified. unstoppable.",
     "the streak has a market cap now.",
     "at this point the grass is just an extension of my wallet.",
-    "two weeks of proof. most tokens don't last this long.",
     "the outdoor season never ends for me.",
     "not a visitor anymore. a permanent resident of outside.",
     "streak so long it's basically vested.",
     "i have documented more grass than most explorers.",
     "the data speaks. the streak screams.",
-    "day fourteen and beyond. the others are still inside.",
+    "the others are still inside.",
     "certified outdoor original. no derivative.",
     "the protocol is simple: go outside. do it every day. forever.",
     "i didn't build a streak. i built a ritual.",
+    "proof of consistency. certified on every level.",
+    "what started as discipline is now architecture.",
+    "the leaderboard is a mirror. i like what i see.",
+    "running a streak most projects can't sustain.",
+    "deeper in the game than most will ever go.",
+    "the soil remembers me.",
+    "i am not competing. i am documenting.",
+    "streak so seasoned it has its own yield.",
+    "the outdoors is not a habit. it is infrastructure.",
+    "this is not dedication. this is design.",
+    "entering elite territory. daily.",
+    "the streak compounds. the legend grows.",
+    "no one else is doing this like i am.",
+    "proof that consistency is the rarest trait.",
+    "built different. logged different.",
+    "not chasing anyone. they are chasing this.",
+    "documented. verified. legendary.",
   ],
 };
 
@@ -394,6 +462,48 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       }
       ctx.restore();
 
+      // ─── 50+ PRESTIGE: GOLD AMBIENT + CORNER BURSTS ─────────────────
+      if (currentStreak >= 50) {
+        // Warm gold radial glow over whole canvas
+        const goldGlow = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.5, W * 0.75);
+        goldGlow.addColorStop(0,   "rgba(255,200,50,0.07)");
+        goldGlow.addColorStop(0.5, "rgba(255,170,20,0.04)");
+        goldGlow.addColorStop(1,   "rgba(255,140,0,0)");
+        ctx.fillStyle = goldGlow;
+        ctx.fillRect(0, 0, W, H);
+        // Corner burst — top-left
+        ctx.save();
+        ctx.globalAlpha = 0.16;
+        ctx.strokeStyle = "#ffd700";
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 7; i++) {
+          const a = (Math.PI / 14) * i;
+          ctx.beginPath(); ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(a) * 300, Math.sin(a) * 300);
+          ctx.stroke();
+        }
+        ctx.restore();
+        // Corner burst — bottom-right
+        ctx.save();
+        ctx.globalAlpha = 0.11;
+        ctx.strokeStyle = "#ffd700";
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 7; i++) {
+          const a = Math.PI + (Math.PI / 14) * i;
+          ctx.beginPath(); ctx.moveTo(W, H);
+          ctx.lineTo(W + Math.cos(a) * 300, H + Math.sin(a) * 300);
+          ctx.stroke();
+        }
+        ctx.restore();
+        // Shimmer band across right panel
+        const shimmer = ctx.createLinearGradient(870, H * 0.45, W, H * 0.55);
+        shimmer.addColorStop(0,   "rgba(255,200,50,0)");
+        shimmer.addColorStop(0.5, "rgba(255,210,70,0.07)");
+        shimmer.addColorStop(1,   "rgba(255,200,50,0)");
+        ctx.fillStyle = shimmer;
+        ctx.fillRect(870, 0, W - 870, H);
+      }
+
       // ─── DIAGONAL LIGHT STREAK ─────────────────────────────────────
       ctx.save();
       ctx.rotate(Math.PI / 6);
@@ -434,10 +544,10 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.restore();
 
       ctx.save();
-      ctx.shadowColor = "rgba(74,222,128,0.7)";
-      ctx.shadowBlur = 18;
-      ctx.strokeStyle = "rgba(74,222,128,0.55)";
-      ctx.lineWidth = 1.5;
+      ctx.shadowColor = currentStreak >= 50 ? "rgba(255,200,50,0.85)" : "rgba(74,222,128,0.7)";
+      ctx.shadowBlur  = currentStreak >= 50 ? 32 : 18;
+      ctx.strokeStyle = currentStreak >= 50 ? "rgba(255,200,50,0.8)" : "rgba(74,222,128,0.55)";
+      ctx.lineWidth   = currentStreak >= 50 ? 2.5 : 1.5;
       ctx.strokeRect(dx, dy, dw, dh);
       ctx.restore();
 
@@ -484,7 +594,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.restore();
 
       // ── OVERLINE TAG ──
-      const tagW = 260, tagH = 28, tagX = CX - tagW / 2, tagY = 72;
+      const tagW = 300, tagH = 30, tagX = CX - tagW / 2, tagY = 58;
       const tagGrad = ctx.createLinearGradient(tagX, tagY, tagX + tagW, tagY);
       tagGrad.addColorStop(0,   "rgba(74,222,128,0.0)");
       tagGrad.addColorStop(0.2, "rgba(74,222,128,0.18)");
@@ -498,92 +608,98 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.shadowColor = "rgba(74,222,128,0.9)";
       ctx.shadowBlur = 8;
       ctx.fillStyle = "#4ade80";
-      ctx.font = "700 15px monospace";
+      ctx.font = "700 18px monospace";
       ctx.letterSpacing = "5px";
       ctx.textAlign = "center";
-      ctx.fillText("✦  OFFICIAL CERTIFICATE  ✦", CX, tagY + 19);
+      ctx.fillText("✦  OFFICIAL CERTIFICATE  ✦", CX, tagY + 21);
       ctx.restore();
 
-      // ── GLOWING TITLE LINE ──
+      // ── GLOWING TITLE: VERIFIED ──
       ctx.save();
       ctx.shadowColor = "rgba(74,222,128,0.5)";
-      ctx.shadowBlur = 28;
+      ctx.shadowBlur = 32;
       ctx.fillStyle = "#ffffff";
-      ctx.font = "700 66px monospace";
+      ctx.font = "700 90px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("VERIFIED", CX, 198);
+      ctx.fillText("VERIFIED", CX, 168);
       ctx.restore();
 
-      const grassGrad = ctx.createLinearGradient(CX - 260, 0, CX + 260, 0);
+      // ── GRASS TOUCHER ──
+      const grassGrad = ctx.createLinearGradient(CX - 300, 0, CX + 300, 0);
       grassGrad.addColorStop(0,   "#6ee7b7");
       grassGrad.addColorStop(0.5, "#4ade80");
       grassGrad.addColorStop(1,   "#34d399");
       ctx.save();
       ctx.shadowColor = "rgba(74,222,128,0.6)";
-      ctx.shadowBlur = 22;
+      ctx.shadowBlur = 26;
       ctx.fillStyle = grassGrad;
-      ctx.font = "700 52px monospace";
+      ctx.font = "700 72px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("GRASS TOUCHER", CX, 268);
+      ctx.fillText("GRASS TOUCHER", CX, 248);
       ctx.restore();
 
-      drawGlowRule(ctx, CX, 298, 340);
+      drawGlowRule(ctx, CX, 278, 360);
 
-      // ── DATE ──
-      ctx.fillStyle = "rgba(74,222,128,0.45)";
-      ctx.font = "600 15px monospace";
-      ctx.letterSpacing = "3px";
+      // ── DATE SECTION ──
+      ctx.fillStyle = "rgba(74,222,128,0.5)";
+      ctx.font = "600 20px monospace";
+      ctx.letterSpacing = "4px";
       ctx.textAlign = "center";
-      ctx.fillText("DATE OF CERTIFICATION", CX, 346);
-
-      ctx.save();
-      ctx.shadowColor = "rgba(74,222,128,0.3)";
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = "#d1fae5";
-      ctx.font = "400 28px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(dateStr, CX, 384);
-      ctx.restore();
-
-      drawGlowRule(ctx, CX, 408, 260);
-
-      // ── STREAK ──
-      ctx.fillStyle = "rgba(74,222,128,0.45)";
-      ctx.font = "600 15px monospace";
-      ctx.letterSpacing = "3px";
-      ctx.textAlign = "center";
-      ctx.fillText("CURRENT STREAK", CX, 454);
-
-      ctx.save();
-      ctx.shadowColor = "rgba(74,222,128,0.65)";
-      ctx.shadowBlur = 40;
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "700 108px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(`DAY ${currentStreak}`, CX, 570);
-      ctx.restore();
+      ctx.fillText("DATE OF CERTIFICATION", CX, 324);
 
       ctx.save();
       ctx.shadowColor = "rgba(74,222,128,0.35)";
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = "#4ade80";
-      ctx.font = "400 21px monospace";
-      ctx.letterSpacing = "2px";
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = "#d1fae5";
+      ctx.font = "400 38px monospace";
+      ctx.letterSpacing = "1px";
       ctx.textAlign = "center";
-      ctx.fillText("🌿  KEEP GOING. TOUCH MORE.", CX, 618);
+      ctx.fillText(dateStr, CX, 370);
       ctx.restore();
 
-      // ─── TOP % PRESTIGE BADGE ──────────────────────────────────────
+      drawGlowRule(ctx, CX, 398, 280);
+
+      // ── STREAK SECTION ──
+      ctx.fillStyle = "rgba(74,222,128,0.5)";
+      ctx.font = "600 20px monospace";
+      ctx.letterSpacing = "4px";
+      ctx.textAlign = "center";
+      ctx.fillText("CURRENT STREAK", CX, 442);
+
+      ctx.save();
+      ctx.shadowColor = currentStreak >= 50 ? "rgba(255,200,50,0.9)" : "rgba(74,222,128,0.65)";
+      ctx.shadowBlur  = currentStreak >= 50 ? 65 : 44;
+      ctx.fillStyle   = currentStreak >= 50 ? "#ffd700" : "#ffffff";
+      ctx.font = "700 118px monospace";
+      ctx.letterSpacing = "0px";
+      ctx.textAlign = "center";
+      ctx.fillText(`DAY ${currentStreak}`, CX, 568);
+      ctx.restore();
+
+      // ── PRESTIGE / LEGENDARY BANNER ──
+      if (currentStreak >= 50) {
+        ctx.save();
+        ctx.font = "700 14px monospace";
+        ctx.letterSpacing = "4px";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ffd700";
+        ctx.shadowColor = "rgba(255,200,50,0.85)";
+        ctx.shadowBlur  = 24;
+        ctx.fillText("✦  L E G E N D A R Y  G R A S S  T O U C H E R  ✦", CX, 606);
+        ctx.restore();
+      }
+
+      // ── TOP % PRESTIGE BADGE ──
       const topPct = getTopPercent(currentStreak);
       if (topPct !== null) {
         ctx.save();
-        ctx.shadowColor = "rgba(74,222,128,0.55)";
-        ctx.shadowBlur = 18;
-        ctx.fillStyle = "#4ade80";
-        ctx.font = "700 18px monospace";
+        ctx.shadowColor = currentStreak >= 50 ? "rgba(255,200,50,0.6)" : "rgba(74,222,128,0.55)";
+        ctx.shadowBlur = 20;
+        ctx.fillStyle = currentStreak >= 50 ? "#ffd700" : "#4ade80";
+        ctx.font = "700 19px monospace";
         ctx.letterSpacing = "3px";
         ctx.textAlign = "center";
-        ctx.fillText(`TOP ${topPct}% GRASS TOUCHER`, CX, 648);
+        ctx.fillText(`TOP ${topPct}% GRASS TOUCHER`, CX, currentStreak >= 50 ? 636 : 606);
         ctx.restore();
       }
 
@@ -622,9 +738,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       // ─── LOGO ──────────────────────────────────────────────────────
       const logo = new Image();
       logo.onload = () => {
-        const logoSize = 160;
-        const gapTop = 638;
-        const gapBot = H - 64;
+        const logoSize = 210;          // enlarged from 160
+        const gapTop = 652;             // shifted down from 638
+        const gapBot = H - 56;
         const logoX = CX - logoSize / 2;
         const logoY = gapTop + (gapBot - gapTop) / 2 - logoSize / 2;
 
