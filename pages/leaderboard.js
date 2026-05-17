@@ -62,27 +62,23 @@ export default function Leaderboard() {
     fetchData();
   }, []);
 
-  // Shared helper: group + merge submissions with streak data
-  function buildLeaderboard(submissions, streakMap, bestStreakMap) {
-    const grouped = {};
-    (submissions || []).forEach((item) => {
-      const normalized = normalizeUsername(item.username);
-      if (!normalized) return;
-      if (!grouped[normalized]) {
-        grouped[normalized] = { username: normalized, count: 0, tweet_url: item.tweet_url, created_at: item.created_at };
-      }
-      grouped[normalized].count += 1;
-      if (new Date(item.created_at) > new Date(grouped[normalized].created_at)) {
-        grouped[normalized].tweet_url = item.tweet_url;
-        grouped[normalized].created_at = item.created_at;
-      }
-    });
-    return Object.values(grouped)
-      .map((entry) => ({
-        ...entry,
-        current_streak: streakMap[entry.username] ?? 1,
-        best_streak: bestStreakMap[entry.username] ?? 1,
-      }))
+  // Build leaderboard from Streaks as the source of truth.
+  // Submissions are used only for counting and recency — users appear
+  // regardless of submission status (pending or approved).
+  function buildLeaderboard(streaks, submissionCountMap, submissionDateMap, filterFn) {
+    return (streaks || [])
+      .filter(s => normalizeUsername(s.username)) // skip blank usernames
+      .filter(filterFn ?? (() => true))
+      .map((s) => {
+        const u = normalizeUsername(s.username);
+        return {
+          username: u,
+          current_streak: s.current_streak ?? 1,
+          best_streak: s.best_streak ?? s.current_streak ?? 1,
+          count: submissionCountMap[u] ?? 0,
+          created_at: submissionDateMap[u] ?? s.last_submission_date ?? new Date(0).toISOString(),
+        };
+      })
       .sort((a, b) => {
         if (b.current_streak !== a.current_streak) return b.current_streak - a.current_streak;
         if (b.count !== a.count) return b.count - a.count;
@@ -93,37 +89,48 @@ export default function Leaderboard() {
   const fetchData = async () => {
     const weekStart = new Date();
     weekStart.setUTCHours(0, 0, 0, 0);
-    weekStart.setUTCDate(weekStart.getUTCDate() - 6); // last 7 days
+    weekStart.setUTCDate(weekStart.getUTCDate() - 6);
 
     const [
-      { data: submissions, error: subError },
       { data: streaks, error: strError },
+      { data: submissions, error: subError },
     ] = await Promise.all([
-      supabase.from("Submissions").select("*").eq("status", "approved").order("created_at", { ascending: false }),
+      // Streaks is the source of truth — all users with any streak appear
       supabase.from("Streaks").select("username, current_streak, best_streak, last_submission_date"),
+      // Submissions used for counts and recency only — include pending + approved
+      supabase.from("Submissions").select("username, created_at").in("status", ["pending", "approved"]).order("created_at", { ascending: false }),
     ]);
 
-    if (subError) { console.error(subError); return; }
-    if (strError) { console.error(strError); }
+    if (strError) { console.error(strError); return; }
+    if (subError) { console.error(subError); }
 
-    // Build streak lookups — normalize keys
-    const streakMap = {};
-    const bestStreakMap = {};
-    (streaks || []).forEach((s) => {
-      const normalized = normalizeUsername(s.username);
-      if (!normalized) return;
-      streakMap[normalized] = s.current_streak;
-      bestStreakMap[normalized] = s.best_streak ?? s.current_streak ?? 1;
+    // Build submission count + most-recent-date maps
+    const submissionCountMap = {};
+    const submissionDateMap = {};
+    const weeklyUsersSet = new Set();
+
+    (submissions || []).forEach((item) => {
+      const u = normalizeUsername(item.username);
+      if (!u) return;
+      submissionCountMap[u] = (submissionCountMap[u] ?? 0) + 1;
+      if (!submissionDateMap[u] || new Date(item.created_at) > new Date(submissionDateMap[u])) {
+        submissionDateMap[u] = item.created_at;
+      }
+      if (new Date(item.created_at) >= weekStart) {
+        weeklyUsersSet.add(u);
+      }
     });
 
-    // All-time leaderboard
-    setData(buildLeaderboard(submissions, streakMap, bestStreakMap));
+    // All-time: every user in Streaks
+    setData(buildLeaderboard(streaks, submissionCountMap, submissionDateMap));
 
-    // Weekly leaderboard — same logic, filtered to last 7 days
-    const weeklySubs = (submissions || []).filter(
-      (s) => new Date(s.created_at) >= weekStart
-    );
-    setWeeklyData(buildLeaderboard(weeklySubs, streakMap, bestStreakMap));
+    // Weekly: only users who submitted in the last 7 days
+    setWeeklyData(buildLeaderboard(
+      streaks,
+      submissionCountMap,
+      submissionDateMap,
+      (s) => weeklyUsersSet.has(normalizeUsername(s.username))
+    ));
   };
 
   // Active dataset reflects selected tab
