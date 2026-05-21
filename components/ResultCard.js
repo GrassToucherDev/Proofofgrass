@@ -412,80 +412,42 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
     const img = new Image();
     img.onload = () => {
+      // ── FULL-BLEED PHOTO BACKGROUND (smart-cover crop) ──────────────
+      const scale = Math.max(W / img.width, H / img.height);
+      const dw = img.width  * scale;
+      const dh = img.height * scale;
+      const dx = (W - dw) / 2;
+      const dy = (H - dh) / 2;
+      ctx.drawImage(img, dx, dy, dw, dh);
 
-      // ─── BACKGROUND ───────────────────────────────────────────────
-      const bgGrad = ctx.createRadialGradient(W * 0.42, H * 0.5, 80, W * 0.5, H * 0.5, W * 0.72);
-      bgGrad.addColorStop(0,   "#0e1f10");
-      bgGrad.addColorStop(0.5, "#080f09");
-      bgGrad.addColorStop(1,   "#030705");
-      ctx.fillStyle = bgGrad;
+      // ── GLOBAL DARK OVERLAY (tones photo for readability) ───────────
+      ctx.fillStyle = "rgba(0,0,0,0.38)";
       ctx.fillRect(0, 0, W, H);
 
-      ctx.save();
-      for (let i = 0; i < 18000; i++) {
-        const nx = Math.random() * W;
-        const ny = Math.random() * H;
-        ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.018})`;
-        ctx.fillRect(nx, ny, 1, 1);
-      }
-      ctx.restore();
+      // ── RIGHT CINEMATIC GRADIENT OVERLAY ────────────────────────────
+      const HUD_X   = W * 0.55;
+      const HUD_W   = W * 0.40;
+      const HUD_CX  = HUD_X + HUD_W / 2;
 
-      // ─── GREEN GLOW SOURCES ────────────────────────────────────────
-      const glowTR = ctx.createRadialGradient(W * 0.78, H * 0.1, 0, W * 0.78, H * 0.1, 480);
-      glowTR.addColorStop(0,   "rgba(74,222,128,0.13)");
-      glowTR.addColorStop(0.5, "rgba(74,222,128,0.04)");
-      glowTR.addColorStop(1,   "rgba(74,222,128,0)");
-      ctx.fillStyle = glowTR;
+      const rightGrad = ctx.createLinearGradient(HUD_X - 80, 0, W, 0);
+      rightGrad.addColorStop(0,    "rgba(2,8,4,0)");
+      rightGrad.addColorStop(0.25, "rgba(2,8,4,0.82)");
+      rightGrad.addColorStop(0.55, "rgba(2,8,4,0.96)");
+      rightGrad.addColorStop(1,    "rgba(1,5,2,1)");
+      ctx.fillStyle = rightGrad;
       ctx.fillRect(0, 0, W, H);
 
-      const glowBL = ctx.createRadialGradient(W * 0.2, H * 0.9, 0, W * 0.2, H * 0.9, 380);
-      glowBL.addColorStop(0,   "rgba(52,211,153,0.10)");
-      glowBL.addColorStop(1,   "rgba(52,211,153,0)");
-      ctx.fillStyle = glowBL;
-      ctx.fillRect(0, 0, W, H);
-
-      const glowBadge = ctx.createRadialGradient(W * 0.73, H * 0.38, 0, W * 0.73, H * 0.38, 220);
-      glowBadge.addColorStop(0,   "rgba(74,222,128,0.18)");
-      glowBadge.addColorStop(1,   "rgba(74,222,128,0)");
-      ctx.fillStyle = glowBadge;
-      ctx.fillRect(0, 0, W, H);
-
-      // ─── GRID OVERLAY ──────────────────────────────────────────────
-      ctx.save();
-      ctx.strokeStyle = "rgba(74,222,128,0.028)";
-      ctx.lineWidth = 1;
-      for (let x = 0; x < W; x += 48) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-      }
-      for (let y = 0; y < H; y += 48) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-      }
-      ctx.restore();
-
-      // ─── 50+ PRESTIGE: GOLD AMBIENT + CORNER BURSTS ─────────────────
+      // ── 50+ GOLD PRESTIGE AMBIENT ────────────────────────────────────
       if (currentStreak >= 50) {
-        // Warm gold radial glow over whole canvas
-        const goldGlow = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.5, W * 0.75);
-        goldGlow.addColorStop(0,   "rgba(255,200,50,0.07)");
-        goldGlow.addColorStop(0.5, "rgba(255,170,20,0.04)");
+        const goldGlow = ctx.createRadialGradient(W * 0.78, H * 0.5, 0, W * 0.78, H * 0.5, W * 0.45);
+        goldGlow.addColorStop(0,   "rgba(255,200,50,0.10)");
+        goldGlow.addColorStop(0.5, "rgba(255,170,20,0.05)");
         goldGlow.addColorStop(1,   "rgba(255,140,0,0)");
         ctx.fillStyle = goldGlow;
         ctx.fillRect(0, 0, W, H);
-        // Corner burst — top-left
+        // Corner bursts
         ctx.save();
-        ctx.globalAlpha = 0.16;
-        ctx.strokeStyle = "#ffd700";
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 7; i++) {
-          const a = (Math.PI / 14) * i;
-          ctx.beginPath(); ctx.moveTo(0, 0);
-          ctx.lineTo(Math.cos(a) * 300, Math.sin(a) * 300);
-          ctx.stroke();
-        }
-        ctx.restore();
-        // Corner burst — bottom-right
-        ctx.save();
-        ctx.globalAlpha = 0.11;
+        ctx.globalAlpha = 0.14;
         ctx.strokeStyle = "#ffd700";
         ctx.lineWidth = 1;
         for (let i = 0; i < 7; i++) {
@@ -495,266 +457,234 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           ctx.stroke();
         }
         ctx.restore();
-        // Shimmer band across right panel
-        const shimmer = ctx.createLinearGradient(870, H * 0.45, W, H * 0.55);
-        shimmer.addColorStop(0,   "rgba(255,200,50,0)");
-        shimmer.addColorStop(0.5, "rgba(255,210,70,0.07)");
-        shimmer.addColorStop(1,   "rgba(255,200,50,0)");
-        ctx.fillStyle = shimmer;
-        ctx.fillRect(870, 0, W - 870, H);
       }
 
-      // ─── DIAGONAL LIGHT STREAK ─────────────────────────────────────
+      // ── GREEN ACCENT GLOW (top-right HUD area) ──────────────────────
+      const hudGlow = ctx.createRadialGradient(HUD_CX, H * 0.35, 0, HUD_CX, H * 0.35, 340);
+      hudGlow.addColorStop(0,   "rgba(74,222,128,0.12)");
+      hudGlow.addColorStop(1,   "rgba(74,222,128,0)");
+      ctx.fillStyle = hudGlow;
+      ctx.fillRect(0, 0, W, H);
+
+      // ── SUBTLE TERMINAL GRID (right panel only) ──────────────────────
       ctx.save();
-      ctx.rotate(Math.PI / 6);
-      const streak = ctx.createLinearGradient(600, -200, 1200, 300);
-      streak.addColorStop(0,   "rgba(74,222,128,0)");
-      streak.addColorStop(0.5, "rgba(74,222,128,0.06)");
-      streak.addColorStop(1,   "rgba(74,222,128,0)");
-      ctx.fillStyle = streak;
-      ctx.fillRect(400, -400, 120, 1600);
-      ctx.restore();
-
-      // ─── LEFT IMAGE PANEL ──────────────────────────────────────────
-      const SPLIT = 870;
-      const PAD = 52;
-      const imgAreaW = SPLIT - PAD * 2;
-      const imgAreaH = H - PAD * 2;
-      const scale = Math.min(imgAreaW / img.width, imgAreaH / img.height);
-      const dw = img.width * scale;
-      const dh = img.height * scale;
-      const dx = PAD + (imgAreaW - dw) / 2;
-      const dy = PAD + (imgAreaH - dh) / 2;
-
-      const photoGlow = ctx.createRadialGradient(
-        dx + dw / 2, dy + dh / 2, Math.min(dw, dh) * 0.3,
-        dx + dw / 2, dy + dh / 2, Math.max(dw, dh) * 0.8
-      );
-      photoGlow.addColorStop(0,   "rgba(74,222,128,0.0)");
-      photoGlow.addColorStop(0.7, "rgba(74,222,128,0.08)");
-      photoGlow.addColorStop(1,   "rgba(74,222,128,0.0)");
-      ctx.fillStyle = photoGlow;
-      ctx.fillRect(dx - 40, dy - 40, dw + 80, dh + 80);
-
-      ctx.save();
-      ctx.shadowColor = "rgba(0,0,0,0.8)";
-      ctx.shadowBlur = 60;
-      ctx.shadowOffsetY = 12;
-      ctx.drawImage(img, dx, dy, dw, dh);
-      ctx.restore();
-
-      ctx.save();
-      ctx.shadowColor = currentStreak >= 50 ? "rgba(255,200,50,0.85)" : "rgba(74,222,128,0.7)";
-      ctx.shadowBlur  = currentStreak >= 50 ? 32 : 18;
-      ctx.strokeStyle = currentStreak >= 50 ? "rgba(255,200,50,0.8)" : "rgba(74,222,128,0.55)";
-      ctx.lineWidth   = currentStreak >= 50 ? 2.5 : 1.5;
-      ctx.strokeRect(dx, dy, dw, dh);
-      ctx.restore();
-
-      ctx.save();
-      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.strokeStyle = "rgba(74,222,128,0.028)";
       ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(dx, dy + dh);
-      ctx.lineTo(dx, dy);
-      ctx.lineTo(dx + dw, dy);
-      ctx.stroke();
+      for (let x = HUD_X; x < W; x += 44) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+      for (let y = 0; y < H; y += 44) {
+        ctx.beginPath(); ctx.moveTo(HUD_X, y); ctx.lineTo(W, y); ctx.stroke();
+      }
       ctx.restore();
 
-      // ─── DIVIDER ───────────────────────────────────────────────────
-      const divGrad = ctx.createLinearGradient(SPLIT, 0, SPLIT, H);
-      divGrad.addColorStop(0,   "rgba(74,222,128,0)");
-      divGrad.addColorStop(0.2, "rgba(74,222,128,0.4)");
-      divGrad.addColorStop(0.5, "rgba(74,222,128,0.7)");
-      divGrad.addColorStop(0.8, "rgba(74,222,128,0.4)");
-      divGrad.addColorStop(1,   "rgba(74,222,128,0)");
+      // ── OUTER BORDER + CORNER BRACKETS ──────────────────────────────
       ctx.save();
-      ctx.shadowColor = "rgba(74,222,128,0.9)";
-      ctx.shadowBlur = 14;
-      ctx.strokeStyle = divGrad;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(SPLIT, 30);
-      ctx.lineTo(SPLIT, H - 30);
-      ctx.stroke();
+      ctx.strokeStyle = currentStreak >= 50
+        ? "rgba(255,200,50,0.45)"
+        : "rgba(74,222,128,0.32)";
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = currentStreak >= 50
+        ? "rgba(255,200,50,0.5)"
+        : "rgba(74,222,128,0.5)";
+      ctx.shadowBlur = 10;
+      ctx.strokeRect(18, 18, W - 36, H - 36);
+      ctx.restore();
+      drawBrackets(ctx, 18, 18, W - 18, H - 18, 28);
+
+      // ── NOISE TEXTURE ───────────────────────────────────────────────
+      ctx.save();
+      for (let i = 0; i < 2000; i++) { // reduced for perf
+        const nx = HUD_X + Math.random() * (W - HUD_X);
+        const ny = Math.random() * H;
+        ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.015})`;
+        ctx.fillRect(nx, ny, 1, 1);
+      }
       ctx.restore();
 
-      // ─── RIGHT PANEL ───────────────────────────────────────────────
-      const RX = SPLIT + 68;
-      const RW = W - SPLIT - 90;
-      const CX = RX + RW / 2;
+      // ─────────────────────────────────────────────────────────────────
+      // HUD TEXT — evenly distributed across full 900px height
+      // Row guide: 72 | 150 | 210 | 262 | 306 | 376 | 490 | 548 | 620 | 670 | 730 | 800 | 858
+      // ─────────────────────────────────────────────────────────────────
 
+      // ── OFFICIAL CERTIFICATE tag (top, y=72) ─────────────────────────
       ctx.save();
-      ctx.fillStyle = "rgba(255,255,255,0.012)";
-      roundRect(ctx, SPLIT + 28, 38, W - SPLIT - 56, H - 76, 16);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(74,222,128,0.08)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.restore();
-
-      // ── OVERLINE TAG ──
-      const tagW = 300, tagH = 30, tagX = CX - tagW / 2, tagY = 58;
-      const tagGrad = ctx.createLinearGradient(tagX, tagY, tagX + tagW, tagY);
-      tagGrad.addColorStop(0,   "rgba(74,222,128,0.0)");
-      tagGrad.addColorStop(0.2, "rgba(74,222,128,0.18)");
-      tagGrad.addColorStop(0.8, "rgba(74,222,128,0.18)");
-      tagGrad.addColorStop(1,   "rgba(74,222,128,0.0)");
-      ctx.fillStyle = tagGrad;
-      roundRect(ctx, tagX, tagY, tagW, tagH, 4);
-      ctx.fill();
-
-      ctx.save();
-      ctx.shadowColor = "rgba(74,222,128,0.9)";
-      ctx.shadowBlur = 8;
+      ctx.shadowColor = "rgba(74,222,128,0.8)";
+      ctx.shadowBlur = 10;
       ctx.fillStyle = "#4ade80";
-      ctx.font = "700 18px monospace";
+      ctx.font = "700 14px monospace";
       ctx.letterSpacing = "5px";
       ctx.textAlign = "center";
-      ctx.fillText("✦  OFFICIAL CERTIFICATE  ✦", CX, tagY + 21);
+      ctx.fillText("✦  OFFICIAL CERTIFICATE  ✦", HUD_CX, 72);
       ctx.restore();
 
-      // ── GLOWING TITLE: VERIFIED ──
+      // ── VERIFIED (y=170) ─────────────────────────────────────────────
       ctx.save();
-      ctx.shadowColor = "rgba(74,222,128,0.5)";
-      ctx.shadowBlur = 32;
+      ctx.shadowColor = "rgba(74,222,128,0.55)";
+      ctx.shadowBlur = 36;
       ctx.fillStyle = "#ffffff";
-      ctx.font = "700 90px monospace";
+      ctx.font = "700 80px monospace";
+      ctx.letterSpacing = "2px";
       ctx.textAlign = "center";
-      ctx.fillText("VERIFIED", CX, 168);
+      ctx.fillText("VERIFIED", HUD_CX, 170);
       ctx.restore();
 
-      // ── GRASS TOUCHER ──
-      const grassGrad = ctx.createLinearGradient(CX - 300, 0, CX + 300, 0);
-      grassGrad.addColorStop(0,   "#6ee7b7");
-      grassGrad.addColorStop(0.5, "#4ade80");
-      grassGrad.addColorStop(1,   "#34d399");
+      // ── GRASS TOUCHER (y=228) ────────────────────────────────────────
+      const gtGrad = ctx.createLinearGradient(HUD_CX - 280, 0, HUD_CX + 280, 0);
+      gtGrad.addColorStop(0,   "#6ee7b7");
+      gtGrad.addColorStop(0.5, "#4ade80");
+      gtGrad.addColorStop(1,   "#34d399");
       ctx.save();
-      ctx.shadowColor = "rgba(74,222,128,0.6)";
-      ctx.shadowBlur = 26;
-      ctx.fillStyle = grassGrad;
-      ctx.font = "700 72px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("GRASS TOUCHER", CX, 248);
-      ctx.restore();
-
-      drawGlowRule(ctx, CX, 278, 360);
-
-      // ── DATE SECTION ──
-      ctx.fillStyle = "rgba(74,222,128,0.5)";
-      ctx.font = "600 20px monospace";
-      ctx.letterSpacing = "4px";
-      ctx.textAlign = "center";
-      ctx.fillText("DATE OF CERTIFICATION", CX, 324);
-
-      ctx.save();
-      ctx.shadowColor = "rgba(74,222,128,0.35)";
-      ctx.shadowBlur = 12;
-      ctx.fillStyle = "#d1fae5";
-      ctx.font = "400 38px monospace";
+      ctx.shadowColor = "rgba(74,222,128,0.65)";
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = gtGrad;
+      ctx.font = "700 50px monospace";
       ctx.letterSpacing = "1px";
       ctx.textAlign = "center";
-      ctx.fillText(dateStr, CX, 370);
+      ctx.fillText("GRASS TOUCHER", HUD_CX, 228);
       ctx.restore();
 
-      drawGlowRule(ctx, CX, 398, 280);
+      drawGlowRule(ctx, HUD_CX, 256, 320);
 
-      // ── STREAK SECTION ──
+      // ── CURRENT STREAK label (y=295) ─────────────────────────────────
       ctx.fillStyle = "rgba(74,222,128,0.5)";
-      ctx.font = "600 20px monospace";
-      ctx.letterSpacing = "4px";
+      ctx.font = "600 14px monospace";
+      ctx.letterSpacing = "5px";
       ctx.textAlign = "center";
-      ctx.fillText("CURRENT STREAK", CX, 442);
+      ctx.fillText("CURRENT STREAK", HUD_CX, 295);
 
+      // ── DAY N (y=420) — hero number, generous space ──────────────────
       ctx.save();
-      ctx.shadowColor = currentStreak >= 50 ? "rgba(255,200,50,0.9)" : "rgba(74,222,128,0.65)";
-      ctx.shadowBlur  = currentStreak >= 50 ? 65 : 44;
+      ctx.shadowColor = currentStreak >= 50 ? "rgba(255,200,50,0.92)" : "rgba(74,222,128,0.7)";
+      ctx.shadowBlur  = currentStreak >= 50 ? 70 : 50;
       ctx.fillStyle   = currentStreak >= 50 ? "#ffd700" : "#ffffff";
-      ctx.font = "700 118px monospace";
+      ctx.font = "700 110px monospace";
       ctx.letterSpacing = "0px";
       ctx.textAlign = "center";
-      ctx.fillText(`DAY ${currentStreak}`, CX, 568);
+      ctx.fillText(`DAY ${currentStreak}`, HUD_CX, 420);
       ctx.restore();
 
-      // ── PRESTIGE / LEGENDARY BANNER ──
-      if (currentStreak >= 50) {
-        ctx.save();
-        ctx.font = "700 14px monospace";
-        ctx.letterSpacing = "4px";
-        ctx.textAlign = "center";
-        ctx.fillStyle = "#ffd700";
-        ctx.shadowColor = "rgba(255,200,50,0.85)";
-        ctx.shadowBlur  = 24;
-        ctx.fillText("✦  L E G E N D A R Y  G R A S S  T O U C H E R  ✦", CX, 606);
-        ctx.restore();
-      }
+      // ── KEEP GOING (y=468) ───────────────────────────────────────────
+      ctx.save();
+      ctx.fillStyle = "rgba(74,222,128,0.50)";
+      ctx.font = "400 16px monospace";
+      ctx.letterSpacing = "3px";
+      ctx.textAlign = "center";
+      ctx.fillText("KEEP GOING. TOUCH MORE.", HUD_CX, 468);
+      ctx.restore();
 
-      // ── TOP % PRESTIGE BADGE ──
-      const topPct = getTopPercent(currentStreak);
-      if (topPct !== null) {
-        ctx.save();
-        ctx.shadowColor = currentStreak >= 50 ? "rgba(255,200,50,0.6)" : "rgba(74,222,128,0.55)";
-        ctx.shadowBlur = 20;
-        ctx.fillStyle = currentStreak >= 50 ? "#ffd700" : "#4ade80";
-        ctx.font = "700 19px monospace";
-        ctx.letterSpacing = "3px";
-        ctx.textAlign = "center";
-        ctx.fillText(`TOP ${topPct}% GRASS TOUCHER`, CX, currentStreak >= 50 ? 636 : 606);
-        ctx.restore();
-      }
+      drawGlowRule(ctx, HUD_CX, 496, 300);
 
-      drawBrackets(ctx, SPLIT + 36, 46, W - 44, H - 46, 26);
+      // ── DATE OF CERTIFICATION label (y=534) ──────────────────────────
+      ctx.fillStyle = "rgba(74,222,128,0.45)";
+      ctx.font = "600 13px monospace";
+      ctx.letterSpacing = "4px";
+      ctx.textAlign = "center";
+      ctx.fillText("DATE OF CERTIFICATION", HUD_CX, 534);
 
-      // ─── BOTTOM BAR ────────────────────────────────────────────────
-      const barY = H - 64;
-      const barGrad = ctx.createLinearGradient(0, barY, W, barY);
-      barGrad.addColorStop(0,    "rgba(74,222,128,0.0)");
-      barGrad.addColorStop(0.15, "rgba(74,222,128,0.14)");
-      barGrad.addColorStop(0.85, "rgba(74,222,128,0.14)");
-      barGrad.addColorStop(1,    "rgba(74,222,128,0.0)");
-      ctx.fillStyle = barGrad;
-      ctx.fillRect(0, barY - 1, W, 1);
-
+      // ── Date value (y=572) ───────────────────────────────────────────
       ctx.save();
       ctx.shadowColor = "rgba(74,222,128,0.3)";
-      ctx.shadowBlur = 12;
-      ctx.fillStyle = "rgba(209,250,229,0.72)";
-      ctx.font = "italic 400 26px 'Georgia', serif";
-      ctx.letterSpacing = "0.5px";
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = "#d1fae5";
+      ctx.font = "400 30px monospace";
+      ctx.letterSpacing = "1px";
       ctx.textAlign = "center";
-      ctx.fillText('"We do touch grass… it\'s the new trend."', W / 2, H - 24);
+      ctx.fillText(dateStr, HUD_CX, 572);
       ctx.restore();
 
-      ctx.fillStyle = "rgba(74,222,128,0.12)";
-      ctx.font = "700 15px monospace";
-      ctx.letterSpacing = "3px";
-      ctx.textAlign = "left";
-      ctx.fillText("PROOF-OF-GRASS", 44, H - 24);
+      drawGlowRule(ctx, HUD_CX, 600, 300);
 
+      // ── LEGENDARY BANNER + TOP % BADGE — fills bottom zone ──────────
+      const topPct = getTopPercent(currentStreak);
+      if (currentStreak >= 50 || topPct !== null) {
+        const badgeColor  = currentStreak >= 50 ? "#ffd700" : "#4ade80";
+        const badgeShadow = currentStreak >= 50 ? "rgba(255,200,50,0.8)" : "rgba(74,222,128,0.7)";
+
+        // LEGENDARY label — large, spaced
+        if (currentStreak >= 50) {
+          ctx.save();
+          ctx.font = "700 22px monospace";
+          ctx.letterSpacing = "10px";
+          ctx.textAlign = "center";
+          ctx.fillStyle = "#ffd700";
+          ctx.shadowColor = "rgba(255,200,50,0.9)";
+          ctx.shadowBlur  = 28;
+          ctx.fillText("✦  L E G E N D A R Y  ✦", HUD_CX, 648);
+          ctx.restore();
+        }
+
+        if (topPct !== null) {
+          // Badge pill — tall and wide to fill the zone
+          const bW = Math.min(HUD_W - 20, 340);
+          const bH = 100;
+          const bX = HUD_CX - bW / 2;
+          const bY = currentStreak >= 50 ? 672 : 628;
+
+          ctx.save();
+          ctx.shadowColor = badgeShadow;
+          ctx.shadowBlur  = 26;
+          ctx.fillStyle   = currentStreak >= 50
+            ? "rgba(255,200,50,0.14)"
+            : "rgba(74,222,128,0.12)";
+          roundRect(ctx, bX, bY, bW, bH, 10);
+          ctx.fill();
+          ctx.strokeStyle = badgeColor;
+          ctx.lineWidth   = 2;
+          roundRect(ctx, bX, bY, bW, bH, 10);
+          ctx.stroke();
+          ctx.restore();
+
+          // TOP X% — large hero text inside badge
+          ctx.save();
+          ctx.fillStyle   = badgeColor;
+          ctx.shadowColor = badgeShadow;
+          ctx.shadowBlur  = 20;
+          ctx.font = "700 48px monospace";
+          ctx.letterSpacing = "4px";
+          ctx.textAlign = "center";
+          ctx.fillText(`TOP ${topPct}%`, HUD_CX, bY + 62);
+          ctx.restore();
+
+          // "OF ALL GRASS TOUCHERS" — subtitle inside badge
+          ctx.save();
+          ctx.fillStyle = "rgba(255,255,255,0.60)";
+          ctx.font = "400 13px monospace";
+          ctx.letterSpacing = "4px";
+          ctx.textAlign = "center";
+          ctx.fillText("OF ALL GRASS TOUCHERS", HUD_CX, bY + 86);
+          ctx.restore();
+        }
+      }
+
+      // ── BOTTOM BAR (y = H-28) ────────────────────────────────────────
+      ctx.fillStyle = "rgba(74,222,128,0.12)";
+      ctx.font = "700 12px monospace";
+      ctx.letterSpacing = "4px";
+      ctx.textAlign = "left";
+      ctx.fillText("#PROOFOFGRASS", 36, H - 28);
       ctx.fillStyle = "rgba(74,222,128,0.12)";
       ctx.textAlign = "right";
-      ctx.fillText("BLOCKCHAIN VERIFIED", W - 44, H - 24);
+      ctx.fillText("proofofgrass.vercel.app", W - 36, H - 28);
 
-      // ─── LOGO ──────────────────────────────────────────────────────
+      // ── LOGO — bottom-right quadrant, clear of badge (y~780) ────────
       const logo = new Image();
       logo.onload = () => {
-        const logoSize = 210;          // enlarged from 160
-        const gapTop = 652;             // shifted down from 638
-        const gapBot = H - 56;
-        const logoX = CX - logoSize / 2;
-        const logoY = gapTop + (gapBot - gapTop) / 2 - logoSize / 2;
+        const logoSize = 100;
+        const logoX    = W - logoSize - 36;      // inner right edge
+        const logoY    = H - logoSize - 52;      // sits above bottom bar
 
         const logoGlow = ctx.createRadialGradient(
-          logoX + logoSize / 2, logoY + logoSize / 2, 10,
+          logoX + logoSize / 2, logoY + logoSize / 2, 8,
           logoX + logoSize / 2, logoY + logoSize / 2, logoSize
         );
-        logoGlow.addColorStop(0,   "rgba(74,222,128,0.22)");
+        logoGlow.addColorStop(0,   "rgba(74,222,128,0.16)");
         logoGlow.addColorStop(1,   "rgba(74,222,128,0)");
         ctx.fillStyle = logoGlow;
-        ctx.fillRect(logoX - logoSize / 2, logoY - logoSize / 2, logoSize * 2, logoSize * 2);
+        ctx.fillRect(logoX - 30, logoY - 30, logoSize + 60, logoSize + 60);
 
         ctx.save();
-        ctx.globalAlpha = 0.92;
+        ctx.globalAlpha = 0.85;
         ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
         ctx.restore();
 
@@ -763,7 +693,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       logo.onerror = () => setDownloadUrl(canvas.toDataURL("image/png"));
       logo.src = "/touchgrass-transparent.png";
     };
-    img.src = imageSrc;
+        img.src = imageSrc;
   }, [imageSrc, dateStr, currentStreak]);
 
   return (

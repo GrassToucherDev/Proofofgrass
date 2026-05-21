@@ -101,9 +101,8 @@ export default function Home() {
       const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
       try {
-        // Single Streaks fetch with all required fields — source of truth for status/shield/dates
-        // Submissions fetched in parallel for post count and rank only
-        const [{ data: streakRow }, { count: postCount }, { data: allStreaks }] = await Promise.all([
+        // Two targeted queries in parallel — no full-table scans
+        const [{ data: streakRow }, { count: postCount }] = await Promise.all([
           supabase
             .from("Streaks")
             .select("current_streak, best_streak, last_submission_date, shield_count")
@@ -113,11 +112,15 @@ export default function Home() {
             .from("Submissions")
             .select("id", { count: "exact", head: true })
             .eq("username", username),
-          supabase
-            .from("Streaks")
-            .select("username, current_streak")
-            .order("current_streak", { ascending: false }),
         ]);
+
+        // Rank: count how many users have a higher streak (no full table scan)
+        const userStreak = streakRow?.current_streak ?? 1;
+        const { count: rankCount } = await supabase
+          .from("Streaks")
+          .select("id", { count: "exact", head: true })
+          .gt("current_streak", userStreak);
+        const derivedRank = ((rankCount ?? 0) + 1);
 
         // ── normalize last_submission_date to UTC YYYY-MM-DD ─────────────────
         const twoDaysAgoStr = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
@@ -167,13 +170,6 @@ export default function Home() {
         setCurrentStreak(actualStreak);
         setDisplayStreak(displayStreakVal);
 
-        // ── stats panel — rank derived from allStreaks ────────────────────────
-        const normalizedUser = username;
-        const rankIdx = (allStreaks || []).findIndex(
-          (s) => String(s.username ?? "").replace(/@/g, "").toLowerCase().trim() === normalizedUser
-        );
-        const derivedRank = rankIdx >= 0 ? rankIdx + 1 : null;
-
         setUserStats({
           posts: postCount ?? 0,
           bestStreak: streakRow?.best_streak ?? actualStreak,
@@ -181,7 +177,9 @@ export default function Home() {
           shields: shieldCount,
         });
 
-        // Fetch latest shield purchase for status display — non-blocking
+        console.log({ username, streakRow, actualStreak, projectedNextStreak, lastStreakDate, shieldCount, missedOneDay });
+
+        // Shield purchase status — fire after main state is set, truly non-blocking
         supabase
           .from("ShieldPurchases")
           .select("tx_signature, status, created_at")
@@ -189,11 +187,7 @@ export default function Home() {
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle()
-          .then(({ data: purchase }) => {
-            setLatestPurchase(purchase ?? null);
-          });
-
-        console.log({ username, streakRow, actualStreak, projectedNextStreak, lastStreakDate, shieldCount, missedOneDay });
+          .then(({ data: purchase }) => setLatestPurchase(purchase ?? null));
       } catch (err) {
         console.error("streak preload failed", err);
         // Reset shield state on error to avoid stale eligible UI
@@ -217,12 +211,11 @@ export default function Home() {
       const diff = nextMidnight - now;
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
       setCountdownMs(diff);
-      setTimeUntilReset(`resets in ${h}h ${m}m ${String(s).padStart(2,"0")}s`);
+      setTimeUntilReset(`resets in ${h}h ${m}m`);
     }
     calcCountdown();
-    const interval = setInterval(calcCountdown, 1000);
+    const interval = setInterval(calcCountdown, 10000); // 10s is enough for h/m display
     return () => clearInterval(interval);
   }, [mounted]);
 
