@@ -595,66 +595,105 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
       drawGlowRule(ctx, HUD_CX, 600, 300);
 
-      // ── LEGENDARY BANNER + TOP % BADGE — fills bottom zone ──────────
+      // ── BOTTOM ZONE — always filled ──────────────────────────────────
       const topPct = getTopPercent(currentStreak);
-      if (currentStreak >= 50 || topPct !== null) {
-        const badgeColor  = currentStreak >= 50 ? "#ffd700" : "#4ade80";
-        const badgeShadow = currentStreak >= 50 ? "rgba(255,200,50,0.8)" : "rgba(74,222,128,0.7)";
+      const badgeColor  = currentStreak >= 50 ? "#ffd700" : "#4ade80";
+      const badgeShadow = currentStreak >= 50
+        ? "rgba(255,200,50,0.8)"
+        : "rgba(74,222,128,0.7)";
 
-        // LEGENDARY label — large, spaced
-        if (currentStreak >= 50) {
-          ctx.save();
-          ctx.font = "700 22px monospace";
-          ctx.letterSpacing = "10px";
-          ctx.textAlign = "center";
-          ctx.fillStyle = "#ffd700";
-          ctx.shadowColor = "rgba(255,200,50,0.9)";
-          ctx.shadowBlur  = 28;
-          ctx.fillText("✦  L E G E N D A R Y  ✦", HUD_CX, 648);
-          ctx.restore();
-        }
+      // LEGENDARY label for 50+ streaks
+      if (currentStreak >= 50) {
+        ctx.save();
+        ctx.font = "700 22px monospace";
+        ctx.letterSpacing = "10px";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ffd700";
+        ctx.shadowColor = "rgba(255,200,50,0.9)";
+        ctx.shadowBlur  = 28;
+        ctx.fillText("✦  L E G E N D A R Y  ✦", HUD_CX, 668);
+        ctx.restore();
+      }
 
-        if (topPct !== null) {
-          // Badge pill — tall and wide to fill the zone
-          const bW = Math.min(HUD_W - 20, 340);
-          const bH = 100;
-          const bX = HUD_CX - bW / 2;
-          const bY = currentStreak >= 50 ? 672 : 628;
+      if (topPct !== null) {
+        // Prestige badge pill — tall, wide, always shown when streak qualifies
+        const bW = Math.min(HUD_W - 20, 340);
+        const bH = 100;
+        const bX = HUD_CX - bW / 2;
+        const bY = currentStreak >= 50 ? 700 : 676;
 
-          ctx.save();
-          ctx.shadowColor = badgeShadow;
-          ctx.shadowBlur  = 26;
-          ctx.fillStyle   = currentStreak >= 50
-            ? "rgba(255,200,50,0.14)"
-            : "rgba(74,222,128,0.12)";
-          roundRect(ctx, bX, bY, bW, bH, 10);
-          ctx.fill();
-          ctx.strokeStyle = badgeColor;
-          ctx.lineWidth   = 2;
-          roundRect(ctx, bX, bY, bW, bH, 10);
-          ctx.stroke();
-          ctx.restore();
+        ctx.save();
+        ctx.shadowColor = badgeShadow;
+        ctx.shadowBlur  = 26;
+        ctx.fillStyle   = currentStreak >= 50
+          ? "rgba(255,200,50,0.14)"
+          : "rgba(74,222,128,0.12)";
+        roundRect(ctx, bX, bY, bW, bH, 10);
+        ctx.fill();
+        ctx.strokeStyle = badgeColor;
+        ctx.lineWidth   = 2;
+        roundRect(ctx, bX, bY, bW, bH, 10);
+        ctx.stroke();
+        ctx.restore();
 
-          // TOP X% — large hero text inside badge
-          ctx.save();
-          ctx.fillStyle   = badgeColor;
-          ctx.shadowColor = badgeShadow;
-          ctx.shadowBlur  = 20;
-          ctx.font = "700 48px monospace";
-          ctx.letterSpacing = "4px";
-          ctx.textAlign = "center";
-          ctx.fillText(`TOP ${topPct}%`, HUD_CX, bY + 62);
-          ctx.restore();
+        ctx.save();
+        ctx.fillStyle   = badgeColor;
+        ctx.shadowColor = badgeShadow;
+        ctx.shadowBlur  = 20;
+        ctx.font = "700 48px monospace";
+        ctx.letterSpacing = "4px";
+        ctx.textAlign = "center";
+        ctx.fillText(`TOP ${topPct}%`, HUD_CX, bY + 62);
+        ctx.restore();
 
-          // "OF ALL GRASS TOUCHERS" — subtitle inside badge
-          ctx.save();
-          ctx.fillStyle = "rgba(255,255,255,0.60)";
-          ctx.font = "400 13px monospace";
-          ctx.letterSpacing = "4px";
-          ctx.textAlign = "center";
-          ctx.fillText("OF ALL GRASS TOUCHERS", HUD_CX, bY + 86);
-          ctx.restore();
-        }
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,0.60)";
+        ctx.font = "400 13px monospace";
+        ctx.letterSpacing = "4px";
+        ctx.textAlign = "center";
+        ctx.fillText("OF ALL GRASS TOUCHERS", HUD_CX, bY + 86);
+        ctx.restore();
+
+      } else {
+        // No prestige tier yet — show streak identity + a motivational block
+        const identityLabel = currentStreak >= 3 ? "🌿 SPROUT" : "🌱 SEED";
+        const identityColor = "#4ade80";
+
+        // Identity pill
+        const bW = Math.min(HUD_W - 20, 320);
+        const bH = 100;
+        const bX = HUD_CX - bW / 2;
+        const bY = 676;
+
+        ctx.save();
+        ctx.shadowColor = "rgba(74,222,128,0.6)";
+        ctx.shadowBlur  = 20;
+        ctx.fillStyle   = "rgba(74,222,128,0.09)";
+        roundRect(ctx, bX, bY, bW, bH, 10);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(74,222,128,0.45)";
+        ctx.lineWidth   = 1.5;
+        roundRect(ctx, bX, bY, bW, bH, 10);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.fillStyle   = identityColor;
+        ctx.shadowColor = "rgba(74,222,128,0.7)";
+        ctx.shadowBlur  = 16;
+        ctx.font = "700 38px monospace";
+        ctx.letterSpacing = "4px";
+        ctx.textAlign = "center";
+        ctx.fillText(identityLabel, HUD_CX, bY + 56);
+        ctx.restore();
+
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,0.45)";
+        ctx.font = "400 12px monospace";
+        ctx.letterSpacing = "4px";
+        ctx.textAlign = "center";
+        ctx.fillText("STREAK RANK: BUILDING", HUD_CX, bY + 82);
+        ctx.restore();
       }
 
       // ── BOTTOM BAR (y = H-28) ────────────────────────────────────────
@@ -676,12 +715,12 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
         const logoGlow = ctx.createRadialGradient(
           logoX + logoSize / 2, logoY + logoSize / 2, 8,
-          logoX + logoSize / 2, logoY + logoSize / 2, logoSize
+          logoX + logoSize / 2, logoY + logoSize / 2, logoSize * 0.7
         );
-        logoGlow.addColorStop(0,   "rgba(74,222,128,0.16)");
+        logoGlow.addColorStop(0,   "rgba(74,222,128,0.05)");
         logoGlow.addColorStop(1,   "rgba(74,222,128,0)");
         ctx.fillStyle = logoGlow;
-        ctx.fillRect(logoX - 30, logoY - 30, logoSize + 60, logoSize + 60);
+        ctx.fillRect(logoX - 10, logoY - 10, logoSize + 20, logoSize + 20);
 
         ctx.save();
         ctx.globalAlpha = 0.85;
