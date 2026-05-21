@@ -492,14 +492,15 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.fillRect(0, 0, W, H);
 
       // ── RIGHT CINEMATIC GRADIENT OVERLAY ────────────────────────────
-      const HUD_X   = W * 0.55;
-      const HUD_W   = W * 0.40;
-      const HUD_CX  = HUD_X + HUD_W / 2;
+      const HUD_X   = W * 0.63;          // pushed right — more photo visible
+      const HUD_W   = W * 0.33;          // narrower panel, clears logo at right edge
+      const HUD_CX  = HUD_X + HUD_W / 2; // centers at ~W*0.795
 
-      const rightGrad = ctx.createLinearGradient(HUD_X - 80, 0, W, 0);
+      // Gradient starts further right so photo is visible across more of the canvas
+      const rightGrad = ctx.createLinearGradient(W * 0.48, 0, W, 0);
       rightGrad.addColorStop(0,    "rgba(2,8,4,0)");
-      rightGrad.addColorStop(0.25, "rgba(2,8,4,0.82)");
-      rightGrad.addColorStop(0.55, "rgba(2,8,4,0.96)");
+      rightGrad.addColorStop(0.28, "rgba(2,8,4,0.80)");
+      rightGrad.addColorStop(0.58, "rgba(2,8,4,0.95)");
       rightGrad.addColorStop(1,    "rgba(1,5,2,1)");
       ctx.fillStyle = rightGrad;
       ctx.fillRect(0, 0, W, H);
@@ -611,7 +612,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.fillText("GRASS TOUCHER", HUD_CX, 228);
       ctx.restore();
 
-      drawGlowRule(ctx, HUD_CX, 256, 320);
+      drawGlowRule(ctx, HUD_CX, 256, 280);
 
       // ── CURRENT STREAK label (y=295) ─────────────────────────────────
       ctx.fillStyle = "rgba(74,222,128,0.5)";
@@ -640,7 +641,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.fillText("KEEP GOING. TOUCH MORE.", HUD_CX, 468);
       ctx.restore();
 
-      drawGlowRule(ctx, HUD_CX, 496, 300);
+      drawGlowRule(ctx, HUD_CX, 496, 260);
 
       // ── DATE OF CERTIFICATION label (y=534) ──────────────────────────
       ctx.fillStyle = "rgba(74,222,128,0.45)";
@@ -660,7 +661,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.fillText(dateStr, HUD_CX, 572);
       ctx.restore();
 
-      drawGlowRule(ctx, HUD_CX, 600, 300);
+      drawGlowRule(ctx, HUD_CX, 600, 260);
 
       // ── BOTTOM ZONE — always filled ──────────────────────────────────
       const topPct = getTopPercent(currentStreak);
@@ -684,7 +685,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
       if (topPct !== null) {
         // Prestige badge pill — tall, wide, always shown when streak qualifies
-        const bW = Math.min(HUD_W - 20, 340);
+        const bW = Math.min(HUD_W - 30, 300);
         const bH = 106;
         const bX = HUD_CX - bW / 2;
         const bY = currentStreak >= 50 ? 718 : 698;
@@ -727,7 +728,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         const identityColor = "#4ade80";
 
         // Identity pill
-        const bW = Math.min(HUD_W - 20, 320);
+        const bW = Math.min(HUD_W - 30, 280);
         const bH = 106;
         const bX = HUD_CX - bW / 2;
         const bY = 718;
