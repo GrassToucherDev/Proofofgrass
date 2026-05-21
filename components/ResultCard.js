@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { supabase } from "../utils/supabase";
 
-// Caption pools — each tier must be day-count agnostic (no "X days/weeks in" wording)
+// Caption pools — tier-accurate, no day/week-count wording
 // beginner: days 1-2 | momentum: days 3-6 | strong: days 7-13 | elite: days 14+
 const CAPTION_POOLS = {
   beginner: [
@@ -29,17 +29,32 @@ const CAPTION_POOLS = {
     "my phone stayed inside. i did not.",
     "went outside on purpose. documentation attached.",
     "first contact with grass. certified and sealed.",
-    "issued certificate of outdoor activity. day one.",
     "grass detected. proof generated. streak unlocked.",
     "outside interaction complete. logging for the record.",
     "nature: acknowledged. streak: initialized.",
     "the only nft that requires fresh air.",
     "departure from indoors confirmed. timestamp attached.",
     "went out. got proof. came back.",
-    "first entry in the outdoor ledger.",
     "grass: touched. receipt: here.",
     "beginning of something real.",
     "started. the hardest part.",
+    "unlocked: fresh air. equipped: accountability.",
+    "issued. certified. logged. valid.",
+    "the first step is always outside.",
+    "grass interaction: confirmed. no excuses needed.",
+    "entry logged. streak sequence: initiated.",
+    "rare event detected: user touched grass.",
+    "first proof. the chain begins here.",
+    "character development: going outside.",
+    "seed planted. streak started.",
+    "outside status: verified. indoor streak: broken.",
+    "no cope. just grass. just proof.",
+    "the journey starts with one blade of grass.",
+    "timestamp: now. location: outside. mood: certified.",
+    "submitted. the ledger does not lie.",
+    "grass touched. future secured.",
+    "documented for the record. this one counts.",
+    "outside achievement unlocked.",
   ],
   momentum: [
     "still going. streak getting real. 🌿",
@@ -66,7 +81,6 @@ const CAPTION_POOLS = {
     "the outdoors has good retention.",
     "another submission. another day ahead of the crowd.",
     "touching grass is the only daily active yield i trust.",
-    "building on-chain history. one field at a time.",
     "my wallet is degen. my schedule is not.",
     "outside committed. streak growing. vibe immaculate.",
     "the streak is compounding.",
@@ -74,9 +88,25 @@ const CAPTION_POOLS = {
     "routine unlocked. execution ongoing.",
     "daily proof. daily discipline. daily bag.",
     "the routine is real now.",
-    "this is what consistency looks like.",
     "touched grass before most people opened their eyes.",
     "another day, another certificate.",
+    "the habit is forming. the proof is here.",
+    "consistency is a practice. i am practicing.",
+    "streak still alive. enemies still inside.",
+    "outside again. on purpose. documented.",
+    "grass log submitted. streak defended.",
+    "no one said it was easy. i do it anyway.",
+    "outdoor streak ongoing. no signs of weakness.",
+    "submitted again. the grind continues.",
+    "small habit. big compound.",
+    "building proof one outdoor session at a time.",
+    "another entry. another lock.",
+    "the momentum is mine now.",
+    "submitted proof. streak secured. moving on.",
+    "active. outside. on time. every time.",
+    "streak defense: successful.",
+    "habit stack: walk outside, take photo, prove it.",
+    "the outdoors is my most reliable dapp.",
   ],
   strong: [
     "consistency looking dangerous. 🌿",
@@ -99,21 +129,36 @@ const CAPTION_POOLS = {
     "other people have goals. i have proof.",
     "my streak has better fundamentals than most launches.",
     "doing this long enough that it stopped feeling hard.",
-    "the outdoors respect the commitment.",
     "streak confirmed. doubt: evaporating.",
-    "daily execution, no announcements, just logs.",
+    "daily execution. no announcements. just logs.",
     "the protocol runs. i run with it.",
     "not a tourist. a recurring participant.",
     "compounding days of outdoor exposure.",
     "building a track record that speaks for itself.",
     "the field is my office. i clocked in again.",
     "consistently certified. no days off.",
-    "the streak has earned its own address.",
     "showing up beats showing off.",
     "another proof. another brick in the streak.",
     "entered, exited, documented. repeat.",
-    "grass touched at scale.",
     "streak health: excellent.",
+    "the market moves. i walk outside. both are true.",
+    "dedicated to the outdoor grind.",
+    "proof submitted. streak untouched. discipline intact.",
+    "the grass is familiar territory now.",
+    "this is what sustained effort looks like.",
+    "strong streak. stronger mindset.",
+    "every day outside is a win logged on chain.",
+    "long-term holder of the outdoor habit.",
+    "still here. still certified. still touching grass.",
+    "track record: spotless.",
+    "the streak speaks louder than any announcement.",
+    "fundamentals: touching grass every single day.",
+    "deep in the outdoor accumulation phase.",
+    "outdoors: my most consistent investment.",
+    "streak alive. discipline unbroken.",
+    "the practice continues. no days skipped.",
+    "more days outside than most have excuses.",
+    "certified operator of the outdoor routine.",
   ],
   elite: [
     "this isn't a phase anymore. it's identity. 🌿",
@@ -145,13 +190,27 @@ const CAPTION_POOLS = {
     "streak so seasoned it has its own yield.",
     "the outdoors is not a habit. it is infrastructure.",
     "this is not dedication. this is design.",
-    "entering elite territory. daily.",
     "the streak compounds. the legend grows.",
-    "no one else is doing this like i am.",
     "proof that consistency is the rarest trait.",
     "built different. logged different.",
-    "not chasing anyone. they are chasing this.",
     "documented. verified. legendary.",
+    "elite status. earned outside. no shortcuts.",
+    "the streak is the résumé.",
+    "i have outlasted trends, fads, and most projects.",
+    "the outdoor practice has become the standard.",
+    "they asked what i do every day. i showed them.",
+    "streak longevity: exceeds expectations.",
+    "proof of life. proof of grass. proof of character.",
+    "this is peak outdoor accumulation.",
+    "rare. consistent. verified.",
+    "i do not announce. i prove.",
+    "the streak is not impressive to me anymore. it is normal.",
+    "level of commitment: immovable.",
+    "every submission adds to the legend.",
+    "grass touched. legend continued.",
+    "the leaderboard is my trophy case.",
+    "they study consistency. i practice it.",
+    "outdoor legacy: growing daily.",
   ],
 };
 
@@ -416,7 +475,12 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       const scale = Math.max(W / img.width, H / img.height);
       const dw = img.width  * scale;
       const dh = img.height * scale;
-      const dx = (W - dw) / 2;
+      // Anchor horizontally: show more of the right side (where the action usually is)
+      // Shift left by up to 30% of the overflow so right content is visible
+      const rawDx = (W - dw) / 2;
+      const dx = img.width > img.height
+        ? Math.min(0, rawDx + (dw - W) * 0.25) // portrait: shift left to reveal right
+        : rawDx;                                  // landscape: center normally
       const dy = (H - dh) / 2;
       ctx.drawImage(img, dx, dy, dw, dh);
 
@@ -611,16 +675,16 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         ctx.fillStyle = "#ffd700";
         ctx.shadowColor = "rgba(255,200,50,0.9)";
         ctx.shadowBlur  = 28;
-        ctx.fillText("✦  L E G E N D A R Y  ✦", HUD_CX, 668);
+        ctx.fillText("✦  L E G E N D A R Y  ✦", HUD_CX, 698);
         ctx.restore();
       }
 
       if (topPct !== null) {
         // Prestige badge pill — tall, wide, always shown when streak qualifies
         const bW = Math.min(HUD_W - 20, 340);
-        const bH = 100;
+        const bH = 106;
         const bX = HUD_CX - bW / 2;
-        const bY = currentStreak >= 50 ? 700 : 676;
+        const bY = currentStreak >= 50 ? 718 : 698;
 
         ctx.save();
         ctx.shadowColor = badgeShadow;
@@ -661,9 +725,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
         // Identity pill
         const bW = Math.min(HUD_W - 20, 320);
-        const bH = 100;
+        const bH = 106;
         const bX = HUD_CX - bW / 2;
-        const bY = 676;
+        const bY = 718;
 
         ctx.save();
         ctx.shadowColor = "rgba(74,222,128,0.6)";
