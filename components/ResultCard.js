@@ -478,9 +478,12 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       // Anchor horizontally: show more of the right side (where the action usually is)
       // Shift left by up to 30% of the overflow so right content is visible
       const rawDx = (W - dw) / 2;
-      const dx = img.width > img.height
-        ? Math.min(0, rawDx + (dw - W) * 0.25) // portrait: shift left to reveal right
-        : rawDx;                                  // landscape: center normally
+      // For portrait photos: anchor to the right portion of the image
+      // Shift left so the right side fills the canvas
+      const overflow = dw - W;
+      const dx = overflow > 0
+        ? -overflow * 0.65  // show right 65% of portrait image
+        : rawDx;            // image fits, center normally
       const dy = (H - dh) / 2;
       ctx.drawImage(img, dx, dy, dw, dh);
 
@@ -675,7 +678,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         ctx.fillStyle = "#ffd700";
         ctx.shadowColor = "rgba(255,200,50,0.9)";
         ctx.shadowBlur  = 28;
-        ctx.fillText("✦  L E G E N D A R Y  ✦", HUD_CX, 698);
+        ctx.fillText("✦  L E G E N D A R Y  ✦", HUD_CX, 656);
         ctx.restore();
       }
 
