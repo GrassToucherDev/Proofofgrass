@@ -154,9 +154,17 @@ export default function Leaderboard() {
         @keyframes cardHover { to { box-shadow: 0 0 24px rgba(74,222,128,0.18); } }
         .lb-card:hover { transform: translateY(-1px); box-shadow: 0 0 24px rgba(74,222,128,0.14); transition: all 0.2s; }
       `}</style>
-      <h1 className="text-4xl mb-2 text-green-400">
-        🌱 Proof of Grass Leaderboard
-      </h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-4xl text-green-400">
+          🌱 Proof of Grass Leaderboard
+        </h1>
+        <a
+          href="/"
+          className="font-mono text-[11px] tracking-widest uppercase text-green-700 hover:text-green-400 transition-colors duration-200"
+        >
+          ← Back to App
+        </a>
+      </div>
       <p className="font-mono text-[10px] text-green-800 tracking-widest uppercase mb-4">
         streaks reset at 00:00 UTC
       </p>

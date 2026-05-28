@@ -579,6 +579,24 @@ export default function Home() {
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="text-center mb-12 relative z-10">
+        {/* Logo */}
+        <div className="flex justify-center mb-5">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full"
+              style={{
+                background: "radial-gradient(circle, rgba(74,222,128,0.18) 0%, transparent 70%)",
+                filter: "blur(12px)",
+                transform: "scale(1.3)",
+              }}
+            />
+            <img
+              src="/touchgrass-transparent.png"
+              alt="Touch Grass"
+              className="relative w-20 h-20 object-contain opacity-90 drop-shadow-[0_0_12px_rgba(74,222,128,0.4)]"
+            />
+          </div>
+        </div>
+
         {/* Eyebrow */}
         <div className="inline-flex items-center gap-2 mb-4">
           <div className="h-px w-8 divider-pulse" style={{background:"linear-gradient(90deg,transparent,#4ade80)"}} />
@@ -595,18 +613,32 @@ export default function Home() {
           Touch grass. Log proof. Build your streak. Earn rewards.
         </p>
 
-        <a
-          href="/leaderboard"
-          className="
-            inline-flex items-center gap-2 mt-5 mb-1
-            font-mono text-[12px] tracking-widest uppercase
-            text-[#4ade80] opacity-50
-            hover:opacity-100 hover:shadow-[0_0_16px_rgba(74,222,128,0.35)]
-            transition-all duration-200
-          "
-        >
-          ◈ Rankings
-        </a>
+        <div className="inline-flex items-center gap-6 mt-5 mb-1">
+          <a
+            href="/leaderboard"
+            className="
+              font-mono text-[12px] tracking-widest uppercase
+              text-[#4ade80] opacity-50
+              hover:opacity-100 hover:shadow-[0_0_16px_rgba(74,222,128,0.35)]
+              transition-all duration-200
+            "
+          >
+            ◈ Rankings
+          </a>
+          <a
+            href="https://touchgrass.today"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="
+              font-mono text-[12px] tracking-widest uppercase
+              text-[#4ade80] opacity-50
+              hover:opacity-100 hover:shadow-[0_0_16px_rgba(74,222,128,0.35)]
+              transition-all duration-200
+            "
+          >
+            ◈ Website
+          </a>
+        </div>
 
         <div className="mt-3 h-px w-24 mx-auto"
           style={{background:"linear-gradient(90deg, transparent, rgba(74,222,128,0.5), transparent)"}} />

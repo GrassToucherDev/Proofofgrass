@@ -575,8 +575,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
       // ── THIN CINEMATIC BORDER ───────────────────────────────────────────
       const INSET = 22;
-      const accentCol = currentStreak >= 50 ? "rgba(212,175,55,0.55)" : "rgba(255,255,255,0.22)";
-      ctx.strokeStyle = accentCol;
+      ctx.strokeStyle = currentStreak >= 50 ? "rgba(212,175,55,0.55)" : "rgba(255,255,255,0.22)";
       ctx.lineWidth = 0.8;
       ctx.strokeRect(INSET, INSET, W - INSET * 2, H - INSET * 2);
 
@@ -596,55 +595,51 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         });
 
       // ── HELPER: ultra-light text ─────────────────────────────────────────
-      const ghost = (text, x, y, size, align = "left", col = "rgba(255,255,255,0.70)", font = "300") => {
+      // ghost() — text with automatic drop shadow for legibility over any photo
+      const ghost = (text, x, y, size, align = "left", col = "rgba(255,255,255,0.90)", font = "400") => {
         ctx.save();
         ctx.font = `${font} ${size}px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
         ctx.fillStyle = col;
         ctx.textAlign = align;
-        ctx.letterSpacing = "0.12em";
+        ctx.letterSpacing = "0.10em";
+        ctx.shadowColor = "rgba(0,0,0,0.80)";
+        ctx.shadowBlur  = 8;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 1;
         ctx.fillText(text, x, y);
         ctx.restore();
       };
 
-      const accentText = currentStreak >= 50 ? "rgba(212,175,55,0.90)" : "rgba(180,220,160,0.85)";
-      const mutedText  = currentStreak >= 50 ? "rgba(212,175,55,0.55)" : "rgba(255,255,255,0.38)";
+      const accentText = currentStreak >= 50 ? "rgba(212,175,55,1.0)" : "rgba(160,230,160,1.0)";
+      const mutedText  = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.70)";
 
-      // ─────────────────────────────────────────────────────────────────────
-      // TOP-LEFT — brand lockup
-      // ─────────────────────────────────────────────────────────────────────
-      const TL_X = INSET + 22, TL_Y = INSET + 32;
-      ghost("PROOF OF GRASS", TL_X, TL_Y, 11, "left", mutedText, "600");
-      ghost("verified outdoors", TL_X, TL_Y + 18, 10, "left", "rgba(255,255,255,0.30)", "300");
+      // ── TOP-LEFT — brand lockup ───────────────────────────────────────────
+      const TL_X = INSET + 22, TL_Y = INSET + 44;
+      ghost("PROOF OF GRASS", TL_X, TL_Y, 16, "left", "rgba(255,255,255,0.95)", "600");
+      ghost("Verified Outdoors", TL_X, TL_Y + 22, 20, "left", "rgba(255,255,255,0.88)", "700");
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(TL_X, TL_Y + 32); ctx.lineTo(TL_X + 160, TL_Y + 32); ctx.stroke();
 
-      // Thin separator
-      ctx.strokeStyle = "rgba(255,255,255,0.15)";
-      ctx.lineWidth = 0.5;
-      ctx.beginPath(); ctx.moveTo(TL_X, TL_Y + 26); ctx.lineTo(TL_X + 110, TL_Y + 26); ctx.stroke();
+      // ── TOP-RIGHT — streak counter ────────────────────────────────────────
+      const TR_X = W - INSET - 28, TR_Y = INSET + 44;
+      ghost("STREAK", TR_X, TR_Y, 13, "right", mutedText, "500");
 
-      // ─────────────────────────────────────────────────────────────────────
-      // TOP-RIGHT — streak counter
-      // ─────────────────────────────────────────────────────────────────────
-      const TR_X = W - INSET - 22, TR_Y = INSET + 32;
-      ghost("STREAK", TR_X, TR_Y, 9, "right", mutedText, "500");
-
-      // Large day number — serif-feel using weight
       ctx.save();
-      ctx.font = `200 68px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.shadowColor = "rgba(0,0,0,0.90)";
+      ctx.shadowBlur  = 14;
       ctx.textAlign = "right";
-      ctx.letterSpacing = "-0.02em";
+      ctx.letterSpacing = "-0.01em";
       const dayStr = "DAY";
       const numStr = ` ${currentStreak}`;
-      // "DAY" in thin white, number in accent
-      ctx.fillStyle = "rgba(255,255,255,0.88)";
-      const dayW = ctx.measureText(dayStr).width;
-      ctx.fillText(dayStr, TR_X - ctx.measureText(numStr).width, TR_Y + 68);
+      ctx.font = `300 88px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.fillText(dayStr, TR_X - ctx.measureText(numStr).width, TR_Y + 92);
       ctx.fillStyle = accentText;
-      ctx.font = `300 68px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
-      ctx.fillText(numStr, TR_X, TR_Y + 68);
+      ctx.font = `400 88px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+      ctx.fillText(numStr, TR_X, TR_Y + 92);
       ctx.restore();
 
-      // Tier label — tiny, spaced
       if (currentStreak >= 7) {
         const tierLabel = currentStreak >= 180 ? "MYTHIC"
           : currentStreak >= 100 ? "IMMORTAL"
@@ -652,90 +647,75 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           : currentStreak >= 30  ? "ELITE"
           : currentStreak >= 14  ? "LOCKED IN"
           : "ROOTED";
-        ghost(`· ${tierLabel} ·`, TR_X, TR_Y + 96, 9, "right", accentText, "400");
+        ghost(`· ${tierLabel} ·`, TR_X, TR_Y + 118, 14, "right", accentText, "400");
       }
 
-      // ─────────────────────────────────────────────────────────────────────
-      // LEFT EDGE — vertical rotated tagline
-      // ─────────────────────────────────────────────────────────────────────
+      // ── LEFT EDGE — vertical tagline ──────────────────────────────────────
       ctx.save();
-      ctx.translate(INSET + 14, H * 0.72);
+      ctx.translate(INSET + 16, H * 0.72);
       ctx.rotate(-Math.PI / 2);
-      ctx.font = "300 9px 'Helvetica Neue', Helvetica, Arial, sans-serif";
-      ctx.fillStyle = "rgba(255,255,255,0.22)";
-      ctx.letterSpacing = "0.2em";
+      ctx.font = "300 12px 'Helvetica Neue', Helvetica, Arial, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.40)";
+      ctx.shadowColor = "rgba(0,0,0,0.70)";
+      ctx.shadowBlur = 5;
+      ctx.letterSpacing = "0.18em";
       ctx.textAlign = "center";
       ctx.fillText("KEEP GOING.  LIVE BETTER.  TOUCH MORE.", 0, 0);
       ctx.restore();
 
-      // ─────────────────────────────────────────────────────────────────────
-      // RIGHT EDGE — vertical rotated secondary text
-      // ─────────────────────────────────────────────────────────────────────
+      // ── RIGHT EDGE — vertical secondary ───────────────────────────────────
       ctx.save();
-      ctx.translate(W - INSET - 14, H * 0.42);
+      ctx.translate(W - INSET - 16, H * 0.42);
       ctx.rotate(Math.PI / 2);
-      ctx.font = "300 9px 'Helvetica Neue', Helvetica, Arial, sans-serif";
-      ctx.fillStyle = "rgba(255,255,255,0.18)";
-      ctx.letterSpacing = "0.2em";
+      ctx.font = "300 12px 'Helvetica Neue', Helvetica, Arial, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.shadowColor = "rgba(0,0,0,0.70)";
+      ctx.shadowBlur = 5;
+      ctx.letterSpacing = "0.18em";
       ctx.textAlign = "center";
       ctx.fillText("REAL MOMENTS.  REAL LIFE.", 0, 0);
       ctx.restore();
 
-      // ─────────────────────────────────────────────────────────────────────
-      // BOTTOM-LEFT — certification metadata
-      // ─────────────────────────────────────────────────────────────────────
+      // ── BOTTOM-LEFT — certification metadata ──────────────────────────────
       const BL_X = INSET + 22, BL_BASE = H - INSET - 28;
+      ghost("DATE OF CERTIFICATION", BL_X, BL_BASE - 22, 12, "left", mutedText, "500");
+      ghost(dateStr, BL_X, BL_BASE, 20, "left", "rgba(255,255,255,0.95)", "300");
 
-      ghost(dateStr, BL_X, BL_BASE, 11, "left", "rgba(255,255,255,0.65)", "300");
-      ghost("DATE OF CERTIFICATION", BL_X, BL_BASE - 16, 8, "left", mutedText, "400");
-
-      // ─────────────────────────────────────────────────────────────────────
-      // BOTTOM-RIGHT — prestige seal area
-      // ─────────────────────────────────────────────────────────────────────
-      const BR_X = W - INSET - 22;
+      // ── BOTTOM-RIGHT — prestige seal ──────────────────────────────────────
+      const BR_X = W - INSET - 28;
       const BR_BASE = H - INSET - 28;
+      ghost("CERTIFIED BY", BR_X, BR_BASE - 24, 12, "right", mutedText, "400");
+      ghost("Touch Grass", BR_X, BR_BASE, 19, "right", "rgba(255,255,255,0.95)", "300");
 
-      // "CERTIFIED BY / touch grass" stacked
-      ghost("CERTIFIED BY", BR_X, BR_BASE - 18, 8, "right", mutedText, "400");
-      ghost("touch grass", BR_X, BR_BASE, 12, "right", "rgba(255,255,255,0.72)", "300");
-
-      // Top % badge — minimal pill, only if elite
       const topPct = getTopPercent(currentStreak);
       if (topPct !== null) {
-        const SEAL_CX = BR_X - 40;
-        const SEAL_Y  = BR_BASE - 86;
-
-        // Thin circle seal
+        const SEAL_CX = BR_X - 55;
+        const SEAL_Y  = BR_BASE - 108;
         ctx.save();
         ctx.strokeStyle = accentText;
-        ctx.lineWidth   = 0.8;
-        ctx.globalAlpha = 0.75;
+        ctx.lineWidth   = 1.4;
+        ctx.shadowColor = "rgba(0,0,0,0.70)";
+        ctx.shadowBlur  = 8;
+        ctx.globalAlpha = 0.90;
         ctx.beginPath();
-        ctx.arc(SEAL_CX, SEAL_Y, 34, 0, Math.PI * 2);
+        ctx.arc(SEAL_CX, SEAL_Y, 46, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
-
-        // Inner text
-        ghost(`TOP ${topPct}%`, SEAL_CX, SEAL_Y - 4, 10, "center", accentText, "500");
-        ghost("grass touchers", SEAL_CX, SEAL_Y + 12, 7, "center", mutedText, "300");
-
-        // Tiny laurel dashes
+        ghost(`TOP ${topPct}%`, SEAL_CX, SEAL_Y - 4, 16, "center", accentText, "600");
+        ghost("Grass Toucher", SEAL_CX, SEAL_Y + 18, 15, "center", "rgba(255,255,255,0.92)", "700");
         ctx.save();
         ctx.strokeStyle = accentText;
-        ctx.lineWidth   = 0.6;
-        ctx.globalAlpha = 0.5;
-        [[-28, -5], [28, -5]].forEach(([ox, oy]) => {
+        ctx.lineWidth = 0.8;
+        ctx.globalAlpha = 0.55;
+        [[-40, -5], [40, -5]].forEach(([ox, oy]) => {
           ctx.beginPath();
-          ctx.moveTo(SEAL_CX + ox, SEAL_Y + oy - 8);
-          ctx.lineTo(SEAL_CX + ox, SEAL_Y + oy + 8);
+          ctx.moveTo(SEAL_CX + ox, SEAL_Y + oy - 10);
+          ctx.lineTo(SEAL_CX + ox, SEAL_Y + oy + 10);
           ctx.stroke();
         });
         ctx.restore();
       }
 
-      // ─────────────────────────────────────────────────────────────────────
-      // LOGO — bottom-right corner, small and quiet
-      // ─────────────────────────────────────────────────────────────────────
       const logo = new Image();
       logo.onload = () => {
         const logoSize = 36;
