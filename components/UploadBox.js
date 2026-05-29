@@ -1,74 +1,66 @@
-import { useCallback, useState } from "react";
+import { useRef, useState } from "react";
 
 export default function UploadBox({ onUpload }) {
+  const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
-  const [fileName, setFileName] = useState(null);
 
-  const processFile = (file) => {
-    if (!file || !file.type.startsWith("image/")) return;
-    setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => onUpload(e.target.result);
-    reader.readAsDataURL(file);
+  const handle = (file) => {
+    if (file instanceof Blob && file.type.startsWith("image/")) {
+      onUpload(file);
+    }
   };
-
-  const handleDrop = useCallback(
-    (e) => {
-      e.preventDefault();
-      setDragging(false);
-      processFile(e.dataTransfer.files[0]);
-    },
-    []
-  );
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setDragging(true);
-  };
-
-  const handleDragLeave = () => setDragging(false);
-
-  const handleChange = (e) => processFile(e.target.files[0]);
 
   return (
-    <label
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      className={`
-        relative flex flex-col items-center justify-center
-        w-full max-w-md h-56 cursor-pointer
-        border-2 border-dashed rounded-sm transition-all duration-300
-        ${dragging
-          ? "border-[#4ade80] bg-[#0f2211]"
-          : "border-[#1f3d22] bg-[#0f1a10] hover:border-[#2d5e30] hover:bg-[#111f12]"
-        }
-      `}
+    <div
+      onClick={() => inputRef.current?.click()}
+      onDragOver={e => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={e => {
+        e.preventDefault();
+        setDragging(false);
+        handle(e.dataTransfer.files[0]);
+      }}
+      style={{
+        border: `1.5px dashed ${dragging ? "#93a85a" : "rgba(147,168,90,0.25)"}`,
+        borderRadius: 12,
+        padding: "36px 20px",
+        textAlign: "center",
+        cursor: "pointer",
+        background: dragging ? "rgba(147,168,90,0.06)" : "rgba(255,255,255,0.02)",
+        transition: "all 0.2s",
+        userSelect: "none",
+      }}
     >
-      <input
-        type="file"
-        accept="image/*"
-        className="sr-only"
-        onChange={handleChange}
-      />
-
-      {/* Icon */}
-      <div className={`text-4xl mb-4 transition-transform duration-300 ${dragging ? "scale-110" : ""}`}>
-        🌿
+      {/* Upload icon */}
+      <div style={{
+        width: 44, height: 44, borderRadius: "50%", margin: "0 auto 14px",
+        border: "1.5px solid rgba(147,168,90,0.3)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: "rgba(147,168,90,0.6)", fontSize: 20,
+        background: "rgba(147,168,90,0.06)",
+      }}>
+        ↑
       </div>
 
-      <p className="text-sm text-[#4ade80] tracking-wider">
-        {fileName ? fileName : "Drop your grass photo here"}
-      </p>
-      <p className="text-xs text-[#3a5e3d] mt-1">
-        or click to browse
-      </p>
+      <div style={{
+        fontSize: 12, fontWeight: 600, letterSpacing: "0.1em",
+        textTransform: "uppercase", color: "rgba(240,239,234,0.45)",
+        marginBottom: 6,
+      }}>
+        {dragging ? "Drop to upload" : "Drag & drop image"}
+      </div>
 
-      {/* Corner accents */}
-      <span className="absolute top-2 left-2 w-3 h-3 border-t border-l border-[#4ade80] opacity-60" />
-      <span className="absolute top-2 right-2 w-3 h-3 border-t border-r border-[#4ade80] opacity-60" />
-      <span className="absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#4ade80] opacity-60" />
-      <span className="absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#4ade80] opacity-60" />
-    </label>
+      <div style={{ fontSize: 11, color: "rgba(240,239,234,0.22)" }}>
+        or click to browse
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={e => handle(e.target.files?.[0])}
+      />
+    </div>
   );
 }

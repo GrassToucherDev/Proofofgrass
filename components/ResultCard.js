@@ -347,7 +347,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const HANDLE = "@XTouchGrass";
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(`${caption}\n\n${HANDLE}`).then(() => {
+    navigator.clipboard.writeText(`${caption}\n\n#touchgrass #proofofgrass\n${HANDLE}\nproofofgrass.app`).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -357,7 +357,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [shareHint, setShareHint] = useState(false); // "Select X, then tap Post" nudge
 
   const buildShareText = useCallback(() =>
-    `${caption}\n\nday ${currentStreak}\n@XTouchGrass\n#proofofgrass\nhttps://proofofgrass.vercel.app/`,
+    `${caption}\n\n#touchgrass #proofofgrass\nday ${currentStreak} @XTouchGrass\nproofofgrass.app`,
   [caption, currentStreak]);
 
   // Single CTA: share to X AND log submission in one tap
@@ -616,7 +616,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       // ── TOP-LEFT — brand lockup ───────────────────────────────────────────
       const TL_X = INSET + 22, TL_Y = INSET + 44;
       ghost("PROOF OF GRASS", TL_X, TL_Y, 16, "left", "rgba(255,255,255,0.95)", "600");
-      ghost("Verified Outdoors", TL_X, TL_Y + 22, 20, "left", "rgba(255,255,255,0.88)", "700");
+      ghost("verified outdoors", TL_X, TL_Y + 22, 20, "left", "rgba(255,255,255,0.88)", "700");
       ctx.strokeStyle = "rgba(255,255,255,0.25)";
       ctx.lineWidth = 0.6;
       ctx.beginPath(); ctx.moveTo(TL_X, TL_Y + 32); ctx.lineTo(TL_X + 160, TL_Y + 32); ctx.stroke();
@@ -685,7 +685,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       const BR_X = W - INSET - 28;
       const BR_BASE = H - INSET - 28;
       ghost("CERTIFIED BY", BR_X, BR_BASE - 24, 12, "right", mutedText, "400");
-      ghost("Touch Grass", BR_X, BR_BASE, 19, "right", "rgba(255,255,255,0.95)", "300");
+      ghost("touch grass", BR_X, BR_BASE, 19, "right", "rgba(255,255,255,0.95)", "300");
 
       const topPct = getTopPercent(currentStreak);
       if (topPct !== null) {
@@ -702,7 +702,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         ctx.stroke();
         ctx.restore();
         ghost(`TOP ${topPct}%`, SEAL_CX, SEAL_Y - 4, 16, "center", accentText, "600");
-        ghost("Grass Toucher", SEAL_CX, SEAL_Y + 18, 15, "center", "rgba(255,255,255,0.92)", "700");
+        ghost("grass touchers", SEAL_CX, SEAL_Y + 18, 15, "center", "rgba(255,255,255,0.92)", "700");
         ctx.save();
         ctx.strokeStyle = accentText;
         ctx.lineWidth = 0.8;
@@ -778,7 +778,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           className="
             inline-flex items-center gap-3 px-10 py-3.5
             font-mono text-sm font-bold tracking-widest uppercase
-            text-[#0d1a0f] bg-[#4ade80]
+            text-[#0e1108] bg-[#93a85a]
             rounded-sm transition-all duration-200
             hover:bg-[#86efac] hover:shadow-[0_0_32px_rgba(74,222,128,0.45)]
             shadow-[0_0_20px_rgba(74,222,128,0.25)] cursor-pointer
@@ -799,10 +799,10 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
               font-mono text-sm font-bold tracking-widest uppercase rounded-sm
               transition-all duration-200
               ${submitStatus === "success"
-                ? "bg-[#166534] border border-[#4ade80] text-[#4ade80] cursor-not-allowed opacity-70"
+                ? "bg-[#2a3018] border border-[#93a85a] text-[#93a85a] cursor-not-allowed opacity-70"
                 : submitStatus === "loading"
-                ? "bg-[#1a3520] border border-[#2d5e30] text-[#4ade80] cursor-not-allowed opacity-60"
-                : "bg-transparent border border-[#4ade80] text-[#4ade80] hover:bg-[#0d2b14] hover:shadow-[0_0_24px_rgba(74,222,128,0.25)]"
+                ? "bg-[#1e2410] border border-[#4a5428] text-[#93a85a] cursor-not-allowed opacity-60"
+                : "bg-transparent border border-[#93a85a] text-[#93a85a] hover:bg-[#1a1e0e] hover:shadow-[0_0_20px_rgba(147,168,90,0.2)]"
               }
             `}
           >
@@ -815,7 +815,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             )}
           </button>
           {shareHint && (
-            <p className="font-mono text-[11px] text-[#4ade80] tracking-wide">
+            <p className="font-mono text-[11px] text-[#93a85a] tracking-wide">
               select x, then tap post
             </p>
           )}
@@ -848,10 +848,10 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           shadow-[inset_0_1px_0_rgba(74,222,128,0.06),0_0_24px_rgba(0,0,0,0.4)]
           px-6 py-5
         ">
-          <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#4ade80] opacity-30" />
-          <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#4ade80] opacity-30" />
-          <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#4ade80] opacity-30" />
-          <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#4ade80] opacity-30" />
+          <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#93a85a] opacity-20" />
+          <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#93a85a] opacity-20" />
+          <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#93a85a] opacity-20" />
+          <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#93a85a] opacity-20" />
           <p className="
             font-mono text-[15px] text-[#d1fae5] leading-relaxed
             text-center min-h-[2.5rem] flex items-center justify-center
@@ -859,7 +859,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           ">
             {caption}
           </p>
-          <p className="font-mono text-[12px] text-[#4ade80] text-center mt-2 opacity-50 tracking-wider">
+          <p className="font-mono text-[12px] text-[#93a85a] text-center mt-2 opacity-40 tracking-wider">
             {HANDLE}
           </p>
         </div>
@@ -871,9 +871,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
               flex-1 flex items-center justify-center gap-2
               py-2.5 px-4
               border border-[#1f3d22] bg-[#0a140b]
-              text-[#4ade80] font-mono text-xs tracking-widest uppercase
+              text-[#93a85a] font-mono text-xs tracking-widest uppercase
               rounded-sm transition-all duration-200
-              hover:border-[#4ade80] hover:bg-[#0d1f0f]
+              hover:border-[#93a85a] hover:bg-[#181c0a]
               hover:shadow-[0_0_16px_rgba(74,222,128,0.15)]
             "
           >
@@ -887,8 +887,8 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
               font-mono text-xs tracking-widest uppercase rounded-sm
               transition-all duration-200
               ${copied
-                ? "bg-[#166534] border border-[#4ade80] text-[#4ade80] shadow-[0_0_20px_rgba(74,222,128,0.2)]"
-                : "bg-[#4ade80] text-[#0d1a0f] border border-transparent hover:bg-[#86efac] hover:shadow-[0_0_20px_rgba(74,222,128,0.3)]"
+                ? "bg-[#2a3018] border border-[#93a85a] text-[#93a85a] shadow-[0_0_16px_rgba(147,168,90,0.2)]"
+                : "bg-[#93a85a] text-[#0e1108] border border-transparent hover:bg-[#b8c87a] hover:shadow-[0_0_16px_rgba(147,168,90,0.25)]"
               }
             `}
           >
