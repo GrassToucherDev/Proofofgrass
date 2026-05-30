@@ -72,6 +72,7 @@ function LBCard({ item, index }) {
   const medals = ["🥇","🥈","🥉"];
 
   return (
+    <Link href={`/u/${item.username}`} style={{ textDecoration:"none" }}>
     <div style={{
       display:"flex", flexDirection:"column", overflow:"hidden",
       borderRadius:12, minHeight:180,
@@ -103,11 +104,15 @@ function LBCard({ item, index }) {
           </span>
         </div>
 
-        {/* Username */}
-        <div style={{ fontSize:14, fontWeight:600, color:T.white, overflow:"hidden",
-          textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"'DM Sans',sans-serif" }}>
+        {/* Username — links to public profile */}
+        <Link href={`/u/${item.username}`} onClick={e => e.stopPropagation()}
+          style={{ fontSize:14, fontWeight:600, color:T.white, overflow:"hidden",
+          textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"'DM Sans',sans-serif",
+          textDecoration:"none", transition:"color 0.15s" }}
+          onMouseEnter={e => e.currentTarget.style.color = tier.color}
+          onMouseLeave={e => e.currentTarget.style.color = T.white}>
           @{item.username}
-        </div>
+        </Link>
 
         {/* Streak hero number */}
         <div style={{ display:"flex", alignItems:"baseline", gap:5, marginTop:"auto" }}>
@@ -139,6 +144,7 @@ function LBCard({ item, index }) {
         )}
       </div>
     </div>
+    </Link>
   );
 }
 

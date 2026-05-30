@@ -717,6 +717,45 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       }
 
       const logo = new Image();
+      // Upload certificate to Supabase Storage and save photo_url on latest submission
+      const savePhotoUrl = async (dataUrl) => {
+        setDownloadUrl(dataUrl);
+        if (!username) return;
+        try {
+          // Convert dataURL to blob
+          const res  = await fetch(dataUrl);
+          const blob = await res.blob();
+          const fileName = `${username}/${Date.now()}.png`;
+
+          const { data: uploaded, error: uploadErr } = await supabase
+            .storage.from("proof-photos").upload(fileName, blob, {
+              contentType: "image/png", upsert: false,
+            });
+
+          if (uploadErr) { console.warn("photo upload failed", uploadErr); return; }
+
+          const { data: urlData } = supabase.storage.from("proof-photos").getPublicUrl(fileName);
+          const publicUrl = urlData?.publicUrl;
+          if (!publicUrl) return;
+
+          // Save to the user's most recent pending/approved submission
+          const { data: latestSub } = await supabase
+            .from("Submissions").select("id")
+            .eq("username", username)
+            .in("status", ["pending","approved"])
+            .order("created_at", { ascending: false })
+            .limit(1).maybeSingle();
+
+          if (latestSub?.id) {
+            await supabase.from("Submissions")
+              .update({ photo_url: publicUrl })
+              .eq("id", latestSub.id);
+          }
+        } catch (e) {
+          console.warn("photo save error", e);
+        }
+      };
+
       logo.onload = () => {
         const logoSize = 36;
         const logoX = BR_X - logoSize;
@@ -725,9 +764,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         ctx.globalAlpha = 0.60;
         ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
         ctx.restore();
-        setDownloadUrl(canvas.toDataURL("image/png"));
+        savePhotoUrl(canvas.toDataURL("image/png"));
       };
-      logo.onerror = () => setDownloadUrl(canvas.toDataURL("image/png"));
+      logo.onerror = () => savePhotoUrl(canvas.toDataURL("image/png"));
       logo.src = "/touchgrass-transparent.png";
     };
         img.src = imageSrc;
