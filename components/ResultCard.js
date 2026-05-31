@@ -360,22 +360,52 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     `${caption}\n\n#touchgrass #proofofgrass\nday ${currentStreak} @XTouchGrass\nproofofgrass.app`,
   [caption, currentStreak]);
 
-  // Single CTA: share to X AND log submission in one tap
+  // ── Submission — always fires after share, no tweetUrl dependency ──────
+  const lockInStreak = useCallback(async () => {
+    if (!username) return;
+    setSubmitStatus("loading");
+    setSubmitError("");
+    try {
+      const { data: result, error: rpcError } = await supabase.rpc("lock_in_streak", {
+        p_username:     username,
+        p_tweet_url:    null,           // tweet URL no longer required
+        p_verification: "self_attested",
+      });
+
+      if (rpcError) {
+        console.error("lock_in_streak RPC error", rpcError);
+        setSubmitError("Streak log failed — tap again.");
+        setSubmitStatus("error");
+        return;
+      }
+
+      const newStreak = result?.current_streak ?? currentStreak;
+      setCurrentStreak(newStreak);
+      onStreakUpdate?.(newStreak);
+      setSubmitStatus("success");
+    } catch (err) {
+      console.error("lock_in_streak exception", err);
+      setSubmitError("Something went wrong — tap again.");
+      setSubmitStatus("error");
+    }
+  }, [username, currentStreak, onStreakUpdate]);
+
+  // ── Share to X — then lock in streak regardless of share path ───────────
   const handleShareAndSubmit = useCallback(async () => {
     if (!downloadUrl) return;
     const text = buildShareText();
 
-    // ── 1. Share — fire immediately, don't wait for submission ───────────
+    // Try Web Share API (mobile — attaches image)
     const canShareFiles =
       typeof navigator !== "undefined" &&
       typeof navigator.share === "function" &&
       typeof navigator.canShare === "function";
 
-    let userCancelled = false;
+    let cancelled = false;
 
     if (canShareFiles) {
       try {
-        const res = await fetch(downloadUrl);
+        const res  = await fetch(downloadUrl);
         const blob = await res.blob();
         const file = new File([blob], "proof-of-grass.png", { type: "image/png" });
         if (navigator.canShare({ files: [file] })) {
@@ -384,90 +414,42 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             await navigator.share({ files: [file], text });
             setShared(true);
             setTimeout(() => { setShared(false); setShareHint(false); }, 4000);
-          } catch (innerErr) {
+          } catch (err) {
             setShareHint(false);
-            if (innerErr?.name === "AbortError") {
-              userCancelled = true; // user dismissed — skip submission
+            if (err?.name === "AbortError") {
+              cancelled = true; // user explicitly dismissed — don't log
             }
-            // non-abort error falls through to intent fallback below
+            // any other error: share failed silently, still log streak below
           }
-          if (!userCancelled) {
-            // fall through to submission after native share
-          } else {
-            return; // user cancelled — do nothing
-          }
-          // skip intent fallback since native share ran
-          // go straight to submission
         } else {
-          // canShare check failed — use intent fallback
+          // canShare returned false — fall back to intent
           navigator.clipboard.writeText(text).catch(() => {});
           window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
           setShared(true);
           setTimeout(() => setShared(false), 2500);
         }
       } catch {
-        // fetch/blob error — use intent fallback
+        // fetch/blob failed — fall back to intent
         navigator.clipboard.writeText(text).catch(() => {});
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
         setShared(true);
         setTimeout(() => setShared(false), 2500);
       }
     } else {
-      // No Web Share API — clipboard + intent
+      // Desktop — clipboard + X intent
       navigator.clipboard.writeText(text).catch(() => {});
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
       setShared(true);
       setTimeout(() => setShared(false), 2500);
     }
 
-    // ── 2. Log submission via RPC (runs after share, non-blocking UI) ───
-    if (!username) return;
-    if (tweetUrl.trim() && !isValidXStatusUrl(tweetUrl)) return;
-    setSubmitStatus("loading");
-    setSubmitError("");
-
-    try {
-      const { data: result, error: rpcError } = await supabase.rpc("lock_in_streak", {
-        p_username:     username,
-        p_tweet_url:    tweetUrl.trim() || null,
-        p_verification: "self_attested",
-      });
-
-      if (rpcError) {
-        console.error("lock_in_streak RPC failed", rpcError);
-        setSubmitError("Streak log failed — try again.");
-        setSubmitStatus("error");
-        return;
-      }
-
-      if (result?.status === "already_submitted") {
-        // Already logged today — that's fine, share still happened
-        setSubmitStatus("success");
-        const existing = result.current_streak ?? currentStreak;
-        setCurrentStreak(existing);
-        onStreakUpdate?.(existing);
-        return;
-      }
-
-      if (result?.status !== "success") {
-        setSubmitError("Unexpected response — try again.");
-        setSubmitStatus("error");
-        return;
-      }
-
-      const newStreak = result.current_streak ?? currentStreak;
-      setCurrentStreak(newStreak);
-      onStreakUpdate?.(newStreak);
-      setSubmitStatus("success");
-      setTweetUrl("");
-    } catch (err) {
-      console.error("submission error", err);
-      setSubmitError("Something went wrong logging your streak.");
-      setSubmitStatus("error");
+    // Always log streak unless user explicitly cancelled the share sheet
+    if (!cancelled) {
+      await lockInStreak();
     }
-  }, [caption, currentStreak, downloadUrl, buildShareText, username, tweetUrl, onStreakUpdate]);
+  }, [downloadUrl, buildShareText, lockInStreak]);
 
-  // Keep handleShareAndPost as alias so lock-in screen buttons still work
+  // Alias for any other buttons that call this
   const handleShareAndPost = handleShareAndSubmit;
 
   const handleSubmit = useCallback(async () => {

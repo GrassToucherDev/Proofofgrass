@@ -73,9 +73,9 @@ function LBCard({ item, index }) {
 
   return (
     <Link href={`/u/${item.username}`} style={{ textDecoration:"none" }}>
-    <div style={{
-      display:"flex", flexDirection:"column", overflow:"hidden",
-      borderRadius:12, minHeight:180,
+    <div className="lb-card" style={{
+      overflow:"hidden",
+      borderRadius:12,
       background: T.bg2,
       border: `1px solid ${index === 0 ? tier.color : tier.border}`,
       boxShadow: index === 0 ? `0 0 24px ${tier.color}22` :
@@ -207,7 +207,18 @@ export default function Leaderboard() {
     .rank-input{width:100%;background:${T.bg3};border:none;border-bottom:1px solid ${T.border};padding:10px 0;color:${T.white};font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;}
     .rank-input:focus{border-bottom-color:${T.olive};}
     .rank-input::placeholder{color:${T.dim};}
-    @media(max-width:600px){.lb-grid{grid-template-columns:1fr 1fr !important;}}
+    /* Mobile nav — hide middle links, show only logo + back */
+    @media(max-width:640px){
+      .nav-links{display:none !important;}
+      .lb-grid{grid-template-columns:1fr !important;}
+    }
+    /* Tablet — 2 columns */
+    @media(min-width:641px) and (max-width:900px){
+      .lb-grid{grid-template-columns:1fr 1fr !important;}
+    }
+    /* Equal height cards via grid row alignment */
+    .lb-grid > a { display:flex; }
+    .lb-card { display:flex; flex-direction:column; width:100%; }
   `;
 
   return (
@@ -218,17 +229,18 @@ export default function Leaderboard() {
         {/* NAV */}
         <nav style={{ position:"sticky", top:0, zIndex:100, display:"flex", alignItems:"center",
           justifyContent:"space-between", padding:"0 clamp(14px,4vw,48px)", height:56,
-          background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}` }}>
-          <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
+          background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}`,
+          gap:12 }}>
+          <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:26, height:26, objectFit:"contain" }} />
             <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
           </Link>
-          <div style={{ display:"flex", gap:28, alignItems:"center" }}>
-            <Link href="/" style={{ fontSize:13, color:T.dim, textDecoration:"none", fontWeight:500, letterSpacing:"0.05em", transition:"color 0.2s" }}>Dashboard</Link>
-            <span style={{ fontSize:13, color:T.olive, fontWeight:600, letterSpacing:"0.05em" }}>Leaderboard</span>
+          <div className="nav-links" style={{ display:"flex", gap:24, alignItems:"center" }}>
+            <Link href="/" style={{ fontSize:13, color:T.dim, textDecoration:"none", fontWeight:500 }}>Dashboard</Link>
+            <span style={{ fontSize:13, color:T.olive, fontWeight:600 }}>Leaderboard</span>
             <a href="https://touchgrass.today" style={{ fontSize:13, color:T.dim, textDecoration:"none", fontWeight:500 }} target="_blank" rel="noopener noreferrer">Website</a>
           </div>
-          <Link href="/" style={{ fontSize:11, color:T.olive, textDecoration:"none", letterSpacing:"0.08em" }}>← Back to App</Link>
+          <Link href="/" style={{ fontSize:11, color:T.olive, textDecoration:"none", letterSpacing:"0.06em", flexShrink:0, whiteSpace:"nowrap" }}>← Back</Link>
         </nav>
 
         {/* HERO HEADER */}
@@ -297,7 +309,7 @@ export default function Leaderboard() {
               {tab === "weekly" ? "No activity this week yet." : "No entries yet."}
             </div>
           ) : (
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))", gap:12 }} className="lb-grid">
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12, alignItems:"stretch" }} className="lb-grid">
               {activeData.map((item, i) => <LBCard key={item.username} item={item} index={i} />)}
             </div>
           )}
