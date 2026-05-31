@@ -395,15 +395,19 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     if (!downloadUrl) return;
     const text = buildShareText();
 
-    // Try Web Share API (mobile — attaches image)
-    const canShareFiles =
-      typeof navigator !== "undefined" &&
+    // Detect mobile (iOS/Android) — only use Web Share API on mobile
+    // On Windows/Mac/Linux Chrome the OS share sheet appears instead of X
+    const isMobile = typeof navigator !== "undefined" &&
+      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    const canShareFiles = isMobile &&
       typeof navigator.share === "function" &&
       typeof navigator.canShare === "function";
 
     let cancelled = false;
 
     if (canShareFiles) {
+      // Mobile — try native share with image attached
       try {
         const res  = await fetch(downloadUrl);
         const blob = await res.blob();
@@ -417,26 +421,25 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           } catch (err) {
             setShareHint(false);
             if (err?.name === "AbortError") {
-              cancelled = true; // user explicitly dismissed — don't log
+              cancelled = true;
             }
-            // any other error: share failed silently, still log streak below
           }
         } else {
-          // canShare returned false — fall back to intent
+          // canShare returned false — use intent
           navigator.clipboard.writeText(text).catch(() => {});
           window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
           setShared(true);
           setTimeout(() => setShared(false), 2500);
         }
       } catch {
-        // fetch/blob failed — fall back to intent
         navigator.clipboard.writeText(text).catch(() => {});
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
         setShared(true);
         setTimeout(() => setShared(false), 2500);
       }
     } else {
-      // Desktop — clipboard + X intent
+      // Desktop or non-mobile — X intent + caption copied to clipboard
+      // User can paste the caption into their X post manually
       navigator.clipboard.writeText(text).catch(() => {});
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
       setShared(true);
@@ -702,39 +705,50 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       // Upload certificate to Supabase Storage and save photo_url on latest submission
       const savePhotoUrl = async (dataUrl) => {
         setDownloadUrl(dataUrl);
-        if (!username) return;
+        if (!username) { console.log("[photo] no username, skipping upload"); return; }
         try {
           // Convert dataURL to blob
           const res  = await fetch(dataUrl);
           const blob = await res.blob();
-          const fileName = `${username}/${Date.now()}.png`;
+          // Use upsert:true so re-uploads on same day overwrite cleanly
+          const fileName = `${username}/${new Date().toISOString().slice(0,10)}.png`;
+          console.log("[photo] uploading to proof-photos/", fileName);
 
           const { data: uploaded, error: uploadErr } = await supabase
             .storage.from("proof-photos").upload(fileName, blob, {
-              contentType: "image/png", upsert: false,
+              contentType: "image/png", upsert: true,
             });
 
-          if (uploadErr) { console.warn("photo upload failed", uploadErr); return; }
+          if (uploadErr) {
+            console.error("[photo] upload failed:", uploadErr.message, uploadErr);
+            return;
+          }
+          console.log("[photo] upload success:", uploaded);
 
           const { data: urlData } = supabase.storage.from("proof-photos").getPublicUrl(fileName);
           const publicUrl = urlData?.publicUrl;
-          if (!publicUrl) return;
+          if (!publicUrl) { console.warn("[photo] no public URL returned"); return; }
+          console.log("[photo] public URL:", publicUrl);
 
           // Save to the user's most recent pending/approved submission
-          const { data: latestSub } = await supabase
+          const { data: latestSub, error: subErr } = await supabase
             .from("Submissions").select("id")
             .eq("username", username)
             .in("status", ["pending","approved"])
             .order("created_at", { ascending: false })
             .limit(1).maybeSingle();
 
-          if (latestSub?.id) {
-            await supabase.from("Submissions")
-              .update({ photo_url: publicUrl })
-              .eq("id", latestSub.id);
-          }
+          if (subErr) { console.error("[photo] sub fetch error:", subErr); return; }
+          if (!latestSub?.id) { console.warn("[photo] no submission found to attach photo to"); return; }
+
+          const { error: updateErr } = await supabase.from("Submissions")
+            .update({ photo_url: publicUrl })
+            .eq("id", latestSub.id);
+
+          if (updateErr) console.error("[photo] update error:", updateErr);
+          else console.log("[photo] photo_url saved to submission", latestSub.id);
         } catch (e) {
-          console.warn("photo save error", e);
+          console.error("[photo] exception:", e);
         }
       };
 
@@ -842,7 +856,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           )}
           {!shareHint && submitStatus !== "success" && (
             <p className="font-mono text-[11px] text-[#2a4a2d] tracking-wide text-center">
-              shares your certificate and logs your streak in one tap
+              opens X with your caption · save &amp; attach your certificate image
             </p>
           )}
           {submitStatus === "error" && submitError && (
