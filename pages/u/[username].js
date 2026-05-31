@@ -27,14 +27,32 @@ function getTier(n) {
 }
 
 const ALL_BADGES = [
-  {id:"sun",     emoji:"☀️",  name:"Sun Seeker",    min:7  },
-  {id:"trail",   emoji:"🏔️",  name:"Trail Blazer",  min:10 },
-  {id:"water",   emoji:"💧",  name:"Water Walker",  min:14 },
-  {id:"forest",  emoji:"🌲",  name:"Forest Friend", min:30 },
-  {id:"early",   emoji:"🌅",  name:"Early Bird",    min:50 },
-  {id:"goat",    emoji:"⛰️",  name:"Mountain Goat", min:30 },
-  {id:"golden",  emoji:"🌄",  name:"Golden Hour",   min:50 },
-  {id:"century", emoji:"💯",  name:"100 Club",      min:100},
+  // Streak milestones
+  {id:"first-step",     emoji:"🌱", name:"First Step",           desc:"Submit your first proof",          condition:(s,p,cd,cs,gs,sh)=>p>=1     },
+  {id:"sun",            emoji:"☀️", name:"Sun Seeker",           desc:"Hold a 7-day streak",              condition:(s,p,cd,cs,gs,sh)=>s>=7     },
+  {id:"week",           emoji:"📅", name:"Week Warrior",         desc:"7 consecutive days outside",       condition:(s,p,cd,cs,gs,sh)=>s>=7     },
+  {id:"water",          emoji:"💧", name:"Water Walker",         desc:"Reach a 14-day streak",            condition:(s,p,cd,cs,gs,sh)=>s>=14    },
+  {id:"fortnight",      emoji:"🗓️", name:"Fortnight",            desc:"14 consecutive days outside",      condition:(s,p,cd,cs,gs,sh)=>s>=14    },
+  {id:"forest",         emoji:"🌲", name:"Forest Friend",        desc:"Hold a 30-day streak",             condition:(s,p,cd,cs,gs,sh)=>s>=30    },
+  {id:"monthly",        emoji:"🌙", name:"Monthly",              desc:"30 consecutive days outside",      condition:(s,p,cd,cs,gs,sh)=>s>=30    },
+  {id:"early",          emoji:"🌅", name:"Early Bird",           desc:"Reach a 50-day streak",            condition:(s,p,cd,cs,gs,sh)=>s>=50    },
+  {id:"golden",         emoji:"🌄", name:"Golden Hour",          desc:"50 consecutive days outside",      condition:(s,p,cd,cs,gs,sh)=>s>=50    },
+  {id:"century",        emoji:"💯", name:"100 Club",             desc:"Reach a 100-day streak",           condition:(s,p,cd,cs,gs,sh)=>s>=100   },
+  // Proof milestones
+  {id:"trail",          emoji:"🏔️", name:"Trail Blazer",         desc:"Submit 10 total proofs",           condition:(s,p,cd,cs,gs,sh)=>p>=10    },
+  {id:"proof-machine",  emoji:"⚙️", name:"Proof Machine",        desc:"Submit 50 total proofs",           condition:(s,p,cd,cs,gs,sh)=>p>=50    },
+  {id:"century-prover", emoji:"📸", name:"Century Prover",       desc:"Submit 100 total proofs",          condition:(s,p,cd,cs,gs,sh)=>p>=100   },
+  // Challenge milestones
+  {id:"ch-starter",     emoji:"⚡", name:"Challenge Starter",    desc:"Send your first challenge",        condition:(s,p,cd,cs,gs,sh)=>cs>=1    },
+  {id:"ch-veteran",     emoji:"🎯", name:"Challenge Veteran",    desc:"Complete 3 challenges",            condition:(s,p,cd,cs,gs,sh)=>cd>=3    },
+  {id:"ch-partner",     emoji:"🤝", name:"Consistency Partner",  desc:"Complete 10 challenges",           condition:(s,p,cd,cs,gs,sh)=>cd>=10   },
+  {id:"ch-legend",      emoji:"👑", name:"Legendary Challenger", desc:"Complete 25 challenges",           condition:(s,p,cd,cs,gs,sh)=>cd>=25   },
+  // Grass Score milestones
+  {id:"gs-1k",          emoji:"🔥", name:"Grass Score 1K",       desc:"Reach a Grass Score of 1,000",     condition:(s,p,cd,cs,gs,sh)=>gs>=1000 },
+  {id:"gs-5k",          emoji:"🔋", name:"Grass Score 5K",       desc:"Reach a Grass Score of 5,000",     condition:(s,p,cd,cs,gs,sh)=>gs>=5000 },
+  // Special
+  {id:"goat",           emoji:"⛰️", name:"Mountain Goat",        desc:"Reach a 30-day streak",            condition:(s,p,cd,cs,gs,sh)=>s>=30    },
+  {id:"shield",         emoji:"🛡️", name:"Shield Bearer",        desc:"Own at least 1 shield",            condition:(s,p,cd,cs,gs,sh)=>sh>=1    },
 ];
 
 const PROOF_BG = [
@@ -174,11 +192,15 @@ export default function ProfilePage() {
   const [subCount,     setSubCount]     = useState(null);
   const [rank,         setRank]         = useState(null);
   const [totalUsers,   setTotalUsers]   = useState(null);
-  const [recentProofs, setRecentProofs] = useState([]);
-  const [topStreaks,   setTopStreaks]   = useState([]);
-  const [communityTop, setCommunityTop] = useState([]);
-  const [impact,       setImpact]       = useState(null);
-  const [loading,      setLoading]      = useState(true);
+  const [recentProofs,   setRecentProofs]   = useState([]);
+  const [topStreaks,     setTopStreaks]     = useState([]);
+  const [communityTop,  setCommunityTop]   = useState([]);
+  const [impact,        setImpact]         = useState(null);
+  const [challenges,    setChallenges]     = useState([]);
+  const [chalProgress,  setChalProgress]   = useState([]);
+  const [challengesDone,setChallengesDone] = useState(0);
+  const [challengesSent,setChallengesSent] = useState(0);
+  const [loading,       setLoading]        = useState(true);
   const [copied,       setCopied]       = useState(false);
   const [editMode,     setEditMode]     = useState(false);
   const [showChallenge,setShowChallenge] = useState(false);
@@ -212,12 +234,26 @@ export default function ProfilePage() {
         .limit(5);
       setActiveChallenges(challengeRows ?? []);
 
-      const [{data:allStreaks},{data:recentSubs},{data:impactRows}] = await Promise.all([
-        // Fetch all users ordered by streak — use this to find exact rank by position
+      const [{data:allStreaks},{data:recentSubs},{data:impactRows},{data:chalRows}] = await Promise.all([
         supabase.from("Streaks").select("username,current_streak").order("current_streak",{ascending:false}),
         supabase.from("Submissions").select("created_at,photo_url").eq("username",username).in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(10),
         supabase.from("Impact").select("trees_funded,co2_lbs,donated_usd").eq("username",username),
+        supabase.from("Challenges").select("*").or(`challenger.eq.${username},challenged.eq.${username}`).order("created_at",{ascending:false}).limit(20),
       ]);
+
+      // Process challenges
+      const chalList = chalRows ?? [];
+      setChallenges(chalList);
+      setChallengesDone(chalList.filter(c => c.status === "completed").length);
+      setChallengesSent(chalList.filter(c => norm(c.challenger) === username).length);
+
+      // Fetch progress rows for active challenges
+      const activeChalIds = chalList.filter(c => c.status === "active").map(c => c.id);
+      if (activeChalIds.length > 0) {
+        const { data: progRows } = await supabase
+          .from("ChallengeProgress").select("*").in("challenge_id", activeChalIds);
+        setChalProgress(progRows ?? []);
+      }
 
       // Find user's rank by position in the ordered list
       const allRows = allStreaks ?? [];
@@ -271,7 +307,7 @@ export default function ProfilePage() {
   const tier    = getTier(current);
   const pct     = (rank !== null && totalUsers>0) ? ((rank/totalUsers)*100).toFixed(2) : "—";
   const grassScore = Math.floor(current*38+(subCount??0)*12+best*22);
-  const badges  = ALL_BADGES.map(b=>({...b,earned:current>=b.min}));
+  const badges  = ALL_BADGES.map(b=>({...b,earned:b.condition(current,subCount??0,challengesDone,challengesSent,grassScore,shields)}));
   const thresholds=[14,30,50,100];
   const prev2  = [...[0,...thresholds]].reverse().find(t=>current>=t)??0;
   const nextT  = thresholds.find(t=>t>current);
@@ -403,6 +439,41 @@ export default function ProfilePage() {
                   </>
                 }
 
+                {/* Challenge highlight */}
+                {(() => {
+                  const activeChallenge = challenges.find(c => c.status === "active");
+                  const topAchievement  = challengesDone >= 25 ? "Legendary Challenger"
+                    : challengesDone >= 10 ? "Consistency Partner"
+                    : challengesDone >= 3  ? "Challenge Veteran"
+                    : null;
+                  if (!activeChallenge && !topAchievement) return null;
+                  return (
+                    <div style={{marginTop:10,marginBottom:4,display:"flex",alignItems:"center",
+                      gap:8,padding:"7px 12px",background:"rgba(147,168,90,0.08)",
+                      border:`1px solid ${T.borderG}`,borderRadius:8,
+                      width:"fit-content",maxWidth:"100%"}}>
+                      {activeChallenge ? (
+                        <>
+                          <span style={{fontSize:12}}>⚡</span>
+                          <Link href={`/challenge/${activeChallenge.slug}`} style={{
+                            fontSize:11,color:T.olive,textDecoration:"none",fontWeight:600,
+                            whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                            {norm(activeChallenge.challenger)===username
+                              ? `vs @${norm(activeChallenge.challenged)}`
+                              : `vs @${norm(activeChallenge.challenger)}`
+                            } · Active Challenge
+                          </Link>
+                        </>
+                      ) : (
+                        <>
+                          <span style={{fontSize:12}}>🎯</span>
+                          <span style={{fontSize:11,color:T.olive,fontWeight:600}}>{topAchievement}</span>
+                          <span style={{fontSize:10,color:T.dim}}>· {challengesDone} completed</span>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
                   <Link href="/" className="btn-out">← Dashboard</Link>
                   <button onClick={copyProfile} className="btn-ol">{copied?"✓ Copied":"↗ Share Profile"}</button>
@@ -508,6 +579,118 @@ export default function ProfilePage() {
               }
             </div>
           </div>
+
+          {/* ── CHALLENGE RECORD ─────────────────────────────────────────── */}
+          {challenges.length > 0 && (
+            <div className="card fade" style={{marginBottom:14}}>
+              <div className="ct">Challenge Record</div>
+              <div style={{display:"flex",flexWrap:"wrap"}}>
+                {(() => {
+                  const started    = challenges.length;
+                  const completed  = challengesDone;
+                  const active     = challenges.filter(c=>c.status==="active").length;
+                  const rate       = started > 0 ? Math.round((completed/started)*100) : 0;
+                  return [
+                    {label:"Completed",   value:completed},
+                    {label:"Active",      value:active},
+                    {label:"Started",     value:started},
+                    {label:"Completion",  value:`${rate}%`},
+                  ].map((s,i,arr) => (
+                    <div key={s.label} style={{flex:"1 1 0",minWidth:0,
+                      display:"flex",flexDirection:"column",alignItems:"center",
+                      padding:"14px 8px",gap:4,
+                      borderRight:i<arr.length-1?`1px solid ${T.border}`:"none"}}>
+                      <span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
+                        fontSize:"clamp(22px,4vw,32px)",fontWeight:700,
+                        color:T.white,lineHeight:1}}>{s.value}</span>
+                      <span style={{fontSize:9,color:T.dim,letterSpacing:"0.12em",
+                        textTransform:"uppercase",textAlign:"center"}}>{s.label}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* ── ACTIVE CHALLENGES ─────────────────────────────────────────── */}
+          {challenges.filter(c=>c.status==="active").length > 0 && (
+            <div className="card fade2" style={{marginBottom:14}}>
+              <div className="ct">Active Challenges</div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {challenges.filter(c=>c.status==="active").map(ch => {
+                  const opponent = norm(ch.challenger)===username ? norm(ch.challenged) : norm(ch.challenger);
+                  const myProg   = chalProgress.find(p => norm(p.username)===username && p.challenge_id===ch.id);
+                  const days     = myProg?.days_complete ?? 0;
+                  const pct      = Math.min(100,Math.round((days/ch.duration_days)*100));
+                  const daysLeft = ch.ends_at
+                    ? Math.max(0,Math.ceil((new Date(ch.ends_at)-Date.now())/86400000))
+                    : ch.duration_days;
+                  return (
+                    <Link key={ch.id} href={`/challenge/${ch.slug}`} style={{
+                      textDecoration:"none",display:"flex",flexDirection:"column",gap:10,
+                      padding:"16px 18px",background:T.bg3,
+                      border:`1px solid ${T.borderG}`,borderRadius:12,
+                      transition:"border-color 0.2s"}}
+                      onMouseEnter={e=>e.currentTarget.style.borderColor=T.olive}
+                      onMouseLeave={e=>e.currentTarget.style.borderColor=T.borderG}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:600,color:T.white,marginBottom:2}}>
+                            @{norm(ch.challenger)} vs @{norm(ch.challenged)}
+                          </div>
+                          <div style={{fontSize:10,color:T.dim}}>{ch.duration_days}-day challenge</div>
+                        </div>
+                        <div style={{textAlign:"right",flexShrink:0}}>
+                          <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
+                            fontSize:22,fontWeight:700,color:T.white,lineHeight:1}}>
+                            {days}<span style={{fontSize:13,color:T.dim,fontWeight:400}}>/{ch.duration_days}</span>
+                          </div>
+                          <div style={{fontSize:9,color:T.dim}}>{daysLeft}d left</div>
+                        </div>
+                      </div>
+                      <div style={{height:2,background:"rgba(255,255,255,0.06)",borderRadius:99,overflow:"hidden"}}>
+                        <div style={{height:"100%",width:`${pct}%`,borderRadius:99,
+                          background:`linear-gradient(90deg,${T.olive},${T.gold})`,transition:"width 1s ease"}} />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── COMPLETED CHALLENGES ──────────────────────────────────────── */}
+          {challenges.filter(c=>c.status==="completed").length > 0 && (
+            <div className="card fade2" style={{marginBottom:14}}>
+              <div className="ct">Completed Challenges</div>
+              <div style={{display:"flex",flexDirection:"column"}}>
+                {challenges.filter(c=>c.status==="completed").slice(0,5).map((ch,i,arr) => {
+                  const completedDate = ch.ends_at
+                    ? new Date(ch.ends_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})
+                    : "";
+                  return (
+                    <Link key={ch.id} href={`/challenge/${ch.slug}`} style={{
+                      textDecoration:"none",display:"flex",alignItems:"center",gap:14,
+                      padding:"12px 0",
+                      borderBottom:i<arr.length-1?`1px solid ${T.border}`:"none"}}>
+                      <div style={{width:36,height:36,borderRadius:10,flexShrink:0,
+                        background:`${T.gold}12`,border:`1px solid ${T.gold}30`,
+                        display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>✦</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:600,color:T.white,marginBottom:2,
+                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          @{norm(ch.challenger)} vs @{norm(ch.challenged)}
+                        </div>
+                        <div style={{fontSize:10,color:T.dim}}>{ch.duration_days}-day challenge · {completedDate}</div>
+                      </div>
+                      <span style={{fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",
+                        color:T.gold,fontWeight:700,flexShrink:0}}>Completed</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Rank + Top Streaks + Community */}
           <div className="three" style={{display:"grid",gridTemplateColumns:"1fr 1.6fr 1fr",gap:14,marginBottom:14}}>
