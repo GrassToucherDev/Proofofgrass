@@ -458,6 +458,7 @@ export default function Home() {
           <div className="nav-links" style={{ display:"flex", gap:28, alignItems:"center" }}>
             <a href="#upload" className="nav-link active">Dashboard</a>
             <Link href="/leaderboard" className="nav-link">Leaderboard</Link>
+            <Link href="/quests" className="nav-link">Quests</Link>
             <a href="https://touchgrass.today" className="nav-link" target="_blank" rel="noopener noreferrer">Website</a>
           </div>
 
@@ -475,13 +476,21 @@ export default function Home() {
                 borderTopColor:"transparent", borderRadius:"50%",
                 animation:"spin 0.7s linear infinite", flexShrink:0 }} />
             )}
-            {hasUser && !loadingUser && currentStreak > 0 && (
-              <div style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 10px",
+            {hasUser && !loadingUser && (
+              <Link href={`/u/${username}`} style={{
+                display:"flex", alignItems:"center", gap:5, padding:"5px 10px",
                 borderRadius:8, border:`1px solid ${T.borderG}`, fontSize:11,
-                color:T.olive, flexShrink:0, whiteSpace:"nowrap" }}>
-                ◎ <span style={{ color:T.white, fontWeight:700 }}>Day {currentStreak}</span>
-                <span style={{ color:tierColor, fontSize:8, letterSpacing:"0.08em", textTransform:"uppercase" }}>{tier}</span>
-              </div>
+                color:T.olive, flexShrink:0, whiteSpace:"nowrap", textDecoration:"none",
+                transition:"border-color 0.2s, background 0.2s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background="rgba(147,168,90,0.08)"; e.currentTarget.style.borderColor=T.olive; }}
+              onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.borderColor="rgba(147,168,90,0.2)"; }}>
+                ◎ <span style={{ color:T.white, fontWeight:700 }}>My Profile</span>
+                {currentStreak > 0 && (
+                  <span style={{ color:tierColor, fontSize:9, letterSpacing:"0.06em",
+                    fontWeight:700, marginLeft:2 }}>· {currentStreak}d</span>
+                )}
+              </Link>
             )}
           </div>
         </nav>
