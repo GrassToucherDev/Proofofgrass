@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import ChallengeModal from "../../components/ChallengeModal";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../utils/supabase";
@@ -180,6 +181,8 @@ export default function ProfilePage() {
   const [loading,      setLoading]      = useState(true);
   const [copied,       setCopied]       = useState(false);
   const [editMode,     setEditMode]     = useState(false);
+  const [showChallenge,setShowChallenge] = useState(false);
+  const [activeChallenges, setActiveChallenges] = useState([]);
 
   useEffect(()=>{
     const saved = typeof window!=="undefined" ? localStorage.getItem("pog_username") : null;
@@ -199,6 +202,16 @@ export default function ProfilePage() {
       ]);
 
       // Step 2: community data + full leaderboard for rank lookup
+      // Fetch active challenges for this user
+      const { data: challengeRows } = await supabase
+        .from("Challenges")
+        .select("*")
+        .or(`challenger.eq.${username},challenged.eq.${username}`)
+        .in("status", ["pending","active"])
+        .order("created_at", { ascending: false })
+        .limit(5);
+      setActiveChallenges(challengeRows ?? []);
+
       const [{data:allStreaks},{data:recentSubs},{data:impactRows}] = await Promise.all([
         // Fetch all users ordered by streak — use this to find exact rank by position
         supabase.from("Streaks").select("username,current_streak").order("current_streak",{ascending:false}),
@@ -393,6 +406,12 @@ export default function ProfilePage() {
                 <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
                   <Link href="/" className="btn-out">← Dashboard</Link>
                   <button onClick={copyProfile} className="btn-ol">{copied?"✓ Copied":"↗ Share Profile"}</button>
+                  {!isOwner && username && (
+                    <button onClick={()=>setShowChallenge(true)} className="btn-out"
+                      style={{borderColor:T.gold,color:T.gold}}>
+                      ⚡ Challenge
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -569,6 +588,39 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* Active Challenges */}
+          {activeChallenges.length > 0 && (
+            <div className="card fade" style={{marginBottom:14}}>
+              <div className="ct">Active Challenges</div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {activeChallenges.map(ch => {
+                  const opponent = norm(ch.challenger) === username ? norm(ch.challenged) : norm(ch.challenger);
+                  const isChallenger = norm(ch.challenger) === username;
+                  return (
+                    <a key={ch.id} href={`/challenge/${ch.slug}`}
+                      style={{textDecoration:"none",display:"flex",alignItems:"center",
+                        gap:14,padding:"14px 16px",background:T.bg3,
+                        border:`1px solid ${ch.status==="active"?T.olive:T.border}`,
+                        borderRadius:12,transition:"border-color 0.2s"}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:600,color:T.white,marginBottom:3}}>
+                          vs @{opponent}
+                        </div>
+                        <div style={{fontSize:10,color:T.dim}}>
+                          {ch.duration_days}-day challenge · {ch.status === "pending" ? (isChallenger ? "Waiting for response" : "Awaiting your response") : "Active"}
+                        </div>
+                      </div>
+                      <div style={{fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",
+                        color:ch.status==="active"?T.olive:T.dim,flexShrink:0}}>
+                        {ch.status === "active" ? "⚡ Active" : "⏳ Pending"}
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Impact */}
           <div className="card fade" style={{marginBottom:14}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:20}}>
@@ -619,6 +671,15 @@ export default function ProfilePage() {
           <div style={{fontSize:10,color:T.dim,letterSpacing:"0.1em"}}>BUILT ON ◎ SOLANA</div>
         </footer>
       </div>
+
+        {/* Challenge Modal */}
+        {showChallenge && (
+          <ChallengeModal
+            targetUsername={username}
+            viewerUsername={viewer}
+            onClose={() => setShowChallenge(false)}
+          />
+        )}
     </>
   );
 }
