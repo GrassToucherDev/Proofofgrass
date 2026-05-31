@@ -773,6 +773,42 @@ export default function Home() {
           </div>
         </div>
 
+        {/* ── QUESTS BANNER ────────────────────────────────────────────────── */}
+        <div style={{
+          margin:"0", padding:"24px clamp(14px,4vw,48px)",
+          background:T.bg2, borderTop:`1px solid ${T.border}`,
+          borderBottom:`1px solid ${T.border}`,
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          gap:16, flexWrap:"wrap",
+        }}>
+          <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
+            <div style={{ width:48, height:48, borderRadius:12, flexShrink:0,
+              background:`${T.olive}14`, border:`1px solid ${T.borderG}`,
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>
+              ⭐
+            </div>
+            <div style={{ minWidth:0 }}>
+              <div style={{ fontSize:14, fontWeight:600, color:T.white, marginBottom:2 }}>
+                Community Quests
+              </div>
+              <div style={{ fontSize:11, color:T.dim }}>
+                Complete quests, earn XP, unlock badges, vote on DexScreener.
+              </div>
+            </div>
+          </div>
+          <Link href="/quests" style={{
+            display:"inline-flex", alignItems:"center", gap:6,
+            background:T.olive, color:"#0e1108",
+            fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700,
+            letterSpacing:"0.1em", textTransform:"uppercase",
+            padding:"10px 20px", borderRadius:8, textDecoration:"none",
+            flexShrink:0, transition:"background 0.2s",
+            whiteSpace:"nowrap",
+          }}>
+            View Quests →
+          </Link>
+        </div>
+
         {/* ── FOOTER CTA ────────────────────────────────────────────────────── */}
         <section style={{ position:"relative", padding:"88px clamp(18px,5vw,72px)",
           textAlign:"center", overflow:"hidden",
