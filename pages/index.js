@@ -280,9 +280,14 @@ export default function Home() {
         ]);
 
         const userStreak  = streakRow?.current_streak ?? 1;
-        const { count: rankCount } = await supabase.from("Streaks")
-          .select("id", { count:"exact", head:true })
-          .gt("current_streak", userStreak);
+        // Fetch all ordered streaks and find position — avoids head:true filter bug
+        const { data: allStreaksForRank } = await supabase
+          .from("Streaks").select("username,current_streak")
+          .order("current_streak", { ascending: false });
+        const rankIdx = (allStreaksForRank ?? []).findIndex(
+          r => r.username?.toLowerCase().trim() === username
+        );
+        const rankCount = rankIdx >= 0 ? rankIdx : (allStreaksForRank?.length ?? 1) - 1;
 
         const lastDate   = streakRow?.last_submission_date
           ? new Date(streakRow.last_submission_date).toISOString().slice(0, 10)
@@ -304,7 +309,7 @@ export default function Home() {
         setHasPostedToday(lastDate === todayStr);
         setCurrentStreak(actual);
         setDisplayStreak(displayVal);
-        setUserStats({ posts: postCount ?? 0, bestStreak: streakRow?.best_streak ?? actual, rank: (rankCount ?? 0) + 1, shields: shieldCount });
+        setUserStats({ posts: postCount ?? 0, bestStreak: streakRow?.best_streak ?? actual, rank: rankCount + 1, shields: shieldCount });
 
         supabase.from("ShieldPurchases")
           .select("tx_signature, status, created_at")
