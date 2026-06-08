@@ -589,11 +589,10 @@ export default function FlexCardPage() {
   };
 
   const [generatingImg, setGeneratingImg] = useState(false);
+  const [downloaded,    setDownloaded]    = useState(false);
 
-  const shareToX = useCallback(async () => {
-    const text = `Day ${streak} — ${tier.label} 🌿\n\nBuilding my outdoor legacy on @XTouchGrass\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/flex/${username}`;
-    const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
-
+  // Step 1 — Download the card image
+  const downloadCard = useCallback(async () => {
     setGeneratingImg(true);
     try {
       const dataUrl = await generateShareImage({
@@ -601,50 +600,23 @@ export default function FlexCardPage() {
         rank, subCount, badges: earnedBadges, best, shields,
         bio: profileRow?.bio ?? "",
       });
-
-      if (isMob && navigator.share && navigator.canShare) {
-        // Mobile — convert to JPEG to reduce size for native share
-        try {
-          const res  = await fetch(dataUrl);
-          const blob = await res.blob();
-          // Re-compress via canvas to JPEG at 0.88 quality — much smaller file
-          const img = await new Promise((res, rej) => {
-            const i = new Image();
-            i.onload = () => res(i);
-            i.onerror = rej;
-            i.src = dataUrl;
-          });
-          const cv2 = document.createElement("canvas");
-          cv2.width = img.width; cv2.height = img.height;
-          cv2.getContext("2d").drawImage(img, 0, 0);
-          const jpegUrl  = cv2.toDataURL("image/jpeg", 0.88);
-          const res2     = await fetch(jpegUrl);
-          const jpegBlob = await res2.blob();
-          const file = new File([jpegBlob], "proof-of-grass-flex.jpg", { type:"image/jpeg" });
-          if (navigator.canShare({ files:[file] })) {
-            await navigator.share({ files:[file], text });
-            setGeneratingImg(false);
-            return;
-          }
-        } catch(shareErr) {
-          console.warn("native share failed, falling back", shareErr);
-        }
-      }
-
-      // Desktop — download image + open X intent
       const link = document.createElement("a");
       link.download = `proof-of-grass-${username}-day${streak}.png`;
       link.href = dataUrl;
       link.click();
-      setTimeout(() => {
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-      }, 600);
+      setDownloaded(true);
+      setTimeout(() => setDownloaded(false), 4000);
     } catch(e) {
-      console.error("share image error", e);
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+      console.error("download error", e);
     }
     setGeneratingImg(false);
-  }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best]);
+  }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow]);
+
+  // Step 2 — Open X with pre-filled caption
+  const shareToX = useCallback(() => {
+    const text = `Day ${streak} — ${tier.label} 🌿\n\nBuilding my outdoor legacy on @XTouchGrass\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/flex/${username}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+  }, [username, streak, tier]);
 
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -697,17 +669,13 @@ export default function FlexCardPage() {
             <Link href={`/u/${username}`} className="nav-lk">Profile</Link>
           </div>
           <div style={{ display:"flex", gap:8, flexShrink:0 }}>
-            {isOwner && (
-              <button onClick={shareToX} disabled={generatingImg} className="btn-share"
-                style={{ fontSize:11, padding:"7px 14px", opacity:generatingImg?0.7:1 }}>
-                {generatingImg ? "Generating…" : <>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                  </svg>
-                  Share
-                </>}
-              </button>
-            )}
+            <button onClick={shareToX} className="btn-share"
+              style={{ fontSize:11, padding:"7px 14px" }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              Share on X
+            </button>
           </div>
         </nav>
 
@@ -943,22 +911,18 @@ export default function FlexCardPage() {
           {/* ── SHARE ACTIONS ─────────────────────────────────────────────── */}
           <div className="fade3" style={{ display:"flex", gap:10, marginTop:20,
             justifyContent:"center", flexWrap:"wrap" }}>
-            {isOwner ? (
-              <button onClick={shareToX} disabled={generatingImg} className="btn-share"
-                style={{opacity:generatingImg?0.7:1}}>
-                {generatingImg ? "Generating image…" : <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                  </svg>
-                  Share on X
-                </>}
-              </button>
-            ) : (
-              <div style={{ fontSize:12, color:"rgba(240,239,234,0.35)", padding:"11px 20px",
-                border:"1px solid rgba(255,255,255,0.06)", borderRadius:9 }}>
-                Sign in to share your flex card
-              </div>
-            )}
+            {/* Step 1 — Download */}
+            <button onClick={downloadCard} disabled={generatingImg} className="btn-share"
+              style={{ opacity:generatingImg?0.7:1 }}>
+              {generatingImg ? "Generating…" : downloaded ? "✓ Downloaded!" : "↓ Download Card"}
+            </button>
+            {/* Step 2 — Share on X */}
+            <button onClick={shareToX} className="btn-ghost">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              Post on X
+            </button>
             <button onClick={copyLink} className="btn-ghost">
               {copied ? "✓ Copied" : "↗ Copy Link"}
             </button>
@@ -966,6 +930,12 @@ export default function FlexCardPage() {
               ← Full Profile
             </Link>
           </div>
+          {downloaded && (
+            <p style={{ textAlign:"center", fontSize:11, color:"rgba(147,168,90,0.7)",
+              marginTop:8 }}>
+              Card downloaded — attach it to your post on X ↑
+            </p>
+          )}
 
         </div>
       </div>

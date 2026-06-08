@@ -3,7 +3,6 @@ import Link from "next/link";
 import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
 import { supabase } from "../utils/supabase";
-import { useAuth } from "../hooks/useAuth";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -195,10 +194,9 @@ const SOL_DOMAIN  = "touchgrassburn.sol";
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Home() {
-  // ── Auth (X OAuth + localStorage fallback) ───────────────────────────────
-  const { session, username: authUsername, verified, loading: authLoading, signInWithX, signOut } = useAuth();
+  // ── Username (restored from localStorage) ────────────────────────────────
   const [rawUsername, setRawUsername] = useState("");
-  const username = authUsername || normalizeUsername(rawUsername);
+  const username = normalizeUsername(rawUsername);
   const hasUser  = username.length > 0;
 
   // ── User streak state (mirrors old index.js exactly) ─────────────────────
@@ -245,8 +243,8 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     const saved = localStorage.getItem("pog_username");
-    if (saved && !authUsername) setRawUsername(normalizeUsername(saved));
-  }, [authUsername]);
+    if (saved) setRawUsername(normalizeUsername(saved));
+  }, []);
 
   // ── Persist username ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -463,37 +461,17 @@ export default function Home() {
             <a href="https://touchgrass.today" className="nav-link" target="_blank" rel="noopener noreferrer">Website</a>
           </div>
 
-          {/* Auth — username input always shown, X verify hidden for now */}
+          {/* Username input + profile link */}
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-            {verified ? (
-              <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-                <Link href={`/u/${username}`} style={{
-                  display:"flex", alignItems:"center", gap:6, padding:"6px 11px",
-                  borderRadius:8, border:`1px solid ${T.borderG}`,
-                  fontSize:11, color:T.olive, textDecoration:"none",
-                  whiteSpace:"nowrap", flexShrink:0,
-                }}>
-                  ✓ @{username}{currentStreak > 0 && ` · ${currentStreak}d`}
-                </Link>
-                <button onClick={signOut} style={{
-                  background:"transparent", border:`1px solid ${T.border}`,
-                  borderRadius:6, padding:"5px 8px", color:T.dim,
-                  fontSize:10, cursor:"pointer", flexShrink:0,
-                }}>Sign out</button>
-              </div>
-            ) : (
-              <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-                <input className="username-input" type="text" placeholder="your username"
-                  value={rawUsername} onChange={e => setRawUsername(e.target.value)}
-                  style={{ width:130 }} />
-                {hasUser && (
-                  <Link href={`/u/${username}`} style={{
-                    fontSize:10, color:T.olive, textDecoration:"none",
-                    border:`1px solid ${T.borderG}`, borderRadius:6,
-                    padding:"5px 9px", whiteSpace:"nowrap", flexShrink:0,
-                  }}>My Profile →</Link>
-                )}
-              </div>
+            <input className="username-input" type="text" placeholder="your username"
+              value={rawUsername} onChange={e => setRawUsername(e.target.value)}
+              style={{ width:130 }} />
+            {hasUser && (
+              <Link href={`/u/${username}`} style={{
+                fontSize:10, color:T.olive, textDecoration:"none",
+                border:`1px solid ${T.borderG}`, borderRadius:6,
+                padding:"5px 9px", whiteSpace:"nowrap", flexShrink:0,
+              }}>My Profile →</Link>
             )}
           </div>
         </nav>
@@ -662,7 +640,7 @@ export default function Home() {
           {/* PROGRESSION */}
           <div className="card" style={{ padding:28, borderRight:`1px solid ${T.border}` }}>
             <div className="card-title">Your Progression</div>
-            {hasUser && verified && currentStreak > 0 ? (
+            {hasUser && currentStreak > 0 ? (
               <>
                 <div style={{ display:"flex", justifyContent:"space-around", marginBottom:28 }}>
                   <TierBadge name="Rooted"    day={14}  completed={currentStreak>=14} active={currentStreak>=7  && currentStreak<14} />
