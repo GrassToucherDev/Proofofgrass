@@ -279,7 +279,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.shadowBlur = 0;
 
   // Tier title pill — pinned to bottom of hero section (hero divider ~y=370)
-  const pillW = 320, pillH = 40, pillX = 72, pillY = 318;
+  const pillW = 320, pillH = 40, pillX = 72, pillY = 290;
   ctx.strokeStyle = tier.color + "55";
   ctx.lineWidth = 1;
   roundRect(ctx, pillX, pillY, pillW, pillH, 20);
@@ -297,9 +297,9 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.textAlign = "right";
 
   // "CURRENT STREAK" label at top
-  ctx.font = "600 16px 'DM Sans', sans-serif";
+  ctx.font = "600 24px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.45)";
-  ctx.fillText("CURRENT STREAK", W - 80, 88);
+  ctx.fillText("CURRENT STREAK", W - 80, 110);
 
   // Large streak number
   const numSize = streak >= 100 ? 148 : 178;
@@ -462,7 +462,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // Solana branding
   ctx.font = "500 15px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.28)";
-  ctx.fillText("BUILT ON ◎ SOLANA  ·  PROOF OF GRASS", 72, H - 28);
+  ctx.fillText("BUILT ON ◎ SOLANA  ·  PROOF OF GRASS", 72, H - 10);
 
   return canvas.toDataURL("image/png");
 }
@@ -591,7 +591,7 @@ export default function FlexCardPage() {
   const [generatingImg, setGeneratingImg] = useState(false);
   const [downloaded,    setDownloaded]    = useState(false);
 
-  // Step 1 — Download the card image
+  // Step 1 — Download/save the card image
   const downloadCard = useCallback(async () => {
     setGeneratingImg(true);
     try {
@@ -600,10 +600,50 @@ export default function FlexCardPage() {
         rank, subCount, badges: earnedBadges, best, shields,
         bio: profileRow?.bio ?? "",
       });
-      const link = document.createElement("a");
-      link.download = `proof-of-grass-${username}-day${streak}.png`;
-      link.href = dataUrl;
-      link.click();
+
+      const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
+
+      if (isMob) {
+        // Mobile: try Web Share API with file first (lets user save to Photos)
+        try {
+          const res  = await fetch(dataUrl);
+          const blob = await res.blob();
+          const file = new File([blob], `proof-of-grass-${username}-day${streak}.png`, { type:"image/png" });
+          if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })) {
+            await navigator.share({
+              files: [file],
+              title: `Day ${streak} — ${tier.label}`,
+              text: "My Proof of Grass flex card",
+            });
+            setDownloaded(true);
+            setTimeout(() => setDownloaded(false), 4000);
+            setGeneratingImg(false);
+            return;
+          }
+        } catch(shareErr) {
+          if (shareErr?.name === "AbortError") {
+            setGeneratingImg(false);
+            return; // user cancelled
+          }
+        }
+        // Fallback: open image in new tab — user can long-press to save
+        const win = window.open();
+        if (win) {
+          win.document.write(`<html><body style="margin:0;background:#000">
+            <img src="${dataUrl}" style="width:100%;max-width:100vw" />
+            <p style="color:#fff;text-align:center;font-family:sans-serif;padding:12px;font-size:14px">
+              Long-press the image to save it
+            </p>
+          </body></html>`);
+        }
+      } else {
+        // Desktop: standard download
+        const link = document.createElement("a");
+        link.download = `proof-of-grass-${username}-day${streak}.png`;
+        link.href = dataUrl;
+        link.click();
+      }
+
       setDownloaded(true);
       setTimeout(() => setDownloaded(false), 4000);
     } catch(e) {
@@ -911,10 +951,10 @@ export default function FlexCardPage() {
           {/* ── SHARE ACTIONS ─────────────────────────────────────────────── */}
           <div className="fade3" style={{ display:"flex", gap:10, marginTop:20,
             justifyContent:"center", flexWrap:"wrap" }}>
-            {/* Step 1 — Download */}
+            {/* Step 1 — Save/Download */}
             <button onClick={downloadCard} disabled={generatingImg} className="btn-share"
               style={{ opacity:generatingImg?0.7:1 }}>
-              {generatingImg ? "Generating…" : downloaded ? "✓ Downloaded!" : "↓ Download Card"}
+              {generatingImg ? "Generating…" : downloaded ? "✓ Saved!" : "↓ Save Card"}
             </button>
             {/* Step 2 — Share on X */}
             <button onClick={shareToX} className="btn-ghost">
@@ -933,7 +973,7 @@ export default function FlexCardPage() {
           {downloaded && (
             <p style={{ textAlign:"center", fontSize:11, color:"rgba(147,168,90,0.7)",
               marginTop:8 }}>
-              Card downloaded — attach it to your post on X ↑
+              Card saved — attach it to your post on X ↑
             </p>
           )}
 
