@@ -3,6 +3,7 @@ import Link from "next/link";
 import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
 import { supabase } from "../utils/supabase";
+import { useAuth } from "../hooks/useAuth";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -194,10 +195,11 @@ const SOL_DOMAIN  = "touchgrassburn.sol";
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Home() {
-  // ── Username (auto-restores from localStorage) ────────────────────────────
+  // ── Auth (X OAuth + localStorage fallback) ───────────────────────────────
+  const { session, username: authUsername, verified, loading: authLoading, signInWithX, signOut } = useAuth();
   const [rawUsername, setRawUsername] = useState("");
-  const username   = normalizeUsername(rawUsername);
-  const hasUser    = username.length > 0;
+  const username = authUsername || normalizeUsername(rawUsername);
+  const hasUser  = username.length > 0;
 
   // ── User streak state (mirrors old index.js exactly) ─────────────────────
   const [currentStreak,       setCurrentStreak]       = useState(1);
@@ -242,10 +244,9 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
-    // Restore username from localStorage after mount (client-only)
     const saved = localStorage.getItem("pog_username");
-    if (saved) setRawUsername(normalizeUsername(saved));
-  }, []);
+    if (saved && !authUsername) setRawUsername(normalizeUsername(saved));
+  }, [authUsername]);
 
   // ── Persist username ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -462,35 +463,50 @@ export default function Home() {
             <a href="https://touchgrass.today" className="nav-link" target="_blank" rel="noopener noreferrer">Website</a>
           </div>
 
-          {/* Username input */}
+          {/* Auth */}
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-            <input
-              className="username-input"
-              type="text"
-              placeholder="your username"
-              value={rawUsername}
-              onChange={e => setRawUsername(e.target.value)}
-            />
-            {loadingUser && (
-              <div style={{ width:14, height:14, border:`2px solid ${T.olive}`,
-                borderTopColor:"transparent", borderRadius:"50%",
-                animation:"spin 0.7s linear infinite", flexShrink:0 }} />
+            {!authLoading && !verified && !hasUser && (
+              <button onClick={signInWithX} style={{
+                display:"flex", alignItems:"center", gap:7,
+                background:T.white, color:T.bg, border:"none",
+                borderRadius:8, padding:"8px 14px", cursor:"pointer",
+                fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700,
+                letterSpacing:"0.04em", transition:"all 0.2s", flexShrink:0,
+              }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                Sign in with X
+              </button>
             )}
-            {hasUser && !loadingUser && (
-              <Link href={`/u/${username}`} style={{
-                display:"flex", alignItems:"center", gap:5, padding:"5px 10px",
-                borderRadius:8, border:`1px solid ${T.borderG}`, fontSize:11,
-                color:T.olive, flexShrink:0, whiteSpace:"nowrap", textDecoration:"none",
-                transition:"border-color 0.2s, background 0.2s",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background="rgba(147,168,90,0.08)"; e.currentTarget.style.borderColor=T.olive; }}
-              onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.borderColor="rgba(147,168,90,0.2)"; }}>
-                ◎ <span style={{ color:T.white, fontWeight:700 }}>My Profile</span>
-                {currentStreak > 0 && (
-                  <span style={{ color:tierColor, fontSize:9, letterSpacing:"0.06em",
-                    fontWeight:700, marginLeft:2 }}>· {currentStreak}d</span>
-                )}
-              </Link>
+            {!authLoading && verified && (
+              <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                <Link href={`/u/${username}`} style={{
+                  display:"flex", alignItems:"center", gap:6, padding:"6px 11px",
+                  borderRadius:8, border:`1px solid ${T.borderG}`,
+                  fontSize:11, color:T.olive, textDecoration:"none",
+                  whiteSpace:"nowrap", flexShrink:0,
+                }}>
+                  ✓ @{username}{currentStreak > 0 && ` · ${currentStreak}d`}
+                </Link>
+                <button onClick={signOut} style={{
+                  background:"transparent", border:`1px solid ${T.border}`,
+                  borderRadius:6, padding:"5px 8px", color:T.dim,
+                  fontSize:10, cursor:"pointer", flexShrink:0,
+                }}>Sign out</button>
+              </div>
+            )}
+            {!authLoading && !verified && hasUser && (
+              <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                <input className="username-input" type="text" placeholder="your username"
+                  value={rawUsername} onChange={e => setRawUsername(e.target.value)}
+                  style={{ width:120 }} />
+                <button onClick={signInWithX} style={{
+                  background:"transparent", border:`1px solid ${T.borderG}`,
+                  borderRadius:6, padding:"6px 10px", color:T.olive,
+                  fontSize:10, cursor:"pointer", flexShrink:0, whiteSpace:"nowrap",
+                }}>Verify ✓</button>
+              </div>
             )}
           </div>
         </nav>
@@ -509,16 +525,14 @@ export default function Home() {
             <h1 className="fade-2" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(44px,6.5vw,88px)", fontWeight:700, color:T.white, lineHeight:0.94, letterSpacing:"-0.02em", marginBottom:18 }}>
               Proof<br />of Grass
             </h1>
-            <p className="fade-2" style={{ fontSize:15, lineHeight:1.72, marginBottom:28, maxWidth:340, fontWeight:300,
-              color: hasUser && streakStatus ? toneColor : T.muted }}>
-              {hasUser && streakStatus ? streakStatus : <>Log your time outside. Build your streak.<br />Earn rewards. Make a difference.</>}
+            <p className="fade-2" style={{ fontSize:15, lineHeight:1.72, marginBottom:28, maxWidth:340, fontWeight:300, color:T.muted }}>
+              Log your time outside. Build your streak.<br />Earn rewards. Make a difference.
             </p>
             <div className="fade-3 hero-btns" style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
               <a href="#upload" className="btn-olive">Log Your Proof ↑</a>
               <Link href="/leaderboard" className="btn-ghost">View Leaderboard</Link>
             </div>
 
-            {/* User mini-stats */}
             {hasUser && userStats && (
               <div className="fade-3" style={{ marginTop:24, display:"flex", gap:18 }}>
                 {[["Posts", userStats.posts], ["Best", `${userStats.bestStreak}d`], ["Rank", `#${userStats.rank}`], ["Shields", userStats.shields]].map(([label, val]) => (
@@ -529,40 +543,42 @@ export default function Home() {
                 ))}
               </div>
             )}
+          </div>
 
-            {!hasUser && (
-              <div style={{ marginTop:32, display:"flex", gap:6, alignItems:"center" }}>
-                <img src="/touchgrass-transparent.png" alt="" style={{ width:12, height:12, opacity:0.35 }} />
-                <span style={{ fontSize:9, color:T.dim, letterSpacing:"0.14em", textTransform:"uppercase" }}>Certified by Touch Grass</span>
+          {/* Right streak HUD — only show when signed in */}
+          {hasUser && currentStreak > 0 && (
+            <div style={{ position:"absolute", right:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", textAlign:"right" }}>
+              <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.dim, textTransform:"uppercase", marginBottom:8 }}>Your Streak</div>
+              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.white, lineHeight:0.9, letterSpacing:"-0.03em" }}>
+                <span style={{ fontSize:"0.42em", color:T.muted, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>
+                {currentStreak}
               </div>
-            )}
-          </div>
-
-          {/* Right streak HUD */}
-          <div style={{ position:"absolute", right:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", textAlign:"right" }}>
-            <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.dim, textTransform:"uppercase", marginBottom:8 }}>
-              {hasUser && currentStreak > 0 ? "Your Streak" : "Top Streak"}
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:7, marginTop:10 }}>
+                <div style={{ width:30, height:1, background:`linear-gradient(90deg,transparent,${tierColor})` }} />
+                <span style={{ fontSize:9, letterSpacing:"0.16em", color:tierColor, textTransform:"uppercase", fontWeight:600 }}>✦ {tier}</span>
+              </div>
             </div>
-            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.white, lineHeight:0.9, letterSpacing:"-0.03em" }}>
-              <span style={{ fontSize:"0.42em", color:T.muted, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>
-              {heroDay}
-            </div>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:7, marginTop:10 }}>
-              <div style={{ width:30, height:1, background:`linear-gradient(90deg,transparent,${heroColor})` }} />
-              <span style={{ fontSize:9, letterSpacing:"0.16em", color:heroColor, textTransform:"uppercase", fontWeight:600 }}>✦ {heroTier}</span>
-            </div>
-            {!hasUser && topStreaker && <div style={{ marginTop:5, fontSize:10, color:T.dim }}>@{topStreaker.username}</div>}
-          </div>
+          )}
         </section>
 
-        {/* ── USERNAME PROMPT BANNER (if not set) ──────────────────────────── */}
+        {/* ── SIGN IN PROMPT BANNER ───────────────────────────────────────── */}
         {mounted && !hasUser && (
-          <div style={{ background:`${T.olive}0c`, borderBottom:`1px solid ${T.borderG}`,
-            padding:"12px clamp(14px,4vw,48px)", display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
-            <span style={{ fontSize:12, color:T.muted }}>Enter your username to see your streak, stats, and generate your certificate.</span>
-            <input className="username-input" type="text" placeholder="your username"
-              value={rawUsername} onChange={e => setRawUsername(e.target.value)}
-              style={{ width:180 }} />
+          <div style={{ background:`${T.olive}08`, borderBottom:`1px solid ${T.borderG}`,
+            padding:"11px clamp(14px,4vw,48px)", display:"flex", alignItems:"center",
+            justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+            <span style={{ fontSize:12, color:T.dim }}>Sign in with X to log your proof, track your streak, and join the leaderboard.</span>
+            <button onClick={signInWithX} style={{
+              display:"inline-flex", alignItems:"center", gap:6,
+              background:T.white, color:T.bg, border:"none",
+              borderRadius:7, padding:"7px 14px", cursor:"pointer",
+              fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:700,
+              flexShrink:0,
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              Sign in with X
+            </button>
           </div>
         )}
 
@@ -583,12 +599,21 @@ export default function Home() {
             <div className="card-title">Log Your Proof</div>
 
             {!hasUser ? (
-              <div style={{ border:`1.5px dashed ${T.borderG}`, borderRadius:12, padding:"28px 18px", textAlign:"center" }}>
-                <div style={{ fontSize:22, marginBottom:10, opacity:0.3 }}>↑</div>
-                <div style={{ fontSize:12, color:T.dim, marginBottom:12 }}>Enter your username to unlock uploads</div>
-                <input className="username-input" type="text" placeholder="your username"
-                  value={rawUsername} onChange={e => setRawUsername(e.target.value)}
-                  style={{ width:"100%", textAlign:"center" }} />
+              <div style={{ border:`1.5px dashed ${T.borderG}`, borderRadius:12, padding:"32px 20px", textAlign:"center" }}>
+                <div style={{ fontSize:28, marginBottom:12, opacity:0.4 }}>🌿</div>
+                <div style={{ fontSize:13, color:T.muted, marginBottom:6, fontWeight:500 }}>Sign in to log your proof</div>
+                <div style={{ fontSize:11, color:T.dim, marginBottom:18 }}>Verify your X account to get started</div>
+                <button onClick={signInWithX} style={{
+                  display:"inline-flex", alignItems:"center", gap:7,
+                  background:T.white, color:T.bg, border:"none",
+                  borderRadius:8, padding:"10px 20px", cursor:"pointer",
+                  fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:700,
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                  Sign in with X
+                </button>
               </div>
             ) : hasPostedToday ? (
               <div style={{ border:`1px solid ${T.borderG}`, borderRadius:12, padding:"28px 18px", textAlign:"center" }}>
@@ -673,7 +698,7 @@ export default function Home() {
           {/* PROGRESSION */}
           <div className="card" style={{ padding:28, borderRight:`1px solid ${T.border}` }}>
             <div className="card-title">Your Progression</div>
-            {hasUser && currentStreak > 0 ? (
+            {hasUser && verified && currentStreak > 0 ? (
               <>
                 <div style={{ display:"flex", justifyContent:"space-around", marginBottom:28 }}>
                   <TierBadge name="Rooted"    day={14}  completed={currentStreak>=14} active={currentStreak>=7  && currentStreak<14} />

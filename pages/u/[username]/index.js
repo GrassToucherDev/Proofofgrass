@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import ChallengeModal from "../../components/ChallengeModal";
+import ChallengeModal from "../../../components/ChallengeModal";
+import WalletVerify from "../../../components/WalletVerify";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { supabase } from "../../utils/supabase";
+import { supabase } from "../../../utils/supabase";
 
 const T = {
   bg:"#0a0b08", bg2:"#111209", bg3:"#181a12",
@@ -201,6 +202,8 @@ export default function ProfilePage() {
   const [challengesDone,setChallengesDone] = useState(0);
   const [challengesSent,setChallengesSent] = useState(0);
   const [loading,       setLoading]        = useState(true);
+  const [walletAddr,    setWalletAddr]     = useState(null);
+  const [walletVerified,setWalletVerified] = useState(false);
   const [copied,       setCopied]       = useState(false);
   const [editMode,     setEditMode]     = useState(false);
   const [showChallenge,setShowChallenge] = useState(false);
@@ -263,6 +266,8 @@ export default function ProfilePage() {
 
       setStreakRow(sr);
       setProfileRow(pr);
+      setWalletAddr(pr?.wallet_address ?? null);
+      setWalletVerified(pr?.wallet_verified ?? false);
       setSubCount(subs??0);
       setRank(computedRank);
       setTotalUsers(allRows.length || 1);
@@ -477,6 +482,10 @@ export default function ProfilePage() {
                 <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
                   <Link href="/" className="btn-out">← Dashboard</Link>
                   <button onClick={copyProfile} className="btn-ol">{copied?"✓ Copied":"↗ Share Profile"}</button>
+                  <Link href={`/flex/${username}`} className="btn-out"
+                    style={{borderColor:T.gold,color:T.gold,textDecoration:"none"}}>
+                    ✦ Flex Card
+                  </Link>
                   {!isOwner && username && (
                     <button onClick={()=>setShowChallenge(true)} className="btn-out"
                       style={{borderColor:T.gold,color:T.gold}}>
@@ -800,6 +809,38 @@ export default function ProfilePage() {
                     </a>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* ── WALLET VERIFICATION (owner only) ──────────────────────────── */}
+          {isOwner && (
+            <div className="card fade" style={{marginBottom:14}}>
+              <div className="ct">Solana Wallet</div>
+              <WalletVerify
+                username={username}
+                currentWallet={walletAddr}
+                currentVerified={walletVerified}
+                onVerified={(addr) => {
+                  setWalletAddr(addr);
+                  setWalletVerified(!!addr);
+                }}
+              />
+            </div>
+          )}
+
+          {/* Show wallet publicly if verified — non-owners */}
+          {!isOwner && walletVerified && walletAddr && (
+            <div className="card fade" style={{marginBottom:14,
+              display:"flex", alignItems:"center", gap:12}}>
+              <div style={{width:36,height:36,borderRadius:10,flexShrink:0,
+                background:"rgba(147,168,90,0.1)",border:`1px solid rgba(147,168,90,0.2)`,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>◎</div>
+              <div>
+                <div style={{fontSize:11,fontWeight:600,color:"#93a85a",marginBottom:2}}>Wallet Verified</div>
+                <div style={{fontSize:11,color:"rgba(240,239,234,0.35)",fontFamily:"monospace",letterSpacing:"0.04em"}}>
+                  {walletAddr.slice(0,4)}...{walletAddr.slice(-4)}
+                </div>
               </div>
             </div>
           )}
