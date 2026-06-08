@@ -463,23 +463,9 @@ export default function Home() {
             <a href="https://touchgrass.today" className="nav-link" target="_blank" rel="noopener noreferrer">Website</a>
           </div>
 
-          {/* Auth */}
+          {/* Auth — username input always shown, X verify hidden for now */}
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-            {!authLoading && !verified && !hasUser && (
-              <button onClick={signInWithX} style={{
-                display:"flex", alignItems:"center", gap:7,
-                background:T.white, color:T.bg, border:"none",
-                borderRadius:8, padding:"8px 14px", cursor:"pointer",
-                fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700,
-                letterSpacing:"0.04em", transition:"all 0.2s", flexShrink:0,
-              }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                </svg>
-                Sign in with X
-              </button>
-            )}
-            {!authLoading && verified && (
+            {verified ? (
               <div style={{ display:"flex", alignItems:"center", gap:7 }}>
                 <Link href={`/u/${username}`} style={{
                   display:"flex", alignItems:"center", gap:6, padding:"6px 11px",
@@ -495,17 +481,18 @@ export default function Home() {
                   fontSize:10, cursor:"pointer", flexShrink:0,
                 }}>Sign out</button>
               </div>
-            )}
-            {!authLoading && !verified && hasUser && (
+            ) : (
               <div style={{ display:"flex", alignItems:"center", gap:7 }}>
                 <input className="username-input" type="text" placeholder="your username"
                   value={rawUsername} onChange={e => setRawUsername(e.target.value)}
-                  style={{ width:120 }} />
-                <button onClick={signInWithX} style={{
-                  background:"transparent", border:`1px solid ${T.borderG}`,
-                  borderRadius:6, padding:"6px 10px", color:T.olive,
-                  fontSize:10, cursor:"pointer", flexShrink:0, whiteSpace:"nowrap",
-                }}>Verify ✓</button>
+                  style={{ width:130 }} />
+                {hasUser && (
+                  <Link href={`/u/${username}`} style={{
+                    fontSize:10, color:T.olive, textDecoration:"none",
+                    border:`1px solid ${T.borderG}`, borderRadius:6,
+                    padding:"5px 9px", whiteSpace:"nowrap", flexShrink:0,
+                  }}>My Profile →</Link>
+                )}
               </div>
             )}
           </div>
@@ -561,24 +548,12 @@ export default function Home() {
           )}
         </section>
 
-        {/* ── SIGN IN PROMPT BANNER ───────────────────────────────────────── */}
+        {/* ── ENTER USERNAME BANNER ────────────────────────────────────────── */}
         {mounted && !hasUser && (
           <div style={{ background:`${T.olive}08`, borderBottom:`1px solid ${T.borderG}`,
             padding:"11px clamp(14px,4vw,48px)", display:"flex", alignItems:"center",
             justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
-            <span style={{ fontSize:12, color:T.dim }}>Sign in with X to log your proof, track your streak, and join the leaderboard.</span>
-            <button onClick={signInWithX} style={{
-              display:"inline-flex", alignItems:"center", gap:6,
-              background:T.white, color:T.bg, border:"none",
-              borderRadius:7, padding:"7px 14px", cursor:"pointer",
-              fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:700,
-              flexShrink:0,
-            }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-              </svg>
-              Sign in with X
-            </button>
+            <span style={{ fontSize:12, color:T.dim }}>Enter your username above to see your streak, log proof, and join the leaderboard.</span>
           </div>
         )}
 
@@ -601,19 +576,8 @@ export default function Home() {
             {!hasUser ? (
               <div style={{ border:`1.5px dashed ${T.borderG}`, borderRadius:12, padding:"32px 20px", textAlign:"center" }}>
                 <div style={{ fontSize:28, marginBottom:12, opacity:0.4 }}>🌿</div>
-                <div style={{ fontSize:13, color:T.muted, marginBottom:6, fontWeight:500 }}>Sign in to log your proof</div>
-                <div style={{ fontSize:11, color:T.dim, marginBottom:18 }}>Verify your X account to get started</div>
-                <button onClick={signInWithX} style={{
-                  display:"inline-flex", alignItems:"center", gap:7,
-                  background:T.white, color:T.bg, border:"none",
-                  borderRadius:8, padding:"10px 20px", cursor:"pointer",
-                  fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:700,
-                }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                  </svg>
-                  Sign in with X
-                </button>
+                <div style={{ fontSize:13, color:T.muted, marginBottom:6, fontWeight:500 }}>Enter your username to get started</div>
+                <div style={{ fontSize:11, color:T.dim, marginBottom:18 }}>Type your username in the top right corner</div>
               </div>
             ) : hasPostedToday ? (
               <div style={{ border:`1px solid ${T.borderG}`, borderRadius:12, padding:"28px 18px", textAlign:"center" }}>

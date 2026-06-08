@@ -279,7 +279,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.shadowBlur = 0;
 
   // Tier title pill — pinned to bottom of hero section (hero divider ~y=370)
-  const pillW = 320, pillH = 40, pillX = 72, pillY = 290;
+  const pillW = 320, pillH = 40, pillX = 72, pillY = 318;
   ctx.strokeStyle = tier.color + "55";
   ctx.lineWidth = 1;
   roundRect(ctx, pillX, pillY, pillW, pillH, 20);
@@ -297,9 +297,9 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.textAlign = "right";
 
   // "CURRENT STREAK" label at top
-  ctx.font = "600 26px 'DM Sans', sans-serif";
+  ctx.font = "600 16px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.45)";
-  ctx.fillText("CURRENT STREAK", W - 80, 120);
+  ctx.fillText("CURRENT STREAK", W - 80, 88);
 
   // Large streak number
   const numSize = streak >= 100 ? 148 : 178;
@@ -309,7 +309,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.fillStyle = "#f5f4ef";
   ctx.shadowColor = tier.glow;
   ctx.shadowBlur = 55;
-  ctx.fillText(`${streak}`, W - 80, 270);
+  ctx.fillText(`${streak}`, W - 80, 288);
   ctx.shadowBlur = 0;
 
   // DAY label to left of number
@@ -462,7 +462,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // Solana branding
   ctx.font = "500 15px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.28)";
-  ctx.fillText("BUILT ON ◎ SOLANA  ·  PROOF OF GRASS", 72, H - 20);
+  ctx.fillText("BUILT ON ◎ SOLANA  ·  PROOF OF GRASS", 72, H - 28);
 
   return canvas.toDataURL("image/png");
 }
@@ -603,14 +603,31 @@ export default function FlexCardPage() {
       });
 
       if (isMob && navigator.share && navigator.canShare) {
-        // Mobile — attach image to native share
-        const res  = await fetch(dataUrl);
-        const blob = await res.blob();
-        const file = new File([blob], "proof-of-grass-flex.png", { type:"image/png" });
-        if (navigator.canShare({ files:[file] })) {
-          await navigator.share({ files:[file], text });
-          setGeneratingImg(false);
-          return;
+        // Mobile — convert to JPEG to reduce size for native share
+        try {
+          const res  = await fetch(dataUrl);
+          const blob = await res.blob();
+          // Re-compress via canvas to JPEG at 0.88 quality — much smaller file
+          const img = await new Promise((res, rej) => {
+            const i = new Image();
+            i.onload = () => res(i);
+            i.onerror = rej;
+            i.src = dataUrl;
+          });
+          const cv2 = document.createElement("canvas");
+          cv2.width = img.width; cv2.height = img.height;
+          cv2.getContext("2d").drawImage(img, 0, 0);
+          const jpegUrl  = cv2.toDataURL("image/jpeg", 0.88);
+          const res2     = await fetch(jpegUrl);
+          const jpegBlob = await res2.blob();
+          const file = new File([jpegBlob], "proof-of-grass-flex.jpg", { type:"image/jpeg" });
+          if (navigator.canShare({ files:[file] })) {
+            await navigator.share({ files:[file], text });
+            setGeneratingImg(false);
+            return;
+          }
+        } catch(shareErr) {
+          console.warn("native share failed, falling back", shareErr);
         }
       }
 
