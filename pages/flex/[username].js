@@ -195,6 +195,18 @@ function getQuote(streak, bio) {
 }
 
 // ─── Share image generator ───────────────────────────────────────────────────
+// CANVAS DESIGN NOTES — keep these when editing:
+// Size: 1080x1080px
+// Left col (x=72): Logo 44px@y72 | "Touch Grass" 600/26px@y101 | VERIFIED badge h30@y132
+//   @username 700/96px(scales by length)@y252 | Tier pill h40@y290 700/16px
+// Right col (right-aligned x=W-80): "CURRENT STREAK" 600/24px@y110
+//   DAY 600/32px@y288 | Streak num 700/178px(2-digit) 148px(3-digit)@y288
+// Hero divider y=370
+// Stats: icons@y425 | values 700/40px Georgia@y480 | labels 600/14px@y510
+// Badges: header@y585 | hexes center@y640 | names 700/13px@y704
+// Progress bar: label 600/16px@y762 | track h10@y775 olive-gold gradient
+// Quote: italic 38/34/30px Georgia center W/2@y910
+// Footer divider@y=H-90 | Hashtags 700/22px@y=H-56 | URL 500/20px right@y=H-56
 async function generateShareImage({ username, streak, tier, tierTitle, grassScore, rank, subCount, badges, best, shields, bio }) {
   const W = 1080, H = 1080;
   const canvas = document.createElement("canvas");
@@ -279,7 +291,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.shadowBlur = 0;
 
   // Tier title pill — pinned to bottom of hero section (hero divider ~y=370)
-  const pillW = 320, pillH = 40, pillX = 72, pillY = 290;
+  const pillW = 320, pillH = 40, pillX = 72, pillY = 318;
   ctx.strokeStyle = tier.color + "55";
   ctx.lineWidth = 1;
   roundRect(ctx, pillX, pillY, pillW, pillH, 20);
@@ -297,9 +309,9 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.textAlign = "right";
 
   // "CURRENT STREAK" label at top
-  ctx.font = "600 24px 'DM Sans', sans-serif";
+  ctx.font = "600 16px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.45)";
-  ctx.fillText("CURRENT STREAK", W - 80, 110);
+  ctx.fillText("CURRENT STREAK", W - 80, 88);
 
   // Large streak number
   const numSize = streak >= 100 ? 148 : 178;
@@ -462,7 +474,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // Solana branding
   ctx.font = "500 15px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.28)";
-  ctx.fillText("BUILT ON ◎ SOLANA  ·  PROOF OF GRASS", 72, H - 10);
+  ctx.fillText("BUILT ON ◎ SOLANA  ·  PROOF OF GRASS", 72, H - 28);
 
   return canvas.toDataURL("image/png");
 }
@@ -594,6 +606,20 @@ export default function FlexCardPage() {
   // Step 1 — Download/save the card image
   const downloadCard = useCallback(async () => {
     setGeneratingImg(true);
+    const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
+
+    // On mobile Safari, window.open() MUST be called synchronously (before any await)
+    // or the browser blocks it as a popup. Open it now, write to it after generation.
+    let mobileWin = null;
+    if (isMob && !(navigator.share && navigator.canShare)) {
+      mobileWin = window.open("", "_blank");
+      if (mobileWin) {
+        mobileWin.document.write(`<html><body style="margin:0;background:#0a0b08;display:flex;align-items:center;justify-content:center;height:100vh">
+          <p style="color:#93a85a;font-family:sans-serif;font-size:16px;text-align:center">Generating your card…</p>
+        </body></html>`);
+      }
+    }
+
     try {
       const dataUrl = await generateShareImage({
         username, streak, tier, tierTitle, grassScore,
@@ -601,43 +627,46 @@ export default function FlexCardPage() {
         bio: profileRow?.bio ?? "",
       });
 
-      const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
-
       if (isMob) {
-        // Mobile: try Web Share API with file first (lets user save to Photos)
-        try {
-          const res  = await fetch(dataUrl);
-          const blob = await res.blob();
-          const file = new File([blob], `proof-of-grass-${username}-day${streak}.png`, { type:"image/png" });
-          if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })) {
-            await navigator.share({
-              files: [file],
-              title: `Day ${streak} — ${tier.label}`,
-              text: "My Proof of Grass flex card",
-            });
-            setDownloaded(true);
-            setTimeout(() => setDownloaded(false), 4000);
-            setGeneratingImg(false);
-            return;
-          }
-        } catch(shareErr) {
-          if (shareErr?.name === "AbortError") {
-            setGeneratingImg(false);
-            return; // user cancelled
+        // Try Web Share API first (best experience — saves to Photos)
+        if (navigator.share && navigator.canShare) {
+          try {
+            const res  = await fetch(dataUrl);
+            const blob = await res.blob();
+            const file = new File([blob], `proof-of-grass-${username}-day${streak}.png`, { type:"image/png" });
+            if (navigator.canShare({ files:[file] })) {
+              await navigator.share({
+                files: [file],
+                title: `Day ${streak} — ${tier.label} 🌿`,
+                text: `Day ${streak} — ${tier.label} 🌿\n\nThis is my Proof of Grass flex card. Building my outdoor legacy daily on @XTouchGrass\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/flex/${username}`,
+              });
+              setDownloaded(true);
+              setTimeout(() => setDownloaded(false), 4000);
+              setGeneratingImg(false);
+              return;
+            }
+          } catch(shareErr) {
+            if (shareErr?.name === "AbortError") {
+              setGeneratingImg(false);
+              return;
+            }
+            // Fall through to window approach
           }
         }
-        // Fallback: open image in new tab — user can long-press to save
-        const win = window.open();
-        if (win) {
-          win.document.write(`<html><body style="margin:0;background:#000">
-            <img src="${dataUrl}" style="width:100%;max-width:100vw" />
-            <p style="color:#fff;text-align:center;font-family:sans-serif;padding:12px;font-size:14px">
-              Long-press the image to save it
+
+        // Fallback: write image to the pre-opened window
+        if (mobileWin) {
+          mobileWin.document.open();
+          mobileWin.document.write(`<html><body style="margin:0;background:#0a0b08">
+            <img src="${dataUrl}" style="width:100%;display:block" />
+            <p style="color:#93a85a;text-align:center;font-family:sans-serif;padding:16px;font-size:15px;margin:0">
+              Long-press the image above to save it to your Photos
             </p>
           </body></html>`);
+          mobileWin.document.close();
         }
       } else {
-        // Desktop: standard download
+        // Desktop: standard anchor download
         const link = document.createElement("a");
         link.download = `proof-of-grass-${username}-day${streak}.png`;
         link.href = dataUrl;
@@ -648,6 +677,7 @@ export default function FlexCardPage() {
       setTimeout(() => setDownloaded(false), 4000);
     } catch(e) {
       console.error("download error", e);
+      if (mobileWin) mobileWin.close();
     }
     setGeneratingImg(false);
   }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow]);
