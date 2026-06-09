@@ -347,9 +347,9 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.textAlign = "right";
 
   // "CURRENT STREAK" label at top
-  ctx.font = "600 16px 'DM Sans', sans-serif";
+  ctx.font = "600 24px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.45)";
-  ctx.fillText("CURRENT STREAK", W - 80, 88);
+  ctx.fillText("CURRENT STREAK", W - 80, 110);
 
   // Large streak number
   const numSize = streak >= 100 ? 148 : 178;

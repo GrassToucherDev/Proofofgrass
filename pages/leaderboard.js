@@ -234,7 +234,7 @@ export default function Leaderboard() {
           gap:12 }}>
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:26, height:26, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
+            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>Touch Grass</span>
           </Link>
           <div className="nav-links" style={{ display:"flex", gap:24, alignItems:"center" }}>
             <Link href="/" style={{ fontSize:13, color:T.dim, textDecoration:"none", fontWeight:500 }}>Dashboard</Link>
