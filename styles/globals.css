@@ -1,26 +1,91 @@
-@import "tailwindcss";
+/* Proof of Grass — Global Styles */
 
+/* Safe area insets for notched iPhones in standalone PWA mode */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  height: 100%;
+  /* Prevent font size adjustment on orientation change */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100%;
+  min-height: -webkit-fill-available;
+  background: #080a06;
+  color: #f0efea;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Smooth scrolling except for route transitions */
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
+}
+
+/* Standalone PWA — add safe area padding to body */
+@media (display-mode: standalone) {
+  body {
+    padding-top: var(--sat);
+    padding-bottom: var(--sab);
+  }
+
+  /* Nav bar should account for status bar in standalone */
+  nav[style*="sticky"] {
+    padding-top: calc(var(--sat) + 0px);
+  }
+}
+
+/* Prevent pull-to-refresh on iOS PWA */
+@media (display-mode: standalone) {
+  html, body {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Image drag prevention */
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* Smooth transitions for all interactive elements */
+button, a {
+  transition: opacity 0.15s ease;
+}
+
+button:active, a:active {
+  opacity: 0.75;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #080a06;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(147, 168, 90, 0.3);
+  border-radius: 2px;
+}
+
+/* Tailwind-compatible utility for hiding scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

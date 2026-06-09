@@ -3,6 +3,9 @@ import Link from "next/link";
 import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
 import { supabase } from "../utils/supabase";
+import { useFollowingFeed } from "../hooks/useFollow";
+import SuggestedTouchers from "../components/SuggestedTouchers";
+import InstallPrompt, { InstallBanner } from "../components/InstallPrompt";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -35,21 +38,26 @@ function computePreviewStreak(row) {
 }
 
 function getStreakTier(n) {
-  if (n >= 365) return "ETERNAL";
-  if (n >= 180) return "MYTHIC";
-  if (n >= 100) return "IMMORTAL";
-  if (n >= 50)  return "LEGENDARY";
-  if (n >= 30)  return "ELITE";
-  if (n >= 14)  return "LOCKED IN";
-  if (n >= 7)   return "ROOTED";
-  if (n >= 3)   return "GROWING";
+  if (n >= 1000) return "TRANSCENDENT";
+  if (n >= 500)  return "ASCENDED";
+  if (n >= 365)  return "ETERNAL";
+  if (n >= 180)  return "MYTHIC";
+  if (n >= 100)  return "IMMORTAL";
+  if (n >= 50)   return "LEGENDARY";
+  if (n >= 30)   return "ELITE";
+  if (n >= 14)   return "LOCKED IN";
+  if (n >= 7)    return "ROOTED";
+  if (n >= 3)    return "GROWING";
   return "SEED";
 }
 
 function getTierColor(tier) {
-  return { ETERNAL:"#fff9c4", MYTHIC:"#fbbf24", IMMORTAL:"#f97316",
-           LEGENDARY:T.gold,  ELITE:"#c084fc",  "LOCKED IN":"#4ade80",
-           ROOTED:"#86efac",  GROWING:"#6ee7b7", SEED:"#93a85a" }[tier] ?? T.olive;
+  return {
+    TRANSCENDENT:"#f0fdf4", ASCENDED:"#e0f2fe",
+    ETERNAL:"#fff9c4", MYTHIC:"#fbbf24", IMMORTAL:"#f97316",
+    LEGENDARY:T.gold, ELITE:"#c084fc", "LOCKED IN":"#4ade80",
+    ROOTED:"#86efac", GROWING:"#6ee7b7", SEED:"#93a85a",
+  }[tier] ?? T.olive;
 }
 
 function fmtBurned(n) {
@@ -192,6 +200,79 @@ function ResultMini({ day }) {
 const BURN_ADDR   = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const SOL_DOMAIN  = "touchgrassburn.sol";
 
+// ─── Following Feed component ────────────────────────────────────────────────
+function FollowingFeed({ username, hasUser }) {
+  const { items, loading } = useFollowingFeed(username);
+
+  const T2 = {
+    olive:"#93a85a", gold:"#c8a84b", white:"#f0efea",
+    dim:"rgba(240,239,234,0.22)", bg3:"#181a12", border:"rgba(255,255,255,0.06)",
+  };
+
+  if (!hasUser) return (
+    <div style={{ textAlign:"center", padding:"32px 0" }}>
+      <div style={{ fontSize:12, color:T2.dim, marginBottom:12 }}>
+        Enter your username to see your Following feed.
+      </div>
+    </div>
+  );
+
+  if (loading) return (
+    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+      {[1,2,3].map(i=>(
+        <div key={i} style={{ height:44, borderRadius:8, background:T2.bg3,
+          animation:"shimmer 1.8s ease-in-out infinite" }} />
+      ))}
+    </div>
+  );
+
+  if (items.length === 0) return (
+    <div style={{ textAlign:"center", padding:"32px 16px",
+      background:"rgba(147,168,90,0.04)", borderRadius:12,
+      border:"1px solid rgba(147,168,90,0.12)" }}>
+      <div style={{ fontSize:32, marginBottom:12 }}>🌿</div>
+      <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+        fontSize:18, fontWeight:700, color:"#f0efea", marginBottom:8 }}>
+        Build your outdoor network.
+      </div>
+      <div style={{ fontSize:12, color:T2.dim, lineHeight:1.6, marginBottom:20 }}>
+        Follow other Grass Touchers to see their activity here.
+      </div>
+      <a href="/leaderboard" style={{
+        display:"inline-block", background:"#93a85a", color:"#080a06",
+        border:"none", borderRadius:9, padding:"10px 20px",
+        fontSize:12, fontWeight:700, textDecoration:"none",
+      }}>Browse Community →</a>
+    </div>
+  );
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+      {items.map((item, i) => {
+        const timeAgo = item.time ? (() => {
+          const diff = Date.now() - new Date(item.time);
+          const mins = Math.floor(diff/60000);
+          const hrs  = Math.floor(diff/3600000);
+          const days = Math.floor(diff/86400000);
+          return days>0?`${days}d ago`:hrs>0?`${hrs}h ago`:mins>0?`${mins}m ago`:"just now";
+        })() : "";
+        return (
+          <div key={i} style={{ display:"flex", alignItems:"center", gap:10,
+            padding:"10px 12px", background:T2.bg3, borderRadius:10,
+            border:`1px solid ${T2.border}` }}>
+            <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <span style={{ fontSize:12, fontWeight:600, color:T2.white }}>@{item.username}</span>
+              <span style={{ fontSize:12, color:T2.dim }}> {item.text}</span>
+            </div>
+            {timeAgo && <span style={{ fontSize:10, color:T2.dim, flexShrink:0 }}>{timeAgo}</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Activity Feed ───────────────────────────────────────────────────────────
 function ActivityFeed() {
   const [items, setItems] = useState([]);
@@ -201,7 +282,7 @@ function ActivityFeed() {
     (async () => {
       try {
         // Fetch recent activity from multiple sources in parallel
-        const [{ data: recentSubs }, { data: recentChals }, { data: topStreaks }] = await Promise.all([
+        const [{ data: recentSubs }, { data: recentChals }, { data: topStreaks }, { data: recentReferrals }] = await Promise.all([
           supabase.from("Submissions")
             .select("username, created_at")
             .in("status", ["pending","approved"])
@@ -215,6 +296,10 @@ function ActivityFeed() {
             .select("username, current_streak, best_streak")
             .order("current_streak", { ascending: false })
             .limit(5),
+          supabase.from("Referrals")
+            .select("referrer_username, referred_username, status, converted_at, created_at")
+            .order("created_at", { ascending: false })
+            .limit(6),
         ]);
 
         const feed = [];
@@ -256,16 +341,37 @@ function ActivityFeed() {
 
         // Milestone events — users with notable streaks
         (topStreaks ?? []).forEach(s => {
-          const milestones = [7,14,30,50,100,180,365];
+          const milestones = [7,14,30,50,100,180,200,250,365,500,750,1000];
           const hit = milestones.find(m => s.current_streak === m);
           if (hit) {
-            const tierName = hit>=365?"ETERNAL":hit>=180?"MYTHIC":hit>=100?"IMMORTAL":hit>=50?"LEGENDARY":hit>=30?"ELITE":hit>=14?"LOCKED IN":"ROOTED";
+            const tierName = hit>=1000?"TRANSCENDENT":hit>=500?"ASCENDED":hit>=365?"ETERNAL":hit>=180?"MYTHIC":hit>=100?"IMMORTAL":hit>=50?"LEGENDARY":hit>=30?"ELITE":hit>=14?"LOCKED IN":"ROOTED";
             feed.push({
               type: "milestone",
               username: s.username,
               text: `reached Day ${hit} — ${tierName} unlocked`,
               emoji: hit>=100?"👑":hit>=50?"🌟":hit>=30?"🌳":"🌱",
               time: null,
+            });
+          }
+        });
+
+        // Referral events
+        (recentReferrals ?? []).forEach(r => {
+          if (r.status === "converted") {
+            feed.push({
+              type: "referral_converted",
+              username: r.referrer_username,
+              text: `helped @${r.referred_username} reach Day 10`,
+              emoji: "🤝",
+              time: r.converted_at || r.created_at,
+            });
+          } else {
+            feed.push({
+              type: "referral_pending",
+              username: r.referrer_username,
+              text: `invited a new Toucher to the movement`,
+              emoji: "🌱",
+              time: r.created_at,
             });
           }
         });
@@ -346,6 +452,7 @@ export default function Home() {
   const [rawUsername, setRawUsername] = useState("");
   const username = normalizeUsername(rawUsername);
   const hasUser  = username.length > 0;
+  const [feedTab, setFeedTab] = useState("global"); // "global" | "following"
 
   // ── User streak state (mirrors old index.js exactly) ─────────────────────
   const [currentStreak,       setCurrentStreak]       = useState(1);
@@ -392,6 +499,18 @@ export default function Home() {
     setMounted(true);
     const saved = localStorage.getItem("pog_username");
     if (saved) setRawUsername(normalizeUsername(saved));
+
+    // Capture referral param from URL — store until first proof submitted
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref && ref.length > 0) {
+      const normalized = ref.toLowerCase().replace(/@/g,"").trim();
+      // Only store if not already set (first referrer wins)
+      if (!localStorage.getItem("pog_referrer")) {
+        localStorage.setItem("pog_referrer", normalized);
+        console.log("[referral] captured ref:", normalized);
+      }
+    }
   }, []);
 
   // ── Persist username ──────────────────────────────────────────────────────
@@ -674,6 +793,13 @@ export default function Home() {
           )}
         </section>
 
+        {/* ── PWA INSTALL BANNER (Day 7+) ────────────────────────────────── */}
+        {mounted && currentStreak >= 7 && (
+          <div style={{ padding:"0 clamp(14px,4vw,48px)" }}>
+            <InstallBanner streak={currentStreak} />
+          </div>
+        )}
+
         {/* ── ENTER USERNAME BANNER ────────────────────────────────────────── */}
         {mounted && !hasUser && (
           <div style={{ background:`${T.olive}08`, borderBottom:`1px solid ${T.borderG}`,
@@ -794,7 +920,10 @@ export default function Home() {
                   <TierBadge name="Rooted"    day={14}  completed={currentStreak>=14} active={currentStreak>=7  && currentStreak<14} />
                   <TierBadge name="Elite"     day={30}  completed={currentStreak>=30} active={currentStreak>=14 && currentStreak<30} />
                   <TierBadge name="Legendary" day={50}  completed={currentStreak>=50} active={currentStreak>=30 && currentStreak<50} />
-                  <TierBadge name="Immortal"  day={100} completed={currentStreak>=100} active={currentStreak>=50 && currentStreak<100} />
+                  <TierBadge name="Immortal"  day={100} completed={currentStreak>=100} active={currentStreak>=50  && currentStreak<100} />
+                  <TierBadge name="Mythic"    day={180} completed={currentStreak>=180} active={currentStreak>=100 && currentStreak<180} />
+                  <TierBadge name="Eternal"   day={365} completed={currentStreak>=365} active={currentStreak>=180 && currentStreak<365} />
+                  <TierBadge name="Ascended"  day={500} completed={currentStreak>=500} active={currentStreak>=365 && currentStreak<500} />
                 </div>
                 {(() => {
                   const thr = [0,7,14,30,50,100];
@@ -873,13 +1002,40 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ACTIVITY FEED */}
+          {/* ACTIVITY FEED WITH TABS */}
           <div className="card" style={{ padding:28 }}>
-            <div className="card-title-row">
-              <span className="card-title" style={{ margin:0 }}>Community Activity</span>
+            {/* Tab switcher */}
+            <div style={{ display:"flex", gap:0, marginBottom:16,
+              background:T.bg3, border:`1px solid ${T.border}`,
+              borderRadius:9, padding:3 }}>
+              {[
+                { id:"global",    label:"🌎 Global" },
+                { id:"following", label:"👥 Following" },
+              ].map(t => (
+                <button key={t.id} onClick={()=>setFeedTab(t.id)} style={{
+                  flex:1, padding:"8px 0",
+                  background: feedTab===t.id ? T.bg2 : "transparent",
+                  border: feedTab===t.id ? `1px solid ${T.borderG}` : "1px solid transparent",
+                  borderRadius:7, fontSize:12, fontWeight:600,
+                  color: feedTab===t.id ? T.white : T.dim,
+                  cursor:"pointer", transition:"all 0.15s",
+                  fontFamily:"'DM Sans',sans-serif",
+                }}>{t.label}</button>
+              ))}
             </div>
-            <ActivityFeed />
+            {feedTab === "global"
+              ? <ActivityFeed />
+              : <FollowingFeed username={username} hasUser={hasUser} />
+            }
           </div>
+
+          {/* SUGGESTED TOUCHERS — show after user is known */}
+          {mounted && hasUser && (
+            <SuggestedTouchers
+              viewerUsername={username}
+              currentStreak={currentStreak}
+            />
+          )}
         </div>
 
         {/* ── QUESTS BANNER ────────────────────────────────────────────────── */}
@@ -952,6 +1108,11 @@ export default function Home() {
         </footer>
 
       </div>
+
+      {/* PWA install prompt */}
+      {mounted && (
+        <InstallPrompt streak={currentStreak} proofCount={subCount ?? 0} />
+      )}
     </>
   );
 }

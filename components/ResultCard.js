@@ -264,9 +264,36 @@ function getMilestoneMsg(streak) {
 // username — already normalized by index.js
 // initialStreak — preloaded by index.js before this component mounts
 // onStreakUpdate — callback so index.js stays in sync after submit
+// ─── Referral badge thresholds ───────────────────────────────────────────────
+const REFERRAL_BADGES = [
+  { count:1,   slug:"community-builder",     name:"Community Builder",    emoji:"🤝" },
+  { count:5,   slug:"grass-recruiter",       name:"Grass Recruiter",      emoji:"🌱" },
+  { count:10,  slug:"community-grower",      name:"Community Grower",     emoji:"🌿" },
+  { count:25,  slug:"movement-builder",      name:"Movement Builder",     emoji:"🌳" },
+  { count:50,  slug:"founding-ambassador",   name:"Founding Ambassador",  emoji:"🏛" },
+  { count:100, slug:"touchgrass-ambassador", name:"Touch Grass Ambassador",emoji:"👑"},
+];
+
+async function checkAndAwardReferralBadge(referrerUsername) {
+  if (!referrerUsername) return;
+  try {
+    const { data: prof } = await supabase
+      .from("Profiles").select("referral_count_successful,referral_badge")
+      .eq("username", referrerUsername).maybeSingle();
+    if (!prof) return;
+    const count = (prof.referral_count_successful || 0) + 1;
+    const earned = [...REFERRAL_BADGES].reverse().find(b => count >= b.count);
+    if (!earned || prof.referral_badge === earned.slug) return;
+    await supabase.from("Profiles").update({ referral_badge: earned.slug })
+      .eq("username", referrerUsername);
+  } catch(e) { console.warn("[referral badge]", e?.message); }
+}
+
 export default function ResultCard({ imageSrc, username, initialStreak = 1, onStreakUpdate }) {
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
+  const sharableFileRef   = useRef(null); // pre-built File object ready for navigator.share()
+  const pendingPhotoUrlRef = useRef(null); // photo URL waiting to be attached after lockInStreak
   const [caption, setCaption] = useState(() => pickCaption(initialStreak, null));
   const [copied, setCopied] = useState(false);
 
@@ -284,6 +311,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [tweetUrl, setTweetUrl] = useState("");
   const [submitStatus, setSubmitStatus] = useState(null); // null | "loading" | "success" | "error"
   const [submitError, setSubmitError] = useState("");
+  const [inAppBrowserMode, setInAppBrowserMode] = useState(false); // true when inside X/IG in-app browser
   const [clipboardDetected, setClipboardDetected] = useState(false); // true when valid X link auto-found
   const [clipboardFeedback, setClipboardFeedback] = useState(null); // null | "detected" | "invalid"
 
@@ -345,9 +373,11 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   }, [currentStreak]);
 
   const HANDLE = "@XTouchGrass";
+  const TAGS = "$TOUCHGRASS #TouchGrass #ProofOfGrass";
+  const buildTags = () => `${TAGS}\n${HANDLE} · proofofgrass.app`;
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(`${caption}\n\n#touchgrass #proofofgrass\n${HANDLE}\nproofofgrass.app`).then(() => {
+    navigator.clipboard.writeText(`${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE} · proofofgrass.app`).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -357,7 +387,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [shareHint, setShareHint] = useState(false); // "Select X, then tap Post" nudge
 
   const buildShareText = useCallback(() =>
-    `${caption}\n\n#touchgrass #proofofgrass\nday ${currentStreak} @XTouchGrass\nproofofgrass.app`,
+    `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE} · proofofgrass.app`,
   [caption, currentStreak]);
 
   // ── Submission — always fires after share, no tweetUrl dependency ──────
@@ -383,6 +413,105 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       setCurrentStreak(newStreak);
       onStreakUpdate?.(newStreak);
       setSubmitStatus("success");
+
+      // ── Attach pending photo URL to the submission just created ───────────
+      if (pendingPhotoUrlRef.current) {
+        const photoUrl = pendingPhotoUrlRef.current;
+        pendingPhotoUrlRef.current = null; // clear so it's not reused
+        try {
+          // Give the RPC a moment to commit before we query
+          await new Promise(r => setTimeout(r, 800));
+          const { data: latestSub } = await supabase
+            .from("Submissions")
+            .select("id")
+            .eq("username", username)
+            .in("status", ["pending", "approved"])
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (latestSub?.id) {
+            await supabase.from("Submissions")
+              .update({ photo_url: photoUrl })
+              .eq("id", latestSub.id);
+            console.log("[photo] attached to submission", latestSub.id);
+          } else {
+            console.warn("[photo] no submission found after lockInStreak");
+          }
+        } catch(photoErr) {
+          console.warn("[photo] attach failed (non-fatal):", photoErr?.message);
+        }
+      }
+
+      // ── Insert referral on first proof ────────────────────────────────────
+      try {
+        const referrer = typeof localStorage !== "undefined"
+          ? localStorage.getItem("pog_referrer") : null;
+        if (referrer && referrer !== username) {
+          const { data: existing } = await supabase.from("Referrals")
+            .select("id").eq("referred_username", username).maybeSingle();
+          if (!existing) {
+            const { data: refExists } = await supabase.from("Streaks")
+              .select("username").eq("username", referrer).maybeSingle();
+            if (refExists) {
+              await supabase.from("Referrals").insert([{
+                referrer_username: referrer,
+                referred_username: username,
+                status: "pending",
+                source_url: typeof window !== "undefined" ? window.location.href : null,
+              }]);
+              // Increment referrer pending count
+              const { data: rp } = await supabase.from("Profiles")
+                .select("referral_count_pending").eq("username", referrer).maybeSingle();
+              await supabase.from("Profiles").update({
+                referral_count_pending: (rp?.referral_count_pending ?? 0) + 1,
+              }).eq("username", referrer);
+            }
+          }
+        }
+      } catch(refErr) {
+        console.warn("[referral] insert non-fatal:", refErr?.message);
+      }
+
+      // ── Check referral conversion at Day 10 ───────────────────────────────
+      try {
+        const newStreak = result?.current_streak ?? currentStreak;
+        if (newStreak >= 10) {
+          const { data: pendingRef } = await supabase.from("Referrals")
+            .select("id,referrer_username")
+            .eq("referred_username", username)
+            .eq("status", "pending")
+            .maybeSingle();
+          if (pendingRef) {
+            const { count: proofCount } = await supabase.from("Submissions")
+              .select("id", { count:"exact", head:true })
+              .eq("username", username).in("status", ["pending","approved"]);
+            if (proofCount >= 7) {
+              // Convert
+              await supabase.from("Referrals").update({
+                status: "converted",
+                converted_at: new Date().toISOString(),
+                referred_reached_day_10: true,
+              }).eq("id", pendingRef.id);
+              // Update referrer counts
+              const { data: rProf } = await supabase.from("Profiles")
+                .select("referral_count_successful,referral_count_pending")
+                .eq("username", pendingRef.referrer_username).maybeSingle();
+              await supabase.from("Profiles").update({
+                referral_count_successful: (rProf?.referral_count_successful ?? 0) + 1,
+                referral_count_pending: Math.max(0, (rProf?.referral_count_pending ?? 1) - 1),
+              }).eq("username", pendingRef.referrer_username);
+              // Award badge if threshold reached
+              await checkAndAwardReferralBadge(pendingRef.referrer_username);
+              // Clear stored referrer since it's been used
+              if (typeof localStorage !== "undefined") localStorage.removeItem("pog_referrer");
+              console.log("[referral] converted:", username, "→", pendingRef.referrer_username);
+            }
+          }
+        }
+      } catch(convErr) {
+        console.warn("[referral] conversion non-fatal:", convErr?.message);
+      }
 
       // ── Update ChallengeProgress for any active challenges ──────────────
       try {
@@ -432,66 +561,98 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   }, [username, currentStreak, onStreakUpdate]);
 
   // ── Share to X — then lock in streak regardless of share path ───────────
+  // Detect X / Twitter in-app browser — blocks window.open and Web Share API
+  const isInAppBrowser = typeof navigator !== "undefined" && (
+    /Twitter/i.test(navigator.userAgent) ||
+    /Instagram/i.test(navigator.userAgent) ||
+    /FBAN|FBAV/i.test(navigator.userAgent) ||  // Facebook in-app
+    /MicroMessenger/i.test(navigator.userAgent) // WeChat
+  );
+
   const handleShareAndSubmit = useCallback(async () => {
     if (!downloadUrl) return;
     const text = buildShareText();
 
-    // Detect mobile (iOS/Android) — only use Web Share API on mobile
-    // On Windows/Mac/Linux Chrome the OS share sheet appears instead of X
     const isMobile = typeof navigator !== "undefined" &&
       /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-    const canShareFiles = isMobile &&
+    const canShareFiles = !isInAppBrowser &&
+      isMobile &&
       typeof navigator.share === "function" &&
       typeof navigator.canShare === "function";
 
     let cancelled = false;
 
+    // ── X in-app browser — can't open windows or use Web Share ───────────
+    if (isInAppBrowser) {
+      // Lock streak immediately since they already generated the card
+      await lockInStreak();
+      // Show the in-app browser modal (handled in UI below via state)
+      setInAppBrowserMode(true);
+      return;
+    }
+
     if (canShareFiles) {
-      // Mobile — try native share with image attached
-      try {
-        const res  = await fetch(downloadUrl);
-        const blob = await res.blob();
-        const file = new File([blob], "proof-of-grass.png", { type: "image/png" });
-        if (navigator.canShare({ files: [file] })) {
-          setShareHint(true);
-          try {
-            await navigator.share({ files: [file], text });
+      // Mobile — use pre-cached File (built when card was generated)
+      // IMPORTANT: navigator.share() must be called with zero awaits before it
+      // or WebViews (especially X in-app) reject it as "not user-initiated"
+      const file = sharableFileRef.current;
+      if (file && navigator.canShare({ files: [file] })) {
+        setShareHint(true);
+        try {
+          // This await is fine — it's the share call itself, not a pre-fetch
+          await navigator.share({ files: [file], text });
+          setShared(true);
+          setTimeout(() => { setShared(false); setShareHint(false); }, 4000);
+        } catch (err) {
+          setShareHint(false);
+          if (err?.name === "AbortError") {
+            cancelled = true;
+          } else {
+            // Share failed — fall back to intent
+            navigator.clipboard.writeText(text).catch(() => {});
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+            setShared(true);
+            setTimeout(() => setShared(false), 2500);
+          }
+        }
+      } else {
+        // No pre-cached file or canShare returned false — fallback
+        // Try fetching now as last resort
+        try {
+          const res  = await fetch(downloadUrl);
+          const blob = await res.blob();
+          const freshFile = new File([blob], "proof-of-grass.png", { type: "image/png" });
+          if (navigator.canShare({ files: [freshFile] })) {
+            setShareHint(true);
+            await navigator.share({ files: [freshFile], text });
             setShared(true);
             setTimeout(() => { setShared(false); setShareHint(false); }, 4000);
-          } catch (err) {
-            setShareHint(false);
-            if (err?.name === "AbortError") {
-              cancelled = true;
-            }
+          } else {
+            throw new Error("canShare false");
           }
-        } else {
-          // canShare returned false — use intent
-          navigator.clipboard.writeText(text).catch(() => {});
-          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-          setShared(true);
-          setTimeout(() => setShared(false), 2500);
+        } catch(err) {
+          if (err?.name === "AbortError") { cancelled = true; }
+          else {
+            navigator.clipboard.writeText(text).catch(() => {});
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+            setShared(true);
+            setTimeout(() => setShared(false), 2500);
+          }
         }
-      } catch {
-        navigator.clipboard.writeText(text).catch(() => {});
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-        setShared(true);
-        setTimeout(() => setShared(false), 2500);
       }
     } else {
-      // Desktop or non-mobile — X intent + caption copied to clipboard
-      // User can paste the caption into their X post manually
+      // Desktop — open intent, copy caption to clipboard
       navigator.clipboard.writeText(text).catch(() => {});
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
       setShared(true);
       setTimeout(() => setShared(false), 2500);
     }
 
-    // Always log streak unless user explicitly cancelled the share sheet
     if (!cancelled) {
       await lockInStreak();
     }
-  }, [downloadUrl, buildShareText, lockInStreak]);
+  }, [downloadUrl, buildShareText, lockInStreak, isInAppBrowser]); // sharableFileRef is a ref, intentionally omitted from deps
 
   // Alias for any other buttons that call this
   const handleShareAndPost = handleShareAndSubmit;
@@ -751,6 +912,8 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           // Convert dataURL to blob
           const res  = await fetch(dataUrl);
           const blob = await res.blob();
+          // Pre-cache as a File so navigator.share() needs zero awaits at share time
+          sharableFileRef.current = new File([blob], "proof-of-grass.png", { type: "image/png" });
           // Use upsert:true so re-uploads on same day overwrite cleanly
           const fileName = `${username}/${new Date().toISOString().slice(0,10)}.png`;
           console.log("[photo] uploading to proof-photos/", fileName);
@@ -771,23 +934,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           if (!publicUrl) { console.warn("[photo] no public URL returned"); return; }
           console.log("[photo] public URL:", publicUrl);
 
-          // Save to the user's most recent pending/approved submission
-          const { data: latestSub, error: subErr } = await supabase
-            .from("Submissions").select("id")
-            .eq("username", username)
-            .in("status", ["pending","approved"])
-            .order("created_at", { ascending: false })
-            .limit(1).maybeSingle();
-
-          if (subErr) { console.error("[photo] sub fetch error:", subErr); return; }
-          if (!latestSub?.id) { console.warn("[photo] no submission found to attach photo to"); return; }
-
-          const { error: updateErr } = await supabase.from("Submissions")
-            .update({ photo_url: publicUrl })
-            .eq("id", latestSub.id);
-
-          if (updateErr) console.error("[photo] update error:", updateErr);
-          else console.log("[photo] photo_url saved to submission", latestSub.id);
+          // Store URL in ref — will be attached to the submission AFTER lockInStreak creates it
+          pendingPhotoUrlRef.current = publicUrl;
+          console.log("[photo] URL ready to attach after streak lock:", publicUrl);
         } catch (e) {
           console.error("[photo] exception:", e);
         }
@@ -864,8 +1013,64 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </a>
       )}
 
+      {/* In-app browser warning — shown when opened from X/IG */}
+      {isInAppBrowser && !inAppBrowserMode && downloadUrl && (
+        <div style={{
+          background:"rgba(200,168,75,0.08)",
+          border:"1px solid rgba(200,168,75,0.4)",
+          borderRadius:10, padding:"14px 16px", marginBottom:8,
+          fontSize:12, color:"#c8a84b", lineHeight:1.6,
+        }}>
+          <div style={{fontWeight:700, marginBottom:4}}>
+            ⚠ You're in the X in-app browser
+          </div>
+          <div style={{fontSize:11, color:"rgba(200,168,75,0.7)"}}>
+            Sharing images requires opening in Safari or Chrome.
+            Tap the <b>···</b> menu (top right) → <b>Open in browser</b>, 
+            then come back to share your result card.
+          </div>
+        </div>
+      )}
+
+      {/* In-app browser mode — shown after streak is locked in */}
+      {inAppBrowserMode && (
+        <div style={{
+          background:"rgba(147,168,90,0.06)",
+          border:"1px solid rgba(147,168,90,0.3)",
+          borderRadius:10, padding:"18px 16px",
+          display:"flex", flexDirection:"column", alignItems:"center", gap:12,
+          textAlign:"center",
+        }}>
+          <div style={{fontSize:22}}>✓</div>
+          <div style={{fontWeight:700, color:"#93a85a", fontSize:13, letterSpacing:"0.06em"}}>
+            STREAK LOCKED IN
+          </div>
+          <div style={{fontSize:11, color:"rgba(240,239,234,0.5)", lineHeight:1.7}}>
+            Your streak is saved. To share your card on X, open this page in Safari or Chrome.
+          </div>
+          {downloadUrl && (
+            <a
+              href={downloadUrl}
+              download="proof-of-grass.png"
+              style={{
+                display:"inline-flex", alignItems:"center", gap:7,
+                background:"#93a85a", color:"#080a06",
+                borderRadius:8, padding:"10px 20px",
+                fontSize:12, fontWeight:700, textDecoration:"none",
+                letterSpacing:"0.06em",
+              }}
+            >
+              ↓ Save Card to Photos
+            </a>
+          )}
+          <div style={{fontSize:10, color:"rgba(240,239,234,0.3)"}}>
+            After saving, tap ··· → Open in browser to post on X
+          </div>
+        </div>
+      )}
+
       {/* Share to X — Web Share API on mobile, intent fallback on desktop */}
-      {downloadUrl && (
+      {downloadUrl && !inAppBrowserMode && (
         <div className="flex flex-col items-center gap-2">
           <button
             onClick={handleShareAndSubmit}
@@ -897,7 +1102,10 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           )}
           {!shareHint && submitStatus !== "success" && (
             <p className="font-mono text-[11px] text-[#2a4a2d] tracking-wide text-center">
-              opens X with your caption · save &amp; attach your certificate image
+              {isInAppBrowser
+                ? "tap ··· → open in browser to share with image"
+                : "opens X with your caption · save & attach your certificate image"
+              }
             </p>
           )}
           {submitStatus === "error" && submitError && (
@@ -935,8 +1143,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           ">
             {caption}
           </p>
-          <p className="font-mono text-[12px] text-[#93a85a] text-center mt-2 opacity-40 tracking-wider">
-            {HANDLE}
+          <p className="font-mono text-[11px] text-[#93a85a] text-center mt-3 tracking-wider leading-relaxed opacity-60">
+            {TAGS}<br />
+            <span className="opacity-70">{HANDLE} · proofofgrass.app</span>
           </p>
         </div>
 
