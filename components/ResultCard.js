@@ -949,31 +949,24 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   }, [imageSrc, dateStr, currentStreak]);
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      {/* Hidden canvas — used only for generation */}
-      <canvas
-        ref={canvasRef}
-        className="hidden"
-        style={{ display: "none" }}
-      />
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:24,width:"100%"}}>
 
-      {/* Preview — shown as <img> so iPhone users can long-press to save */}
-      <div className="w-full flex flex-col items-center gap-2">
-        <div className="w-full overflow-hidden rounded border border-[#1a3a1e] shadow-[0_0_80px_rgba(74,222,128,0.08)]">
+      {/* Hidden canvas */}
+      <canvas ref={canvasRef} style={{display:"none"}} />
+
+      {/* Card preview */}
+      <div style={{width:"100%"}}>
+        <div style={{width:"100%",overflow:"hidden",borderRadius:6,
+          border:"1px solid #1a3a1e",
+          boxShadow:"0 0 80px rgba(74,222,128,0.08)"}}>
           {downloadUrl ? (
-            <img
-              src={downloadUrl}
-              alt="Proof of Grass Certificate"
-              style={{ width:"100%", height:"auto", display:"block", maxWidth:"100%" }}
-            />
+            <img src={downloadUrl} alt="Proof of Grass Certificate"
+              style={{width:"100%",height:"auto",display:"block",maxWidth:"100%"}} />
           ) : (
-            <div
-              className="w-full bg-[#0a140b] flex items-center justify-center"
-              style={{ aspectRatio: "1/1" }}
-            >
-              <span className="font-mono text-[#2a4a2d] text-xs tracking-widest animate-pulse">
-                generating…
-              </span>
+            <div style={{width:"100%",aspectRatio:"1/1",background:"#0a140b",
+              display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <span style={{fontFamily:"monospace",color:"#2a4a2d",fontSize:11,
+                letterSpacing:"0.3em"}}>generating…</span>
             </div>
           )}
         </div>
@@ -981,192 +974,168 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
       {/* Download */}
       {downloadUrl && (
-        <a
-          href={downloadUrl}
-          download="proof-of-grass.png"
-          className="
-            inline-flex items-center gap-3 px-10 py-3.5
-            font-mono text-sm font-bold tracking-widest uppercase
-            text-[#0e1108] bg-[#93a85a]
-            rounded-sm transition-all duration-200
-            hover:bg-[#86efac] hover:shadow-[0_0_32px_rgba(74,222,128,0.45)]
-            shadow-[0_0_20px_rgba(74,222,128,0.25)] cursor-pointer
-          "
-        >
+        <a href={downloadUrl} download="proof-of-grass.png" style={{
+          display:"inline-flex",alignItems:"center",gap:10,
+          padding:"12px 32px",
+          fontFamily:"monospace",fontSize:13,fontWeight:700,
+          letterSpacing:"0.15em",textTransform:"uppercase",
+          color:"#0e1108",background:"#93a85a",
+          borderRadius:3,textDecoration:"none",
+          boxShadow:"0 0 20px rgba(147,168,90,0.3)",
+        }}>
           ↓ Download Certificate
         </a>
       )}
 
-      {/* In-app browser warning — shown when opened from X/IG */}
+      {/* In-app browser warning */}
       {isInAppBrowser && !inAppBrowserMode && downloadUrl && (
         <div style={{
           background:"rgba(200,168,75,0.08)",
           border:"1px solid rgba(200,168,75,0.4)",
-          borderRadius:10, padding:"14px 16px", marginBottom:8,
-          fontSize:12, color:"#c8a84b", lineHeight:1.6,
+          borderRadius:10,padding:"14px 16px",
+          fontSize:12,color:"#c8a84b",lineHeight:1.6,width:"100%",
         }}>
-          <div style={{fontWeight:700, marginBottom:4}}>
-            ⚠ You're in the X in-app browser
-          </div>
-          <div style={{fontSize:11, color:"rgba(200,168,75,0.7)"}}>
-            Sharing images requires opening in Safari or Chrome.
-            Tap the <b>···</b> menu (top right) → <b>Open in browser</b>, 
-            then come back to share your result card.
+          <div style={{fontWeight:700,marginBottom:4}}>⚠ You're in the X in-app browser</div>
+          <div style={{fontSize:11,color:"rgba(200,168,75,0.7)"}}>
+            Tap <b>···</b> → <b>Open in browser</b> to share with your image.
           </div>
         </div>
       )}
 
-      {/* In-app browser mode — shown after streak is locked in */}
+      {/* In-app browser locked state */}
       {inAppBrowserMode && (
         <div style={{
           background:"rgba(147,168,90,0.06)",
           border:"1px solid rgba(147,168,90,0.3)",
-          borderRadius:10, padding:"18px 16px",
-          display:"flex", flexDirection:"column", alignItems:"center", gap:12,
-          textAlign:"center",
+          borderRadius:10,padding:"18px 16px",
+          display:"flex",flexDirection:"column",alignItems:"center",gap:12,
+          textAlign:"center",width:"100%",
         }}>
           <div style={{fontSize:22}}>✓</div>
-          <div style={{fontWeight:700, color:"#93a85a", fontSize:13, letterSpacing:"0.06em"}}>
+          <div style={{fontWeight:700,color:"#93a85a",fontSize:13,letterSpacing:"0.06em"}}>
             STREAK LOCKED IN
           </div>
-          <div style={{fontSize:11, color:"rgba(240,239,234,0.5)", lineHeight:1.7}}>
-            Your streak is saved. To share your card on X, open this page in Safari or Chrome.
+          <div style={{fontSize:11,color:"rgba(240,239,234,0.5)",lineHeight:1.7}}>
+            Your streak is saved. Open in Safari to share with image.
           </div>
           {downloadUrl && (
-            <a
-              href={downloadUrl}
-              download="proof-of-grass.png"
-              style={{
-                display:"inline-flex", alignItems:"center", gap:7,
-                background:"#93a85a", color:"#080a06",
-                borderRadius:8, padding:"10px 20px",
-                fontSize:12, fontWeight:700, textDecoration:"none",
-                letterSpacing:"0.06em",
-              }}
-            >
-              ↓ Save Card to Photos
-            </a>
+            <a href={downloadUrl} download="proof-of-grass.png" style={{
+              display:"inline-flex",alignItems:"center",gap:7,
+              background:"#93a85a",color:"#080a06",
+              borderRadius:8,padding:"10px 20px",
+              fontSize:12,fontWeight:700,textDecoration:"none",
+            }}>↓ Save Card to Photos</a>
           )}
-          <div style={{fontSize:10, color:"rgba(240,239,234,0.3)"}}>
-            After saving, tap ··· → Open in browser to post on X
-          </div>
         </div>
       )}
 
-      {/* Share to X — Web Share API on mobile, intent fallback on desktop */}
+      {/* Share button */}
       {downloadUrl && !inAppBrowserMode && (
-        <div className="flex flex-col items-center gap-2">
-          <button
-            onClick={handleShareAndSubmit}
-            disabled={submitStatus === "loading" || submitStatus === "success"}
-            className={`
-              inline-flex items-center gap-3 px-10 py-3.5
-              font-mono text-sm font-bold tracking-widest uppercase rounded-sm
-              transition-all duration-200
-              ${submitStatus === "success"
-                ? "bg-[#2a3018] border border-[#93a85a] text-[#93a85a] cursor-not-allowed opacity-70"
-                : submitStatus === "loading"
-                ? "bg-[#1e2410] border border-[#4a5428] text-[#93a85a] cursor-not-allowed opacity-60"
-                : "bg-transparent border border-[#93a85a] text-[#93a85a] hover:bg-[#1a1e0e] hover:shadow-[0_0_20px_rgba(147,168,90,0.2)]"
-              }
-            `}
-          >
-            {submitStatus === "loading" ? (
-              <><span className="animate-pulse">●</span> posting…</>
-            ) : submitStatus === "success" ? (
-              <><span>✓</span> streak locked in</>
-            ) : (
-              <>📤 share to x + lock in streak</>
-            )}
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,width:"100%"}}>
+          <button onClick={handleShareAndSubmit}
+            disabled={submitStatus==="loading"||submitStatus==="success"}
+            style={{
+              display:"inline-flex",alignItems:"center",gap:10,
+              padding:"13px 32px",width:"100%",justifyContent:"center",
+              fontFamily:"monospace",fontSize:13,fontWeight:700,
+              letterSpacing:"0.15em",textTransform:"uppercase",
+              borderRadius:3,cursor:"pointer",border:"1px solid #93a85a",
+              background: submitStatus==="success"?"#2a3018"
+                        : submitStatus==="loading"?"#1e2410"
+                        : "transparent",
+              color:"#93a85a",
+              opacity: submitStatus==="loading"||submitStatus==="success" ? 0.7 : 1,
+            }}>
+            {submitStatus==="loading" ? "posting…"
+              : submitStatus==="success" ? "✓ streak locked in"
+              : "📤 share to x + lock in streak"}
           </button>
           {shareHint && (
-            <p className="font-mono text-[11px] text-[#93a85a] tracking-wide">
+            <p style={{fontFamily:"monospace",fontSize:11,color:"#93a85a",
+              letterSpacing:"0.08em",margin:0}}>
               select x, then tap post
             </p>
           )}
-          {!shareHint && submitStatus !== "success" && (
-            <p className="font-mono text-[11px] text-[#2a4a2d] tracking-wide text-center">
+          {!shareHint && submitStatus!=="success" && (
+            <p style={{fontFamily:"monospace",fontSize:11,
+              color:"rgba(147,168,90,0.45)",textAlign:"center",
+              letterSpacing:"0.06em",margin:0,lineHeight:1.6}}>
               {isInAppBrowser
                 ? "tap ··· → open in browser to share with image"
                 : "opens X with your caption · save & attach your certificate image"
               }
             </p>
           )}
-          {submitStatus === "error" && submitError && (
-            <p className="font-mono text-[10px] text-[#ef4444] tracking-wide text-center mt-1">
-              {submitError}
-            </p>
+          {submitStatus==="error" && submitError && (
+            <p style={{fontFamily:"monospace",fontSize:10,color:"#ef4444",
+              textAlign:"center",margin:0}}>{submitError}</p>
           )}
         </div>
       )}
 
       {/* Caption Generator */}
-      <div className="w-full max-w-2xl mt-2">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1f3d22]" />
-          <span className="text-[10px] font-mono tracking-[0.3em] text-[#3a5e3d] uppercase">
-            Caption Generator
-          </span>
-          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1f3d22]" />
+      <div style={{width:"100%"}}>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+          <div style={{flex:1,height:1,background:"linear-gradient(to right,transparent,#1f3d22)"}}/>
+          <span style={{fontFamily:"monospace",fontSize:10,letterSpacing:"0.3em",
+            color:"#3a5e3d",textTransform:"uppercase"}}>Caption Generator</span>
+          <div style={{flex:1,height:1,background:"linear-gradient(to left,transparent,#1f3d22)"}}/>
         </div>
 
-        <div className="
-          relative rounded-sm border border-[#1a3520]
-          bg-[#0a140b]
-          shadow-[inset_0_1px_0_rgba(74,222,128,0.06),0_0_24px_rgba(0,0,0,0.4)]
-          px-6 py-5
-        ">
-          <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#93a85a] opacity-20" />
-          <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#93a85a] opacity-20" />
-          <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#93a85a] opacity-20" />
-          <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#93a85a] opacity-20" />
-          <p className="
-            font-mono text-[15px] text-[#d1fae5] leading-relaxed
-            text-center min-h-[2.5rem] flex items-center justify-center
-            transition-all duration-300
-          ">
-            {caption}
-          </p>
-          <p className="font-mono text-[11px] text-[#93a85a] text-center mt-3 tracking-wider leading-relaxed opacity-60">
-            {TAGS}<br />
-            <span className="opacity-70">{HANDLE} · proofofgrass.app</span>
+        {/* Caption box */}
+        <div style={{
+          position:"relative",borderRadius:4,
+          border:"1px solid #1a3520",background:"#0a140b",
+          padding:"20px 24px",
+          boxShadow:"inset 0 1px 0 rgba(74,222,128,0.06),0 0 24px rgba(0,0,0,0.4)",
+        }}>
+          {/* Corner accents */}
+          {[{t:0,l:0,bt:"border-top",bl:"border-left"},{t:0,r:0},{b:0,l:0},{b:0,r:0}].map((_,i)=>(
+            <span key={i} style={{
+              position:"absolute",width:10,height:10,
+              top: i<2?0:undefined, bottom: i>=2?0:undefined,
+              left: i%2===0?0:undefined, right: i%2===1?0:undefined,
+              borderTop: i<2?"1px solid rgba(147,168,90,0.25)":undefined,
+              borderBottom: i>=2?"1px solid rgba(147,168,90,0.25)":undefined,
+              borderLeft: i%2===0?"1px solid rgba(147,168,90,0.25)":undefined,
+              borderRight: i%2===1?"1px solid rgba(147,168,90,0.25)":undefined,
+            }}/>
+          ))}
+          <p style={{
+            fontFamily:"monospace",fontSize:14,color:"#d1fae5",
+            lineHeight:1.7,textAlign:"center",margin:0,
+          }}>{caption}</p>
+          <p style={{
+            fontFamily:"monospace",fontSize:11,color:"#93a85a",
+            textAlign:"center",marginTop:12,letterSpacing:"0.08em",
+            lineHeight:1.7,opacity:0.6,
+          }}>
+            {TAGS}<br/>
+            <span style={{opacity:0.7}}>{HANDLE} · proofofgrass.app</span>
           </p>
         </div>
 
-        <div className="flex items-center gap-3 mt-3">
-          <button
-            onClick={handleNewCaption}
-            className="
-              flex-1 flex items-center justify-center gap-2
-              py-2.5 px-4
-              border border-[#1f3d22] bg-[#0a140b]
-              text-[#93a85a] font-mono text-xs tracking-widest uppercase
-              rounded-sm transition-all duration-200
-              hover:border-[#93a85a] hover:bg-[#181c0a]
-              hover:shadow-[0_0_16px_rgba(74,222,128,0.15)]
-            "
-          >
-            <span className="text-base leading-none">↺</span> New Caption
-          </button>
-          <button
-            onClick={handleCopy}
-            className={`
-              flex-1 flex items-center justify-center gap-2
-              py-2.5 px-4
-              font-mono text-xs tracking-widest uppercase rounded-sm
-              transition-all duration-200
-              ${copied
-                ? "bg-[#2a3018] border border-[#93a85a] text-[#93a85a] shadow-[0_0_16px_rgba(147,168,90,0.2)]"
-                : "bg-[#93a85a] text-[#0e1108] border border-transparent hover:bg-[#b8c87a] hover:shadow-[0_0_16px_rgba(147,168,90,0.25)]"
-              }
-            `}
-          >
-            {copied ? (
-              <><span className="text-base leading-none">✓</span> Copied!</>
-            ) : (
-              <><span className="text-base leading-none">⎘</span> Copy Caption</>
-            )}
-          </button>
+        {/* Buttons */}
+        <div style={{display:"flex",gap:10,marginTop:10}}>
+          <button onClick={handleNewCaption} style={{
+            flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,
+            padding:"10px 16px",
+            border:"1px solid #1f3d22",background:"#0a140b",
+            color:"#93a85a",fontFamily:"monospace",fontSize:11,
+            letterSpacing:"0.12em",textTransform:"uppercase",
+            borderRadius:3,cursor:"pointer",
+          }}>↺ New Caption</button>
+          <button onClick={handleCopy} style={{
+            flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,
+            padding:"10px 16px",
+            border: copied?"1px solid #93a85a":"1px solid transparent",
+            background: copied?"#2a3018":"#93a85a",
+            color: copied?"#93a85a":"#0e1108",
+            fontFamily:"monospace",fontSize:11,
+            letterSpacing:"0.12em",textTransform:"uppercase",
+            borderRadius:3,cursor:"pointer",fontWeight:700,
+          }}>{copied?"✓ Copied!":"⎘ Copy Caption"}</button>
         </div>
       </div>
 
