@@ -18,6 +18,7 @@ const DEXSCREENER_URL = "https://dexscreener.com/solana/HCSSW5tyLPCRUYcVUxRfYtmJ
 const QUEST_DEFS = [
   { slug:"daily-proof",      title:"Daily Proof",            desc:"Submit your proof of grass today.",            type:"daily",   xp:25,  tokens:100, icon:"☀️", target:1 },
   { slug:"vote-dexscreener", title:"Vote on DexScreener",    desc:"Boost $TOUCHGRASS — vote on DexScreener.",    type:"daily",   xp:50,  tokens:200, icon:"🗳️", target:1, link:DEXSCREENER_URL },
+  { slug:"flex-profile-weekly", title:"Flex Your Profile",   desc:"Share your Proof of Grass flex card on X this week.", type:"weekly",  xp:75,  tokens:0,   icon:"✨", target:1, link:null },
   { slug:"challenge-friend", title:"Challenge a Friend",     desc:"Challenge another user to a 7-day streak.",   type:"weekly",  xp:50,  tokens:200, icon:"⚡", target:1 },
   { slug:"reach-day-30",     title:"Reach Day 30",           desc:"Build a 30-day streak and unlock Elite rank.", type:"ongoing", xp:75,  tokens:0,   icon:"🔥", target:1 },
   { slug:"reach-day-50",     title:"Reach Day 50",           desc:"Reach Legendary status with a 50-day streak.", type:"ongoing", xp:150, tokens:0,   icon:"🌟", target:1 },
@@ -66,14 +67,22 @@ function CircularProgress({ pct, size = 90, stroke = 6 }) {
 }
 
 // ─── Quest card ───────────────────────────────────────────────────────────────
-function QuestCard({ quest, progress, completed }) {
+function QuestCard({ quest, progress, completed, onComplete }) {
   const prog    = progress?.progress ?? 0;
   const fill    = quest.target > 0 ? Math.min(100, Math.round((prog / quest.target) * 100)) : 0;
   const isDone  = completed || progress?.completed;
   const hasLink = !!quest.link;
 
   const handleClick = () => {
-    if (hasLink) window.open(quest.link, "_blank", "noopener,noreferrer");
+    if (!hasLink) return;
+    // For daily link quests, mark complete on click via localStorage
+    if (quest.slug === "vote-dexscreener" && !isDone) {
+      try {
+        localStorage.setItem("pog_dex_voted", new Date().toISOString());
+        onComplete?.(quest.slug);
+      } catch(e) {}
+    }
+    window.open(quest.link, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -255,9 +264,32 @@ export default function QuestsPage() {
         .eq("challenger",username)
         .gte("created_at", weekStart.toISOString());
 
+      // Check if user flexed this week via localStorage
+      let flexedThisWeek = false;
+      try {
+        const flexKey = localStorage.getItem("pog_flexed_week");
+        if (flexKey) {
+          const flexedWeekStart = new Date(flexKey);
+          flexedThisWeek = flexedWeekStart >= weekStart;
+        }
+      } catch(e) {}
+
       const progress = {
         "daily-proof":      { progress: todaySubs ?? 0,      completed: (todaySubs ?? 0) >= 1 },
-        "vote-dexscreener": { progress: 0,                   completed: false                  },
+        "flex-profile-weekly": { progress: flexedThisWeek ? 1 : 0, completed: flexedThisWeek },
+        "vote-dexscreener": (() => {
+          // Daily reset — check if voted today via localStorage
+          try {
+            const key = "pog_dex_voted";
+            const stored = localStorage.getItem(key);
+            if (stored) {
+              const votedDate = stored.slice(0, 10);
+              const today2    = new Date().toISOString().slice(0, 10);
+              if (votedDate === today2) return { progress: 1, completed: true };
+            }
+          } catch(e) {}
+          return { progress: 0, completed: false };
+        })(),
         "challenge-friend": { progress: weekChal ?? 0,       completed: (weekChal ?? 0) >= 1  },
         "reach-day-30":     { progress: Math.min(streak,30), completed: streak >= 30           },
         "reach-day-50":     { progress: Math.min(streak,50), completed: streak >= 50           },
@@ -293,6 +325,7 @@ export default function QuestsPage() {
     ::-webkit-scrollbar-track{background:${T.bg};}
     ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
     @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+    @keyframes logoFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
     .fade{animation:fadeUp 0.6s ease both;}
     .fade2{animation:fadeUp 0.6s 0.1s ease both;}
     .nav-lk{color:${T.dim};font-size:13px;font-weight:500;text-decoration:none;transition:color 0.2s;}
@@ -352,16 +385,32 @@ export default function QuestsPage() {
           </div>
           <div style={{ position:"absolute", inset:0,
             background:"linear-gradient(180deg,rgba(10,11,8,0.2) 0%,rgba(10,11,8,0.85) 65%,rgba(10,11,8,0.99) 100%)" }} />
-          <div style={{ position:"relative", width:"100%", padding:"0 clamp(14px,5vw,64px) 36px" }}>
-            <div className="fade" style={{ fontSize:10, letterSpacing:"0.22em", color:T.olive,
-              textTransform:"uppercase", marginBottom:10, fontWeight:600 }}>Community</div>
-            <h1 className="fade" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:"clamp(48px,7vw,88px)", fontWeight:700, color:T.white,
-              lineHeight:0.92, letterSpacing:"-0.02em", marginBottom:14 }}>Quests</h1>
-            <p className="fade2" style={{ fontSize:14, color:T.muted, lineHeight:1.7,
-              fontWeight:300, maxWidth:360 }}>
-              Complete quests. Earn badges.<br />Grow the movement.
-            </p>
+          <div style={{ position:"relative", width:"100%", padding:"0 clamp(14px,5vw,64px) 36px",
+            display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:16 }}>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div className="fade" style={{ fontSize:10, letterSpacing:"0.22em", color:T.olive,
+                textTransform:"uppercase", marginBottom:10, fontWeight:600 }}>Community</div>
+              <h1 className="fade" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                fontSize:"clamp(48px,7vw,88px)", fontWeight:700, color:T.white,
+                lineHeight:0.92, letterSpacing:"-0.02em", marginBottom:14 }}>Quests</h1>
+              <p className="fade2" style={{ fontSize:14, color:T.muted, lineHeight:1.7,
+                fontWeight:300, maxWidth:360 }}>
+                Complete quests. Earn badges.<br />Grow the movement.
+              </p>
+            </div>
+            {/* Logo — fills right side of hero */}
+            <div className="fade2" style={{ flexShrink:0, display:"flex",
+              alignItems:"flex-end", paddingBottom:4 }}>
+              <img src="/touchgrass-transparent.png" alt="Touch Grass"
+                style={{
+                  width:"clamp(100px,18vw,180px)",
+                  height:"clamp(100px,18vw,180px)",
+                  objectFit:"contain",
+                  opacity:0.88,
+                  filter:"drop-shadow(0 8px 32px rgba(147,168,90,0.25)) drop-shadow(0 2px 8px rgba(0,0,0,0.4))",
+                  animation:"logoFloat 5s ease-in-out infinite",
+                }} />
+            </div>
           </div>
         </section>
 
@@ -417,7 +466,16 @@ export default function QuestsPage() {
               </div>
             )}
             {filteredQuests.map(q => (
-              <QuestCard key={q.slug} quest={q} progress={questProgress[q.slug]} completed={questProgress[q.slug]?.completed} />
+              <QuestCard key={q.slug} quest={q}
+                progress={questProgress[q.slug]}
+                completed={questProgress[q.slug]?.completed}
+                onComplete={(slug) => {
+                  setQuestProgress(prev => ({
+                    ...prev,
+                    [slug]: { progress: 1, completed: true },
+                  }));
+                }}
+              />
             ))}
           </div>
 
@@ -459,6 +517,55 @@ export default function QuestsPage() {
             </div>
           </div>
 
+          {/* ── INVITE A FRIEND QUEST ───────────────────────────────────── */}
+          <div className="card fade2" style={{ marginBottom:16 }}>
+            <div style={{ fontSize:9, letterSpacing:"0.18em", color:T.olive,
+              textTransform:"uppercase", marginBottom:12, fontWeight:700 }}>
+              ✦ Community Quest
+            </div>
+            <div style={{ display:"flex", gap:16, alignItems:"flex-start", flexWrap:"wrap" }}>
+              <div style={{ flex:1, minWidth:200 }}>
+                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                  fontSize:22, fontWeight:700, color:T.white, marginBottom:6 }}>
+                  Invite a Friend
+                </div>
+                <div style={{ fontSize:12, color:T.muted, lineHeight:1.6, marginBottom:10 }}>
+                  Grow the movement. Invite someone to start their outdoor streak.
+                </div>
+                <div style={{ fontSize:11, color:T.olive, fontWeight:600 }}>
+                  Counts when they reach Day 10.
+                </div>
+              </div>
+              {username && (
+                <div style={{ flex:1, minWidth:180 }}>
+                  <div style={{ fontSize:9, color:T.dim, letterSpacing:"0.12em",
+                    textTransform:"uppercase", marginBottom:7 }}>Your Referral Link</div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <div style={{ flex:1, minWidth:0, background:T.bg3,
+                      border:`1px solid ${T.border}`, borderRadius:7,
+                      padding:"8px 10px", fontSize:10, color:T.muted,
+                      overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                      proofofgrass.app/?ref={username}
+                    </div>
+                    <button onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/?ref=${username}`
+                      ).catch(()=>{});
+                    }} style={{
+                      background:"transparent", border:`1px solid ${T.borderG}`,
+                      borderRadius:7, padding:"8px 12px", fontSize:10,
+                      fontWeight:600, color:T.olive, cursor:"pointer", flexShrink:0,
+                      fontFamily:"'DM Sans',sans-serif",
+                    }}>Copy</button>
+                  </div>
+                  <div style={{ fontSize:10, color:T.dim, marginTop:6 }}>
+                    🤝 Reward: Community Builder badge
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* ── BADGES ──────────────────────────────────────────────────── */}
           <div className="card fade2" style={{ marginBottom:16 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
@@ -481,7 +588,7 @@ export default function QuestsPage() {
               <StatPill icon="⭐" value={questsDone}            label="Quests Completed" />
               <StatPill icon="🔥" value={streak}               label="Day Streak"        />
               <StatPill icon="⚡" value={xpEarned}             label="Total XP Earned"   />
-              <StatPill icon="🛡" value={badgesEarned}         label="Badges Earned"     />
+              <StatPill icon="🎖" value={badgesEarned}         label="Badges Earned"     />
             </div>
           </div>
 

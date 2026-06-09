@@ -2,7 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Allow service-worker.js to be served from root (not /_next/)
   async headers() {
     return [
       {
@@ -20,7 +19,6 @@ const nextConfig = {
           { key: "Content-Type", value: "application/manifest+json" },
         ],
       },
-      // Security headers
       {
         source: "/(.*)",
         headers: [
@@ -31,11 +29,6 @@ const nextConfig = {
       },
     ];
   },
-
-  // Silence the lockfile warning
-  turbopack: {
-    root: __dirname,
-  },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

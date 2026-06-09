@@ -15,16 +15,27 @@ const T = {
 
 function norm(v) { return String(v??"").replace(/@/g,"").toLowerCase().trim(); }
 
+const REFERRAL_BADGES = [
+  { count:1,   slug:"community-builder",     name:"Community Builder",    emoji:"🤝" },
+  { count:5,   slug:"grass-recruiter",       name:"Grass Recruiter",      emoji:"🌱" },
+  { count:10,  slug:"community-grower",      name:"Community Grower",     emoji:"🌿" },
+  { count:25,  slug:"movement-builder",      name:"Movement Builder",     emoji:"🌳" },
+  { count:50,  slug:"founding-ambassador",   name:"Founding Ambassador",  emoji:"🏛" },
+  { count:100, slug:"touchgrass-ambassador", name:"Touch Grass Ambassador",emoji:"👑"},
+];
+
 function getTier(n) {
-  if (n>=365) return {label:"ETERNAL",   color:"#fff9c4", border:"#a08000"};
-  if (n>=180) return {label:"MYTHIC",    color:"#fbbf24", border:"#92400e"};
-  if (n>=100) return {label:"IMMORTAL",  color:"#f97316", border:"#7c2d12"};
-  if (n>=50)  return {label:"LEGENDARY", color:T.gold,    border:"#7a5c00"};
-  if (n>=30)  return {label:"ELITE",     color:"#c084fc", border:"#6d28d9"};
-  if (n>=14)  return {label:"LOCKED IN", color:T.olive,   border:"#4a5a28"};
-  if (n>=7)   return {label:"ROOTED",    color:"#b8c87a", border:"#5a6a30"};
-  if (n>=3)   return {label:"GROWING",   color:"#a0b870", border:"#4a5828"};
-  return {label:"SEED", color:"rgba(240,239,234,0.35)", border:T.border};
+  if (n>=1000) return {label:"TRANSCENDENT", color:"#f0fdf4", border:"#ffffff"};
+  if (n>=500)  return {label:"ASCENDED",     color:"#e0f2fe", border:"#0369a1"};
+  if (n>=365)  return {label:"ETERNAL",      color:"#fff9c4", border:"#a08000"};
+  if (n>=180)  return {label:"MYTHIC",       color:"#fbbf24", border:"#92400e"};
+  if (n>=100)  return {label:"IMMORTAL",     color:"#f97316", border:"#7c2d12"};
+  if (n>=50)   return {label:"LEGENDARY",    color:T.gold,    border:"#7a5c00"};
+  if (n>=30)   return {label:"ELITE",        color:"#c084fc", border:"#6d28d9"};
+  if (n>=14)   return {label:"LOCKED IN",    color:T.olive,   border:"#4a5a28"};
+  if (n>=7)    return {label:"ROOTED",       color:"#b8c87a", border:"#5a6a30"};
+  if (n>=3)    return {label:"GROWING",      color:"#a0b870", border:"#4a5828"};
+  return             {label:"SEED",          color:"rgba(240,239,234,0.35)", border:T.border};
 }
 
 const ALL_BADGES = [
@@ -39,6 +50,12 @@ const ALL_BADGES = [
   {id:"early",          emoji:"🌅", name:"Early Bird",           desc:"Reach a 50-day streak",            condition:(s,p,cd,cs,gs,sh)=>s>=50    },
   {id:"golden",         emoji:"🌄", name:"Golden Hour",          desc:"50 consecutive days outside",      condition:(s,p,cd,cs,gs,sh)=>s>=50    },
   {id:"century",        emoji:"💯", name:"100 Club",             desc:"Reach a 100-day streak",           condition:(s,p,cd,cs,gs,sh)=>s>=100   },
+  {id:"mythic-club",    emoji:"⚡", name:"Mythic Club",           desc:"Reach a 180-day streak",           condition:(s,p,cd,cs,gs,sh)=>s>=180   },
+  {id:"double-century", emoji:"🔱", name:"200 Club",              desc:"Reach a 200-day streak",           condition:(s,p,cd,cs,gs,sh)=>s>=200   },
+  {id:"quarter-millennium",emoji:"🏺",name:"Quarter Millennium",  desc:"Reach a 250-day streak",           condition:(s,p,cd,cs,gs,sh)=>s>=250   },
+  {id:"eternal-club",   emoji:"👑", name:"Eternal",              desc:"Reach a 365-day streak — one full year", condition:(s,p,cd,cs,gs,sh)=>s>=365 },
+  {id:"ascended-club",  emoji:"🌌", name:"Ascended",             desc:"Reach a 500-day streak",           condition:(s,p,cd,cs,gs,sh)=>s>=500   },
+  {id:"transcendent",   emoji:"✨", name:"Transcendent",         desc:"Reach a 1000-day streak",          condition:(s,p,cd,cs,gs,sh)=>s>=1000  },
   // Proof milestones
   {id:"trail",          emoji:"🏔️", name:"Trail Blazer",         desc:"Submit 10 total proofs",           condition:(s,p,cd,cs,gs,sh)=>p>=10    },
   {id:"proof-machine",  emoji:"⚙️", name:"Proof Machine",        desc:"Submit 50 total proofs",           condition:(s,p,cd,cs,gs,sh)=>p>=50    },
@@ -202,6 +219,164 @@ function EditableField({label,value,onSave,multiline}) {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
+
+// ─── Avatar Picker Modal ──────────────────────────────────────────────────────
+function AvatarPickerModal({ profileRow, username, uploading, error, onClose, onSelectEmoji, onUploadPhoto, onRemovePhoto }) {
+  const T2 = {
+    bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
+    border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)",
+    olive:"#93a85a", gold:"#c8a84b", purple:"#a78bfa",
+    white:"#f0efea", dim:"rgba(240,239,234,0.24)", muted:"rgba(240,239,234,0.52)",
+  };
+
+  const canUpload = profileRow?.has_grass_toucher || profileRow?.has_screen_toucher;
+  const hasPhoto  = !!profileRow?.avatar_url;
+  const frame     = profileRow?.avatar_frame;
+  const isFullEco = profileRow?.has_touchgrass_holder && profileRow?.has_grass_toucher && profileRow?.has_screen_toucher;
+  const isNFT     = profileRow?.has_grass_toucher || profileRow?.has_screen_toucher;
+
+  const EMOJIS = ["🌿","🌱","🌲","🏔️","☀️","🦅","🐾","🌊","🍃","🌾"];
+
+  const fileInputRef = { current: null };
+
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",
+        backdropFilter:"blur(6px)",zIndex:9990,
+      }}/>
+      <div style={{
+        position:"fixed",bottom:0,left:0,right:0,zIndex:9991,
+        background:T2.bg2,borderRadius:"20px 20px 0 0",
+        border:`1px solid ${T2.borderG}`,borderBottom:"none",
+        padding:`24px 20px calc(28px + env(safe-area-inset-bottom, 0px))`,
+        boxShadow:"0 -24px 60px rgba(0,0,0,0.6)",
+      }}>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+          <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:20,fontWeight:700,color:T2.white}}>
+            Profile Picture
+          </div>
+          <button onClick={onClose} style={{background:"transparent",border:`1px solid ${T2.border}`,
+            borderRadius:8,padding:"5px 10px",color:T2.dim,fontSize:13,cursor:"pointer"}}>✕</button>
+        </div>
+
+        {/* Current avatar preview */}
+        {hasPhoto && (
+          <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:20,
+            padding:"12px 14px",background:T2.bg3,borderRadius:10,
+            border:`1px solid ${frame==="crown"?T2.gold+"50":frame==="glow"?T2.olive+"50":T2.border}`}}>
+            <div style={{
+              width:52,height:52,borderRadius:"50%",overflow:"hidden",flexShrink:0,
+              boxShadow:frame==="crown"?`0 0 0 3px ${T2.gold},0 0 16px ${T2.gold}60`
+                :frame==="glow"?`0 0 0 2px ${T2.olive},0 0 12px ${T2.olive}50`:"none",
+            }}>
+              <img src={profileRow.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:600,color:T2.white,marginBottom:3}}>Current photo</div>
+              {frame && (
+                <div style={{fontSize:10,fontWeight:700,color:frame==="crown"?T2.gold:T2.olive,
+                  letterSpacing:"0.08em"}}>
+                  {frame==="crown"?"👑 Crown Frame":"✨ Glow Frame"} · NFT Holder
+                </div>
+              )}
+            </div>
+            <button onClick={onRemovePhoto} style={{
+              background:"transparent",border:`1px solid rgba(248,113,113,0.3)`,
+              borderRadius:7,padding:"6px 10px",fontSize:11,color:"#f87171",
+              cursor:"pointer",flexShrink:0,
+            }}>Remove</button>
+          </div>
+        )}
+
+        {/* Upload section — NFT gated */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.16em",textTransform:"uppercase",
+            color:T2.muted,marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{color:T2.olive,fontSize:8}}>✦</span>
+            {canUpload ? "Upload Photo" : "Photo Upload · NFT Required"}
+          </div>
+
+          {canUpload ? (
+            <div>
+              <label style={{
+                display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                width:"100%",padding:"13px 0",
+                background: uploading ? T2.bg3 : `${T2.olive}12`,
+                border:`1px dashed ${uploading?T2.border:T2.olive}`,
+                borderRadius:10,cursor: uploading?"default":"pointer",
+                fontSize:13,fontWeight:600,color:uploading?T2.dim:T2.olive,
+                transition:"all 0.2s",
+              }}>
+                {uploading ? "Uploading…" : "📷  Choose Photo"}
+                <input type="file" accept="image/jpeg,image/png,image/webp"
+                  style={{display:"none"}}
+                  disabled={uploading}
+                  onChange={e=>{
+                    const f = e.target.files?.[0];
+                    if (f) onUploadPhoto(f);
+                  }}/>
+              </label>
+              {/* Frame indicator */}
+              <div style={{marginTop:8,fontSize:10,color:T2.dim,lineHeight:1.5}}>
+                {isFullEco
+                  ? <span style={{color:T2.gold}}>👑 Your photo will display with a Crown Frame</span>
+                  : isNFT
+                    ? <span style={{color:T2.olive}}>✨ Your photo will display with a Glow Frame</span>
+                    : null
+                }
+              </div>
+              {error && <div style={{marginTop:8,fontSize:11,color:"#f87171"}}>{error}</div>}
+              <div style={{marginTop:6,fontSize:10,color:T2.dim}}>JPEG, PNG or WebP · Max 2MB</div>
+            </div>
+          ) : (
+            <div style={{
+              padding:"16px",background:T2.bg3,borderRadius:10,
+              border:`1px solid ${T2.border}`,
+            }}>
+              <div style={{fontSize:12,color:T2.dim,lineHeight:1.6,marginBottom:10}}>
+                Upload a custom profile photo by holding a <span style={{color:T2.olive,fontWeight:600}}>Grass Toucher</span> or <span style={{color:"#a78bfa",fontWeight:600}}>Screen Toucher</span> NFT.
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <div style={{flex:1,padding:"8px 10px",background:T2.bg2,
+                  border:`1px solid rgba(147,168,90,0.2)`,borderRadius:7,
+                  fontSize:10,color:"rgba(147,168,90,0.5)",textAlign:"center",
+                  opacity:0.6}}>🌿 Grass Toucher</div>
+                <div style={{flex:1,padding:"8px 10px",background:T2.bg2,
+                  border:`1px solid rgba(167,139,250,0.2)`,borderRadius:7,
+                  fontSize:10,color:"rgba(167,139,250,0.5)",textAlign:"center",
+                  opacity:0.6}}>📱 Screen Toucher</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Emoji section — always available */}
+        <div>
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.16em",textTransform:"uppercase",
+            color:T2.muted,marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{color:T2.olive,fontSize:8}}>✦</span>
+            Choose Emoji
+          </div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {["🌿","🌱","🌲","🏔️","☀️","🦅","🐾","🌊","🍃","🌾"].map(e=>(
+              <button key={e} onClick={()=>onSelectEmoji(e)} style={{
+                width:44,height:44,borderRadius:10,fontSize:22,
+                background: profileRow?.avatar_emoji===e && !hasPhoto
+                  ? `${T2.olive}20` : T2.bg3,
+                border:`1px solid ${profileRow?.avatar_emoji===e && !hasPhoto ? T2.olive : T2.border}`,
+                cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",
+                transition:"all 0.15s",
+              }}>{e}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const {username:slug} = router.query;
@@ -221,6 +396,8 @@ export default function ProfilePage() {
   const [topStreaks,     setTopStreaks]     = useState([]);
   const [communityTop,  setCommunityTop]   = useState([]);
   const [impact,        setImpact]         = useState(null);
+  const [referrals,     setReferrals]      = useState([]);
+  const [refLinkCopied, setRefLinkCopied]  = useState(false);
   const [challenges,    setChallenges]     = useState([]);
   const [chalProgress,  setChalProgress]   = useState([]);
   const [challengesDone,setChallengesDone] = useState(0);
@@ -229,7 +406,10 @@ export default function ProfilePage() {
   const [walletAddr,    setWalletAddr]     = useState(null);
   const [walletVerified,setWalletVerified] = useState(false);
   const [copied,       setCopied]       = useState(false);
-  const [editMode,     setEditMode]     = useState(false);
+  const [editMode,      setEditMode]      = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [avatarUploading,  setAvatarUploading]  = useState(false);
+  const [avatarError,      setAvatarError]      = useState("");
   const [showChallenge,setShowChallenge] = useState(false);
   const [activeChallenges, setActiveChallenges] = useState([]);
 
@@ -246,7 +426,7 @@ export default function ProfilePage() {
       // Step 1: user streak + profile + submissions (parallel — no dependencies)
       const [{data:sr},{data:pr},{count:subs}] = await Promise.all([
         supabase.from("Streaks").select("current_streak,best_streak,last_submission_date,shield_count").eq("username",username).maybeSingle(),
-        supabase.from("Profiles").select("bio,location,avatar_emoji,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher").eq("username",username).maybeSingle(),
+        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_count_pending,referral_badge").eq("username",username).maybeSingle(),
         supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username).in("status",["pending","approved"]),
       ]);
 
@@ -261,11 +441,12 @@ export default function ProfilePage() {
         .limit(5);
       setActiveChallenges(challengeRows ?? []);
 
-      const [{data:allStreaks},{data:recentSubs},{data:impactRows},{data:chalRows}] = await Promise.all([
+      const [{data:allStreaks},{data:recentSubs},{data:impactRows},{data:chalRows},{data:referralRows}] = await Promise.all([
         supabase.from("Streaks").select("username,current_streak").order("current_streak",{ascending:false}),
         supabase.from("Submissions").select("created_at,photo_url").eq("username",username).in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(10),
         supabase.from("Impact").select("trees_funded,co2_lbs,donated_usd").eq("username",username),
         supabase.from("Challenges").select("*").or(`challenger.eq.${username},challenged.eq.${username}`).order("created_at",{ascending:false}).limit(20),
+        supabase.from("Referrals").select("referred_username,status,converted_at,created_at").eq("referrer_username",username).order("created_at",{ascending:false}).limit(20),
       ]);
 
       // Process challenges
@@ -273,6 +454,7 @@ export default function ProfilePage() {
       setChallenges(chalList);
       setChallengesDone(chalList.filter(c => c.status === "completed").length);
       setChallengesSent(chalList.filter(c => norm(c.challenger) === username).length);
+      setReferrals(referralRows ?? []);
 
       // Fetch progress rows for active challenges
       const activeChalIds = chalList.filter(c => c.status === "active").map(c => c.id);
@@ -337,7 +519,17 @@ export default function ProfilePage() {
   const pct     = (rank !== null && totalUsers>0) ? ((rank/totalUsers)*100).toFixed(2) : "—";
   const grassScore = Math.floor(current*38+(subCount??0)*12+best*22);
   const badges  = ALL_BADGES.map(b=>({...b,earned:b.condition(current,subCount??0,challengesDone,challengesSent,grassScore,shields)}));
-  const thresholds=[14,30,50,100];
+  // Merge referral badges
+  const refSuccessful = profileRow?.referral_count_successful ?? 0;
+  const referralBadgeList = REFERRAL_BADGES.map(b => ({
+    ...b, id:b.slug,
+    desc:`Refer ${b.count} friend${b.count>1?"s":""} who reach Day 10`,
+    earned: refSuccessful >= b.count,
+    condition:()=>false,
+  }));
+  const allBadgesDisplay = [...badges, ...referralBadgeList];
+  const earnedCount = allBadgesDisplay.filter(b=>b.earned).length;
+  const thresholds=[7,14,30,50,100,180,365,500,1000];
   const prev2  = [...[0,...thresholds]].reverse().find(t=>current>=t)??0;
   const nextT  = thresholds.find(t=>t>current);
   const fill   = nextT?Math.round(((current-prev2)/(nextT-prev2))*100):100;
@@ -374,12 +566,24 @@ export default function ProfilePage() {
     .nav-lk{color:${T.dim};font-size:13px;font-weight:500;text-decoration:none;letter-spacing:0.04em;transition:color 0.2s;}
     .nav-lk:hover{color:${T.white};}
     @media(max-width:768px){
-      .hi{flex-direction:column!important;}
-      .shud{width:100%!important;margin-top:14px!important;}
+      .hi{flex-direction:column!important;align-items:stretch!important;}
+      .shud{width:100%!important;min-width:0!important;margin-top:12px!important;
+        padding:20px 16px!important;order:2;}
+      .hi>.fade{order:1;}
       .two{grid-template-columns:1fr!important;}
       .three{grid-template-columns:1fr!important;}
       .strip{flex-wrap:wrap!important;}
-      .strip>div{min-width:50%!important;border-right:none!important;border-bottom:1px solid ${T.border};}
+      .strip>div{flex:1 1 calc(33% - 1px)!important;min-width:0!important;
+        border-right:none!important;border-bottom:1px solid ${T.border}!important;}
+      .badge-grid{grid-template-columns:repeat(4,1fr)!important;}
+      .nav-links{display:none!important;}
+      .nav-brand{font-size:15px!important;}
+      .hero-actions a,.hero-actions button{
+        font-size:10px!important;padding:6px 9px!important;letter-spacing:0.02em!important;}
+    }
+    @media(max-width:480px){
+      .strip>div{flex:1 1 calc(50% - 1px)!important;}
+      .badge-grid{grid-template-columns:repeat(3,1fr)!important;}
     }
   `;
 
@@ -390,23 +594,27 @@ export default function ProfilePage() {
 
         {/* NAV */}
         <nav style={{position:"sticky",top:0,zIndex:200,display:"flex",alignItems:"center",
-          justifyContent:"space-between",padding:"0 clamp(14px,4vw,48px)",height:56,
+          justifyContent:"space-between",padding:"0 clamp(10px,3vw,48px)",height:52,gap:8,
           background:`${T.bg}ec`,backdropFilter:"blur(18px)",borderBottom:`1px solid ${T.border}`}}>
-          <Link href="/" style={{display:"flex",alignItems:"center",gap:9,textDecoration:"none"}}>
-            <img src="/touchgrass-transparent.png" alt="" style={{width:26,height:26,objectFit:"contain"}} />
-            <span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:17,fontWeight:700,color:T.white}}>touch grass</span>
+          <Link href="/" style={{display:"flex",alignItems:"center",gap:7,textDecoration:"none",flexShrink:0}}>
+            <img src="/touchgrass-transparent.png" alt="" style={{width:24,height:24,objectFit:"contain"}} />
+            <span className="nav-brand" style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:16,fontWeight:700,color:T.white,whiteSpace:"nowrap"}}>Touch Grass</span>
           </Link>
-          <div style={{display:"flex",gap:24}}>
+          <div className="nav-links" style={{display:"flex",gap:20,flex:1,justifyContent:"center"}}>
             <Link href="/" className="nav-lk">Dashboard</Link>
             <Link href="/leaderboard" className="nav-lk">Leaderboard</Link>
           </div>
-          <div style={{display:"flex",gap:8}}>
+          <div style={{display:"flex",gap:6,flexShrink:0}}>
             {isOwner && (
-              <button onClick={()=>setEditMode(v=>!v)} className="btn-out" style={{fontSize:11}}>
-                {editMode?"✓ Done":"✏ Edit Profile"}
+              <button onClick={()=>setEditMode(v=>!v)} className="btn-out"
+                style={{fontSize:10,padding:"5px 10px",whiteSpace:"nowrap"}}>
+                {editMode?"✓ Done":"✏ Edit"}
               </button>
             )}
-            <button onClick={copyProfile} className="btn-ol">{copied?"✓ Copied":"↗ Share"}</button>
+            <button onClick={copyProfile} className="btn-ol"
+              style={{fontSize:10,padding:"5px 10px",whiteSpace:"nowrap"}}>
+              {copied?"✓":"↗ Share"}
+            </button>
           </div>
         </nav>
 
@@ -418,8 +626,8 @@ export default function ProfilePage() {
           </div>
           <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,rgba(10,11,8,0.3) 0%,rgba(10,11,8,0.88) 70%,rgba(10,11,8,0.99) 100%)"}} />
 
-          <div style={{position:"relative",width:"100%",padding:"0 clamp(14px,5vw,64px) 36px"}}>
-            <div className="hi" style={{display:"flex",alignItems:"flex-end",gap:28}}>
+          <div style={{position:"relative",width:"100%",padding:"0 clamp(14px,4vw,48px) 24px"}}>
+            <div className="hi" style={{display:"flex",alignItems:"flex-start",gap:20}}>
 
               {/* Identity */}
               <div className="fade" style={{flex:1,minWidth:0}}>
@@ -429,19 +637,28 @@ export default function ProfilePage() {
                     background:`linear-gradient(135deg,${T.bg3},${T.olive}30)`,
                     border:`2px solid ${tier.color}`,
                     display:"flex",alignItems:"center",justifyContent:"center",
-                    fontSize:profileRow?.avatar_emoji?32:28,
+                    fontSize:profileRow?.avatar_emoji?32:28,overflow:"hidden",
                     fontFamily:"'Cormorant Garamond',Georgia,serif",
-                    fontWeight:700,color:T.white,boxShadow:`0 0 22px ${tier.color}28`,
+                    fontWeight:700,color:T.white,
+                    boxShadow: profileRow?.avatar_frame==="crown"
+                      ? `0 0 0 3px ${T.gold}, 0 0 20px ${T.gold}60`
+                      : profileRow?.avatar_frame==="glow"
+                        ? `0 0 0 2px ${T.olive}, 0 0 16px ${T.olive}50`
+                        : `0 0 22px ${tier.color}28`,
                     cursor:editMode?"pointer":"default",
+                    position:"relative",
                     title:editMode?"Click to change avatar":""}}
-                    onClick={()=>{
-                      if (!editMode) return;
-                      const emojis=["🌿","🌱","🌲","🏔️","☀️","🦅","🐾","🌊","🍃","🌾"];
-                      const cur = profileRow?.avatar_emoji||"🌿";
-                      const next = emojis[(emojis.indexOf(cur)+1)%emojis.length];
-                      saveField("avatar_emoji",next);
-                    }}>
-                    {loading?username?.[0]?.toUpperCase()??"?":(profileRow?.avatar_emoji||"🌿")}
+                    onClick={()=>{ if (editMode) setShowAvatarPicker(true); }}>
+                    {profileRow?.avatar_url
+                      ? <img src={profileRow.avatar_url} alt=""
+                          style={{width:"100%",height:"100%",borderRadius:"50%",objectFit:"cover"}} />
+                      : (loading ? username?.[0]?.toUpperCase()??"?" : (profileRow?.avatar_emoji||"🌿"))
+                    }
+                    {editMode && (
+                      <div style={{position:"absolute",inset:0,borderRadius:"50%",
+                        background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",
+                        justifyContent:"center",fontSize:16}}>✏</div>
+                    )}
                   </div>
                   <div>
                     <span style={{display:"inline-block",fontSize:8,color:T.olive,letterSpacing:"0.16em",
@@ -503,7 +720,7 @@ export default function ProfilePage() {
                     </div>
                   );
                 })()}
-                <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
+                <div className="hero-actions" style={{display:"flex",gap:7,marginTop:12,flexWrap:"wrap",alignItems:"center"}}>
                   <Link href="/" className="btn-out">← Dashboard</Link>
                   <button onClick={copyProfile} className="btn-ol">{copied?"✓ Copied":"↗ Share Profile"}</button>
                   <Link href={`/flex/${username}`} className="btn-out"
@@ -517,6 +734,7 @@ export default function ProfilePage() {
                     </button>
                   )}
                 </div>
+
               </div>
 
               {/* Streak HUD */}
@@ -564,6 +782,38 @@ export default function ProfilePage() {
         {/* MAIN CONTENT */}
         <div style={{padding:"28px clamp(14px,5vw,64px)"}}>
 
+          {/* ── WALLET VERIFICATION (owner only) ──────────────────────────── */}
+          {isOwner && (
+            <div className="card fade" style={{marginBottom:14}}>
+              <div className="ct">Solana Wallet</div>
+              <WalletVerify
+                username={username}
+                currentWallet={walletAddr}
+                currentVerified={walletVerified}
+                onVerified={(addr) => {
+                  setWalletAddr(addr);
+                  setWalletVerified(!!addr);
+                }}
+              />
+            </div>
+          )}
+
+          {/* Show wallet publicly if verified — non-owners */}
+          {!isOwner && walletVerified && walletAddr && (
+            <div className="card fade" style={{marginBottom:14,
+              display:"flex", alignItems:"center", gap:12}}>
+              <div style={{width:36,height:36,borderRadius:10,flexShrink:0,
+                background:"rgba(147,168,90,0.1)",border:`1px solid rgba(147,168,90,0.2)`,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>◎</div>
+              <div>
+                <div style={{fontSize:11,fontWeight:600,color:"#93a85a",marginBottom:2}}>Wallet Verified</div>
+                <div style={{fontSize:11,color:"rgba(240,239,234,0.35)",fontFamily:"monospace",letterSpacing:"0.04em"}}>
+                  {walletAddr.slice(0,4)}...{walletAddr.slice(-4)}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── ECOSYSTEM STATUS ─────────────────────────────────────────── */}
           {(() => {
             const hasTG = profileRow?.has_touchgrass_holder ?? false;
@@ -573,7 +823,7 @@ export default function ProfilePage() {
             const pct   = Math.round((count/3)*100);
             const title = count===3?"FULL ECOSYSTEM TOUCHER":count===2?"ECOSYSTEM MEMBER":count===1?"TOKEN SUPPORTER":null;
             const EcoCard = ({verified,icon,name,label,accent,note}) => (
-              <div style={{flex:"1 1 0",minWidth:0,borderRadius:12,padding:"16px 12px",
+              <div style={{flex:"1 1 80px",minWidth:0,borderRadius:12,padding:"14px 8px",
                 background:verified?`${accent}0a`:T.bg3,
                 border:`1px solid ${verified?accent+"50":T.border}`,
                 display:"flex",flexDirection:"column",alignItems:"center",gap:10,
@@ -657,6 +907,148 @@ export default function ProfilePage() {
             );
           })()}
 
+          {/* ── COMMUNITY BUILDER ────────────────────────────────────────── */}
+          {(() => {
+            const refSuccessful = profileRow?.referral_count_successful ?? 0;
+            const refPending    = profileRow?.referral_count_pending    ?? 0;
+            const currentBadge  = REFERRAL_BADGES.slice().reverse().find(b => refSuccessful >= b.count);
+            const nextBadge     = REFERRAL_BADGES.find(b => refSuccessful < b.count);
+            const pct           = nextBadge ? Math.min(100, Math.round((refSuccessful / nextBadge.count) * 100)) : 100;
+            const refLink       = typeof window !== "undefined"
+              ? `${window.location.origin}/?ref=${username}` : `https://proofofgrass.app/?ref=${username}`;
+
+            const copyRefLink = () => {
+              navigator.clipboard.writeText(refLink).catch(()=>{});
+              setRefLinkCopied(true);
+              setTimeout(() => setRefLinkCopied(false), 2000);
+            };
+
+            // Only show to profile owner, or if they have referrals
+            if (!isOwner && refSuccessful === 0) return null;
+
+            return (
+              <div className="card fade2" style={{marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:16,
+                  justifyContent:"space-between",flexWrap:"wrap"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7}}>
+                    <span style={{fontSize:13}}>🤝</span>
+                    <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.18em",
+                      textTransform:"uppercase",color:T.muted}}>Community Builder</span>
+                  </div>
+                  {currentBadge && (
+                    <div style={{fontSize:11,color:T.gold,fontWeight:600}}>
+                      {currentBadge.emoji} {currentBadge.name}
+                    </div>
+                  )}
+                </div>
+
+                {/* Stats row */}
+                <div style={{display:"flex",gap:0,marginBottom:18,
+                  borderRadius:10,overflow:"hidden",border:`1px solid ${T.border}`}}>
+                  {[
+                    {label:"Successful Referrals",value:refSuccessful,accent:true},
+                    {label:"Pending",value:refPending,accent:false},
+                    {label:"Total Invited",value:refSuccessful+refPending,accent:false},
+                  ].map((s,i,arr) => (
+                    <div key={s.label} style={{flex:1,textAlign:"center",padding:"14px 8px",
+                      background:T.bg3,
+                      borderRight:i<arr.length-1?`1px solid ${T.border}`:"none"}}>
+                      <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
+                        fontSize:26,fontWeight:700,
+                        color:s.accent?T.gold:T.white,lineHeight:1,marginBottom:4}}>
+                        {s.value}
+                      </div>
+                      <div style={{fontSize:9,color:T.dim,letterSpacing:"0.1em",
+                        textTransform:"uppercase"}}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Next badge progress */}
+                {nextBadge && (
+                  <div style={{marginBottom:16}}>
+                    <div style={{display:"flex",justifyContent:"space-between",
+                      alignItems:"center",marginBottom:6}}>
+                      <span style={{fontSize:10,color:T.dim,letterSpacing:"0.1em",
+                        textTransform:"uppercase"}}>Next: {nextBadge.emoji} {nextBadge.name}</span>
+                      <span style={{fontSize:11,fontWeight:600,color:T.olive}}>
+                        {refSuccessful} / {nextBadge.count}
+                      </span>
+                    </div>
+                    <div style={{height:4,background:"rgba(255,255,255,0.06)",
+                      borderRadius:99,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${pct}%`,borderRadius:99,
+                        background:`linear-gradient(90deg,${T.olive},${T.gold})`,
+                        transition:"width 1s ease"}}/>
+                    </div>
+                  </div>
+                )}
+                {!nextBadge && refSuccessful >= 100 && (
+                  <div style={{fontSize:11,color:T.gold,marginBottom:16,
+                    textAlign:"center",fontWeight:600}}>
+                    👑 Maximum rank achieved — Touch Grass Ambassador
+                  </div>
+                )}
+
+                {/* Referral link — only for owner */}
+                {isOwner && (
+                  <div style={{marginBottom:refSuccessful>0?16:0}}>
+                    <div style={{fontSize:9,color:T.dim,letterSpacing:"0.12em",
+                      textTransform:"uppercase",marginBottom:7}}>Your Referral Link</div>
+                    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                      <div style={{flex:1,minWidth:0,background:T.bg3,
+                        border:`1px solid ${T.border}`,borderRadius:7,
+                        padding:"8px 12px",fontSize:11,color:T.muted,
+                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {refLink}
+                      </div>
+                      <button onClick={copyRefLink} style={{
+                        background:refLinkCopied?T.olive:"transparent",
+                        border:`1px solid ${refLinkCopied?T.olive:T.borderG}`,
+                        borderRadius:7,padding:"8px 14px",
+                        fontSize:11,fontWeight:600,
+                        color:refLinkCopied?T.bg:T.olive,cursor:"pointer",
+                        flexShrink:0,transition:"all 0.2s",
+                        fontFamily:"'DM Sans',sans-serif"}}>
+                        {refLinkCopied?"✓ Copied":"Copy"}
+                      </button>
+                    </div>
+                    <div style={{fontSize:10,color:T.dim,marginTop:6,lineHeight:1.5}}>
+                      Referral counts after your invitee reaches Day 10.
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent converts */}
+                {referrals.length > 0 && (
+                  <div>
+                    <div style={{fontSize:9,color:T.dim,letterSpacing:"0.12em",
+                      textTransform:"uppercase",marginBottom:10}}>Recent Activity</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {referrals.slice(0,5).map(r => (
+                        <div key={r.referred_username} style={{
+                          display:"flex",alignItems:"center",gap:10,
+                          padding:"8px 10px",borderRadius:8,background:T.bg3,
+                          border:`1px solid ${T.border}`}}>
+                          <span style={{fontSize:14}}>
+                            {r.status==="converted"?"✅":"🕐"}
+                          </span>
+                          <span style={{fontSize:12,color:T.white,flex:1}}>
+                            @{r.referred_username}
+                          </span>
+                          <span style={{fontSize:10,fontWeight:600,
+                            color:r.status==="converted"?T.olive:T.dim}}>
+                            {r.status==="converted"?"Day 10 ✓":"Pending"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Progression + Badges */}
           <div className="two" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
             <div className="card fade2">
@@ -665,7 +1057,10 @@ export default function ProfilePage() {
                 <TierBadge name="Rooted"    day={14}  completed={current>=14}  active={current>=7  && current<14}  />
                 <TierBadge name="Elite"     day={30}  completed={current>=30}  active={current>=14 && current<30}  />
                 <TierBadge name="Legendary" day={50}  completed={current>=50}  active={current>=30 && current<50}  />
-                <TierBadge name="Immortal"  day={100} completed={current>=100} active={current>=50 && current<100} />
+                <TierBadge name="Immortal"  day={100} completed={current>=100} active={current>=50  && current<100} />
+                <TierBadge name="Mythic"    day={180} completed={current>=180} active={current>=100 && current<180} />
+                <TierBadge name="Eternal"   day={365} completed={current>=365} active={current>=180 && current<365} />
+                <TierBadge name="Ascended"  day={500} completed={current>=500} active={current>=365 && current<500} />
               </div>
               {nextT
                 ? <>
@@ -688,7 +1083,7 @@ export default function ProfilePage() {
             <div className="card fade3">
               <div className="ct">Badges</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
-                {badges.map(b=><Badge key={b.id} b={b} />)}
+                {allBadgesDisplay.map(b=><Badge key={b.id} b={b} />)}
               </div>
             </div>
           </div>
@@ -930,38 +1325,6 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* ── WALLET VERIFICATION (owner only) ──────────────────────────── */}
-          {isOwner && (
-            <div className="card fade" style={{marginBottom:14}}>
-              <div className="ct">Solana Wallet</div>
-              <WalletVerify
-                username={username}
-                currentWallet={walletAddr}
-                currentVerified={walletVerified}
-                onVerified={(addr) => {
-                  setWalletAddr(addr);
-                  setWalletVerified(!!addr);
-                }}
-              />
-            </div>
-          )}
-
-          {/* Show wallet publicly if verified — non-owners */}
-          {!isOwner && walletVerified && walletAddr && (
-            <div className="card fade" style={{marginBottom:14,
-              display:"flex", alignItems:"center", gap:12}}>
-              <div style={{width:36,height:36,borderRadius:10,flexShrink:0,
-                background:"rgba(147,168,90,0.1)",border:`1px solid rgba(147,168,90,0.2)`,
-                display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>◎</div>
-              <div>
-                <div style={{fontSize:11,fontWeight:600,color:"#93a85a",marginBottom:2}}>Wallet Verified</div>
-                <div style={{fontSize:11,color:"rgba(240,239,234,0.35)",fontFamily:"monospace",letterSpacing:"0.04em"}}>
-                  {walletAddr.slice(0,4)}...{walletAddr.slice(-4)}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Impact */}
           <div className="card fade" style={{marginBottom:14}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:20}}>
@@ -1012,6 +1375,49 @@ export default function ProfilePage() {
           <div style={{fontSize:10,color:T.dim,letterSpacing:"0.1em"}}>BUILT ON ◎ SOLANA</div>
         </footer>
       </div>
+
+        {/* Avatar Picker Modal */}
+        {showAvatarPicker && isOwner && (
+          <AvatarPickerModal
+            profileRow={profileRow}
+            username={username}
+            uploading={avatarUploading}
+            error={avatarError}
+            onClose={()=>{ setShowAvatarPicker(false); setAvatarError(""); }}
+            onSelectEmoji={async (emoji)=>{
+              await supabase.from("Profiles").update({
+                avatar_emoji: emoji, avatar_url: null, avatar_frame: null,
+              }).eq("username", username);
+              setShowAvatarPicker(false);
+              window.location.reload();
+            }}
+            onUploadPhoto={async (file)=>{
+              setAvatarUploading(true); setAvatarError("");
+              try {
+                if (file.size > 2 * 1024 * 1024) { setAvatarError("Image must be under 2MB."); setAvatarUploading(false); return; }
+                if (!["image/jpeg","image/png","image/webp"].includes(file.type)) { setAvatarError("JPEG, PNG or WebP only."); setAvatarUploading(false); return; }
+                const ext = file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
+                const { error: upErr } = await supabase.storage.from("avatars")
+                  .upload(`${username}.${ext}`, file, { contentType:file.type, upsert:true });
+                if (upErr) { setAvatarError("Upload failed — try again."); setAvatarUploading(false); return; }
+                const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(`${username}.${ext}`);
+                const publicUrl = `${urlData?.publicUrl}?t=${Date.now()}`;
+                const frame = (profileRow?.has_touchgrass_holder && profileRow?.has_grass_toucher && profileRow?.has_screen_toucher) ? "crown"
+                  : (profileRow?.has_grass_toucher || profileRow?.has_screen_toucher) ? "glow" : null;
+                await supabase.from("Profiles").update({
+                  avatar_url: publicUrl, avatar_emoji: null,
+                  avatar_frame: frame ?? null,
+                }).eq("username", username);
+                window.location.reload();
+              } catch(e) { setAvatarError("Something went wrong."); }
+              setAvatarUploading(false);
+            }}
+            onRemovePhoto={async ()=>{
+              await supabase.from("Profiles").update({ avatar_url:null, avatar_frame:null, avatar_emoji:"🌿" }).eq("username",username);
+              window.location.reload();
+            }}
+          />
+        )}
 
         {/* Challenge Modal */}
         {showChallenge && (

@@ -3,9 +3,6 @@ import Link from "next/link";
 import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
 import { supabase } from "../utils/supabase";
-import { useFollowingFeed } from "../hooks/useFollow";
-import SuggestedTouchers from "../components/SuggestedTouchers";
-import InstallPrompt, { InstallBanner } from "../components/InstallPrompt";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -201,77 +198,6 @@ const BURN_ADDR   = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const SOL_DOMAIN  = "touchgrassburn.sol";
 
 // ─── Following Feed component ────────────────────────────────────────────────
-function FollowingFeed({ username, hasUser }) {
-  const { items, loading } = useFollowingFeed(username);
-
-  const T2 = {
-    olive:"#93a85a", gold:"#c8a84b", white:"#f0efea",
-    dim:"rgba(240,239,234,0.22)", bg3:"#181a12", border:"rgba(255,255,255,0.06)",
-  };
-
-  if (!hasUser) return (
-    <div style={{ textAlign:"center", padding:"32px 0" }}>
-      <div style={{ fontSize:12, color:T2.dim, marginBottom:12 }}>
-        Enter your username to see your Following feed.
-      </div>
-    </div>
-  );
-
-  if (loading) return (
-    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-      {[1,2,3].map(i=>(
-        <div key={i} style={{ height:44, borderRadius:8, background:T2.bg3,
-          animation:"shimmer 1.8s ease-in-out infinite" }} />
-      ))}
-    </div>
-  );
-
-  if (items.length === 0) return (
-    <div style={{ textAlign:"center", padding:"32px 16px",
-      background:"rgba(147,168,90,0.04)", borderRadius:12,
-      border:"1px solid rgba(147,168,90,0.12)" }}>
-      <div style={{ fontSize:32, marginBottom:12 }}>🌿</div>
-      <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-        fontSize:18, fontWeight:700, color:"#f0efea", marginBottom:8 }}>
-        Build your outdoor network.
-      </div>
-      <div style={{ fontSize:12, color:T2.dim, lineHeight:1.6, marginBottom:20 }}>
-        Follow other Grass Touchers to see their activity here.
-      </div>
-      <a href="/leaderboard" style={{
-        display:"inline-block", background:"#93a85a", color:"#080a06",
-        border:"none", borderRadius:9, padding:"10px 20px",
-        fontSize:12, fontWeight:700, textDecoration:"none",
-      }}>Browse Community →</a>
-    </div>
-  );
-
-  return (
-    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-      {items.map((item, i) => {
-        const timeAgo = item.time ? (() => {
-          const diff = Date.now() - new Date(item.time);
-          const mins = Math.floor(diff/60000);
-          const hrs  = Math.floor(diff/3600000);
-          const days = Math.floor(diff/86400000);
-          return days>0?`${days}d ago`:hrs>0?`${hrs}h ago`:mins>0?`${mins}m ago`:"just now";
-        })() : "";
-        return (
-          <div key={i} style={{ display:"flex", alignItems:"center", gap:10,
-            padding:"10px 12px", background:T2.bg3, borderRadius:10,
-            border:`1px solid ${T2.border}` }}>
-            <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>
-            <div style={{ flex:1, minWidth:0 }}>
-              <span style={{ fontSize:12, fontWeight:600, color:T2.white }}>@{item.username}</span>
-              <span style={{ fontSize:12, color:T2.dim }}> {item.text}</span>
-            </div>
-            {timeAgo && <span style={{ fontSize:10, color:T2.dim, flexShrink:0 }}>{timeAgo}</span>}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 // ─── Activity Feed ───────────────────────────────────────────────────────────
 function ActivityFeed() {
@@ -452,7 +378,6 @@ export default function Home() {
   const [rawUsername, setRawUsername] = useState("");
   const username = normalizeUsername(rawUsername);
   const hasUser  = username.length > 0;
-  const [feedTab, setFeedTab] = useState("global"); // "global" | "following"
 
   // ── User streak state (mirrors old index.js exactly) ─────────────────────
   const [currentStreak,       setCurrentStreak]       = useState(1);
@@ -793,13 +718,6 @@ export default function Home() {
           )}
         </section>
 
-        {/* ── PWA INSTALL BANNER (Day 7+) ────────────────────────────────── */}
-        {mounted && currentStreak >= 7 && (
-          <div style={{ padding:"0 clamp(14px,4vw,48px)" }}>
-            <InstallBanner streak={currentStreak} />
-          </div>
-        )}
-
         {/* ── ENTER USERNAME BANNER ────────────────────────────────────────── */}
         {mounted && !hasUser && (
           <div style={{ background:`${T.olive}08`, borderBottom:`1px solid ${T.borderG}`,
@@ -1004,38 +922,10 @@ export default function Home() {
 
           {/* ACTIVITY FEED WITH TABS */}
           <div className="card" style={{ padding:28 }}>
-            {/* Tab switcher */}
-            <div style={{ display:"flex", gap:0, marginBottom:16,
-              background:T.bg3, border:`1px solid ${T.border}`,
-              borderRadius:9, padding:3 }}>
-              {[
-                { id:"global",    label:"🌎 Global" },
-                { id:"following", label:"👥 Following" },
-              ].map(t => (
-                <button key={t.id} onClick={()=>setFeedTab(t.id)} style={{
-                  flex:1, padding:"8px 0",
-                  background: feedTab===t.id ? T.bg2 : "transparent",
-                  border: feedTab===t.id ? `1px solid ${T.borderG}` : "1px solid transparent",
-                  borderRadius:7, fontSize:12, fontWeight:600,
-                  color: feedTab===t.id ? T.white : T.dim,
-                  cursor:"pointer", transition:"all 0.15s",
-                  fontFamily:"'DM Sans',sans-serif",
-                }}>{t.label}</button>
-              ))}
-            </div>
-            {feedTab === "global"
-              ? <ActivityFeed />
-              : <FollowingFeed username={username} hasUser={hasUser} />
-            }
+            
+            <ActivityFeed />
           </div>
 
-          {/* SUGGESTED TOUCHERS — show after user is known */}
-          {mounted && hasUser && (
-            <SuggestedTouchers
-              viewerUsername={username}
-              currentStreak={currentStreak}
-            />
-          )}
         </div>
 
         {/* ── QUESTS BANNER ────────────────────────────────────────────────── */}
@@ -1109,10 +999,6 @@ export default function Home() {
 
       </div>
 
-      {/* PWA install prompt */}
-      {mounted && (
-        <InstallPrompt streak={currentStreak} proofCount={subCount ?? 0} />
-      )}
     </>
   );
 }

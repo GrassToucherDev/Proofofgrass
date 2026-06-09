@@ -22,19 +22,21 @@ function normalizeUsername(val) {
 }
 
 function getStreakTier(streak) {
-  if (streak >= 365) return { label:"ETERNAL",   color:"#fff9c4", border:"#a08000" };
-  if (streak >= 180) return { label:"MYTHIC",    color:"#fbbf24", border:"#92400e" };
-  if (streak >= 100) return { label:"IMMORTAL",  color:"#f97316", border:"#7c2d12" };
-  if (streak >= 50)  return { label:"LEGENDARY", color:T.gold,    border:"#7a5c00" };
-  if (streak >= 30)  return { label:"ELITE",     color:"#c084fc", border:"#6d28d9" };
-  if (streak >= 14)  return { label:"LOCKED IN", color:T.olive,   border:"#4a5a28" };
-  if (streak >= 7)   return { label:"ROOTED",    color:"#b8c87a", border:"#5a6a30" };
-  if (streak >= 3)   return { label:"GROWING",   color:"#a0b870", border:"#4a5828" };
+  if (streak >= 1000) return { label:"TRANSCENDENT", color:"#f0fdf4", border:"rgba(240,253,244,0.5)" };
+  if (streak >= 500)  return { label:"ASCENDED",     color:"#e0f2fe", border:"rgba(224,242,254,0.5)" };
+  if (streak >= 365)  return { label:"ETERNAL",      color:"#fff9c4", border:"#a08000" };
+  if (streak >= 180)  return { label:"MYTHIC",       color:"#fbbf24", border:"#92400e" };
+  if (streak >= 100)  return { label:"IMMORTAL",     color:"#f97316", border:"#7c2d12" };
+  if (streak >= 50)   return { label:"LEGENDARY",    color:T.gold,    border:"#7a5c00" };
+  if (streak >= 30)   return { label:"ELITE",        color:"#c084fc", border:"#6d28d9" };
+  if (streak >= 14)   return { label:"LOCKED IN",    color:T.olive,   border:"#4a5a28" };
+  if (streak >= 7)    return { label:"ROOTED",       color:"#b8c87a", border:"#5a6a30" };
+  if (streak >= 3)    return { label:"GROWING",      color:"#a0b870", border:"#4a5828" };
   return { label:"SEED", color:"rgba(240,239,234,0.35)", border:"rgba(255,255,255,0.1)" };
 }
 
 function getNextTier(streak) {
-  const tiers = [3, 7, 14, 30, 50, 100, 180, 365];
+  const tiers = [3, 7, 14, 30, 50, 100, 180, 365, 500, 1000];
   const next = tiers.find(t => streak < t);
   if (!next) return null;
   return { days: next, remaining: next - streak };
@@ -64,11 +66,11 @@ function LBCard({ item, index }) {
   const tier   = getStreakTier(item.current_streak);
   const topPct = getTopPercent(item.current_streak);
   const nextTier = getNextTier(item.current_streak);
-  const thresholds = [0, 3, 7, 14, 30, 50, 100, 180, 365];
+  const thresholds = [0, 3, 7, 14, 30, 50, 100, 180, 365, 500, 1000];
   const prev  = [...thresholds].reverse().find(t => item.current_streak >= t) ?? 0;
   const nextT = nextTier?.days ?? 365;
   const fill  = nextT - prev > 0 ? Math.min(100, Math.round(((item.current_streak - prev) / (nextT - prev)) * 100)) : 100;
-  const barLabel = !nextTier ? "✦ eternal" : `${nextTier.remaining}d to ${getStreakTier(nextTier.days).label}`;
+  const barLabel = !nextTier ? "✦ transcendent" : `${nextTier.remaining}d to ${getStreakTier(nextTier.days).label}`;
   const medals = ["🥇","🥈","🥉"];
 
   return (
@@ -256,6 +258,13 @@ export default function Leaderboard() {
           <div style={{ display:"flex", gap:8, marginBottom:32 }}>
             <button className={`tab-btn ${tab==="alltime" ? "tab-active" : "tab-inactive"}`} onClick={() => setTab("alltime")}>All Time</button>
             <button className={`tab-btn ${tab==="weekly"  ? "tab-active" : "tab-inactive"}`} onClick={() => setTab("weekly")}>This Week</button>
+            <button className={`tab-btn ${tab==="friends" ? "tab-active" : "tab-inactive"}`} onClick={() => setTab("friends")} style={{ position:"relative" }}>
+              Friends
+              <span style={{ fontSize:7, fontWeight:700, color:"#c8a84b",
+                background:"rgba(200,168,75,0.15)", border:"1px solid rgba(200,168,75,0.35)",
+                borderRadius:3, padding:"1px 4px", marginLeft:5,
+                letterSpacing:"0.08em", verticalAlign:"middle" }}>SOON</span>
+            </button>
           </div>
         </div>
 
@@ -297,7 +306,29 @@ export default function Leaderboard() {
           </div>
 
           {/* GRID */}
-          {loading ? (
+          {tab === "friends" ? (
+            <div style={{ textAlign:"center", padding:"48px 20px",
+              background:T.bg2, border:`1px solid rgba(147,168,90,0.2)`,
+              borderRadius:14 }}>
+              <div style={{ fontSize:42, marginBottom:16 }}>👥</div>
+              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                fontSize:22, fontWeight:700, color:T.white, marginBottom:8 }}>
+                Friends Leaderboard
+              </div>
+              <div style={{ fontSize:13, color:T.dim, lineHeight:1.7,
+                marginBottom:20, maxWidth:300, margin:"0 auto 20px" }}>
+                See how your streak ranks among people you follow.
+                Coming soon — follow some Touchers first.
+              </div>
+              <a href="/leaderboard" style={{
+                display:"inline-block", background:"transparent",
+                border:`1px solid rgba(147,168,90,0.35)`,
+                borderRadius:9, padding:"10px 22px",
+                fontSize:12, fontWeight:700, color:"#93a85a",
+                textDecoration:"none",
+              }}>Browse the Global Rankings →</a>
+            </div>
+          ) : loading ? (
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12 }} className="lb-grid">
               {Array.from({length:8}).map((_,i) => (
                 <div key={i} style={{ height:180, borderRadius:12, background:T.bg2, border:`1px solid ${T.border}`, opacity:0.5 }} />

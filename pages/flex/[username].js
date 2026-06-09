@@ -15,25 +15,29 @@ const T = {
 function norm(v) { return String(v??"").replace(/@/g,"").toLowerCase().trim(); }
 
 function getTier(n) {
-  if (n>=365) return { label:"ETERNAL",   color:"#fff9c4", glow:"#a08000" };
-  if (n>=180) return { label:"MYTHIC",    color:"#fbbf24", glow:"#92400e" };
-  if (n>=100) return { label:"IMMORTAL",  color:"#f97316", glow:"#7c2d12" };
-  if (n>=50)  return { label:"LEGENDARY", color:T.gold,    glow:"#7a5c00" };
-  if (n>=30)  return { label:"ELITE",     color:T.purple,  glow:"#5b21b6" };
-  if (n>=14)  return { label:"LOCKED IN", color:T.olive,   glow:"#3a4a20" };
-  if (n>=7)   return { label:"ROOTED",    color:"#b8c87a", glow:"#4a5828" };
-  if (n>=3)   return { label:"GROWING",   color:"#a0b870", glow:"#3a4820" };
-  return { label:"SEED", color:T.dim, glow:"transparent" };
+  if (n>=1000) return { label:"TRANSCENDENT", color:"#f0fdf4", glow:"#ffffff" };
+  if (n>=500)  return { label:"ASCENDED",     color:"#e0f2fe", glow:"#0369a1" };
+  if (n>=365)  return { label:"ETERNAL",      color:"#fff9c4", glow:"#a08000" };
+  if (n>=180)  return { label:"MYTHIC",       color:"#fbbf24", glow:"#92400e" };
+  if (n>=100)  return { label:"IMMORTAL",     color:"#f97316", glow:"#7c2d12" };
+  if (n>=50)   return { label:"LEGENDARY",    color:T.gold,    glow:"#7a5c00" };
+  if (n>=30)   return { label:"ELITE",        color:T.purple,  glow:"#5b21b6" };
+  if (n>=14)   return { label:"LOCKED IN",    color:T.olive,   glow:"#3a4a20" };
+  if (n>=7)    return { label:"ROOTED",       color:"#b8c87a", glow:"#4a5828" };
+  if (n>=3)    return { label:"GROWING",      color:"#a0b870", glow:"#3a4820" };
+  return             { label:"SEED",          color:T.dim,     glow:"transparent" };
 }
 
 function getTierTitle(n) {
-  if (n>=365) return "ETERNAL GRASS TOUCHER";
-  if (n>=180) return "MYTHIC GRASS TOUCHER";
-  if (n>=100) return "IMMORTAL GRASS TOUCHER";
-  if (n>=50)  return "LEGENDARY TOUCHER";
-  if (n>=30)  return "ELITE GRASS TOUCHER";
-  if (n>=14)  return "LOCKED IN TOUCHER";
-  if (n>=7)   return "ROOTED GRASS TOUCHER";
+  if (n>=1000) return "TRANSCENDENT GRASS TOUCHER";
+  if (n>=500)  return "ASCENDED GRASS TOUCHER";
+  if (n>=365)  return "ETERNAL GRASS TOUCHER";
+  if (n>=180)  return "MYTHIC GRASS TOUCHER";
+  if (n>=100)  return "IMMORTAL GRASS TOUCHER";
+  if (n>=50)   return "LEGENDARY TOUCHER";
+  if (n>=30)   return "ELITE GRASS TOUCHER";
+  if (n>=14)   return "LOCKED IN TOUCHER";
+  if (n>=7)    return "ROOTED GRASS TOUCHER";
   return "GRASS TOUCHER";
 }
 
@@ -48,6 +52,11 @@ const ALL_BADGES = [
   {id:"early",          emoji:"🌅", name:"Early Bird",           rarity:22, condition:(s,p)=>s>=50    },
   {id:"golden",         emoji:"🌄", name:"Golden Hour",          rarity:20, condition:(s,p)=>s>=50    },
   {id:"century",        emoji:"💯", name:"100 Club",             rarity:8,  condition:(s,p)=>s>=100   },
+  {id:"mythic-club",    emoji:"⚡", name:"Mythic Club",           rarity:4,  condition:(s,p)=>s>=180   },
+  {id:"double-century", emoji:"🔱", name:"200 Club",              rarity:3,  condition:(s,p)=>s>=200   },
+  {id:"eternal-club",   emoji:"👑", name:"Eternal",              rarity:1,  condition:(s,p)=>s>=365   },
+  {id:"ascended-club",  emoji:"🌌", name:"Ascended",             rarity:0.5,condition:(s,p)=>s>=500   },
+  {id:"transcendent",   emoji:"✨", name:"Transcendent",         rarity:0.1,condition:(s,p)=>s>=1000  },
   {id:"trail",          emoji:"🏔️", name:"Trail Blazer",         rarity:60, condition:(s,p)=>p>=10    },
   {id:"proof-machine",  emoji:"⚙️", name:"Proof Machine",        rarity:30, condition:(s,p)=>p>=50    },
   {id:"century-prover", emoji:"📸", name:"Century Prover",       rarity:12, condition:(s,p)=>p>=100   },
@@ -177,20 +186,22 @@ function StatCell({ icon, value, label, sub, accent, last }) {
 
 // ─── Quote pool ──────────────────────────────────────────────────────────────
 const QUOTE_POOL = {
-  seed:     ["Every legend starts with day one.","The streak starts now.","Outside is where it begins.","Step one. Then step two.","The hardest part is starting."],
-  growing:  ["Building something real.","Momentum is everything.","Show up. Every day.","Small steps. Big life.","The habit is forming."],
-  rooted:   ["Seven days of proof.","The streak is real now.","Outside every day. No excuses.","Consistency is the flex.","One week down. Keep going."],
-  locked:   ["Two weeks outside. That's rare.","Most people won't do this.","The proof speaks for itself.","Discipline over motivation.","Locked in. Stay locked in."],
-  elite:    ["Thirty days. Not everyone makes it.","Elite is a standard, not a title.","Outside is my default setting.","The grind is outdoors.","30 days of proof. For real."],
-  legendary:["Consistency compounds.","Fifty days outside. That's legendary.","Not everyone becomes legendary.","The streak doesn't lie.","Built different. Outside daily."],
-  immortal: ["100 days. Most won't even try.","The streak is the identity.","Immortal status. Earned outside.","Three figures. Outdoor certified.","Day 100. The streak lives on."],
-  mythic:   ["Half a year outside. Daily.","Mythic isn't given. It's earned.","180 days of proof.","The outside is home.","Consistency at a mythic level."],
-  eternal:  ["365 days. A full year outside.","Eternal. Because I earned it.","One year of proof. Every day.","The streak is eternal now.","A year outside. No days off."],
+  seed:        ["Every legend starts with day one.","The streak starts now.","Outside is where it begins.","Step one. Then step two.","The hardest part is starting."],
+  growing:     ["Building something real.","Momentum is everything.","Show up. Every day.","Small steps. Big life.","The habit is forming."],
+  rooted:      ["The streak is real now.","Outside every day. No excuses.","Consistency is the flex.","One week down. Keep going.","Seven days of proof."],
+  locked:      ["Most people won't do this.","The proof speaks for itself.","Discipline over motivation.","Locked in. Stay locked in.","Two weeks of showing up."],
+  elite:       ["Elite is a standard, not a title.","Outside is my default setting.","The grind is outdoors.","Not everyone gets here.","Thirty days is just the start."],
+  legendary:   ["Consistency compounds.","Not everyone becomes legendary.","The streak doesn't lie.","Built different. Outside daily.","Legendary is earned, not given."],
+  immortal:    ["The streak is the identity.","Immortal status. Earned outside.","Three figures. Outdoor certified.","Most won't even try.","The streak lives on."],
+  mythic:      ["Half a year outside. Daily.","Mythic isn't given. It's earned.","The outside is home.","Consistency at a mythic level.","Built over months of proof."],
+  eternal:     ["Eternal. Because I earned it.","One year of proof. Every day.","The streak is eternal now.","A year outside. No days off.","365 days of showing up."],
+  ascended:    ["Beyond the leaderboard now.","Ascended. The streak transcends.","500 days of proof. Unreachable.","The outdoors chose me.","Above the noise. Outside daily."],
+  transcendent:["A thousand days outside. Unmatched.","The streak has no ceiling.","Transcendent. No words left.","1000 days. The legend is complete.","The greatest outdoor streak alive."],
 };
 
 function getQuote(streak, bio) {
   if (bio && bio.trim().length > 0 && bio.trim().length <= 60) return `"${bio.trim()}"`;
-  const pool = streak>=365?QUOTE_POOL.eternal:streak>=180?QUOTE_POOL.mythic:streak>=100?QUOTE_POOL.immortal:streak>=50?QUOTE_POOL.legendary:streak>=30?QUOTE_POOL.elite:streak>=14?QUOTE_POOL.locked:streak>=7?QUOTE_POOL.rooted:streak>=3?QUOTE_POOL.growing:QUOTE_POOL.seed;
+  const pool = streak>=1000?QUOTE_POOL.transcendent:streak>=500?QUOTE_POOL.ascended:streak>=365?QUOTE_POOL.eternal:streak>=180?QUOTE_POOL.mythic:streak>=100?QUOTE_POOL.immortal:streak>=50?QUOTE_POOL.legendary:streak>=30?QUOTE_POOL.elite:streak>=14?QUOTE_POOL.locked:streak>=7?QUOTE_POOL.rooted:streak>=3?QUOTE_POOL.growing:QUOTE_POOL.seed;
   return `"${pool[streak % pool.length]}"`;
 }
 
@@ -207,7 +218,7 @@ function getQuote(streak, bio) {
 // Progress bar: label 600/16px@y762 | track h10@y775 olive-gold gradient
 // Quote: italic 38/34/30px Georgia center W/2@y910
 // Footer divider@y=H-90 | Hashtags 700/22px@y=H-56 | URL 500/20px right@y=H-56
-async function generateShareImage({ username, streak, tier, tierTitle, grassScore, rank, subCount, badges, best, shields, bio, hasTG, hasGT, hasST }) {
+async function generateShareImage({ username, streak, tier, tierTitle, grassScore, rank, subCount, badges, best, shields, bio, hasTG, hasGT, hasST, avatarUrl, avatarFrame }) {
   const W = 1080, H = 1080;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
@@ -260,6 +271,38 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.font = "600 30px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.4)";
   ctx.fillText("Touch Grass", 126, 101);
+
+  // Avatar photo (if set) — drawn in top-left area under VERIFIED badge
+  if (avatarUrl) {
+    try {
+      const avatarImg = await loadImage(avatarUrl);
+      const aSize = 80, aX = 72, aY = 174;
+      // Clip to circle
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(aX + aSize/2, aY + aSize/2, aSize/2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(avatarImg, aX, aY, aSize, aSize);
+      ctx.restore();
+      // Frame ring
+      ctx.beginPath();
+      ctx.arc(aX + aSize/2, aY + aSize/2, aSize/2 + 2, 0, Math.PI * 2);
+      ctx.strokeStyle = avatarFrame === "crown" ? "#c8a84b"
+        : avatarFrame === "glow"  ? "#93a85a"
+        : "rgba(147,168,90,0.5)";
+      ctx.lineWidth = avatarFrame === "crown" ? 3 : 2;
+      ctx.stroke();
+      // Glow effect for crown frame
+      if (avatarFrame === "crown") {
+        ctx.shadowColor = "#c8a84b";
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(aX + aSize/2, aY + aSize/2, aSize/2 + 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+    } catch(e) { /* avatar load failed — skip */ }
+  }
 
   // VERIFIED OUTDOORS badge — 20px gap below logo
   const vbadgeW = 210, vbadgeH = 30, vbadgeX = 72, vbadgeY = 132;
@@ -409,11 +452,11 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.beginPath(); ctx.moveTo(72, 730); ctx.lineTo(W-72, 730); ctx.stroke();
 
   // Streak progress bar section
-  const thresholds = [7,14,30,50,100,180,365];
+  const thresholds = [7,14,30,50,100,180,365,500,1000];
   const nextT = thresholds.find(t => t > streak) || 365;
   const prevT = [...[0,...thresholds]].reverse().find(t => streak >= t) || 0;
   const fillPct = Math.min(1, (streak - prevT) / (nextT - prevT));
-  const tierLabel2 = nextT >= 365 ? "ETERNAL" : nextT >= 180 ? "MYTHIC" : nextT >= 100 ? "IMMORTAL" : nextT >= 50 ? "LEGENDARY" : nextT >= 30 ? "ELITE" : nextT >= 14 ? "LOCKED IN" : "ROOTED";
+  const tierLabel2 = nextT >= 1000 ? "TRANSCENDENT" : nextT >= 500 ? "ASCENDED" : nextT >= 365 ? "ETERNAL" : nextT >= 180 ? "MYTHIC" : nextT >= 100 ? "IMMORTAL" : nextT >= 50 ? "LEGENDARY" : nextT >= 30 ? "ELITE" : nextT >= 14 ? "LOCKED IN" : "ROOTED";
 
   ctx.font = "600 16px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.45)";
@@ -580,7 +623,7 @@ export default function FlexCardPage() {
       setLoading(true);
       const [{ data:sr }, { data:pr }, { count:subs }, { data:recentSubs }] = await Promise.all([
         supabase.from("Streaks").select("current_streak,best_streak,shield_count").eq("username",username).maybeSingle(),
-        supabase.from("Profiles").select("bio,location,avatar_emoji,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher").eq("username",username).maybeSingle(),
+        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_badge").eq("username",username).maybeSingle(),
         supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username).in("status",["pending","approved"]),
         supabase.from("Submissions").select("created_at").eq("username",username).in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(63),
       ]);
@@ -624,11 +667,14 @@ export default function FlexCardPage() {
 
   // Milestones
   const milestones = [
-    { label:"7 Day Streak",    target:7,   icon:"🌱", done: streak>=7,   date: streak>=7   ? "Unlocked" : `${streak}/7`   },
-    { label:"30 Day Streak",   target:30,  icon:"🌿", done: streak>=30,  date: streak>=30  ? "Unlocked" : `${streak}/30`  },
-    { label:"50 Day Streak",   target:50,  icon:"🌳", done: streak>=50,  date: streak>=50  ? "Unlocked" : `${streak}/50`  },
-    { label:"100 Day Goal",    target:100, icon:"💯", done: streak>=100, date: streak>=100 ? "Unlocked" : `${streak}/100` },
-  ];
+    { label:"7 Day Streak",    target:7,    icon:"🌱",  done: streak>=7,    date: streak>=7    ? "Unlocked" : `${streak}/7`    },
+    { label:"30 Day Streak",   target:30,   icon:"🌿",  done: streak>=30,   date: streak>=30   ? "Unlocked" : `${streak}/30`   },
+    { label:"50 Day Streak",   target:50,   icon:"🌳",  done: streak>=50,   date: streak>=50   ? "Unlocked" : `${streak}/50`   },
+    { label:"100 Day — Immortal", target:100, icon:"💯", done: streak>=100, date: streak>=100  ? "Unlocked" : `${streak}/100`  },
+    { label:"180 Day — Mythic",   target:180, icon:"⚡", done: streak>=180, date: streak>=180  ? "Unlocked" : `${streak}/180`  },
+    { label:"365 Day — Eternal",  target:365, icon:"👑", done: streak>=365, date: streak>=365  ? "Unlocked" : `${streak}/365`  },
+    { label:"500 Day — Ascended", target:500, icon:"🌌", done: streak>=500, date: streak>=500  ? "Unlocked" : `${streak}/500`  },
+  ].filter((m,i) => i < 4 || streak >= m.target - 20 || (i === 4 && streak >= 80));
 
   const isOwner = !!(viewer && viewer === username);
 
@@ -716,6 +762,8 @@ export default function FlexCardPage() {
 
       setDownloaded(true);
       setTimeout(() => setDownloaded(false), 4000);
+      // Mark weekly flex quest as complete
+      try { localStorage.setItem("pog_flexed_week", new Date().toISOString()); } catch(e) {}
     } catch(e) {
       console.error("download error", e);
       if (mobileWin) mobileWin.close();
@@ -758,6 +806,7 @@ export default function FlexCardPage() {
           const file = new File([blob], `proof-of-grass-${username}-day${streak}.png`, { type:"image/png" });
           if (navigator.canShare({ files:[file] })) {
             await navigator.share({ files:[file], title:`Day ${streak} — ${tier.label} 🌿`, text });
+            try { localStorage.setItem("pog_flexed_week", new Date().toISOString()); } catch(e) {}
             setGeneratingImg(false);
             return;
           }
@@ -897,11 +946,24 @@ export default function FlexCardPage() {
                 {/* Avatar */}
                 <div style={{ width:72, height:72, borderRadius:"50%", flexShrink:0,
                   background:`linear-gradient(135deg,${T.bg4},${T.olive}22)`,
-                  border:`2px solid ${tier.color}`,
+                  overflow:"hidden",
+                  boxShadow: profileRow?.avatar_frame==="crown"
+                    ? `0 0 0 3px ${T.gold}, 0 0 20px ${T.gold}60`
+                    : profileRow?.avatar_frame==="glow"
+                      ? `0 0 0 2px ${T.olive}, 0 0 16px ${T.olive}50`
+                      : `0 0 24px ${tier.glow}40`,
+                  border: profileRow?.avatar_frame==="crown"
+                    ? `2px solid ${T.gold}`
+                    : profileRow?.avatar_frame==="glow"
+                      ? `2px solid ${T.olive}`
+                      : `2px solid ${tier.color}`,
                   display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize:28, boxShadow:`0 0 24px ${tier.glow}40`,
+                  fontSize:28,
                   fontFamily:"'Cormorant Garamond',Georgia,serif", fontWeight:700, color:T.white }}>
-                  {profileRow?.avatar_emoji || username[0]?.toUpperCase() || "🌿"}
+                  {profileRow?.avatar_url
+                    ? <img src={profileRow.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    : (profileRow?.avatar_emoji || username[0]?.toUpperCase() || "🌿")
+                  }
                 </div>
                 <div style={{ minWidth:0 }}>
                   {/* Verified badge */}
@@ -1079,6 +1141,62 @@ export default function FlexCardPage() {
                 </div>
               ))}
             </div>
+
+            {/* ── COMMUNITY BUILDER ────────────────────────────────────── */}
+            {(() => {
+              const refCount = profileRow?.referral_count_successful ?? 0;
+              if (refCount === 0) return null;
+              const RBADGES = [
+                {count:1,name:"Community Builder",emoji:"🤝"},
+                {count:5,name:"Grass Recruiter",emoji:"🌱"},
+                {count:10,name:"Community Grower",emoji:"🌿"},
+                {count:25,name:"Movement Builder",emoji:"🌳"},
+                {count:50,name:"Founding Ambassador",emoji:"🏛"},
+                {count:100,name:"Touch Grass Ambassador",emoji:"👑"},
+              ];
+              const badge = [...RBADGES].reverse().find(b => refCount >= b.count);
+              const next  = RBADGES.find(b => refCount < b.count);
+              return (
+                <div className="fade3" style={{padding:"16px 24px",
+                  borderBottom:`1px solid ${T.border}`}}>
+                  <div style={{display:"flex",alignItems:"center",
+                    justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+                    <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.18em",
+                      textTransform:"uppercase",color:T.muted,display:"flex",
+                      alignItems:"center",gap:6}}>
+                      <span>🤝</span> Community Builder
+                    </div>
+                    {badge && (
+                      <span style={{fontSize:11,color:T.gold,fontWeight:600}}>
+                        {badge.emoji} {badge.name}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:16,marginTop:10}}>
+                    <div>
+                      <span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
+                        fontSize:28,fontWeight:700,color:T.gold}}>{refCount}</span>
+                      <span style={{fontSize:10,color:T.dim,marginLeft:5}}>
+                        successful referral{refCount!==1?"s":""}
+                      </span>
+                    </div>
+                    {next && (
+                      <div style={{flex:1,minWidth:80}}>
+                        <div style={{fontSize:9,color:T.dim,marginBottom:4}}>
+                          Next: {next.emoji} {next.name}
+                        </div>
+                        <div style={{height:3,background:"rgba(255,255,255,0.06)",
+                          borderRadius:99,overflow:"hidden"}}>
+                          <div style={{height:"100%",borderRadius:99,
+                            background:`linear-gradient(90deg,${T.olive},${T.gold})`,
+                            width:`${Math.min(100,Math.round((refCount/next.count)*100))}%`}}/>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ── ECOSYSTEM STATUS ─────────────────────────────────────── */}
             <div className="fade3" style={{ padding:"18px 24px",

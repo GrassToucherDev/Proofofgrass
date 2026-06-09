@@ -521,7 +521,7 @@ proofofgrass.app`;
                             target="_blank" rel="noopener noreferrer"
                             style={{fontSize:10,color:T.dim,marginLeft:8,
                               textDecoration:"none"}}>
-                            Profile ->
+                            Profile &rarr;
                           </a>
                         </div>
                         {/* Join time */}
