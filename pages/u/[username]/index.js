@@ -85,14 +85,16 @@ const PROOF_BG = [
 // ─── Atoms ────────────────────────────────────────────────────────────────────
 function StatPill({icon,value,label,sub,accent,last}) {
   return (
-    <div style={{display:"flex",flexDirection:"column",gap:3,padding:"20px 14px",
-      borderRight:last?"none":`1px solid ${T.border}`,minWidth:0,flex:"1 1 0"}}>
-      <span style={{fontSize:17,marginBottom:2}}>{icon}</span>
+    <div className="strip-item" style={{display:"flex",flexDirection:"column",gap:3,
+      padding:"16px 12px",
+      borderRight:last?"none":`1px solid ${T.border}`,
+      minWidth:0,flex:"1 1 0",boxSizing:"border-box"}}>
+      <span style={{fontSize:16,marginBottom:2}}>{icon}</span>
       <span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
-        fontSize:"clamp(20px,2.8vw,34px)",fontWeight:700,lineHeight:1,
+        fontSize:"clamp(18px,2.5vw,30px)",fontWeight:700,lineHeight:1,
         color:accent?T.gold:T.white,letterSpacing:"-0.02em"}}>{value}</span>
-      {sub&&<span style={{fontSize:10,color:T.olive,fontWeight:600,letterSpacing:"0.06em"}}>{sub}</span>}
-      <span style={{fontSize:9,color:T.dim,letterSpacing:"0.14em",textTransform:"uppercase",marginTop:2}}>{label}</span>
+      {sub&&<span style={{fontSize:9,color:T.olive,fontWeight:600,letterSpacing:"0.06em"}}>{sub}</span>}
+      <span style={{fontSize:9,color:T.dim,letterSpacing:"0.12em",textTransform:"uppercase",marginTop:2}}>{label}</span>
     </div>
   );
 }
@@ -596,13 +598,23 @@ export default function ProfilePage() {
     @media(max-width:768px){
       .hi{flex-direction:column!important;align-items:stretch!important;}
       .shud{width:100%!important;min-width:0!important;margin-top:12px!important;
-        padding:20px 16px!important;order:2;}
+        padding:16px!important;order:2;}
       .hi>.fade{order:1;}
       .two{grid-template-columns:1fr!important;}
       .three{grid-template-columns:1fr!important;}
       .strip{flex-wrap:wrap!important;}
-      .strip>div{flex:1 1 calc(33% - 1px)!important;min-width:0!important;
-        border-right:none!important;border-bottom:1px solid ${T.border}!important;}
+      .strip>div{
+        flex:1 1 calc(50% - 1px)!important;
+        min-width:0!important;
+        border-right:none!important;
+        border-bottom:1px solid ${T.border}!important;
+        padding:14px 12px!important;
+        box-sizing:border-box!important;
+      }
+      .strip>div:last-child{
+        flex:1 1 100%!important;
+        border-bottom:none!important;
+      }
       .badge-grid{grid-template-columns:repeat(4,1fr)!important;}
       .nav-links{display:none!important;}
       .nav-brand{font-size:15px!important;}
@@ -610,7 +622,8 @@ export default function ProfilePage() {
         font-size:10px!important;padding:6px 9px!important;letter-spacing:0.02em!important;}
     }
     @media(max-width:480px){
-      .strip>div{flex:1 1 calc(50% - 1px)!important;}
+      .strip>div{flex:1 1 calc(50% - 1px)!important;padding:12px 10px!important;}
+      .strip>div:last-child{flex:1 1 100%!important;}
       .badge-grid{grid-template-columns:repeat(3,1fr)!important;}
     }
   `;
@@ -659,7 +672,8 @@ export default function ProfilePage() {
 
               {/* Identity */}
               <div className="fade" style={{flex:1,minWidth:0}}>
-                <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14,
+                  marginTop:16}}>
                   {/* Avatar with emoji */}
                   <div style={{width:76,height:76,borderRadius:"50%",flexShrink:0,
                     background:`linear-gradient(135deg,${T.bg3},${T.olive}30)`,
@@ -766,7 +780,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Streak HUD */}
-              <div className="shud fade2" style={{width:320,flexShrink:0,
+              <div className="shud fade2" style={{width:"min(320px,100%)",flexShrink:0,
                 background:"rgba(12,13,10,0.84)",backdropFilter:"blur(20px)",
                 border:`1px solid ${tier.color}40`,borderRadius:14,
                 padding:"28px 32px",
