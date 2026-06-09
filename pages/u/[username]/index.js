@@ -501,6 +501,34 @@ export default function ProfilePage() {
     })();
   },[username]);
 
+  // Handle Phantom mobile deep link return
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("wallet_verify") !== "1") return;
+    const pubkey = params.get("publicKey");
+    if (!pubkey || !username) return;
+
+    // Save wallet to Supabase
+    (async () => {
+      const { error: saveErr } = await supabase.from("Profiles").upsert({
+        username,
+        wallet_address:         pubkey,
+        wallet_verified:        true,
+        wallet_verified_at:     new Date().toISOString(),
+        holder_tier:            "none",
+        wallet_last_checked_at: new Date().toISOString(),
+      }, { onConflict: "username" });
+
+      if (!saveErr) {
+        setWalletAddr(pubkey);
+        setWalletVerified(true);
+        // Clean URL
+        window.history.replaceState({}, "", `/u/${username}`);
+      }
+    })();
+  }, [username]);
+
   // Save profile field to Supabase
   const saveField = async (field, value) => {
     setProfileRow(prev=>({...prev,[field]:value}));
