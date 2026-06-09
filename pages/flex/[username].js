@@ -195,10 +195,10 @@ function getQuote(streak, bio) {
 }
 
 // ─── Share image generator ───────────────────────────────────────────────────
-// CANVAS DESIGN NOTES — keep these when editing:
+// CANVAS DESIGN NOTES — LOCKED 2025-06-08 — do not change without approval:
 // Size: 1080x1080px
-// Left col (x=72): Logo 44px@y72 | "Touch Grass" 600/26px@y101 | VERIFIED badge h30@y132
-//   @username 700/96px(scales by length)@y252 | Tier pill h40@y290 700/16px
+// Left col (x=72): Logo 44px@y72 | "Touch Grass" 600/30px@y101 (0.4 opacity) | VERIFIED badge h30@y132
+//   @username 700/96px(scales by length)@y262 | Tier pill h40 w320@y290 700/16px
 // Right col (right-aligned x=W-80): "CURRENT STREAK" 600/24px@y110
 //   DAY 600/32px@y288 | Streak num 700/178px(2-digit) 148px(3-digit)@y288
 // Hero divider y=370
@@ -207,7 +207,7 @@ function getQuote(streak, bio) {
 // Progress bar: label 600/16px@y762 | track h10@y775 olive-gold gradient
 // Quote: italic 38/34/30px Georgia center W/2@y910
 // Footer divider@y=H-90 | Hashtags 700/22px@y=H-56 | URL 500/20px right@y=H-56
-async function generateShareImage({ username, streak, tier, tierTitle, grassScore, rank, subCount, badges, best, shields, bio }) {
+async function generateShareImage({ username, streak, tier, tierTitle, grassScore, rank, subCount, badges, best, shields, bio, hasTG, hasGT, hasST }) {
   const W = 1080, H = 1080;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
@@ -249,12 +249,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.fillStyle = "rgba(147,168,90,0.08)";
   ctx.fillRect(40, 40, W-80, 320);
 
-  // Left column layout — evenly spaced top to bottom
-  // Row 1 (y=72): Logo + "Touch Grass" brand
-  // Row 2 (y=140): VERIFIED OUTDOORS badge
-  // Row 3 (y=220): @username
-  // Row 4 (y=300): Tier title pill
-
+  // ── LOCKED CANVAS LAYOUT (approved 2025-06-08) ───────────────────────────
   // Logo + brand name
   try {
     const logo = await loadImage("/touchgrass-transparent.png");
@@ -309,9 +304,9 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.textAlign = "right";
 
   // "CURRENT STREAK" label at top
-  ctx.font = "600 24px 'DM Sans', sans-serif";
+  ctx.font = "600 16px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.45)";
-  ctx.fillText("CURRENT STREAK", W - 80, 110);
+  ctx.fillText("CURRENT STREAK", W - 80, 88);
 
   // Large streak number
   const numSize = streak >= 100 ? 148 : 178;
@@ -453,28 +448,71 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   const qSize = quote.length > 50 ? 30 : quote.length > 38 ? 34 : 38;
   ctx.font = `italic ${qSize}px 'Georgia', serif`;
   ctx.textAlign = "center";
-  ctx.fillText(quote, W / 2, 910);
+  ctx.fillText(quote, W / 2, 865);
   ctx.textAlign = "left";
   ctx.textAlign = "left";
+
+  // Ecosystem status strip — before footer
+  const ecoItems = [
+    { label:"$TOUCHGRASS", verified: hasTG },
+    { label:"GRASS TOUCHER", verified: hasGT },
+    { label:"SCREEN TOUCHER", verified: hasST },
+  ];
+  const ecoCount = [hasTG,hasGT,hasST].filter(Boolean).length;
+  const ecoY = H - 200;
+
+  if (ecoCount === 3) {
+    // Full ecosystem — premium gold banner
+    ctx.fillStyle = "rgba(200,168,75,0.12)";
+    roundRect(ctx, 72, ecoY, W-144, 40, 8);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(200,168,75,0.4)";
+    ctx.lineWidth = 1;
+    roundRect(ctx, 72, ecoY, W-144, 40, 8);
+    ctx.stroke();
+    ctx.font = "700 16px 'DM Sans', sans-serif";
+    ctx.fillStyle = "#c8a84b";
+    ctx.textAlign = "center";
+    ctx.fillText("👑  FULL ECOSYSTEM TOUCHER", W/2, ecoY + 26);
+    ctx.textAlign = "left";
+  } else {
+    // Individual status pills
+    const itemW = (W - 144 - 16) / 3;
+    ecoItems.forEach((item, i) => {
+      const ix = 72 + i * (itemW + 8);
+      ctx.fillStyle = item.verified ? "rgba(147,168,90,0.1)" : "rgba(255,255,255,0.03)";
+      roundRect(ctx, ix, ecoY, itemW, 36, 7);
+      ctx.fill();
+      ctx.strokeStyle = item.verified ? "rgba(147,168,90,0.4)" : "rgba(255,255,255,0.08)";
+      ctx.lineWidth = 1;
+      roundRect(ctx, ix, ecoY, itemW, 36, 7);
+      ctx.stroke();
+      ctx.font = "600 13px 'DM Sans', sans-serif";
+      ctx.fillStyle = item.verified ? "#93a85a" : "rgba(240,239,234,0.25)";
+      ctx.textAlign = "center";
+      ctx.fillText(`${item.verified?"✓":"✗"}  ${item.label}`, ix + itemW/2, ecoY + 23);
+      ctx.textAlign = "left";
+    });
+  }
 
   // Footer divider
   ctx.strokeStyle = "rgba(147,168,90,0.2)";
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(72, H-90); ctx.lineTo(W-72, H-90); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(72, H-150); ctx.lineTo(W-72, H-150); ctx.stroke();
   // Hashtags
   ctx.font = "700 22px 'DM Sans', sans-serif";
   ctx.fillStyle = "#93a85a";
-  ctx.fillText("$TOUCHGRASS  #TouchGrass  #ProofOfGrass", 72, H - 56);
+  ctx.fillText("$TOUCHGRASS  #TouchGrass  #ProofOfGrass", 72, H - 110);
   // URL
   ctx.textAlign = "right";
   ctx.font = "500 20px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.5)";
-  ctx.fillText("proofofgrass.app", W - 72, H - 56);
+  ctx.fillText("proofofgrass.app", W - 72, H - 110);
   ctx.textAlign = "left";
   // Solana branding
   ctx.font = "500 15px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.28)";
-  ctx.fillText("BUILT ON ◎ SOLANA  ·  PROOF OF GRASS", 72, H - 10);
+  ctx.fillText("BUILT ON ◎ SOLANA  ·  PROOF OF GRASS", 72, H - 82);
 
   return canvas.toDataURL("image/png");
 }
@@ -542,7 +580,7 @@ export default function FlexCardPage() {
       setLoading(true);
       const [{ data:sr }, { data:pr }, { count:subs }, { data:recentSubs }] = await Promise.all([
         supabase.from("Streaks").select("current_streak,best_streak,shield_count").eq("username",username).maybeSingle(),
-        supabase.from("Profiles").select("bio,location,avatar_emoji,joined_at,wallet_verified").eq("username",username).maybeSingle(),
+        supabase.from("Profiles").select("bio,location,avatar_emoji,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher").eq("username",username).maybeSingle(),
         supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username).in("status",["pending","approved"]),
         supabase.from("Submissions").select("created_at").eq("username",username).in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(63),
       ]);
@@ -625,6 +663,9 @@ export default function FlexCardPage() {
         username, streak, tier, tierTitle, grassScore,
         rank, subCount, badges: earnedBadges, best, shields,
         bio: profileRow?.bio ?? "",
+        hasTG: profileRow?.has_touchgrass_holder ?? false,
+        hasGT: profileRow?.has_grass_toucher     ?? false,
+        hasST: profileRow?.has_screen_toucher    ?? false,
       });
 
       if (isMob) {
@@ -682,11 +723,89 @@ export default function FlexCardPage() {
     setGeneratingImg(false);
   }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow]);
 
-  // Step 2 — Open X with pre-filled caption
-  const shareToX = useCallback(() => {
-    const text = `Day ${streak} — ${tier.label} 🌿\n\nBuilding my outdoor legacy on @XTouchGrass\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/flex/${username}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-  }, [username, streak, tier]);
+  // Step 2 — Share to X (native share with image on mobile, intent on desktop)
+  const shareToX = useCallback(async () => {
+    const text = `Day ${streak} — ${tier.label} 🌿\n\nBuilding my outdoor legacy daily on @XTouchGrass\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/flex/${username}`;
+    const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
+
+    // On desktop: open window BEFORE any await (Safari/Chrome block post-await popups)
+    let desktopWin = null;
+    if (!isMob || !(navigator.share && navigator.canShare)) {
+      desktopWin = window.open("", "_blank");
+      if (desktopWin) {
+        desktopWin.document.write(`<html><body style="margin:0;background:#0a0b08;display:flex;align-items:center;justify-content:center;height:100vh">
+          <p style="color:#93a85a;font-family:sans-serif;font-size:16px">Generating your card…</p>
+        </body></html>`);
+      }
+    }
+
+    setGeneratingImg(true);
+    try {
+      const dataUrl = await generateShareImage({
+        username, streak, tier, tierTitle, grassScore,
+        rank, subCount, badges: earnedBadges, best, shields,
+        bio: profileRow?.bio ?? "",
+        hasTG: profileRow?.has_touchgrass_holder ?? false,
+        hasGT: profileRow?.has_grass_toucher     ?? false,
+        hasST: profileRow?.has_screen_toucher    ?? false,
+      });
+
+      if (isMob && navigator.share && navigator.canShare) {
+        // Mobile — native share with image attached
+        try {
+          const res  = await fetch(dataUrl);
+          const blob = await res.blob();
+          const file = new File([blob], `proof-of-grass-${username}-day${streak}.png`, { type:"image/png" });
+          if (navigator.canShare({ files:[file] })) {
+            await navigator.share({ files:[file], title:`Day ${streak} — ${tier.label} 🌿`, text });
+            setGeneratingImg(false);
+            return;
+          }
+        } catch(e) {
+          if (e?.name === "AbortError") { setGeneratingImg(false); return; }
+          console.warn("native share failed, opening tab fallback", e);
+        }
+        // Mobile fallback — show image in new tab
+        const win = window.open("", "_blank");
+        if (win) {
+          win.document.open();
+          win.document.write(`<html><body style="margin:0;background:#0a0b08">
+            <img src="${dataUrl}" style="width:100%;display:block"/>
+            <p style="color:#93a85a;text-align:center;font-family:sans-serif;padding:16px;font-size:15px">
+              Long-press image to save, then post on X
+            </p>
+          </body></html>`);
+          win.document.close();
+        }
+      } else {
+        // Desktop — write card image into the pre-opened window for download,
+        // then redirect to X intent
+        if (desktopWin) {
+          desktopWin.document.open();
+          desktopWin.document.write(`<html><body style="margin:0;background:#0a0b08">
+            <img src="${dataUrl}" style="width:100%;max-width:600px;display:block;margin:0 auto"/>
+            <p style="color:#93a85a;text-align:center;font-family:sans-serif;padding:16px;font-size:14px">
+              Right-click the image above to save it, then attach it to your X post
+            </p>
+            <p style="text-align:center;padding-bottom:20px">
+              <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}"
+                target="_blank"
+                style="display:inline-block;background:#93a85a;color:#0a0b08;padding:12px 24px;
+                border-radius:8px;text-decoration:none;font-family:sans-serif;font-weight:700;font-size:14px">
+                Post on X →
+              </a>
+            </p>
+          </body></html>`);
+          desktopWin.document.close();
+        }
+      }
+    } catch(e) {
+      console.error("shareToX error", e);
+      if (desktopWin) desktopWin.close();
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+    }
+    setGeneratingImg(false);
+  }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow]);
 
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -959,6 +1078,85 @@ export default function FlexCardPage() {
                     textTransform:"uppercase", textAlign:"center" }}>{s.label}</span>
                 </div>
               ))}
+            </div>
+
+            {/* ── ECOSYSTEM STATUS ─────────────────────────────────────── */}
+            <div className="fade3" style={{ padding:"18px 24px",
+              borderBottom:`1px solid ${T.border}` }}>
+              <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em",
+                textTransform:"uppercase", color:T.muted, marginBottom:14,
+                display:"flex", alignItems:"center", gap:6 }}>
+                <span style={{ color:T.olive }}>🌱</span> Ecosystem Status
+              </div>
+              <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap" }}>
+                {[
+                  { key:"hasTG", icon:"🪙", name:"$TOUCHGRASS HOLDER",
+                    label: profileRow?.has_touchgrass_holder ? "VERIFIED HOLDER" : "NOT VERIFIED",
+                    verified: profileRow?.has_touchgrass_holder, accent: T.gold,
+                    note: "Hold 100K+ $TOUCHGRASS to qualify" },
+                  { key:"hasGT", icon:"🌿", name:"GRASS TOUCHER",
+                    label: profileRow?.has_grass_toucher ? "NFT HOLDER" : "LOCKED",
+                    verified: profileRow?.has_grass_toucher, accent: T.olive, note: null },
+                  { key:"hasST", icon:"📱", name:"SCREEN TOUCHER",
+                    label: profileRow?.has_screen_toucher ? "NFT HOLDER" : "LOCKED",
+                    verified: profileRow?.has_screen_toucher, accent: "#a78bfa", note: null },
+                ].map(item => (
+                  <div key={item.key} style={{ flex:"1 1 0", minWidth:0, borderRadius:10,
+                    padding:"12px 10px", textAlign:"center",
+                    background: item.verified ? `${item.accent}0a` : T.bg3,
+                    border:`1px solid ${item.verified ? item.accent+"50" : T.border}`,
+                    opacity: item.verified ? 1 : 0.45 }}>
+                    <div style={{ fontSize:22, marginBottom:6 }}>{item.icon}</div>
+                    <div style={{ fontSize:10, fontWeight:700, color: item.verified ? T.white : T.dim,
+                      letterSpacing:"0.04em", marginBottom:5 }}>{item.name}</div>
+                    <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.1em",
+                      textTransform:"uppercase", color: item.verified ? item.accent : T.dim,
+                      border:`1px solid ${item.verified ? item.accent+"40" : T.border}`,
+                      borderRadius:20, padding:"2px 7px", display:"inline-block" }}>
+                      {item.verified ? "✓" : "✗"} {item.label}
+                    </div>
+                    {!item.verified && item.note && (
+                      <div style={{ fontSize:8, color:T.dim, marginTop:5, lineHeight:1.4 }}>
+                        {item.note}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* Completion */}
+              {(() => {
+                const count = [
+                  profileRow?.has_touchgrass_holder,
+                  profileRow?.has_grass_toucher,
+                  profileRow?.has_screen_toucher,
+                ].filter(Boolean).length;
+                const pct = Math.round((count/3)*100);
+                return (
+                  <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap" }}>
+                    <div style={{ flex:1, minWidth:120 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between",
+                        marginBottom:5 }}>
+                        <span style={{ fontSize:9, color:T.dim, letterSpacing:"0.12em",
+                          textTransform:"uppercase" }}>Ecosystem Completion</span>
+                        <span style={{ fontSize:11, fontWeight:700,
+                          color: count===3 ? T.gold : T.olive }}>{count}/3</span>
+                      </div>
+                      <div style={{ height:3, background:"rgba(255,255,255,0.06)",
+                        borderRadius:99, overflow:"hidden" }}>
+                        <div style={{ height:"100%", width:`${pct}%`, borderRadius:99,
+                          background:`linear-gradient(90deg,${T.olive},${T.gold})`,
+                          transition:"width 1.2s ease" }} />
+                      </div>
+                    </div>
+                    {count===3 && (
+                      <div style={{ fontSize:11, fontWeight:700, color:T.gold,
+                        letterSpacing:"0.06em", flexShrink:0 }}>
+                        👑 FULL ECOSYSTEM TOUCHER
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* ── FOOTER ────────────────────────────────────────────────── */}

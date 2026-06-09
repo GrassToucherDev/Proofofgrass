@@ -144,13 +144,54 @@ export default function ChallengePage() {
         supabase.from("ChallengeProgress").select("*").eq("challenge_id", ch.id),
         supabase.from("ChallengeEvents").select("*").eq("challenge_id", ch.id).order("created_at", { ascending: false }).limit(20),
       ]);
-      setProgress(prog ?? []);
-      setEvents(evts ?? []);
 
       // Fetch streak rows for both participants
       const users = [ch.challenger, ch.challenged];
-      const { data: sRows } = await supabase.from("Streaks")
-        .select("username,current_streak,best_streak").in("username", users);
+      const [{ data: sRows }, { data: chalSubs1 }, { data: chalSubs2 }] = await Promise.all([
+        supabase.from("Streaks").select("username,current_streak,best_streak").in("username", users),
+        // Count actual submissions since challenge started for challenger
+        ch.started_at ? supabase.from("Submissions")
+          .select("created_at")
+          .eq("username", ch.challenger)
+          .in("status", ["pending","approved"])
+          .gte("created_at", ch.started_at) : Promise.resolve({ data: [] }),
+        // Count actual submissions since challenge started for challenged
+        ch.started_at ? supabase.from("Submissions")
+          .select("created_at")
+          .eq("username", ch.challenged)
+          .in("status", ["pending","approved"])
+          .gte("created_at", ch.started_at) : Promise.resolve({ data: [] }),
+      ]);
+
+      // Count unique days submitted since challenge start
+      const countUniqueDays = (subs) => {
+        const days = new Set((subs ?? []).map(s => s.created_at.slice(0, 10)));
+        return days.size;
+      };
+
+      const challDays = countUniqueDays(chalSubs1);
+      const challedDays = countUniqueDays(chalSubs2);
+
+      // Merge progress — use actual submission count if days_complete is lower
+      const mergedProg = (prog ?? []).map(p => {
+        const actualDays = norm(p.username) === norm(ch.challenger) ? challDays : challedDays;
+        return {
+          ...p,
+          days_complete: Math.max(p.days_complete ?? 0, actualDays),
+        };
+      });
+
+      // If no progress rows exist yet, create them from actual data
+      if (mergedProg.length === 0 && ch.started_at) {
+        mergedProg.push(
+          { username: ch.challenger, days_complete: challDays,  status:"active", challenge_id: ch.id },
+          { username: ch.challenged, days_complete: challedDays, status:"active", challenge_id: ch.id },
+        );
+      }
+
+      setProgress(mergedProg);
+      setEvents(evts ?? []);
+
       const sm = {};
       (sRows ?? []).forEach(r => { sm[norm(r.username)] = r; });
       setStreaks(sm);

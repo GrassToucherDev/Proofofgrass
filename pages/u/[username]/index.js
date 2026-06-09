@@ -82,12 +82,36 @@ function StatPill({icon,value,label,sub,accent,last}) {
 
 function Badge({b}) {
   return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:7,opacity:b.earned?1:0.22}}>
+    <div className="badge-wrap" style={{display:"flex",flexDirection:"column",
+      alignItems:"center",gap:7,opacity:b.earned?1:0.22,cursor:"default",position:"relative"}}>
+      {/* Hover tooltip */}
+      <div className="badge-tip" style={{
+        position:"absolute",bottom:"calc(100% + 8px)",left:"50%",transform:"translateX(-50%)",
+        background:"#1e2016",border:"1px solid rgba(147,168,90,0.3)",borderRadius:8,
+        padding:"8px 12px",width:152,textAlign:"center",pointerEvents:"none",
+        opacity:0,transition:"opacity 0.18s",zIndex:100,whiteSpace:"normal",
+        boxShadow:"0 4px 16px rgba(0,0,0,0.5)"}}>
+        <div style={{fontSize:10,fontWeight:700,color:"#f0efea",marginBottom:3}}>{b.name}</div>
+        <div style={{fontSize:9,color:"rgba(240,239,234,0.5)",lineHeight:1.4}}>{b.desc}</div>
+        <div style={{fontSize:9,fontWeight:700,marginTop:5,
+          color:b.earned?"#93a85a":"rgba(240,239,234,0.3)"}}>
+          {b.earned?"✓ Earned":"🔒 Locked"}
+        </div>
+      </div>
       <div style={{width:56,height:56,borderRadius:14,
         background:b.earned?`${T.olive}14`:"transparent",
         border:`1.5px solid ${b.earned?T.olive:T.border}`,
         display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,
-        boxShadow:b.earned?`0 0 14px ${T.olive}20`:"none"}}>
+        boxShadow:b.earned?`0 0 14px ${T.olive}20`:"none",
+        transition:"transform 0.15s"}}
+        onMouseEnter={e=>{
+          e.currentTarget.style.transform="scale(1.08)";
+          e.currentTarget.parentNode.querySelector(".badge-tip").style.opacity="1";
+        }}
+        onMouseLeave={e=>{
+          e.currentTarget.style.transform="";
+          e.currentTarget.parentNode.querySelector(".badge-tip").style.opacity="0";
+        }}>
         {b.emoji}
       </div>
       <div style={{fontSize:9,fontWeight:700,color:b.earned?T.white:T.dim,
@@ -222,7 +246,7 @@ export default function ProfilePage() {
       // Step 1: user streak + profile + submissions (parallel — no dependencies)
       const [{data:sr},{data:pr},{count:subs}] = await Promise.all([
         supabase.from("Streaks").select("current_streak,best_streak,last_submission_date,shield_count").eq("username",username).maybeSingle(),
-        supabase.from("Profiles").select("bio,location,avatar_emoji,joined_at").eq("username",username).maybeSingle(),
+        supabase.from("Profiles").select("bio,location,avatar_emoji,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher").eq("username",username).maybeSingle(),
         supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username).in("status",["pending","approved"]),
       ]);
 
@@ -539,6 +563,99 @@ export default function ProfilePage() {
 
         {/* MAIN CONTENT */}
         <div style={{padding:"28px clamp(14px,5vw,64px)"}}>
+
+          {/* ── ECOSYSTEM STATUS ─────────────────────────────────────────── */}
+          {(() => {
+            const hasTG = profileRow?.has_touchgrass_holder ?? false;
+            const hasGT = profileRow?.has_grass_toucher     ?? false;
+            const hasST = profileRow?.has_screen_toucher    ?? false;
+            const count = [hasTG,hasGT,hasST].filter(Boolean).length;
+            const pct   = Math.round((count/3)*100);
+            const title = count===3?"FULL ECOSYSTEM TOUCHER":count===2?"ECOSYSTEM MEMBER":count===1?"TOKEN SUPPORTER":null;
+            const EcoCard = ({verified,icon,name,label,accent,note}) => (
+              <div style={{flex:"1 1 0",minWidth:0,borderRadius:12,padding:"16px 12px",
+                background:verified?`${accent}0a`:T.bg3,
+                border:`1px solid ${verified?accent+"50":T.border}`,
+                display:"flex",flexDirection:"column",alignItems:"center",gap:10,
+                opacity:verified?1:0.42,
+                boxShadow:verified?`0 0 20px ${accent}18`:"none"}}>
+                <div style={{fontSize:30}}>{icon}</div>
+                <div style={{textAlign:"center"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:verified?T.white:T.dim,
+                    letterSpacing:"0.06em",marginBottom:5}}>{name}</div>
+                  <div style={{display:"inline-flex",alignItems:"center",gap:4,
+                    fontSize:9,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",
+                    color:verified?accent:T.dim,
+                    border:`1px solid ${verified?accent+"40":T.border}`,
+                    borderRadius:20,padding:"2px 8px",
+                    background:verified?`${accent}10`:"transparent"}}>
+                    {verified?"✓":"✗"} {label}
+                  </div>
+                  {!verified && note && (
+                    <div style={{fontSize:9,color:T.dim,marginTop:6,lineHeight:1.5,
+                      textAlign:"center"}}>
+                      {note}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+            return (
+              <div className="card fade2" style={{marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:16}}>
+                  <span style={{fontSize:13}}>🌱</span>
+                  <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.18em",
+                    textTransform:"uppercase",color:T.muted}}>Ecosystem Status</span>
+                </div>
+                <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
+                  <EcoCard verified={hasTG} icon="🪙" name="$TOUCHGRASS HOLDER"
+                    label={hasTG?"VERIFIED HOLDER":"NOT VERIFIED"} accent={T.gold}
+                    note="Hold 100K+ $TOUCHGRASS to qualify"/>
+                  <EcoCard verified={hasGT} icon="🌿" name="GRASS TOUCHER"
+                    label={hasGT?"NFT HOLDER":"LOCKED"} accent={T.olive}/>
+                  <EcoCard verified={hasST} icon="📱" name="SCREEN TOUCHER"
+                    label={hasST?"NFT HOLDER":"LOCKED"} accent="#a78bfa"/>
+                </div>
+                <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"stretch"}}>
+                  <div style={{flex:1,minWidth:160}}>
+                    <div style={{fontSize:9,letterSpacing:"0.16em",color:T.dim,
+                      textTransform:"uppercase",marginBottom:8}}>Ecosystem Completion</div>
+                    <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
+                      fontSize:28,fontWeight:700,color:T.white,lineHeight:1,marginBottom:6}}>
+                      {count} <span style={{fontSize:16,color:T.dim,fontWeight:400}}>/ 3 VERIFIED</span>
+                    </div>
+                    <div style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:99,overflow:"hidden",marginBottom:4}}>
+                      <div style={{height:"100%",width:`${pct}%`,borderRadius:99,
+                        background:`linear-gradient(90deg,${T.olive},${T.gold})`,transition:"width 1.2s ease"}}/>
+                    </div>
+                    <div style={{fontSize:10,color:T.dim}}>{pct}%</div>
+                  </div>
+                  {title && (
+                    <div style={{flex:1,minWidth:160,borderRadius:12,padding:"14px 16px",
+                      background:count===3?`linear-gradient(135deg,${T.gold}18,${T.gold}08)`:`${T.olive}08`,
+                      border:`1px solid ${count===3?T.gold+"50":T.borderG}`,
+                      display:"flex",flexDirection:"column",justifyContent:"center",
+                      boxShadow:count===3?`0 0 24px ${T.gold}20`:"none"}}>
+                      <div style={{fontSize:8,letterSpacing:"0.18em",color:T.dim,
+                        textTransform:"uppercase",marginBottom:6}}>You Are A</div>
+                      {count===3&&<div style={{fontSize:16,marginBottom:4}}>👑</div>}
+                      <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
+                        fontSize:count===3?18:15,fontWeight:700,
+                        color:count===3?T.gold:T.olive,letterSpacing:"0.04em",lineHeight:1.2,
+                        textShadow:count===3?`0 0 20px ${T.gold}60`:"none"}}>
+                        {title}
+                      </div>
+                      {count===3&&(
+                        <div style={{fontSize:9,color:"rgba(200,168,75,0.5)",marginTop:6}}>
+                          Holds $TOUCHGRASS + Grass Toucher + Screen Toucher
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Progression + Badges */}
           <div className="two" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>

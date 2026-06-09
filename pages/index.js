@@ -192,6 +192,154 @@ function ResultMini({ day }) {
 const BURN_ADDR   = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const SOL_DOMAIN  = "touchgrassburn.sol";
 
+// ─── Activity Feed ───────────────────────────────────────────────────────────
+function ActivityFeed() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // Fetch recent activity from multiple sources in parallel
+        const [{ data: recentSubs }, { data: recentChals }, { data: topStreaks }] = await Promise.all([
+          supabase.from("Submissions")
+            .select("username, created_at")
+            .in("status", ["pending","approved"])
+            .order("created_at", { ascending: false })
+            .limit(8),
+          supabase.from("Challenges")
+            .select("challenger, challenged, duration_days, status, created_at, slug")
+            .order("created_at", { ascending: false })
+            .limit(5),
+          supabase.from("Streaks")
+            .select("username, current_streak, best_streak")
+            .order("current_streak", { ascending: false })
+            .limit(5),
+        ]);
+
+        const feed = [];
+
+        // Proof submissions
+        (recentSubs ?? []).forEach(s => {
+          feed.push({
+            type: "proof",
+            username: s.username,
+            text: "logged outdoor proof",
+            emoji: "🌿",
+            time: s.created_at,
+          });
+        });
+
+        // Challenges issued
+        (recentChals ?? []).forEach(c => {
+          if (c.status === "pending" || c.status === "active") {
+            feed.push({
+              type: "challenge",
+              username: c.challenger,
+              text: `challenged @${c.challenged} to a ${c.duration_days}-day streak`,
+              emoji: "⚡",
+              time: c.created_at,
+              link: `/challenge/${c.slug}`,
+            });
+          }
+          if (c.status === "completed") {
+            feed.push({
+              type: "challenge_complete",
+              username: c.challenger,
+              text: `completed a ${c.duration_days}-day challenge with @${c.challenged}`,
+              emoji: "🏆",
+              time: c.created_at,
+              link: `/challenge/${c.slug}`,
+            });
+          }
+        });
+
+        // Milestone events — users with notable streaks
+        (topStreaks ?? []).forEach(s => {
+          const milestones = [7,14,30,50,100,180,365];
+          const hit = milestones.find(m => s.current_streak === m);
+          if (hit) {
+            const tierName = hit>=365?"ETERNAL":hit>=180?"MYTHIC":hit>=100?"IMMORTAL":hit>=50?"LEGENDARY":hit>=30?"ELITE":hit>=14?"LOCKED IN":"ROOTED";
+            feed.push({
+              type: "milestone",
+              username: s.username,
+              text: `reached Day ${hit} — ${tierName} unlocked`,
+              emoji: hit>=100?"👑":hit>=50?"🌟":hit>=30?"🌳":"🌱",
+              time: null,
+            });
+          }
+        });
+
+        // Sort by time, milestones last
+        feed.sort((a, b) => {
+          if (!a.time && !b.time) return 0;
+          if (!a.time) return 1;
+          if (!b.time) return -1;
+          return new Date(b.time) - new Date(a.time);
+        });
+
+        setItems(feed.slice(0, 10));
+      } catch(e) {
+        console.warn("activity feed error", e);
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  const T2 = { olive:"#93a85a", gold:"#c8a84b", white:"#f0efea",
+    dim:"rgba(240,239,234,0.22)", bg3:"#181a12", border:"rgba(255,255,255,0.06)" };
+
+  if (loading) return (
+    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+      {[1,2,3,4].map(i => (
+        <div key={i} style={{ height:44, borderRadius:8, background:T2.bg3,
+          animation:"shimmer 1.8s ease-in-out infinite" }} />
+      ))}
+    </div>
+  );
+
+  if (items.length === 0) return (
+    <p style={{ fontSize:12, color:T2.dim, textAlign:"center", padding:"16px 0" }}>
+      No recent activity yet.
+    </p>
+  );
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+      {items.map((item, i) => {
+        const timeAgo = item.time ? (() => {
+          const diff = Date.now() - new Date(item.time);
+          const mins = Math.floor(diff/60000);
+          const hrs  = Math.floor(diff/3600000);
+          const days = Math.floor(diff/86400000);
+          return days>0?`${days}d ago`:hrs>0?`${hrs}h ago`:mins>0?`${mins}m ago`:"just now";
+        })() : "";
+
+        const inner = (
+          <div style={{ display:"flex", alignItems:"center", gap:10,
+            padding:"10px 12px", background:T2.bg3, borderRadius:10,
+            border:`1px solid ${T2.border}` }}>
+            <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <span style={{ fontSize:12, fontWeight:600, color:T2.white }}>
+                @{item.username}
+              </span>
+              <span style={{ fontSize:12, color:T2.dim }}> {item.text}</span>
+            </div>
+            {timeAgo && (
+              <span style={{ fontSize:10, color:T2.dim, flexShrink:0 }}>{timeAgo}</span>
+            )}
+          </div>
+        );
+
+        return item.link
+          ? <Link key={i} href={item.link} style={{ textDecoration:"none" }}>{inner}</Link>
+          : <div key={i}>{inner}</div>;
+      })}
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Home() {
   // ── Username (restored from localStorage) ────────────────────────────────
@@ -725,18 +873,12 @@ export default function Home() {
             </div>
           </div>
 
-          {/* RESULT CARD PREVIEW */}
+          {/* ACTIVITY FEED */}
           <div className="card" style={{ padding:28 }}>
             <div className="card-title-row">
-              <span className="card-title" style={{ margin:0 }}>Result Card Preview</span>
-              <a href="#upload" className="view-all">Create Yours</a>
+              <span className="card-title" style={{ margin:0 }}>Community Activity</span>
             </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-              <ResultMini day={previewDays[0] ?? 67} />
-              <p style={{ fontSize:11, color:T.dim, textAlign:"center", lineHeight:1.65 }}>
-                Every outdoor moment officially certified.<br />Share your proof. Build your legacy.
-              </p>
-            </div>
+            <ActivityFeed />
           </div>
         </div>
 

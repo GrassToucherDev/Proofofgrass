@@ -72,7 +72,6 @@ function LBCard({ item, index }) {
   const medals = ["🥇","🥈","🥉"];
 
   return (
-    <Link href={`/u/${item.username}`} style={{ textDecoration:"none" }}>
     <div className="lb-card" style={{
       overflow:"hidden",
       borderRadius:12,
@@ -82,8 +81,9 @@ function LBCard({ item, index }) {
                  item.current_streak >= 100 ? "0 0 16px rgba(249,115,22,0.1)" :
                  item.current_streak >= 50  ? "0 0 14px rgba(200,168,75,0.1)" : "none",
       transition:"transform 0.2s, box-shadow 0.2s",
-      cursor:"default",
+      cursor:"pointer",
     }}
+    onClick={() => window.location.href = `/u/${item.username}`}
     onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow=`0 8px 28px ${tier.color}18`; }}
     onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow=""; }}
     >
@@ -144,7 +144,6 @@ function LBCard({ item, index }) {
         )}
       </div>
     </div>
-    </Link>
   );
 }
 
@@ -310,7 +309,7 @@ export default function Leaderboard() {
             </div>
           ) : (
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12, alignItems:"stretch" }} className="lb-grid">
-              {activeData.map((item, i) => <LBCard key={item.username} item={item} index={i} />)}
+              {activeData.map((item, i) => <LBCard key={`${item.username}-${i}`} item={item} index={i} />)}
             </div>
           )}
 

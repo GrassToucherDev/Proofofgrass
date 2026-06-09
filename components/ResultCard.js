@@ -368,7 +368,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     try {
       const { data: result, error: rpcError } = await supabase.rpc("lock_in_streak", {
         p_username:     username,
-        p_tweet_url:    null,           // tweet URL no longer required
+        p_tweet_url:    null,
         p_verification: "self_attested",
       });
 
@@ -383,6 +383,47 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       setCurrentStreak(newStreak);
       onStreakUpdate?.(newStreak);
       setSubmitStatus("success");
+
+      // ── Update ChallengeProgress for any active challenges ──────────────
+      try {
+        const todayUTC = new Date().toISOString().slice(0, 10);
+        const { data: activeChals } = await supabase
+          .from("Challenges")
+          .select("id")
+          .or(`challenger.eq.${username},challenged.eq.${username}`)
+          .eq("status", "active");
+
+        if (activeChals?.length) {
+          for (const ch of activeChals) {
+            // Only increment if not already logged today
+            const { data: prog } = await supabase
+              .from("ChallengeProgress")
+              .select("id, days_complete, last_checked")
+              .eq("challenge_id", ch.id)
+              .eq("username", username)
+              .maybeSingle();
+
+            if (prog && prog.last_checked !== todayUTC) {
+              const newDays = (prog.days_complete ?? 0) + 1;
+              await supabase
+                .from("ChallengeProgress")
+                .update({ days_complete: newDays, last_checked: todayUTC })
+                .eq("id", prog.id);
+
+              // Log the event
+              await supabase.from("ChallengeEvents").insert([{
+                challenge_id: ch.id,
+                username,
+                event_type: "day_logged",
+              }]);
+            }
+          }
+        }
+      } catch (chalErr) {
+        console.warn("challenge progress update failed", chalErr);
+        // Non-fatal — streak still locked in
+      }
+
     } catch (err) {
       console.error("lock_in_streak exception", err);
       setSubmitError("Something went wrong — tap again.");
