@@ -1438,20 +1438,48 @@ export default function ProfilePage() {
               try {
                 if (file.size > 2 * 1024 * 1024) { setAvatarError("Image must be under 2MB."); setAvatarUploading(false); return; }
                 if (!["image/jpeg","image/png","image/webp"].includes(file.type)) { setAvatarError("JPEG, PNG or WebP only."); setAvatarUploading(false); return; }
-                const ext = file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
+
+                // Always use .jpg extension regardless of input type — avoids filename mismatch on re-upload
+                const fileName = `${username}.jpg`;
+
+                // First try to remove any existing avatar files to avoid conflicts
+                await supabase.storage.from("avatars").remove([
+                  `${username}.jpg`, `${username}.png`, `${username}.webp`
+                ]).catch(()=>{}); // non-fatal
+
                 const { error: upErr } = await supabase.storage.from("avatars")
-                  .upload(`${username}.${ext}`, file, { contentType:file.type, upsert:true });
-                if (upErr) { setAvatarError("Upload failed — try again."); setAvatarUploading(false); return; }
-                const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(`${username}.${ext}`);
+                  .upload(fileName, file, { contentType: file.type, upsert: true });
+
+                if (upErr) {
+                  console.error("[avatar upload]", upErr);
+                  setAvatarError(`Upload failed: ${upErr.message}`);
+                  setAvatarUploading(false);
+                  return;
+                }
+
+                const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(fileName);
                 const publicUrl = `${urlData?.publicUrl}?t=${Date.now()}`;
+
                 const frame = (profileRow?.has_touchgrass_holder && profileRow?.has_grass_toucher && profileRow?.has_screen_toucher) ? "crown"
                   : (profileRow?.has_grass_toucher || profileRow?.has_screen_toucher) ? "glow" : null;
-                await supabase.from("Profiles").update({
+
+                const { error: dbErr } = await supabase.from("Profiles").update({
                   avatar_url: publicUrl, avatar_emoji: null,
                   avatar_frame: frame ?? null,
                 }).eq("username", username);
+
+                if (dbErr) {
+                  console.error("[avatar db]", dbErr);
+                  setAvatarError(`Save failed: ${dbErr.message}`);
+                  setAvatarUploading(false);
+                  return;
+                }
+
                 window.location.reload();
-              } catch(e) { setAvatarError("Something went wrong."); }
+              } catch(e) {
+                console.error("[avatar]", e);
+                setAvatarError(e?.message || "Something went wrong.");
+              }
               setAvatarUploading(false);
             }}
             onRemovePhoto={async ()=>{
