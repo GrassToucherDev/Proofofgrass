@@ -585,22 +585,31 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
     // ── X in-app browser — can't open windows or use Web Share ───────────
     if (isInAppBrowser) {
-      // Lock streak immediately since they already generated the card
       await lockInStreak();
-      // Show the in-app browser modal (handled in UI below via state)
       setInAppBrowserMode(true);
       return;
     }
 
     if (canShareFiles) {
-      // Mobile — use pre-cached File (built when card was generated)
-      // IMPORTANT: navigator.share() must be called with zero awaits before it
-      // or WebViews (especially X in-app) reject it as "not user-initiated"
-      const file = sharableFileRef.current;
+      // Use pre-cached file if available, otherwise build synchronously from dataURL
+      // The file must be ready BEFORE any await to keep the user-gesture chain intact
+      let file = sharableFileRef.current;
+
+      if (!file && downloadUrl.startsWith("data:")) {
+        // dataURL is already in memory — convert synchronously via fetch (fast, no network)
+        try {
+          const res = await fetch(downloadUrl);
+          const blob = await res.blob();
+          file = new File([blob], "proof-of-grass.png", { type: "image/png" });
+          sharableFileRef.current = file;
+        } catch(e) {
+          file = null;
+        }
+      }
+
       if (file && navigator.canShare({ files: [file] })) {
         setShareHint(true);
         try {
-          // This await is fine — it's the share call itself, not a pre-fetch
           await navigator.share({ files: [file], text });
           setShared(true);
           setTimeout(() => { setShared(false); setShareHint(false); }, 4000);
@@ -609,7 +618,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           if (err?.name === "AbortError") {
             cancelled = true;
           } else {
-            // Share failed — fall back to intent
             navigator.clipboard.writeText(text).catch(() => {});
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
             setShared(true);
@@ -617,29 +625,11 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           }
         }
       } else {
-        // No pre-cached file or canShare returned false — fallback
-        // Try fetching now as last resort
-        try {
-          const res  = await fetch(downloadUrl);
-          const blob = await res.blob();
-          const freshFile = new File([blob], "proof-of-grass.png", { type: "image/png" });
-          if (navigator.canShare({ files: [freshFile] })) {
-            setShareHint(true);
-            await navigator.share({ files: [freshFile], text });
-            setShared(true);
-            setTimeout(() => { setShared(false); setShareHint(false); }, 4000);
-          } else {
-            throw new Error("canShare false");
-          }
-        } catch(err) {
-          if (err?.name === "AbortError") { cancelled = true; }
-          else {
-            navigator.clipboard.writeText(text).catch(() => {});
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-            setShared(true);
-            setTimeout(() => setShared(false), 2500);
-          }
-        }
+        // canShare returned false — fall back to X intent
+        navigator.clipboard.writeText(text).catch(() => {});
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+        setShared(true);
+        setTimeout(() => setShared(false), 2500);
       }
     } else {
       // Desktop — open intent, copy caption to clipboard
@@ -974,13 +964,12 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             <img
               src={downloadUrl}
               alt="Proof of Grass Certificate"
-              className="w-full h-auto block"
-              style={{ aspectRatio: "16/9" }}
+              style={{ width:"100%", height:"auto", display:"block", maxWidth:"100%" }}
             />
           ) : (
             <div
               className="w-full bg-[#0a140b] flex items-center justify-center"
-              style={{ aspectRatio: "16/9" }}
+              style={{ aspectRatio: "1/1" }}
             >
               <span className="font-mono text-[#2a4a2d] text-xs tracking-widest animate-pulse">
                 generating…
@@ -988,11 +977,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             </div>
           )}
         </div>
-        {downloadUrl && (
-          <p className="font-mono text-[10px] text-[#3a5e3d] tracking-wide">
-            on iphone: hold the image to save
-          </p>
-        )}
       </div>
 
       {/* Download */}
