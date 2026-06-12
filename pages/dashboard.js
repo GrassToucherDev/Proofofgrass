@@ -5,7 +5,8 @@ import { supabase } from "../utils/supabase";
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const T = {
   bg:      "#0e0f0b",
-  bg2:     "#141510",
+  bg2: 
+141510",
   bg3:     "#1c1e17",
   border:  "rgba(255,255,255,0.07)",
   borderG: "rgba(147,168,90,0.2)",
