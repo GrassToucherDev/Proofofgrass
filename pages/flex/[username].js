@@ -347,9 +347,9 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.textAlign = "right";
 
   // "CURRENT STREAK" label at top
-  ctx.font = "600 24px 'DM Sans', sans-serif";
+  ctx.font = "600 16px 'DM Sans', sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.45)";
-  ctx.fillText("CURRENT STREAK", W - 80, 110);
+  ctx.fillText("CURRENT STREAK", W - 80, 88);
 
   // Large streak number
   const numSize = streak >= 100 ? 148 : 178;
@@ -1149,10 +1149,10 @@ export default function FlexCardPage() {
               const RBADGES = [
                 {count:1,name:"Community Builder",emoji:"🤝"},
                 {count:5,name:"Grass Recruiter",emoji:"🌱"},
-                {count:10,name:"Community Grower",emoji:"🌿"},
-                {count:25,name:"Movement Builder",emoji:"🌳"},
-                {count:50,name:"Founding Ambassador",emoji:"🏛"},
-                {count:100,name:"Touch Grass Ambassador",emoji:"👑"},
+                {count:10,name:"Community Cultivator",emoji:"🌿"},
+                {count:25,name:"Growth Leader",emoji:"🌳"},
+                {count:50,name:"Ecosystem Builder",emoji:"🏛"},
+                {count:100,name:"Grass Evangelist",emoji:"👑"},
               ];
               const badge = [...RBADGES].reverse().find(b => refCount >= b.count);
               const next  = RBADGES.find(b => refCount < b.count);

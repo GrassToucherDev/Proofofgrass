@@ -1,0 +1,9 @@
+[33mcommit 4091da157409e8ff4941756ad0c31e18fcb7ba76[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: GrassToucherDev <didyoutouchgrasstoday@gmail.com>
+Date:   Fri Jun 12 12:27:12 2026 +0000
+
+    image upload fix
+
+ pages/_document.js | 2 [32m+[m[31m-[m
+ pages/dashboard.js | 3 [32m++[m[31m-[m
+ 2 files changed, 3 insertions(+), 2 deletions(-)

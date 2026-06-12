@@ -16,12 +16,12 @@ const T = {
 function norm(v) { return String(v??"").replace(/@/g,"").toLowerCase().trim(); }
 
 const REFERRAL_BADGES = [
-  { count:1,   slug:"community-builder",     name:"Community Builder",    emoji:"🤝" },
-  { count:5,   slug:"grass-recruiter",       name:"Grass Recruiter",      emoji:"🌱" },
-  { count:10,  slug:"community-grower",      name:"Community Grower",     emoji:"🌿" },
-  { count:25,  slug:"movement-builder",      name:"Movement Builder",     emoji:"🌳" },
-  { count:50,  slug:"founding-ambassador",   name:"Founding Ambassador",  emoji:"🏛" },
-  { count:100, slug:"touchgrass-ambassador", name:"Touch Grass Ambassador",emoji:"👑"},
+  { count:1,   slug:"referral_community_builder",    name:"Community Builder",    emoji:"🤝", rarity:"COMMON",    points:25  },
+  { count:5,   slug:"referral_grass_recruiter",      name:"Grass Recruiter",      emoji:"🌱", rarity:"RARE",      points:75  },
+  { count:10,  slug:"referral_community_cultivator", name:"Community Cultivator", emoji:"🌿", rarity:"EPIC",      points:150 },
+  { count:25,  slug:"referral_growth_leader",        name:"Growth Leader",        emoji:"🌳", rarity:"LEGENDARY", points:300 },
+  { count:50,  slug:"referral_ecosystem_builder",    name:"Ecosystem Builder",    emoji:"🏛", rarity:"MYTHIC",    points:750 },
+  { count:100, slug:"referral_grass_evangelist",     name:"Grass Evangelist",     emoji:"👑", rarity:"MYTHIC",    points:750 },
 ];
 
 function getTier(n) {
@@ -428,7 +428,7 @@ export default function ProfilePage() {
       // Step 1: user streak + profile + submissions (parallel — no dependencies)
       const [{data:sr},{data:pr},{count:subs}] = await Promise.all([
         supabase.from("Streaks").select("current_streak,best_streak,last_submission_date,shield_count").eq("username",username).maybeSingle(),
-        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_count_pending,referral_badge").eq("username",username).maybeSingle(),
+        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_count_pending,referral_badge,grass_score").eq("username",username).maybeSingle(),
         supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username).in("status",["pending","approved"]),
       ]);
 
@@ -547,7 +547,11 @@ export default function ProfilePage() {
   const shields = streakRow?.shield_count??0;
   const tier    = getTier(current);
   const pct     = (rank !== null && totalUsers>0) ? ((rank/totalUsers)*100).toFixed(2) : "—";
-  const grassScore = Math.floor(current*38+(subCount??0)*12+best*22);
+  // Grass Score is lifetime progress, tracked server-side via ScoreEvents.
+  // Falls back to the legacy formula only if grass_score hasn't been backfilled yet.
+  const grassScore = profileRow?.grass_score != null
+    ? profileRow.grass_score
+    : Math.floor(current*38+(subCount??0)*12+best*22);
   const badges  = ALL_BADGES.map(b=>({...b,earned:b.condition(current,subCount??0,challengesDone,challengesSent,grassScore,shields)}));
   // Merge referral badges
   const refSuccessful = profileRow?.referral_count_successful ?? 0;
@@ -821,6 +825,14 @@ export default function ProfilePage() {
           <StatPill icon="🛡" value={loading?"…":shields}                     label="Shields"        last />
         </div>
 
+        {/* Grass Score microcopy */}
+        <div style={{padding:"8px clamp(14px,5vw,64px)",background:T.bg2,
+          borderBottom:`1px solid ${T.border}`,textAlign:"center"}}>
+          <span style={{fontSize:10,color:T.dim,letterSpacing:"0.04em",lineHeight:1.6}}>
+            Grass Score is lifetime progress. Streaks can reset. Progress stays.
+          </span>
+        </div>
+
         {/* MAIN CONTENT */}
         <div style={{padding:"28px clamp(14px,5vw,64px)"}}>
 
@@ -983,6 +995,25 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
+
+                {/* People Cultivated — community-framed prestige metric */}
+                {refSuccessful > 0 && (
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,
+                    padding:"12px 14px",borderRadius:10,
+                    background:`linear-gradient(135deg,${T.olive}14,transparent)`,
+                    border:`1px solid ${T.borderG}`}}>
+                    <span style={{fontSize:22}}>🌱</span>
+                    <div>
+                      <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
+                        fontSize:20,fontWeight:700,color:T.olive,lineHeight:1.2}}>
+                        {refSuccessful} {refSuccessful === 1 ? "person" : "people"} cultivated
+                      </div>
+                      <div style={{fontSize:10,color:T.dim,letterSpacing:"0.04em",marginTop:2}}>
+                        Brought into the movement and built their own streak
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Stats row */}
                 <div style={{display:"flex",gap:0,marginBottom:18,
