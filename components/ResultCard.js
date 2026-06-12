@@ -972,17 +972,19 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </div>
       </div>
 
-      {/* Download */}
+      {/* Download — also locks in streak so bypass is impossible */}
       {downloadUrl && (
-        <a href={downloadUrl} download="proof-of-grass.png" style={{
-          display:"inline-flex",alignItems:"center",gap:10,
-          padding:"12px 32px",
-          fontFamily:"monospace",fontSize:13,fontWeight:700,
-          letterSpacing:"0.15em",textTransform:"uppercase",
-          color:"#0e1108",background:"#93a85a",
-          borderRadius:3,textDecoration:"none",
-          boxShadow:"0 0 20px rgba(147,168,90,0.3)",
-        }}>
+        <a href={downloadUrl} download="proof-of-grass.png"
+          onClick={()=>{ if (submitStatus!=="success") lockInStreak(); }}
+          style={{
+            display:"inline-flex",alignItems:"center",gap:10,
+            padding:"12px 32px",
+            fontFamily:"monospace",fontSize:13,fontWeight:700,
+            letterSpacing:"0.15em",textTransform:"uppercase",
+            color:"#0e1108",background:"#93a85a",
+            borderRadius:3,textDecoration:"none",
+            boxShadow:"0 0 20px rgba(147,168,90,0.3)",
+          }}>
           ↓ Download Certificate
         </a>
       )}
