@@ -461,8 +461,8 @@ export default function ProfilePage() {
       ]);
 
       // GRASS SCORE: global rank (1-indexed position in grass_score DESC order)
-      const rankIdx = (allScores ?? []).findIndex(p => norm(p.username) === username);
-      setGlobalRank(rankIdx === -1 ? null : rankIdx + 1);
+      const gsRankIdx = (allScores ?? []).findIndex(p => norm(p.username) === username);
+      setGlobalRank(gsRankIdx === -1 ? null : gsRankIdx + 1);
       setScoreEvents(scoreEventRows ?? []);
 
       // GRASS SCORE: breakdown by event_type
