@@ -49,16 +49,23 @@ function getTopPercent(streak) {
   return null;
 }
 
-// Leaderboard built from Streaks as source of truth
-function buildLeaderboard(streaks, countMap, dateMap, filterFn) {
+// Leaderboard built from Streaks as source of truth, ranked by Grass Score (lifetime)
+function buildLeaderboard(streaks, countMap, dateMap, scoreMap, filterFn) {
   return (streaks || [])
     .filter(s => normalizeUsername(s.username))
     .filter(filterFn ?? (() => true))
     .map(s => {
       const u = normalizeUsername(s.username);
-      return { username: u, current_streak: s.current_streak ?? 1, best_streak: s.best_streak ?? 1, count: countMap[u] ?? 0, created_at: dateMap[u] ?? s.last_submission_date ?? new Date(0).toISOString() };
+      return {
+        username: u,
+        current_streak: s.current_streak ?? 1,
+        best_streak: s.best_streak ?? 1,
+        grass_score: scoreMap?.[u] ?? 0,
+        count: countMap[u] ?? 0,
+        created_at: dateMap[u] ?? s.last_submission_date ?? new Date(0).toISOString(),
+      };
     })
-    .sort((a, b) => b.current_streak - a.current_streak);
+    .sort((a, b) => b.grass_score - a.grass_score);
 }
 
 // ─── Card component ───────────────────────────────────────────────────────────
@@ -116,15 +123,22 @@ function LBCard({ item, index }) {
           @{item.username}
         </Link>
 
-        {/* Streak hero number */}
+        {/* Grass Score — primary ranking metric */}
         <div style={{ display:"flex", alignItems:"baseline", gap:5, marginTop:"auto" }}>
           <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:700,
             lineHeight:1, color:tier.color, textShadow:`0 0 16px ${tier.color}60` }}>
-            🔥 {item.current_streak}
+            🌱 {(item.grass_score ?? 0).toLocaleString()}
           </span>
           <span style={{ fontSize:11, color:T.dim, fontWeight:500 }}>
-            day{item.current_streak !== 1 ? "s" : ""}
+            grass score
           </span>
+        </div>
+
+        {/* Current + best streak — secondary stats */}
+        <div style={{ display:"flex", gap:12, fontSize:11, color:T.muted }}>
+          <span>🔥 {item.current_streak} day{item.current_streak !== 1 ? "s" : ""}</span>
+          <span style={{ color:T.dim }}>·</span>
+          <span>best {item.best_streak}</span>
         </div>
 
         {/* Progress bar */}
@@ -164,10 +178,16 @@ export default function Leaderboard() {
       weekStart.setUTCHours(0,0,0,0);
       weekStart.setUTCDate(weekStart.getUTCDate() - 6);
 
-      const [{ data: streaks }, { data: subs }] = await Promise.all([
+      const [{ data: streaks }, { data: subs }, { data: profiles }] = await Promise.all([
         supabase.from("Streaks").select("username,current_streak,best_streak,last_submission_date"),
         supabase.from("Submissions").select("username,created_at").in("status",["pending","approved"]).order("created_at",{ascending:false}),
+        supabase.from("Profiles").select("username,grass_score"),
       ]);
+
+      const scoreMap = {};
+      (profiles || []).forEach(p => {
+        scoreMap[normalizeUsername(p.username)] = p.grass_score ?? 0;
+      });
 
       const countMap = {}, dateMap = {}, weeklySet = new Set();
       (subs || []).forEach(r => {
@@ -177,8 +197,8 @@ export default function Leaderboard() {
         if (new Date(r.created_at) >= weekStart) weeklySet.add(u);
       });
 
-      setData(buildLeaderboard(streaks, countMap, dateMap));
-      setWeeklyData(buildLeaderboard(streaks, countMap, dateMap, s => weeklySet.has(normalizeUsername(s.username))));
+      setData(buildLeaderboard(streaks, countMap, dateMap, scoreMap));
+      setWeeklyData(buildLeaderboard(streaks, countMap, dateMap, scoreMap, s => weeklySet.has(normalizeUsername(s.username))));
       setLoading(false);
     })();
   }, []);
@@ -234,7 +254,7 @@ export default function Leaderboard() {
           gap:12 }}>
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:26, height:26, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>Touch Grass</span>
+            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
           </Link>
           <div className="nav-links" style={{ display:"flex", gap:24, alignItems:"center" }}>
             <Link href="/" style={{ fontSize:13, color:T.dim, textDecoration:"none", fontWeight:500 }}>Dashboard</Link>
