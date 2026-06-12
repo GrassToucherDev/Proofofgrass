@@ -623,13 +623,14 @@ export default function FlexCardPage() {
       setLoading(true);
       const [{ data:sr }, { data:pr }, { count:subs }, { data:recentSubs }] = await Promise.all([
         supabase.from("Streaks").select("current_streak,best_streak,shield_count").eq("username",username).maybeSingle(),
-        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_badge").eq("username",username).maybeSingle(),
+        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_badge,grass_score").eq("username",username).maybeSingle(),
         supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username).in("status",["pending","approved"]),
         supabase.from("Submissions").select("created_at").eq("username",username).in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(63),
       ]);
 
-      const [{ data:allStreaks }, { data:chals }] = await Promise.all([
-        supabase.from("Streaks").select("username,current_streak").order("current_streak",{ascending:false}),
+      const [{ data:allProfiles }, { data:chals }] = await Promise.all([
+        // GRASS SCORE: rank is now based on grass_score (the primary leaderboard metric)
+        supabase.from("Profiles").select("username,grass_score").order("grass_score",{ascending:false}),
         supabase.from("Challenges").select("id,status,challenger").or(`challenger.eq.${username},challenged.eq.${username}`),
       ]);
 
@@ -638,7 +639,7 @@ export default function FlexCardPage() {
       setSubCount(subs ?? 0);
       setSubmissions(recentSubs ?? []);
 
-      const allRows = allStreaks ?? [];
+      const allRows = allProfiles ?? [];
       const idx = allRows.findIndex(r => norm(r.username) === username);
       setRank(idx >= 0 ? idx + 1 : null);
       setTotalUsers(allRows.length || 1);
@@ -654,7 +655,11 @@ export default function FlexCardPage() {
   const streak     = streakRow?.current_streak ?? 0;
   const best       = streakRow?.best_streak ?? 0;
   const shields    = streakRow?.shield_count ?? 0;
-  const grassScore = Math.floor(streak * 38 + subCount * 12 + best * 22);
+  // GRASS SCORE: read from server-authoritative Profiles.grass_score, with
+  // legacy formula fallback only if not yet backfilled.
+  const grassScore = profileRow?.grass_score != null
+    ? profileRow.grass_score
+    : Math.floor(streak * 38 + subCount * 12 + best * 22);
   const tier       = getTier(streak);
   const tierTitle  = getTierTitle(streak);
   const pct        = totalUsers > 0 ? ((rank / totalUsers) * 100).toFixed(1) : "—";
@@ -1020,12 +1025,18 @@ export default function FlexCardPage() {
 
             {/* ── STATS GRID ────────────────────────────────────────────── */}
             <div className="stats-grid fade2" style={{
-              display:"grid", gridTemplateColumns:"repeat(4,1fr)",
+              display:"grid", gridTemplateColumns:"repeat(3,1fr)",
               borderBottom:`1px solid ${T.border}` }}>
-              <StatCell icon="⚡" value={loading?"…":grassScore.toLocaleString()}   label="Grass Score"          />
-              <StatCell icon="🔥" value={loading?"…":`${best}d`}                    label="Longest Streak"       />
-              <StatCell icon="🛡" value={loading?"…":shields}                       label="Shields Owned"        />
-              <StatCell icon="👑" value={loading?"…":(rank?`#${rank}`:"—")}         label={`Global Rank\nTop ${pct}%`} last accent />
+              <StatCell icon="🌱" value={loading?"…":grassScore.toLocaleString()}   label="Grass Score"          accent />
+              <StatCell icon="👑" value={loading?"…":(rank?`#${rank}`:"—")}         label={`Global Rank\nTop ${pct}%`} />
+              <StatCell icon="🔥" value={loading?"…":`${streak}d`}                  label="Current Streak"       last />
+            </div>
+            <div className="stats-grid fade2" style={{
+              display:"grid", gridTemplateColumns:"repeat(3,1fr)",
+              borderBottom:`1px solid ${T.border}` }}>
+              <StatCell icon="🏆" value={loading?"…":`${best}d`}                    label="Longest Streak"       />
+              <StatCell icon="🤝" value={loading?"…":(profileRow?.referral_count_successful ?? 0)} label="Successful Referrals" />
+              <StatCell icon="🎖" value={loading?"…":earnedBadges.length}            label="Badges Earned"        last />
             </div>
 
             {/* ── BADGES ────────────────────────────────────────────────── */}

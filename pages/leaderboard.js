@@ -49,8 +49,9 @@ function getTopPercent(streak) {
   return null;
 }
 
-// Leaderboard built from Streaks as source of truth, ranked by Grass Score (lifetime)
-function buildLeaderboard(streaks, countMap, dateMap, scoreMap, filterFn) {
+// Leaderboard built from Streaks as source of truth.
+// sortBy: 'grass_score' (default/main) | 'current_streak' | 'referral_count'
+function buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, filterFn, sortBy = "grass_score") {
   return (streaks || [])
     .filter(s => normalizeUsername(s.username))
     .filter(filterFn ?? (() => true))
@@ -61,15 +62,16 @@ function buildLeaderboard(streaks, countMap, dateMap, scoreMap, filterFn) {
         current_streak: s.current_streak ?? 1,
         best_streak: s.best_streak ?? 1,
         grass_score: scoreMap?.[u] ?? 0,
+        referral_count: referralMap?.[u] ?? 0,
         count: countMap[u] ?? 0,
         created_at: dateMap[u] ?? s.last_submission_date ?? new Date(0).toISOString(),
       };
     })
-    .sort((a, b) => b.grass_score - a.grass_score);
+    .sort((a, b) => b[sortBy] - a[sortBy]);
 }
 
 // ─── Card component ───────────────────────────────────────────────────────────
-function LBCard({ item, index }) {
+function LBCard({ item, index, board }) {
   const tier   = getStreakTier(item.current_streak);
   const topPct = getTopPercent(item.current_streak);
   const nextTier = getNextTier(item.current_streak);
@@ -123,22 +125,55 @@ function LBCard({ item, index }) {
           @{item.username}
         </Link>
 
-        {/* Grass Score — primary ranking metric */}
+        {/* Primary ranking metric — depends on active board */}
         <div style={{ display:"flex", alignItems:"baseline", gap:5, marginTop:"auto" }}>
-          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:700,
-            lineHeight:1, color:tier.color, textShadow:`0 0 16px ${tier.color}60` }}>
-            🌱 {(item.grass_score ?? 0).toLocaleString()}
-          </span>
-          <span style={{ fontSize:11, color:T.dim, fontWeight:500 }}>
-            grass score
-          </span>
+          {board === "current_streak" ? (
+            <>
+              <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:700,
+                lineHeight:1, color:tier.color, textShadow:`0 0 16px ${tier.color}60` }}>
+                🔥 {item.current_streak}
+              </span>
+              <span style={{ fontSize:11, color:T.dim, fontWeight:500 }}>
+                day{item.current_streak !== 1 ? "s" : ""}
+              </span>
+            </>
+          ) : board === "referral_count" ? (
+            <>
+              <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:700,
+                lineHeight:1, color:tier.color, textShadow:`0 0 16px ${tier.color}60` }}>
+                🤝 {item.referral_count}
+              </span>
+              <span style={{ fontSize:11, color:T.dim, fontWeight:500 }}>
+                referral{item.referral_count !== 1 ? "s" : ""}
+              </span>
+            </>
+          ) : (
+            <>
+              <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:700,
+                lineHeight:1, color:tier.color, textShadow:`0 0 16px ${tier.color}60` }}>
+                🌱 {(item.grass_score ?? 0).toLocaleString()}
+              </span>
+              <span style={{ fontSize:11, color:T.dim, fontWeight:500 }}>
+                grass score
+              </span>
+            </>
+          )}
         </div>
 
-        {/* Current + best streak — secondary stats */}
-        <div style={{ display:"flex", gap:12, fontSize:11, color:T.muted }}>
-          <span>🔥 {item.current_streak} day{item.current_streak !== 1 ? "s" : ""}</span>
-          <span style={{ color:T.dim }}>·</span>
-          <span>best {item.best_streak}</span>
+        {/* Secondary stats — always show streak + grass score + referrals for context */}
+        <div style={{ display:"flex", gap:10, fontSize:11, color:T.muted, flexWrap:"wrap" }}>
+          {board !== "current_streak" && (
+            <span>🔥 {item.current_streak}d <span style={{color:T.dim}}>· best {item.best_streak}</span></span>
+          )}
+          {board === "current_streak" && (
+            <span>🏆 best {item.best_streak}d</span>
+          )}
+          {board !== "grass_score" && (
+            <span style={{ color:T.dim }}>· 🌱 {(item.grass_score ?? 0).toLocaleString()}</span>
+          )}
+          {board !== "referral_count" && item.referral_count > 0 && (
+            <span style={{ color:T.dim }}>· 🤝 {item.referral_count}</span>
+          )}
         </div>
 
         {/* Progress bar */}
@@ -166,10 +201,17 @@ function LBCard({ item, index }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Leaderboard() {
   const [tab,        setTab]        = useState("alltime");
+  const [board,      setBoard]      = useState("grass_score"); // 'grass_score' | 'current_streak' | 'referral_count'
   const [data,       setData]       = useState([]);
   const [weeklyData, setWeeklyData] = useState([]);
   const [rankQuery,  setRankQuery]  = useState("");
   const [loading,    setLoading]    = useState(true);
+
+  const BOARDS = [
+    { key:"grass_score",    label:"🏆 Grass Score",      sub:"Overall progression" },
+    { key:"current_streak", label:"🔥 Streaks",           sub:"Consistency" },
+    { key:"referral_count", label:"🤝 Community Builder", sub:"Referrals" },
+  ];
 
   useEffect(() => {
     (async () => {
@@ -181,12 +223,14 @@ export default function Leaderboard() {
       const [{ data: streaks }, { data: subs }, { data: profiles }] = await Promise.all([
         supabase.from("Streaks").select("username,current_streak,best_streak,last_submission_date"),
         supabase.from("Submissions").select("username,created_at").in("status",["pending","approved"]).order("created_at",{ascending:false}),
-        supabase.from("Profiles").select("username,grass_score"),
+        supabase.from("Profiles").select("username,grass_score,referral_count_successful"),
       ]);
 
-      const scoreMap = {};
+      const scoreMap = {}, referralMap = {};
       (profiles || []).forEach(p => {
-        scoreMap[normalizeUsername(p.username)] = p.grass_score ?? 0;
+        const u = normalizeUsername(p.username);
+        scoreMap[u] = p.grass_score ?? 0;
+        referralMap[u] = p.referral_count_successful ?? 0;
       });
 
       const countMap = {}, dateMap = {}, weeklySet = new Set();
@@ -197,11 +241,11 @@ export default function Leaderboard() {
         if (new Date(r.created_at) >= weekStart) weeklySet.add(u);
       });
 
-      setData(buildLeaderboard(streaks, countMap, dateMap, scoreMap));
-      setWeeklyData(buildLeaderboard(streaks, countMap, dateMap, scoreMap, s => weeklySet.has(normalizeUsername(s.username))));
+      setData(buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, null, board));
+      setWeeklyData(buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, s => weeklySet.has(normalizeUsername(s.username)), board));
       setLoading(false);
     })();
-  }, []);
+  }, [board]);
 
   const activeData = tab === "alltime" ? data : weeklyData;
   const normalizedQ = normalizeUsername(rankQuery);
@@ -270,9 +314,30 @@ export default function Leaderboard() {
           <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(36px,6vw,72px)", fontWeight:700, color:T.white, lineHeight:1, letterSpacing:"-0.02em", marginBottom:12 }}>
             The Outdoor<br />Leaderboard
           </h1>
-          <p style={{ fontSize:14, color:T.dim, marginBottom:32, fontWeight:300, maxWidth:400, lineHeight:1.7 }}>
-            Real streaks. Real people. Going outside every day.
+          <p style={{ fontSize:14, color:T.dim, marginBottom:32, fontWeight:300, maxWidth:420, lineHeight:1.7 }}>
+            {board === "current_streak"
+              ? "Real streaks. Real people. Going outside every day."
+              : board === "referral_count"
+              ? "Bring people outside. Build the movement."
+              : "Daily proofs, milestones, badges, and referrals — every contribution counts."}
           </p>
+
+          {/* BOARD SELECTOR — three competitions */}
+          <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
+            {BOARDS.map(b => (
+              <button
+                key={b.key}
+                className={`tab-btn ${board===b.key ? "tab-active" : "tab-inactive"}`}
+                onClick={() => setBoard(b.key)}
+                style={{ display:"flex", flexDirection:"column", alignItems:"flex-start",
+                  gap:2, padding:"10px 18px", height:"auto" }}
+              >
+                <span>{b.label}</span>
+                <span style={{ fontSize:8, letterSpacing:"0.08em", textTransform:"none",
+                  opacity:0.7, fontWeight:500 }}>{b.sub}</span>
+              </button>
+            ))}
+          </div>
 
           {/* Tabs */}
           <div style={{ display:"flex", gap:8, marginBottom:32 }}>
@@ -310,10 +375,12 @@ export default function Leaderboard() {
               {rankResult && (
                 <div style={{ display:"flex", gap:32, flexWrap:"wrap", marginTop:8 }}>
                   {[
-                    ["Rank",   `#${rankResult.rank}`],
-                    ["Streak", `🔥 ${rankResult.current_streak}d`],
-                    ["Best",   `🏆 ${rankResult.best_streak}d`],
-                    ["Tier",   getStreakTier(rankResult.current_streak).label],
+                    ["Rank",        `#${rankResult.rank}`],
+                    ["Grass Score", `🌱 ${rankResult.grass_score.toLocaleString()}`],
+                    ["Streak",      `🔥 ${rankResult.current_streak}d`],
+                    ["Best",        `🏆 ${rankResult.best_streak}d`],
+                    ["Referrals",   `🤝 ${rankResult.referral_count}`],
+                    ["Tier",        getStreakTier(rankResult.current_streak).label],
                   ].map(([label, val]) => (
                     <div key={label}>
                       <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", color:T.dim, marginBottom:4 }}>{label}</div>
@@ -360,13 +427,15 @@ export default function Leaderboard() {
             </div>
           ) : (
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12, alignItems:"stretch" }} className="lb-grid">
-              {activeData.map((item, i) => <LBCard key={`${item.username}-${i}`} item={item} index={i} />)}
+              {activeData.map((item, i) => <LBCard key={`${item.username}-${i}`} item={item} index={i} board={board} />)}
             </div>
           )}
 
           {/* STREAK RESETS NOTE */}
           <p style={{ fontSize:10, color:T.dim, letterSpacing:"0.12em", textTransform:"uppercase", marginTop:24, textAlign:"center" }}>
-            Streaks reset at 00:00 UTC
+            {board === "current_streak"
+              ? "Streaks reset at 00:00 UTC"
+              : "Grass Score never resets — streaks can, your progress can't"}
           </p>
         </div>
 

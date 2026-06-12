@@ -415,6 +415,11 @@ export default function ProfilePage() {
   const [showChallenge,setShowChallenge] = useState(false);
   const [activeChallenges, setActiveChallenges] = useState([]);
 
+  // GRASS SCORE: global rank + score breakdown + recent activity
+  const [globalRank,     setGlobalRank]     = useState(null);
+  const [scoreEvents,    setScoreEvents]    = useState([]);
+  const [scoreBreakdown, setScoreBreakdown] = useState({ daily_proof:0, streak_milestone:0, badge:0, referral:0, ecosystem:0 });
+
   useEffect(()=>{
     const saved = typeof window!=="undefined" ? localStorage.getItem("pog_username") : null;
     if (saved) setViewer(norm(saved));
@@ -443,13 +448,33 @@ export default function ProfilePage() {
         .limit(5);
       setActiveChallenges(challengeRows ?? []);
 
-      const [{data:allStreaks},{data:recentSubs},{data:impactRows},{data:chalRows},{data:referralRows}] = await Promise.all([
+      const [{data:allStreaks},{data:recentSubs},{data:impactRows},{data:chalRows},{data:referralRows},{data:scoreEventRows},{data:allScores}] = await Promise.all([
         supabase.from("Streaks").select("username,current_streak").order("current_streak",{ascending:false}),
         supabase.from("Submissions").select("created_at,photo_url").eq("username",username).in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(10),
         supabase.from("Impact").select("trees_funded,co2_lbs,donated_usd").eq("username",username),
         supabase.from("Challenges").select("*").or(`challenger.eq.${username},challenged.eq.${username}`).order("created_at",{ascending:false}).limit(20),
         supabase.from("Referrals").select("referred_username,status,converted_at,created_at").eq("referrer_username",username).order("created_at",{ascending:false}).limit(20),
+        // GRASS SCORE: recent score activity (latest 10 events)
+        supabase.from("ScoreEvents").select("event_type,points,description,source_id,created_at").eq("username",username).order("created_at",{ascending:false}).limit(10),
+        // GRASS SCORE: all users' scores, for global rank computation
+        supabase.from("Profiles").select("username,grass_score").order("grass_score",{ascending:false}),
       ]);
+
+      // GRASS SCORE: global rank (1-indexed position in grass_score DESC order)
+      const rankIdx = (allScores ?? []).findIndex(p => norm(p.username) === username);
+      setGlobalRank(rankIdx === -1 ? null : rankIdx + 1);
+      setScoreEvents(scoreEventRows ?? []);
+
+      // GRASS SCORE: breakdown by event_type
+      const breakdown = { daily_proof:0, streak_milestone:0, badge:0, referral:0, ecosystem:0 };
+      // Fetch ALL score events for this user to compute accurate totals per category
+      const { data: allEventsForUser } = await supabase
+        .from("ScoreEvents").select("event_type,points").eq("username",username);
+      (allEventsForUser ?? []).forEach(e => {
+        const key = e.event_type in breakdown ? e.event_type : null;
+        if (key) breakdown[key] += (e.points ?? 0);
+      });
+      setScoreBreakdown(breakdown);
 
       // Process challenges
       const chalList = chalRows ?? [];
@@ -835,6 +860,79 @@ export default function ProfilePage() {
 
         {/* MAIN CONTENT */}
         <div style={{padding:"28px clamp(14px,5vw,64px)"}}>
+
+          {/* ── GRASS SCORE ──────────────────────────────────────────────── */}
+          <div className="card fade" style={{marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+              flexWrap:"wrap",gap:8,marginBottom:16}}>
+              <div style={{display:"flex",alignItems:"center",gap:7}}>
+                <span style={{fontSize:13}}>🌱</span>
+                <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.18em",
+                  textTransform:"uppercase",color:T.muted}}>Grass Score</span>
+              </div>
+              {globalRank != null && (
+                <div style={{fontSize:11,color:T.gold,fontWeight:600}}>
+                  Global Rank #{globalRank.toLocaleString()}
+                </div>
+              )}
+            </div>
+
+            {/* Total score — hero number */}
+            <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:20}}>
+              <span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
+                fontSize:"clamp(36px,6vw,52px)",fontWeight:700,color:T.olive,lineHeight:1,
+                textShadow:`0 0 24px ${T.olive}40`}}>
+                {loading ? "…" : grassScore.toLocaleString()}
+              </span>
+              <span style={{fontSize:12,color:T.dim,fontWeight:500}}>total points</span>
+            </div>
+
+            {/* Score breakdown */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",
+              gap:8,marginBottom:18}}>
+              {[
+                {key:"daily_proof",      label:"Daily Proofs",     icon:"📅"},
+                {key:"streak_milestone", label:"Streak Milestones",icon:"🏆"},
+                {key:"badge",            label:"Badges",           icon:"🎖"},
+                {key:"referral",         label:"Referrals",        icon:"🤝"},
+                {key:"ecosystem",        label:"Ecosystem Bonuses",icon:"🪙"},
+              ].map(b => (
+                <div key={b.key} style={{padding:"12px 10px",borderRadius:10,
+                  background:T.bg3,border:`1px solid ${T.border}`,textAlign:"center"}}>
+                  <div style={{fontSize:16,marginBottom:4}}>{b.icon}</div>
+                  <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
+                    fontSize:18,fontWeight:700,color:T.white,lineHeight:1,marginBottom:3}}>
+                    {(scoreBreakdown[b.key] ?? 0).toLocaleString()}
+                  </div>
+                  <div style={{fontSize:8,color:T.dim,letterSpacing:"0.08em",
+                    textTransform:"uppercase",lineHeight:1.3}}>{b.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Recent score activity */}
+            {scoreEvents.length > 0 && (
+              <div>
+                <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.16em",
+                  textTransform:"uppercase",color:T.muted,marginBottom:10}}>
+                  Recent Score Activity
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {scoreEvents.map((e,i) => (
+                    <div key={i} style={{display:"flex",alignItems:"center",
+                      justifyContent:"space-between",gap:10,padding:"8px 12px",
+                      borderRadius:8,background:T.bg3,border:`1px solid ${T.border}`}}>
+                      <span style={{fontSize:11,color:T.muted}}>{e.description}</span>
+                      <span style={{fontSize:12,fontWeight:700,color:T.olive,
+                        fontFamily:"'Cormorant Garamond',Georgia,serif",whiteSpace:"nowrap"}}>
+                        +{e.points}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* ── WALLET VERIFICATION (owner only) ──────────────────────────── */}
           {isOwner && (
