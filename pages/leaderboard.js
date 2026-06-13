@@ -51,7 +51,7 @@ function getTopPercent(streak) {
 
 // Leaderboard built from Streaks as source of truth.
 // sortBy: 'grass_score' (default/main) | 'current_streak' | 'referral_count'
-function buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, filterFn, sortBy = "grass_score") {
+function buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, avatarMap, filterFn, sortBy = "grass_score") {
   return (streaks || [])
     .filter(s => normalizeUsername(s.username))
     .filter(filterFn ?? (() => true))
@@ -63,6 +63,7 @@ function buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, fil
         best_streak: s.best_streak ?? 1,
         grass_score: scoreMap?.[u] ?? 0,
         referral_count: referralMap?.[u] ?? 0,
+        avatar_url: avatarMap?.[u] ?? null,
         count: countMap[u] ?? 0,
         created_at: dateMap[u] ?? s.last_submission_date ?? new Date(0).toISOString(),
       };
@@ -115,14 +116,30 @@ function LBCard({ item, index, board }) {
           </span>
         </div>
 
-        {/* Username — links to public profile */}
+        {/* Avatar + Username — links to public profile */}
         <Link href={`/u/${item.username}`} onClick={e => e.stopPropagation()}
-          style={{ fontSize:14, fontWeight:600, color:T.white, overflow:"hidden",
-          textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"'DM Sans',sans-serif",
-          textDecoration:"none", transition:"color 0.15s" }}
-          onMouseEnter={e => e.currentTarget.style.color = tier.color}
-          onMouseLeave={e => e.currentTarget.style.color = T.white}>
-          @{item.username}
+          style={{ display:"flex", alignItems:"center", gap:8, textDecoration:"none",
+          transition:"color 0.15s", minWidth:0 }}
+          onMouseEnter={e => { e.currentTarget.querySelector('.lb-username').style.color = tier.color; }}
+          onMouseLeave={e => { e.currentTarget.querySelector('.lb-username').style.color = T.white; }}>
+          {item.avatar_url ? (
+            <img src={item.avatar_url} alt="" loading="lazy" className="lb-avatar"
+              style={{ width:44, height:44, borderRadius:"50%", objectFit:"cover",
+                border:`1px solid ${T.borderG}`, flexShrink:0, background:T.bg3 }} />
+          ) : (
+            <div className="lb-avatar" style={{ width:44, height:44, borderRadius:"50%",
+              border:`1px solid ${T.borderG}`, flexShrink:0, background:T.bg3,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:700,
+              color:T.olive }}>
+              {item.username?.[0]?.toUpperCase() ?? "?"}
+            </div>
+          )}
+          <span className="lb-username" style={{ fontSize:14, fontWeight:600, color:T.white,
+            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+            fontFamily:"'DM Sans',sans-serif", transition:"color 0.15s" }}>
+            @{item.username}
+          </span>
         </Link>
 
         {/* Primary ranking metric — depends on active board */}
@@ -223,14 +240,15 @@ export default function Leaderboard() {
       const [{ data: streaks }, { data: subs }, { data: profiles }] = await Promise.all([
         supabase.from("Streaks").select("username,current_streak,best_streak,last_submission_date"),
         supabase.from("Submissions").select("username,created_at").in("status",["pending","approved"]).order("created_at",{ascending:false}),
-        supabase.from("Profiles").select("username,grass_score,referral_count_successful"),
+        supabase.from("Profiles").select("username,grass_score,referral_count_successful,avatar_url"),
       ]);
 
-      const scoreMap = {}, referralMap = {};
+      const scoreMap = {}, referralMap = {}, avatarMap = {};
       (profiles || []).forEach(p => {
         const u = normalizeUsername(p.username);
         scoreMap[u] = p.grass_score ?? 0;
         referralMap[u] = p.referral_count_successful ?? 0;
+        avatarMap[u] = p.avatar_url || null;
       });
 
       const countMap = {}, dateMap = {}, weeklySet = new Set();
@@ -241,8 +259,8 @@ export default function Leaderboard() {
         if (new Date(r.created_at) >= weekStart) weeklySet.add(u);
       });
 
-      setData(buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, null, board));
-      setWeeklyData(buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, s => weeklySet.has(normalizeUsername(s.username)), board));
+      setData(buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, avatarMap, null, board));
+      setWeeklyData(buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, avatarMap, s => weeklySet.has(normalizeUsername(s.username)), board));
       setLoading(false);
     })();
   }, [board]);
@@ -276,6 +294,7 @@ export default function Leaderboard() {
     @media(max-width:640px){
       .nav-links{display:none !important;}
       .lb-grid{grid-template-columns:1fr !important;}
+      .lb-avatar{width:38px !important;height:38px !important;}
     }
     /* Tablet — 2 columns */
     @media(min-width:641px) and (max-width:900px){
