@@ -145,116 +145,58 @@ export default function AdminMilestones() {
     setLoading(true);
 
     try {
-      // 1. Find users whose streak hit a milestone day this week.
-      //    We use Streaks.last_submission_date (the actual date they submitted)
-      //    rather than ScoreEvents.created_at (which may reflect backfill timestamp,
-      //    not the real date the milestone was reached).
+      // 1. Find users who hit a streak milestone this week.
       //
-      //    Logic: if a user's last_submission_date falls within the date range
-      //    AND their current_streak equals one of our milestone days,
-      //    they hit that milestone this week.
+      //    Source of truth: Streaks table.
+      //    A user "hit milestone M this week" if:
+      //      - Their current_streak >= M (they've reached it)
+      //      - The date they crossed M falls within the report range
+      //      - Date crossed = last_submission_date - (current_streak - M) days
       //
-      //    Edge case: if a user hit Day 30 on Wednesday and has since continued
-      //    to Day 33, their current_streak won't equal 30 anymore. To catch these,
-      //    we also check Submissions: find any submission in the range where the
-      //    user's streak on that date crossed a milestone (submission count = milestone).
-      //    For V1 simplicity, we use the Streaks approach for active milestones
-      //    and supplement with ScoreEvents for historical ones in the range.
+      //    This correctly handles users mid-streak (e.g. current=79, milestone=50:
+      //    they crossed Day 50 on last_submission_date - 29 days ago).
+      //    If that date falls outside the report range, they're excluded.
+      //
+      //    Also catches users whose streak == milestone exactly today (just hit it).
+      //    Does NOT use ScoreEvents timestamps (which may reflect backfill dates).
+      //    Does NOT use submission counts (which ignore streak consecutiveness).
 
-      // Approach: fetch all Submissions in the date range, group by username,
-      // then cross-reference with Streaks to find milestone crossings.
-      const { data: weekSubs } = await supabase
-        .from("Submissions")
-        .select("username, created_at")
-        .in("status", ["pending", "approved"])
-        .gte("created_at", `${from}T00:00:00.000Z`)
-        .lte("created_at", `${to}T23:59:59.999Z`)
-        .order("created_at", { ascending: true });
-
-      // For each user who submitted this week, fetch their full submission count
-      // up to each date to determine if they crossed a milestone that day.
-      // Simpler V1: fetch current streaks and flag users whose streak IS a milestone
-      // (hit it on their last submission date within range) OR whose streak has
-      // passed a milestone during the week (check ScoreEvents created within range
-      // BUT only for events whose source_id milestone day <= current_streak,
-      // AND whose earliest submission this week is <= milestone_day submissions total).
-
-      // V1 practical approach: use ScoreEvents but filter by milestone day vs
-      // current_streak to exclude backfill artifacts.
-      // A ScoreEvent is "real this week" if:
-      //   1. created_at is in the range (it fired this week), AND
-      //   2. The user's current_streak >= milestone_day (they've actually reached it)
-      //   3. The user's current_streak - (days since milestone) ≈ milestone_day
-      //      i.e. milestone was reached recently
-      // Simplest reliable filter: use Streaks.last_submission_date in range
-      // combined with checking if current_streak is within N days of a milestone.
-
-      // CLEANEST APPROACH: query Streaks directly for users active this week
-      // whose current_streak matches a milestone day exactly (hit it on their
-      // last submission), OR fetch all submissions in range and count cumulative
-      // to find milestone crossings. For V1, use Streaks active this week.
-      const { data: activeStreaks } = await supabase
+      const { data: allActiveStreaks } = await supabase
         .from("Streaks")
         .select("username, current_streak, best_streak, last_submission_date")
-        .gte("last_submission_date", from)
-        .lte("last_submission_date", to);
+        .gte("current_streak", MILESTONES[0]); // only users with streak >= lowest milestone
 
-      // Also fetch submission counts to find milestone crossings mid-week
-      // (user hit Day 30 on Tuesday but today is Day 33 — last_submission_date is today)
-      const weekUsernames = [...new Set((weekSubs ?? []).map(s => s.username))];
-
-      // For each user active this week, count their total submissions to find
-      // which milestone(s) they crossed during the week
       const milestoneEvents = [];
       const seen = new Set();
 
-      // Build a map: username -> submissions this week sorted by date
-      const weekSubsByUser = {};
-      for (const s of (weekSubs ?? [])) {
-        if (!weekSubsByUser[s.username]) weekSubsByUser[s.username] = [];
-        weekSubsByUser[s.username].push(s.created_at.slice(0, 10));
-      }
-
-      // Fetch total submission counts for all users active this week
-      const totalCountResults = weekUsernames.length > 0
-        ? await Promise.all(weekUsernames.map(u =>
-            supabase.from("Submissions")
-              .select("id", { count: "exact", head: true })
-              .eq("username", u)
-              .in("status", ["pending", "approved"])
-              .lte("created_at", `${to}T23:59:59.999Z`)
-          ))
-        : [];
-
-      const totalCountMap = {};
-      weekUsernames.forEach((u, i) => {
-        totalCountMap[u] = totalCountResults[i]?.count ?? 0;
-      });
-
-      // For each user, find which milestones they crossed this week
-      // by checking: did their total submission count pass a milestone this week?
-      for (const username of weekUsernames) {
-        const userDates = weekSubsByUser[username] ?? [];
-        const totalNow = totalCountMap[username];
-        const weekCount = userDates.length;
-        const totalBefore = totalNow - weekCount; // submissions before this week
+      for (const s of (allActiveStreaks ?? [])) {
+        const lastDate = new Date(s.last_submission_date + "T00:00:00.000Z");
+        const current  = s.current_streak;
 
         for (const milestone of MILESTONES) {
-          // Did they cross this milestone during this week?
-          if (totalBefore < milestone && totalNow >= milestone) {
-            // Find the specific date they hit the milestone (Nth submission)
-            const nthInWeek = milestone - totalBefore; // which submission this week was the milestone
-            const hitDate = userDates[nthInWeek - 1] ?? userDates[userDates.length - 1];
-            const key = `${username}:${milestone}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            milestoneEvents.push({ username, milestone, milestone_date: hitDate });
-          }
-        }
-      }
+          if (current < milestone) continue; // hasn't reached this milestone
 
-      if (milestoneEvents.length === 0) {
-        setRows([]); setLoading(false); return;
+          // Calculate the date they crossed this milestone:
+          // They were at (current) streak on last_submission_date,
+          // so they were at (milestone) streak (current - milestone) days earlier.
+          const daysAgo = current - milestone;
+          const hitDate = new Date(lastDate);
+          hitDate.setUTCDate(hitDate.getUTCDate() - daysAgo);
+          const hitDateStr = hitDate.toISOString().slice(0, 10);
+
+          // Check if hit date falls within the report range
+          if (hitDateStr < from || hitDateStr > to) continue;
+
+          const key = `${s.username}:${milestone}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          milestoneEvents.push({
+            username:       s.username,
+            milestone:      milestone,
+            milestone_date: hitDateStr,
+          });
+        }
       }
 
       // 2. Fetch profile/streak data for all relevant users
