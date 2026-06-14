@@ -1146,8 +1146,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </div>
       </div>
 
-    </div>
-
     {/* ── LUCKY TOUCH MODAL ──────────────────────────────────────────────── */}
     {luckyTouch?.triggered && (
       <div style={{
@@ -1275,7 +1273,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       </div>
     )}
 
-  </div>
+    </div>
   );
 }
 
