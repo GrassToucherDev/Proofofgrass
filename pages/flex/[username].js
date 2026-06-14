@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../utils/supabase";
+import { resolveActiveCover } from "../../utils/coverDefinitions";
 
 const T = {
   bg:     "#080a06", bg2: "#0e100b", bg3: "#141710", bg4: "#1a1e13",
@@ -218,7 +219,7 @@ function getQuote(streak, bio) {
 // Progress bar: label 600/16px@y762 | track h10@y775 olive-gold gradient
 // Quote: italic 38/34/30px Georgia center W/2@y910
 // Footer divider@y=H-90 | Hashtags 700/22px@y=H-56 | URL 500/20px right@y=H-56
-async function generateShareImage({ username, streak, tier, tierTitle, grassScore, rank, subCount, badges, best, shields, bio, hasTG, hasGT, hasST, avatarUrl, avatarFrame }) {
+async function generateShareImage({ username, streak, tier, tierTitle, grassScore, rank, subCount, badges, best, shields, bio, hasTG, hasGT, hasST, avatarUrl, avatarFrame, coverUrl }) {
   const W = 1080, H = 1080;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
@@ -231,6 +232,41 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   bg.addColorStop(1,   "#080a06");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
+
+  // ── PRESTIGE COVER ──────────────────────────────────────────────────────────
+  // Drawn beneath all existing overlays (glow, grid, border, content) so the
+  // card composition is unchanged — only the background treatment differs.
+  // Cover-image-on -> existing-gradient-on -> existing-elements-on, exactly
+  // matching the layered order requested.
+  if (coverUrl) {
+    try {
+      const coverImg = await loadImage(coverUrl);
+      // Cover image to fill W x H (object-fit: cover behavior)
+      const imgRatio = coverImg.width / coverImg.height;
+      const canvasRatio = W / H;
+      let drawW, drawH, drawX, drawY;
+      if (imgRatio > canvasRatio) {
+        drawH = H; drawW = H * imgRatio;
+        drawX = (W - drawW) / 2; drawY = 0;
+      } else {
+        drawW = W; drawH = W / imgRatio;
+        drawX = 0; drawY = (H - drawH) / 2;
+      }
+      ctx.drawImage(coverImg, drawX, drawY, drawW, drawH);
+
+      // Dark scrim so existing text/elements remain legible over any cover —
+      // matches the base background's tone so contrast stays consistent.
+      const scrim = ctx.createLinearGradient(0, 0, W, H);
+      scrim.addColorStop(0,   "rgba(8,10,6,0.55)");
+      scrim.addColorStop(0.5, "rgba(14,17,10,0.65)");
+      scrim.addColorStop(1,   "rgba(8,10,6,0.8)");
+      ctx.fillStyle = scrim;
+      ctx.fillRect(0, 0, W, H);
+    } catch {
+      // If cover fails to load, fall through silently — base background
+      // (already filled above) remains as-is.
+    }
+  }
 
   // Ambient glow
   const glow = ctx.createRadialGradient(W*0.75, H*0.2, 0, W*0.75, H*0.2, 480);
@@ -623,7 +659,7 @@ export default function FlexCardPage() {
       setLoading(true);
       const [{ data:sr }, { data:pr }, { count:subs }, { data:recentSubs }] = await Promise.all([
         supabase.from("Streaks").select("current_streak,best_streak,shield_count").eq("username",username).maybeSingle(),
-        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_badge,grass_score").eq("username",username).maybeSingle(),
+        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_badge,grass_score,active_cover_id,unlocked_covers").eq("username",username).maybeSingle(),
         supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username).in("status",["pending","approved"]),
         supabase.from("Submissions").select("created_at").eq("username",username).in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(63),
       ]);
@@ -660,6 +696,9 @@ export default function FlexCardPage() {
   const grassScore = profileRow?.grass_score != null
     ? profileRow.grass_score
     : Math.floor(streak * 38 + subCount * 12 + best * 22);
+
+  // PRESTIGE COVERS: resolve active cover for hero background
+  const activeCover = resolveActiveCover(profileRow);
   const tier       = getTier(streak);
   const tierTitle  = getTierTitle(streak);
   const pct        = totalUsers > 0 ? ((rank / totalUsers) * 100).toFixed(1) : "—";
@@ -717,6 +756,10 @@ export default function FlexCardPage() {
         hasTG: profileRow?.has_touchgrass_holder ?? false,
         hasGT: profileRow?.has_grass_toucher     ?? false,
         hasST: profileRow?.has_screen_toucher    ?? false,
+        avatarUrl: profileRow?.avatar_url || null,
+        avatarFrame: profileRow?.avatar_frame || null,
+        // PRESTIGE COVERS: pass active cover image to share card generator
+        coverUrl: activeCover?.imageUrl || null,
       });
 
       if (isMob) {
@@ -801,6 +844,10 @@ export default function FlexCardPage() {
         hasTG: profileRow?.has_touchgrass_holder ?? false,
         hasGT: profileRow?.has_grass_toucher     ?? false,
         hasST: profileRow?.has_screen_toucher    ?? false,
+        avatarUrl: profileRow?.avatar_url || null,
+        avatarFrame: profileRow?.avatar_frame || null,
+        // PRESTIGE COVERS: pass active cover image to share card generator
+        coverUrl: activeCover?.imageUrl || null,
       });
 
       if (isMob && navigator.share && navigator.canShare) {
@@ -941,7 +988,10 @@ export default function FlexCardPage() {
 
             {/* ── HERO ─────────────────────────────────────────────────── */}
             <div className="fade" style={{ padding:"28px 28px 22px",
-              background:`linear-gradient(135deg,${T.bg3},${T.bg2})`,
+              background: activeCover?.imageUrl
+                ? `linear-gradient(135deg,rgba(20,21,16,0.55),rgba(20,21,16,0.85)), url(${activeCover.imageUrl})`
+                : `linear-gradient(135deg,${T.bg3},${T.bg2})`,
+              backgroundSize:"cover", backgroundPosition:"center",
               borderBottom:`1px solid ${T.border}`, position:"relative",
               display:"flex", alignItems:"flex-start", justifyContent:"space-between",
               gap:16, flexWrap:"wrap" }}>

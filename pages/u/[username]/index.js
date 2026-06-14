@@ -4,6 +4,7 @@ import WalletVerify from "../../../components/WalletVerify";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../../utils/supabase";
+import { resolveActiveCover, COVER_DEFINITIONS } from "../../../utils/coverDefinitions";
 
 const T = {
   bg:"#0a0b08", bg2:"#111209", bg3:"#181a12",
@@ -433,7 +434,7 @@ export default function ProfilePage() {
       // Step 1: user streak + profile + submissions (parallel — no dependencies)
       const [{data:sr},{data:pr},{count:subs}] = await Promise.all([
         supabase.from("Streaks").select("current_streak,best_streak,last_submission_date,shield_count").eq("username",username).maybeSingle(),
-        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_count_pending,referral_badge,grass_score").eq("username",username).maybeSingle(),
+        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_count_pending,referral_badge,grass_score,active_cover_id,unlocked_covers").eq("username",username).maybeSingle(),
         supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username).in("status",["pending","approved"]),
       ]);
 
@@ -562,6 +563,9 @@ export default function ProfilePage() {
     await supabase.from("Profiles").upsert({username, [field]:value},{onConflict:"username"});
   };
 
+  // PRESTIGE COVERS: equip an unlocked cover (owner only)
+  const equipCover = (slug) => saveField("active_cover_id", slug);
+
   const copyProfile = ()=>{
     if (typeof window!=="undefined") navigator.clipboard.writeText(window.location.href).catch(()=>{});
     setCopied(true); setTimeout(()=>setCopied(false),1800);
@@ -577,6 +581,10 @@ export default function ProfilePage() {
   const grassScore = profileRow?.grass_score != null
     ? profileRow.grass_score
     : Math.floor(current*38+(subCount??0)*12+best*22);
+
+  // PRESTIGE COVERS: resolve which cover to display in the hero
+  const activeCover = resolveActiveCover(profileRow);
+  const unlockedCovers = profileRow?.unlocked_covers ?? [];
   const badges  = ALL_BADGES.map(b=>({...b,earned:b.condition(current,subCount??0,challengesDone,challengesSent,grassScore,shields)}));
   // Merge referral badges
   const refSuccessful = profileRow?.referral_count_successful ?? 0;
@@ -691,9 +699,15 @@ export default function ProfilePage() {
         {/* HERO */}
         <section style={{position:"relative",overflow:"hidden",
           minHeight:"clamp(280px,40vh,460px)",display:"flex",alignItems:"flex-end"}}>
-          <div style={{position:"absolute",inset:0,background:"linear-gradient(155deg,#1a2d0e,#2d4a18 25%,#1a3010 55%,#0a1508)"}}>
-            <div style={{position:"absolute",inset:0,opacity:0.22,backgroundImage:"radial-gradient(ellipse at 70% 30%,#4a7a28,transparent 55%),radial-gradient(ellipse at 25% 70%,#2d5a18,transparent 45%)"}} />
-          </div>
+          {activeCover?.imageUrl ? (
+            <div style={{position:"absolute",inset:0,
+              backgroundImage:`url(${activeCover.imageUrl})`,
+              backgroundSize:"cover",backgroundPosition:"center"}} />
+          ) : (
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(155deg,#1a2d0e,#2d4a18 25%,#1a3010 55%,#0a1508)"}}>
+              <div style={{position:"absolute",inset:0,opacity:0.22,backgroundImage:"radial-gradient(ellipse at 70% 30%,#4a7a28,transparent 55%),radial-gradient(ellipse at 25% 70%,#2d5a18,transparent 45%)"}} />
+            </div>
+          )}
           <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,rgba(10,11,8,0.3) 0%,rgba(10,11,8,0.88) 70%,rgba(10,11,8,0.99) 100%)"}} />
 
           <div style={{position:"relative",width:"100%",padding:"0 clamp(14px,4vw,48px) 24px"}}>
@@ -1255,6 +1269,54 @@ export default function ProfilePage() {
               <div className="ct">Badges</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
                 {allBadgesDisplay.map(b=><Badge key={b.id} b={b} />)}
+              </div>
+            </div>
+
+            {/* ── PRESTIGE COVERS ──────────────────────────────────────── */}
+            <div className="card fade3" style={{marginTop:14}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                marginBottom:14}}>
+                <div className="ct" style={{margin:0}}>Prestige Covers</div>
+                <div style={{fontSize:10,color:T.dim,letterSpacing:"0.08em"}}>
+                  {unlockedCovers.length} / {COVER_DEFINITIONS.length} unlocked
+                </div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10}}>
+                {COVER_DEFINITIONS.map(cov => {
+                  const isUnlocked = unlockedCovers.includes(cov.slug);
+                  const isActive   = profileRow?.active_cover_id === cov.slug;
+                  return (
+                    <div key={cov.slug} style={{
+                      position:"relative",borderRadius:10,overflow:"hidden",
+                      border:`1px solid ${isActive ? T.olive : T.border}`,
+                      aspectRatio:"16/9",cursor:isOwner&&isUnlocked?"pointer":"default",
+                      boxShadow:isActive?`0 0 14px ${T.olive}40`:"none",
+                    }}
+                    onClick={()=>{ if (isOwner && isUnlocked && !isActive) equipCover(cov.slug); }}>
+                      {isUnlocked ? (
+                        <img src={cov.imageUrl} alt={cov.name} loading="lazy"
+                          style={{width:"100%",height:"100%",objectFit:"cover",
+                            filter:isActive?"none":"brightness(0.85)"}} />
+                      ) : (
+                        <div style={{width:"100%",height:"100%",background:T.bg3,
+                          display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          <span style={{fontSize:22,opacity:0.3}}>🔒</span>
+                        </div>
+                      )}
+                      <div style={{position:"absolute",inset:0,
+                        background:"linear-gradient(180deg,transparent 40%,rgba(8,10,6,0.9) 100%)",
+                        display:"flex",flexDirection:"column",justifyContent:"flex-end",
+                        padding:8}}>
+                        <div style={{fontSize:11,fontWeight:700,color:T.white,
+                          fontFamily:"'Cormorant Garamond',Georgia,serif"}}>{cov.name}</div>
+                        <div style={{fontSize:8,color:isUnlocked?T.olive:T.dim,
+                          letterSpacing:"0.06em",textTransform:"uppercase",marginTop:2}}>
+                          {isActive ? "✦ Equipped" : isUnlocked ? (isOwner ? "Tap to equip" : "Unlocked") : `Day ${cov.unlockDay} streak`}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
