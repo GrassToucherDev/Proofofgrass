@@ -1,106 +1,111 @@
 // ════════════════════════════════════════════════════════════════════════════
 // PRESTIGE COVERS — Configuration (V1: streak-progression only)
+// Place this file at: utils/coverDefinitions.js
 // ════════════════════════════════════════════════════════════════════════════
-// Place this file at: lib/coverDefinitions.js (or utils/coverDefinitions.js —
-// match wherever `utils/supabase.js` lives in your project structure).
-//
-// Each cover unlocks automatically when a user's best_streak crosses the
-// `unlockDay` threshold (checked server-side in lock_in_streak).
-//
-// imageUrl points to Supabase Storage — create a public bucket called
-// "covers" and upload placeholder artwork at these paths. Swap files later
-// without touching code, as long as the path/filename stays the same.
-//
-// ── FUTURE PREMIUM VARIANTS (Phase 2 — NOT implemented yet) ──────────────────
-// Premium covers will reference a `premiumOf` field pointing back to their
-// base cover's slug, plus `requiresTokenLock: true` (enforcement TBD in
-// Phase 2). Example shape (commented out, for future reference):
-//
-//   celestial_ascension_premium: {
-//     slug: "celestial_ascension_premium",
-//     name: "Celestial Ascension (Premium)",
-//     unlockDay: 500,
-//     premiumOf: "celestial_ascension",
-//     requiresTokenLock: true,  // Phase 2 — not enforced in V1
-//     imageUrl: `${COVERS_BASE_URL}/celestial_ascension_premium.jpg`,
-//   }
-//
-// V1 only implements the base (non-premium) covers below.
+// Paste each cover's exact Supabase Storage public URL below.
+// Get these from: Supabase dashboard → Storage → covers bucket →
+//   click file → Copy URL (the long https://...supabase.co/storage/... URL)
 // ════════════════════════════════════════════════════════════════════════════
 
-// Replace with your actual Supabase project URL + "covers" bucket path.
-// Example: https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public/covers
-export const COVERS_BASE_URL =
-  "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public/covers";
+const COVER_URLS = {
+  golden_hour:         "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public/covers/golden_hour.png",
+  rooted_grove:        "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public/covers/rooted_grove.png",
+  mountain_summit:     "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public/covers/mountain_summit.png",
+  ancient_forest:      "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public/covers/ancient_forest.png",
+  ascended_night_sky:  "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public/covers/ascended_night_sky.png",
+  sun_temple:          "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public/covers/sun_temple.png",
+  eternal_garden:      "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public/covers/eternal_garden.png",
+  celestial_ascension: "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public/covers/celestial_ascension.png",
+};
+
+// Fallback gradients — shown when image URL is missing or fails to load.
+// These match the cover's thematic feel so the gallery always looks intentional.
+const COVER_FALLBACKS = {
+  golden_hour:         "linear-gradient(135deg,#1a1200,#4a3800,#c8a84b40)",
+  rooted_grove:        "linear-gradient(135deg,#0a1a08,#1a3010,#2d4a18)",
+  mountain_summit:     "linear-gradient(135deg,#0d0d14,#1a1a2e,#4a4a6a)",
+  ancient_forest:      "linear-gradient(135deg,#061208,#0d2414,#1a4020)",
+  ascended_night_sky:  "linear-gradient(135deg,#04040e,#0a0a1e,#1a1a3e)",
+  sun_temple:          "linear-gradient(135deg,#1a0e00,#3d2800,#c8841b30)",
+  eternal_garden:      "linear-gradient(135deg,#041008,#0a2010,#93a85a20)",
+  celestial_ascension: "linear-gradient(135deg,#060410,#0e0a1e,#a78bfa30)",
+};
 
 export const COVER_DEFINITIONS = [
   {
-    slug: "day_7_golden_hour",
-    name: "Golden Hour",
-    unlockDay: 7,
+    slug:        "day_7_golden_hour",
+    name:        "Golden Hour",
+    unlockDay:   7,
     description: "Reach a 7-day streak",
-    imageUrl: `${COVERS_BASE_URL}/golden_hour.jpg`,
+    imageUrl:    COVER_URLS.golden_hour,
+    fallback:    COVER_FALLBACKS.golden_hour,
   },
   {
-    slug: "day_14_rooted_grove",
-    name: "Rooted Grove",
-    unlockDay: 14,
+    slug:        "day_14_rooted_grove",
+    name:        "Rooted Grove",
+    unlockDay:   14,
     description: "Reach a 14-day streak",
-    imageUrl: `${COVERS_BASE_URL}/rooted_grove.jpg`,
+    imageUrl:    COVER_URLS.rooted_grove,
+    fallback:    COVER_FALLBACKS.rooted_grove,
   },
   {
-    slug: "day_30_mountain_summit",
-    name: "Mountain Summit",
-    unlockDay: 30,
+    slug:        "day_30_mountain_summit",
+    name:        "Mountain Summit",
+    unlockDay:   30,
     description: "Reach a 30-day streak",
-    imageUrl: `${COVERS_BASE_URL}/mountain_summit.jpg`,
+    imageUrl:    COVER_URLS.mountain_summit,
+    fallback:    COVER_FALLBACKS.mountain_summit,
   },
   {
-    slug: "day_50_ancient_forest",
-    name: "Ancient Forest",
-    unlockDay: 50,
+    slug:        "day_50_ancient_forest",
+    name:        "Ancient Forest",
+    unlockDay:   50,
     description: "Reach a 50-day streak",
-    imageUrl: `${COVERS_BASE_URL}/ancient_forest.jpg`,
+    imageUrl:    COVER_URLS.ancient_forest,
+    fallback:    COVER_FALLBACKS.ancient_forest,
   },
   {
-    slug: "day_100_ascended_night_sky",
-    name: "Ascended Night Sky",
-    unlockDay: 100,
+    slug:        "day_100_ascended_night_sky",
+    name:        "Ascended Night Sky",
+    unlockDay:   100,
     description: "Reach a 100-day streak",
-    imageUrl: `${COVERS_BASE_URL}/ascended_night_sky.jpg`,
-    // FUTURE (Phase 2): premium variant "celestial_ascension_premium"
-    // shares this unlockDay but additionally requires a token lock.
+    imageUrl:    COVER_URLS.ascended_night_sky,
+    fallback:    COVER_FALLBACKS.ascended_night_sky,
   },
   {
-    slug: "day_180_sun_temple",
-    name: "Sun Temple",
-    unlockDay: 180,
+    slug:        "day_180_sun_temple",
+    name:        "Sun Temple",
+    unlockDay:   180,
     description: "Reach a 180-day streak",
-    imageUrl: `${COVERS_BASE_URL}/sun_temple.jpg`,
+    imageUrl:    COVER_URLS.sun_temple,
+    fallback:    COVER_FALLBACKS.sun_temple,
   },
   {
-    slug: "day_365_eternal_garden",
-    name: "Eternal Garden",
-    unlockDay: 365,
+    slug:        "day_365_eternal_garden",
+    name:        "Eternal Garden",
+    unlockDay:   365,
     description: "Reach a 365-day streak",
-    imageUrl: `${COVERS_BASE_URL}/eternal_garden.jpg`,
+    imageUrl:    COVER_URLS.eternal_garden,
+    fallback:    COVER_FALLBACKS.eternal_garden,
   },
   {
-    slug: "day_500_celestial_ascension",
-    name: "Celestial Ascension",
-    unlockDay: 500,
+    slug:        "day_500_celestial_ascension",
+    name:        "Celestial Ascension",
+    unlockDay:   500,
     description: "Reach a 500-day streak",
-    imageUrl: `${COVERS_BASE_URL}/celestial_ascension.jpg`,
+    imageUrl:    COVER_URLS.celestial_ascension,
+    fallback:    COVER_FALLBACKS.celestial_ascension,
+    // FUTURE (Phase 2): premium variant "celestial_ascension_premium"
+    // requiresTokenLock: true (not enforced in V1)
   },
 ];
 
-// Helper: get a cover's definition by slug (returns null if not found)
+// Helper: get a cover definition by slug
 export function getCoverBySlug(slug) {
   return COVER_DEFINITIONS.find(c => c.slug === slug) || null;
 }
 
-// Helper: get the highest-tier cover a user has unlocked (for default display
-// if no active_cover_id is set) — returns null if none unlocked yet.
+// Helper: get the highest-tier unlocked cover
 export function getHighestUnlockedCover(unlockedCovers) {
   if (!unlockedCovers || unlockedCovers.length === 0) return null;
   const unlocked = COVER_DEFINITIONS.filter(c => unlockedCovers.includes(c.slug));
@@ -108,12 +113,17 @@ export function getHighestUnlockedCover(unlockedCovers) {
   return unlocked.reduce((a, b) => (b.unlockDay > a.unlockDay ? b : a));
 }
 
-// Helper: resolve which cover image to show for a profile.
-// Falls back to highest unlocked, then null (no cover / default background).
+// Helper: resolve which cover to display for a profile row.
+// Falls back to highest unlocked, then null (default background shown).
 export function resolveActiveCover(profileRow) {
   if (profileRow?.active_cover_id) {
     const active = getCoverBySlug(profileRow.active_cover_id);
     if (active) return active;
   }
   return getHighestUnlockedCover(profileRow?.unlocked_covers);
+}
+
+// Helper: check if a URL is a real URL (not the placeholder string)
+export function isCoverUrlReady(imageUrl) {
+  return imageUrl && imageUrl !== "PASTE_URL_HERE";
 }
