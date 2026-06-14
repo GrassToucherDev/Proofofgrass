@@ -311,6 +311,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [tweetUrl, setTweetUrl] = useState("");
   const [submitStatus, setSubmitStatus] = useState(null); // null | "loading" | "success" | "error"
   const [submitError, setSubmitError] = useState("");
+  const [luckyTouch, setLuckyTouch] = useState(null); // null | {triggered, tier, type, points}
   const [inAppBrowserMode, setInAppBrowserMode] = useState(false); // true when inside X/IG in-app browser
   const [clipboardDetected, setClipboardDetected] = useState(false); // true when valid X link auto-found
   const [clipboardFeedback, setClipboardFeedback] = useState(null); // null | "detected" | "invalid"
@@ -413,6 +414,11 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       setCurrentStreak(newStreak);
       onStreakUpdate?.(newStreak);
       setSubmitStatus("success");
+
+      // Lucky Touch — show popup if triggered
+      if (result?.lucky_touch?.triggered) {
+        setLuckyTouch(result.lucky_touch);
+      }
 
       // ── Attach pending photo URL to the submission just created ───────────
       if (pendingPhotoUrlRef.current) {
