@@ -694,6 +694,11 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     onStreakUpdate?.(newStreak);
     setSubmitStatus("success");
     setTweetUrl("");
+
+    // Lucky Touch — show popup if triggered
+    if (result?.lucky_touch?.triggered) {
+      setLuckyTouch(result.lucky_touch);
+    }
   }, [username, tweetUrl, currentStreak, onStreakUpdate]);
 
   // dateStr computed once on client mount to avoid SSR mismatch
@@ -1142,6 +1147,135 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       </div>
 
     </div>
+
+    {/* ── LUCKY TOUCH MODAL ──────────────────────────────────────────────── */}
+    {luckyTouch?.triggered && (
+      <div style={{
+        position:"fixed", inset:0, zIndex:9999,
+        display:"flex", alignItems:"center", justifyContent:"center",
+        background:"rgba(4,5,3,0.85)", backdropFilter:"blur(8px)",
+        padding:"24px",
+      }}
+      onClick={() => setLuckyTouch(null)}>
+        <div style={{
+          position:"relative",
+          background: luckyTouch.tier === "legendary"
+            ? "linear-gradient(145deg,#1a1200,#2d2000,#1a0e00)"
+            : luckyTouch.tier === "rare"
+            ? "linear-gradient(145deg,#0a0e14,#141e2a,#0a0e14)"
+            : "linear-gradient(145deg,#0a100a,#141e10,#0a100a)",
+          border: `1px solid ${
+            luckyTouch.tier === "legendary" ? "#c8a84b"
+            : luckyTouch.tier === "rare"    ? "#a78bfa"
+            : "#93a85a"
+          }`,
+          borderRadius:20,
+          padding:"40px 32px",
+          maxWidth:340,
+          width:"100%",
+          textAlign:"center",
+          boxShadow: luckyTouch.tier === "legendary"
+            ? "0 0 60px rgba(200,168,75,0.35), 0 0 120px rgba(200,168,75,0.15)"
+            : luckyTouch.tier === "rare"
+            ? "0 0 40px rgba(167,139,250,0.3)"
+            : "0 0 30px rgba(147,168,90,0.2)",
+          animation: "ltPop 0.4s cubic-bezier(0.34,1.56,0.64,1)",
+        }}
+        onClick={e => e.stopPropagation()}>
+
+          {/* Icon */}
+          <div style={{
+            fontSize: luckyTouch.tier === "legendary" ? 56 : 48,
+            marginBottom:16,
+            filter: luckyTouch.tier === "legendary"
+              ? "drop-shadow(0 0 16px rgba(200,168,75,0.8))"
+              : luckyTouch.tier === "rare"
+              ? "drop-shadow(0 0 12px rgba(167,139,250,0.7))"
+              : "drop-shadow(0 0 8px rgba(147,168,90,0.6))",
+          }}>
+            {luckyTouch.tier === "legendary" ? "☀️" : "🍀"}
+          </div>
+
+          {/* Tier label */}
+          <div style={{
+            fontSize:9, fontWeight:700, letterSpacing:"0.22em",
+            textTransform:"uppercase", marginBottom:10,
+            color: luckyTouch.tier === "legendary" ? "#c8a84b"
+              : luckyTouch.tier === "rare"          ? "#a78bfa"
+              : "#93a85a",
+          }}>
+            {luckyTouch.tier === "legendary" ? "☀ Sun's Blessing"
+              : luckyTouch.tier === "rare"   ? "🍀 Rare Lucky Touch"
+              : "🍀 Lucky Touch"}
+          </div>
+
+          {/* Title */}
+          <div style={{
+            fontFamily:"'Cormorant Garamond',Georgia,serif",
+            fontSize: luckyTouch.tier === "legendary" ? 32 : 28,
+            fontWeight:700, lineHeight:1.1, marginBottom:12,
+            color:"#f0efea",
+          }}>
+            {luckyTouch.tier === "legendary"
+              ? "A Rare Blessing"
+              : luckyTouch.tier === "rare"
+              ? "Rare Reward"
+              : "Lucky Touch"}
+          </div>
+
+          {/* Reward */}
+          <div style={{
+            fontFamily:"'Cormorant Garamond',Georgia,serif",
+            fontSize:22, fontWeight:600, marginBottom:8,
+            color: luckyTouch.tier === "legendary" ? "#c8a84b"
+              : luckyTouch.tier === "rare"          ? "#a78bfa"
+              : "#93a85a",
+          }}>
+            {luckyTouch.type === "shield"
+              ? "🛡 +1 Shield"
+              : `🌱 +${luckyTouch.points} Grass Score`}
+          </div>
+
+          {/* Flavour text */}
+          <div style={{
+            fontSize:12, color:"rgba(240,239,234,0.45)",
+            lineHeight:1.6, marginBottom:28,
+          }}>
+            {luckyTouch.tier === "legendary"
+              ? "A rare blessing from the Touch Grass Sun."
+              : luckyTouch.tier === "rare"
+              ? "Not everyone gets this. Keep touching grass."
+              : "Keep touching grass."}
+          </div>
+
+          {/* Dismiss */}
+          <button
+            onClick={() => setLuckyTouch(null)}
+            style={{
+              width:"100%", padding:"14px",
+              background: luckyTouch.tier === "legendary" ? "#c8a84b"
+                : luckyTouch.tier === "rare"               ? "#a78bfa"
+                : "#93a85a",
+              color: luckyTouch.tier === "rare" ? "#f0efea" : "#0e1108",
+              border:"none", borderRadius:10, cursor:"pointer",
+              fontFamily:"'DM Sans',sans-serif", fontSize:13,
+              fontWeight:700, letterSpacing:"0.06em",
+            }}>
+            Keep Going ✦
+          </button>
+        </div>
+
+        {/* Pop-in animation */}
+        <style>{`
+          @keyframes ltPop {
+            from { opacity:0; transform:scale(0.82) translateY(16px); }
+            to   { opacity:1; transform:scale(1)    translateY(0);     }
+          }
+        `}</style>
+      </div>
+    )}
+
+  </div>
   );
 }
 

@@ -4,7 +4,7 @@ import WalletVerify from "../../../components/WalletVerify";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../../utils/supabase";
-import { resolveActiveCover, COVER_DEFINITIONS } from "../../../utils/coverDefinitions";
+import { resolveActiveCover, COVER_DEFINITIONS, isCoverUrlReady } from "../../../utils/coverDefinitions";
 
 const T = {
   bg:"#0a0b08", bg2:"#111209", bg3:"#181a12",
@@ -434,7 +434,7 @@ export default function ProfilePage() {
       // Step 1: user streak + profile + submissions (parallel — no dependencies)
       const [{data:sr},{data:pr},{count:subs}] = await Promise.all([
         supabase.from("Streaks").select("current_streak,best_streak,last_submission_date,shield_count").eq("username",username).maybeSingle(),
-        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_count_pending,referral_badge,grass_score,active_cover_id,unlocked_covers").eq("username",username).maybeSingle(),
+        supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_count_pending,referral_badge,grass_score,active_cover_id,unlocked_covers,lucky_touch_count").eq("username",username).maybeSingle(),
         supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username).in("status",["pending","approved"]),
       ]);
 
@@ -649,7 +649,10 @@ export default function ProfilePage() {
         box-sizing:border-box!important;
       }
       .strip>div:last-child{
-        flex:1 1 100%!important;
+        flex:1 1 calc(50% - 1px)!important;
+        border-bottom:none!important;
+      }
+      .strip>div:nth-last-child(2){
         border-bottom:none!important;
       }
       .badge-grid{grid-template-columns:repeat(4,1fr)!important;}
@@ -660,7 +663,8 @@ export default function ProfilePage() {
     }
     @media(max-width:480px){
       .strip>div{flex:1 1 calc(50% - 1px)!important;padding:12px 10px!important;}
-      .strip>div:last-child{flex:1 1 100%!important;}
+      .strip>div:last-child{flex:1 1 calc(50% - 1px)!important;}
+      .strip>div:nth-last-child(2){border-bottom:none!important;}
       .badge-grid{grid-template-columns:repeat(3,1fr)!important;}
     }
   `;
@@ -699,10 +703,17 @@ export default function ProfilePage() {
         {/* HERO */}
         <section style={{position:"relative",overflow:"hidden",
           minHeight:"clamp(280px,40vh,460px)",display:"flex",alignItems:"flex-end"}}>
-          {activeCover?.imageUrl ? (
+          {activeCover && isCoverUrlReady(activeCover.imageUrl) ? (
             <div style={{position:"absolute",inset:0,
               backgroundImage:`url(${activeCover.imageUrl})`,
-              backgroundSize:"cover",backgroundPosition:"center"}} />
+              backgroundSize:"cover",backgroundPosition:"center"}}
+              onError={e => {
+                // If image fails to load, fall back to the cover's gradient
+                e.currentTarget.style.backgroundImage = "none";
+                e.currentTarget.style.background = activeCover.fallback;
+              }} />
+          ) : activeCover?.fallback ? (
+            <div style={{position:"absolute",inset:0,background:activeCover.fallback}} />
           ) : (
             <div style={{position:"absolute",inset:0,background:"linear-gradient(155deg,#1a2d0e,#2d4a18 25%,#1a3010 55%,#0a1508)"}}>
               <div style={{position:"absolute",inset:0,opacity:0.22,backgroundImage:"radial-gradient(ellipse at 70% 30%,#4a7a28,transparent 55%),radial-gradient(ellipse at 25% 70%,#2d5a18,transparent 45%)"}} />
@@ -861,6 +872,7 @@ export default function ProfilePage() {
           <StatPill icon="🏆" value={loading?"…":best}                        label="Longest Streak" />
           <StatPill icon="🌿" value={loading?"…":(subCount??0)}               label="Proofs Logged"  />
           <StatPill icon="⚡" value={loading?"…":grassScore.toLocaleString()} label="Grass Score"    />
+          <StatPill icon="🍀" value={loading?"…":(profileRow?.lucky_touch_count??0)} label="Lucky Touches" />
           <StatPill icon="🛡" value={loading?"…":shields}                     label="Shields"        last />
         </div>
 
@@ -1293,14 +1305,24 @@ export default function ProfilePage() {
                       boxShadow:isActive?`0 0 14px ${T.olive}40`:"none",
                     }}
                     onClick={()=>{ if (isOwner && isUnlocked && !isActive) equipCover(cov.slug); }}>
-                      {isUnlocked ? (
+                      {isUnlocked && isCoverUrlReady(cov.imageUrl) ? (
                         <img src={cov.imageUrl} alt={cov.name} loading="lazy"
                           style={{width:"100%",height:"100%",objectFit:"cover",
-                            filter:isActive?"none":"brightness(0.85)"}} />
+                            filter:isActive?"none":"brightness(0.85)"}}
+                          onError={e => {
+                            e.currentTarget.style.display = "none";
+                            e.currentTarget.parentElement.style.background = cov.fallback;
+                          }} />
+                      ) : isUnlocked ? (
+                        <div style={{width:"100%",height:"100%",background:cov.fallback,
+                          filter:isActive?"none":"brightness(0.85)"}} />
                       ) : (
                         <div style={{width:"100%",height:"100%",background:T.bg3,
-                          display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                          flexDirection:"column",gap:4}}>
                           <span style={{fontSize:22,opacity:0.3}}>🔒</span>
+                          <span style={{fontSize:7,color:T.dim,letterSpacing:"0.06em",
+                            textTransform:"uppercase"}}>Day {cov.unlockDay}</span>
                         </div>
                       )}
                       <div style={{position:"absolute",inset:0,
