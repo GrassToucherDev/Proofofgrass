@@ -203,12 +203,20 @@ const SOL_DOMAIN  = "touchgrassburn.sol";
 function ActivityFeed() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [globalLuckyCount, setGlobalLuckyCount] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
         // Fetch recent activity from multiple sources in parallel
-        const [{ data: recentSubs }, { data: recentChals }, { data: topStreaks }, { data: recentReferrals }] = await Promise.all([
+        const [
+          { data: recentSubs },
+          { data: recentChals },
+          { data: topStreaks },
+          { data: recentReferrals },
+          { data: luckyTouchFeed },
+          { count: globalLuckyCount },
+        ] = await Promise.all([
           supabase.from("Submissions")
             .select("username, created_at")
             .in("status", ["pending","approved"])
@@ -226,6 +234,15 @@ function ActivityFeed() {
             .select("referrer_username, referred_username, status, converted_at, created_at")
             .order("created_at", { ascending: false })
             .limit(6),
+          // Lucky Touch — Rare and Legendary only (no common, avoid feed spam)
+          supabase.from("LuckyTouchEvents")
+            .select("username, reward_tier, reward_type, created_at")
+            .in("reward_tier", ["rare", "legendary"])
+            .order("created_at", { ascending: false })
+            .limit(5),
+          // Global Lucky Touch count — for community stat display
+          supabase.from("LuckyTouchEvents")
+            .select("*", { count: "exact", head: true }),
         ]);
 
         const feed = [];
@@ -302,6 +319,19 @@ function ActivityFeed() {
           }
         });
 
+        // Lucky Touch feed events (Rare + Legendary only)
+        (luckyTouchFeed ?? []).forEach(lt => {
+          feed.push({
+            type: lt.reward_tier === "legendary" ? "lucky_touch_legendary" : "lucky_touch_rare",
+            username: lt.username,
+            text: lt.reward_tier === "legendary"
+              ? "received Sun's Blessing ☀️"
+              : "received a Rare Lucky Touch",
+            emoji: lt.reward_tier === "legendary" ? "☀️" : "🍀",
+            time: lt.created_at,
+          });
+        });
+
         // Sort by time, milestones last
         feed.sort((a, b) => {
           if (!a.time && !b.time) return 0;
@@ -311,6 +341,7 @@ function ActivityFeed() {
         });
 
         setItems(feed.slice(0, 10));
+        setGlobalLuckyCount(globalLuckyCount ?? 0);
       } catch(e) {
         console.warn("activity feed error", e);
       }
@@ -338,6 +369,25 @@ function ActivityFeed() {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+
+      {/* Global Lucky Touch community stat */}
+      {globalLuckyCount > 0 && (
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+          padding:"10px 14px", background:T2.bg3, borderRadius:10,
+          border:`1px solid rgba(147,168,90,0.15)`, marginBottom:4 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+            <span style={{ fontSize:16 }}>🍀</span>
+            <span style={{ fontSize:11, color:T2.dim, letterSpacing:"0.04em" }}>
+              Community Lucky Touches
+            </span>
+          </div>
+          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            fontSize:18, fontWeight:700, color:T2.olive }}>
+            {globalLuckyCount.toLocaleString()} discovered
+          </span>
+        </div>
+      )}
+
       {items.map((item, i) => {
         const timeAgo = item.time ? (() => {
           const diff = Date.now() - new Date(item.time);
@@ -347,16 +397,29 @@ function ActivityFeed() {
           return days>0?`${days}d ago`:hrs>0?`${hrs}h ago`:mins>0?`${mins}m ago`:"just now";
         })() : "";
 
+        const isLuckyLegendary = item.type === "lucky_touch_legendary";
+        const isLuckyRare      = item.type === "lucky_touch_rare";
+        const isLucky          = isLuckyLegendary || isLuckyRare;
+
         const inner = (
           <div style={{ display:"flex", alignItems:"center", gap:10,
-            padding:"10px 12px", background:T2.bg3, borderRadius:10,
-            border:`1px solid ${T2.border}` }}>
+            padding:"10px 12px", borderRadius:10,
+            background: isLuckyLegendary ? "linear-gradient(135deg,#1a1200,#2d2000)"
+              : isLuckyRare ? "rgba(167,139,250,0.08)"
+              : T2.bg3,
+            border: isLuckyLegendary ? "1px solid rgba(200,168,75,0.35)"
+              : isLuckyRare ? "1px solid rgba(167,139,250,0.25)"
+              : `1px solid ${T2.border}` }}>
             <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>
             <div style={{ flex:1, minWidth:0 }}>
-              <span style={{ fontSize:12, fontWeight:600, color:T2.white }}>
+              <span style={{ fontSize:12, fontWeight:600,
+                color: isLuckyLegendary ? T2.gold : T2.white }}>
                 @{item.username}
               </span>
-              <span style={{ fontSize:12, color:T2.dim }}> {item.text}</span>
+              <span style={{ fontSize:12,
+                color: isLuckyLegendary ? "rgba(200,168,75,0.7)"
+                  : isLuckyRare ? "rgba(167,139,250,0.8)"
+                  : T2.dim }}> {item.text}</span>
             </div>
             {timeAgo && (
               <span style={{ fontSize:10, color:T2.dim, flexShrink:0 }}>{timeAgo}</span>
