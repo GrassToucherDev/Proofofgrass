@@ -385,6 +385,10 @@ proofofgrass.app`;
             {lastRefresh && (
               <span style={{fontSize:10,color:T.dim}}>Updated {lastRefresh}</span>
             )}
+            <a href="/admin/milestones"
+              style={{fontSize:12,color:T.dim,textDecoration:"none",fontWeight:500}}>
+              Milestones
+            </a>
             <button onClick={loadStats} disabled={loading}
               style={{background:T.bg3,border:`1px solid ${T.border}`,borderRadius:7,
                 padding:"6px 14px",color:loading?T.dim:T.white,fontSize:11,
