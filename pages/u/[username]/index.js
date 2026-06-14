@@ -420,6 +420,8 @@ export default function ProfilePage() {
   const [globalRank,     setGlobalRank]     = useState(null);
   const [scoreEvents,    setScoreEvents]    = useState([]);
   const [scoreBreakdown, setScoreBreakdown] = useState({ daily_proof:0, streak_milestone:0, badge:0, referral:0, ecosystem:0 });
+  // SPOTLIGHT: win count + most recent category
+  const [spotlightData,  setSpotlightData]  = useState({ count:0, latest:null });
 
   useEffect(()=>{
     const saved = typeof window!=="undefined" ? localStorage.getItem("pog_username") : null;
@@ -449,7 +451,7 @@ export default function ProfilePage() {
         .limit(5);
       setActiveChallenges(challengeRows ?? []);
 
-      const [{data:allStreaks},{data:recentSubs},{data:impactRows},{data:chalRows},{data:referralRows},{data:scoreEventRows},{data:allScores}] = await Promise.all([
+      const [{data:allStreaks},{data:recentSubs},{data:impactRows},{data:chalRows},{data:referralRows},{data:scoreEventRows},{data:allScores},{data:spotlightWins}] = await Promise.all([
         supabase.from("Streaks").select("username,current_streak").order("current_streak",{ascending:false}),
         supabase.from("Submissions").select("created_at,photo_url").eq("username",username).in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(10),
         supabase.from("Impact").select("trees_funded,co2_lbs,donated_usd").eq("username",username),
@@ -459,12 +461,23 @@ export default function ProfilePage() {
         supabase.from("ScoreEvents").select("event_type,points,description,source_id,created_at").eq("username",username).order("created_at",{ascending:false}).limit(10),
         // GRASS SCORE: all users' scores, for global rank computation
         supabase.from("Profiles").select("username,grass_score").order("grass_score",{ascending:false}),
+        // SPOTLIGHT: win count and most recent category
+        supabase.from("CommunitySpotlights").select("category,week_start").eq("username",username).eq("status","active").order("week_start",{ascending:false}),
       ]);
 
       // GRASS SCORE: global rank (1-indexed position in grass_score DESC order)
       const gsRankIdx = (allScores ?? []).findIndex(p => norm(p.username) === username);
       setGlobalRank(gsRankIdx === -1 ? null : gsRankIdx + 1);
       setScoreEvents(scoreEventRows ?? []);
+
+      // Spotlight wins
+      const wins = spotlightWins ?? [];
+      const SPOT_NAMES = { longest_streak:"Longest Streak", meme_lord:"Meme Lord",
+        biggest_shiller:"Biggest Shiller", space_warrior:"Space Warrior" };
+      setSpotlightData({
+        count:  wins.length,
+        latest: wins[0] ? { category: wins[0].category, name: SPOT_NAMES[wins[0].category] ?? wins[0].category } : null,
+      });
 
       // GRASS SCORE: breakdown by event_type
       const breakdown = { daily_proof:0, streak_milestone:0, badge:0, referral:0, ecosystem:0 };
@@ -828,6 +841,19 @@ export default function ProfilePage() {
                       style={{borderColor:T.gold,color:T.gold}}>
                       ⚡ Challenge
                     </button>
+                  )}
+                  {/* Spotlight winner badge */}
+                  {spotlightData.count > 0 && (
+                    <Link href="/spotlight"
+                      style={{display:"inline-flex",alignItems:"center",gap:5,
+                        padding:"5px 10px",borderRadius:6,textDecoration:"none",
+                        background:"rgba(200,168,75,0.1)",
+                        border:`1px solid rgba(200,168,75,0.35)`,
+                        fontSize:10,fontWeight:700,color:T.gold,
+                        letterSpacing:"0.06em"}}>
+                      🏆 Spotlight {spotlightData.count > 1 ? `×${spotlightData.count}` : "Winner"}
+                      {spotlightData.latest && ` · ${spotlightData.latest.name}`}
+                    </Link>
                   )}
                 </div>
 

@@ -145,69 +145,30 @@ export default function AdminMilestones() {
     setLoading(true);
 
     try {
-      // 1. Find users who hit a streak milestone this week.
-      //
-      //    Source of truth: Streaks table.
-      //    A user "hit milestone M this week" if:
-      //      - Their current_streak >= M (they've reached it)
-      //      - The date they crossed M falls within the report range
-      //      - Date crossed = last_submission_date - (current_streak - M) days
-      //
-      //    This correctly handles users mid-streak (e.g. current=79, milestone=50:
-      //    they crossed Day 50 on last_submission_date - 29 days ago).
-      //    If that date falls outside the report range, they're excluded.
-      //
-      //    Also catches users whose streak == milestone exactly today (just hit it).
-      //    Does NOT use ScoreEvents timestamps (which may reflect backfill dates).
-      //    Does NOT use submission counts (which ignore streak consecutiveness).
+      // 1. Call server-side RPC for accurate milestone detection.
+      //    Uses gaps-and-islands SQL to find the exact date each user's
+      //    consecutive streak crossed a milestone value.
+      //    Correctly handles resets, backfill artifacts, and mid-streak users.
+      const { data: milestoneHits, error: rpcErr } = await supabase
+        .rpc("get_milestone_hits", { p_from: from, p_to: to });
 
-      const { data: allActiveStreaks } = await supabase
-        .from("Streaks")
-        .select("username, current_streak, best_streak, last_submission_date")
-        .gte("current_streak", MILESTONES[0]); // only users with streak >= lowest milestone
-
-      const milestoneEvents = [];
-      const seen = new Set();
-
-      for (const s of (allActiveStreaks ?? [])) {
-        const lastDate = new Date(s.last_submission_date + "T00:00:00.000Z");
-        const current  = s.current_streak;
-
-        for (const milestone of MILESTONES) {
-          if (current < milestone) continue; // hasn't reached this milestone
-
-          // Calculate the date they crossed this milestone:
-          // They were at (current) streak on last_submission_date,
-          // so they were at (milestone) streak (current - milestone) days earlier.
-          const daysAgo = current - milestone;
-          const hitDate = new Date(lastDate);
-          hitDate.setUTCDate(hitDate.getUTCDate() - daysAgo);
-          const hitDateStr = hitDate.toISOString().slice(0, 10);
-
-          // Check if hit date falls within the report range
-          if (hitDateStr < from || hitDateStr > to) continue;
-
-          const key = `${s.username}:${milestone}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-
-          milestoneEvents.push({
-            username:       s.username,
-            milestone:      milestone,
-            milestone_date: hitDateStr,
-          });
-        }
+      if (rpcErr) {
+        console.error("get_milestone_hits RPC error:", rpcErr);
+        setRows([]); setLoading(false); return;
       }
 
-      // 2. Fetch profile/streak data for all relevant users
-      const usernames = [...new Set(milestoneEvents.map(e => e.username))];
-      const [{ data: profiles }, { data: streaks }] = await Promise.all([
-        supabase.from("Profiles").select("username,grass_score").in("username", usernames),
-        supabase.from("Streaks").select("username,current_streak,best_streak").in("username", usernames),
-      ]);
+      const milestoneEvents = (milestoneHits ?? []).map(h => ({
+        username:       h.username,
+        milestone:      h.milestone,
+        milestone_date: h.milestone_date,
+        current_streak: h.current_streak,
+        best_streak:    h.best_streak,
+        grass_score:    h.grass_score,
+      }));
 
-      const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.username, p]));
-      const streakMap  = Object.fromEntries((streaks  ?? []).map(s => [s.username, s]));
+      // Compatibility shim — profileMap/streakMap not needed (RPC returns all data)
+      const profileMap = Object.fromEntries(milestoneEvents.map(e => [e.username, { grass_score: e.grass_score }]));
+      const streakMap  = Object.fromEntries(milestoneEvents.map(e => [e.username, { current_streak: e.current_streak, best_streak: e.best_streak }]));
 
       // 3. Fetch or create WeeklyRewardClaims rows for each milestone event
       const weekStart = getMondayOf(from);
@@ -234,15 +195,19 @@ export default function AdminMilestones() {
         .lte("milestone_date", to)
         .order("milestone_date", { ascending: false });
 
-      // 5. Merge everything into display rows
+      // 5. Merge claims with RPC data into display rows
       const displayRows = (claims ?? [])
         .filter(c => MILESTONES.includes(c.milestone))
-        .map(c => ({
-          ...c,
-          current_streak: streakMap[c.username]?.current_streak ?? null,
-          best_streak:    streakMap[c.username]?.best_streak    ?? null,
-          grass_score:    profileMap[c.username]?.grass_score   ?? null,
-        }))
+        .map(c => {
+          // Find matching milestone hit for current streak/score data
+          const hit = milestoneEvents.find(e => e.username === c.username && e.milestone === c.milestone);
+          return {
+            ...c,
+            current_streak: hit?.current_streak ?? streakMap[c.username]?.current_streak ?? null,
+            best_streak:    hit?.best_streak    ?? streakMap[c.username]?.best_streak    ?? null,
+            grass_score:    hit?.grass_score    ?? profileMap[c.username]?.grass_score   ?? null,
+          };
+        })
         .sort((a, b) => b.milestone - a.milestone || a.username.localeCompare(b.username));
 
       setRows(displayRows);
@@ -369,6 +334,7 @@ export default function AdminMilestones() {
           <div style={{ display:"flex", gap:16, alignItems:"center" }}>
             <a href="/admin/stats" style={{ fontSize:12, color:T.dim, textDecoration:"none" }}>Stats</a>
             <a href="/admin/milestones" style={{ fontSize:12, color:T.olive, fontWeight:600, textDecoration:"none" }}>Milestones</a>
+            <a href="/admin/spotlight"  style={{ fontSize:12, color:T.dim, textDecoration:"none" }}>Spotlight</a>
           </div>
         </nav>
 

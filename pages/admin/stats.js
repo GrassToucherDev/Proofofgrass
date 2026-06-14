@@ -389,6 +389,10 @@ proofofgrass.app`;
               style={{fontSize:12,color:T.dim,textDecoration:"none",fontWeight:500}}>
               Milestones
             </a>
+            <a href="/admin/spotlight"
+              style={{fontSize:12,color:T.dim,textDecoration:"none",fontWeight:500}}>
+              Spotlight
+            </a>
             <button onClick={loadStats} disabled={loading}
               style={{background:T.bg3,border:`1px solid ${T.border}`,borderRadius:7,
                 padding:"6px 14px",color:loading?T.dim:T.white,fontSize:11,

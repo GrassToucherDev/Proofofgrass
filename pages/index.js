@@ -200,6 +200,142 @@ const SOL_DOMAIN  = "touchgrassburn.sol";
 // ─── Following Feed component ────────────────────────────────────────────────
 
 // ─── Activity Feed ───────────────────────────────────────────────────────────
+// ─── Spotlight section (dashboard) ───────────────────────────────────────────
+const SPOT_CATS = [
+  { key:"longest_streak",  emoji:"🔥", name:"Longest Streak",  label:"Streak Champion", color:"#f97316" },
+  { key:"meme_lord",       emoji:"😂", name:"Meme Lord",        label:"Meme Champion",   color:"#c8a84b" },
+  { key:"biggest_shiller", emoji:"📣", name:"Biggest Shiller",  label:"Community MVP",   color:"#93a85a" },
+  { key:"space_warrior",   emoji:"🎧", name:"Space Warrior",    label:"Spaces Champion", color:"#a78bfa" },
+];
+
+function SpotlightSection() {
+  const [winners, setWinners] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      // Get this week's Monday
+      const d = new Date();
+      const day = d.getUTCDay();
+      d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
+      const thisMonday = d.toISOString().slice(0, 10);
+
+      const { data: spotlights } = await supabase
+        .from("CommunitySpotlights")
+        .select("*")
+        .eq("status", "active")
+        .eq("week_start", thisMonday);
+
+      if (!spotlights?.length) { setLoading(false); return; }
+
+      // Fetch profile avatars
+      const usernames = [...new Set(spotlights.map(s => s.username))];
+      const { data: profiles } = await supabase
+        .from("Profiles").select("username, avatar_url").in("username", usernames);
+
+      const avatarMap = Object.fromEntries((profiles ?? []).map(p => [p.username, p.avatar_url]));
+      setWinners(spotlights.map(s => ({
+        ...s,
+        resolved_avatar: s.avatar_url || avatarMap[s.username] || null,
+      })));
+      setLoading(false);
+    })();
+  }, []);
+
+  const winnerMap = Object.fromEntries(winners.map(w => [w.category, w]));
+
+  const T2 = {
+    bg2:"#0e100b", bg3:"#141710", border:"rgba(255,255,255,0.055)",
+    borderGold:"rgba(200,168,75,0.35)", gold:"#c8a84b",
+    white:"#f0efea", dim:"rgba(240,239,234,0.24)", muted:"rgba(240,239,234,0.52)",
+  };
+
+  return (
+    <div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+        marginBottom:16, flexWrap:"wrap", gap:8 }}>
+        <div>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em",
+            textTransform:"uppercase", color:T2.gold, marginBottom:4 }}>
+            Community
+          </div>
+          <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            fontSize:18, fontWeight:700, color:T2.white }}>
+            Community Spotlight
+          </div>
+          <div style={{ fontSize:11, color:T2.dim, marginTop:2 }}>
+            This week's Touch Grass winners
+          </div>
+        </div>
+        <a href="/spotlight" style={{ fontSize:11, color:T2.gold,
+          textDecoration:"none", fontWeight:600, letterSpacing:"0.04em",
+          whiteSpace:"nowrap" }}>
+          View Spotlight →
+        </a>
+      </div>
+
+      {/* Horizontal scroll on mobile */}
+      <div style={{ display:"flex", gap:12, overflowX:"auto",
+        paddingBottom:4, scrollbarWidth:"none" }}>
+        {SPOT_CATS.map(cat => {
+          const w = winnerMap[cat.key];
+          return (
+            <div key={cat.key} style={{
+              flexShrink:0, width:160,
+              background: w ? `linear-gradient(145deg,${T2.bg2},${T2.bg3})`
+                           : T2.bg2,
+              border:`1px solid ${w ? T2.borderGold : T2.border}`,
+              borderRadius:12, padding:"14px 14px",
+              boxShadow: w ? "0 0 18px rgba(200,168,75,0.1)" : "none",
+            }}>
+              <div style={{ fontSize:20, marginBottom:6 }}>{cat.emoji}</div>
+              <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.12em",
+                textTransform:"uppercase", color:cat.color, marginBottom:8 }}>
+                {cat.name}
+              </div>
+              {loading ? (
+                <div style={{ height:32, borderRadius:6, background:T2.bg3, opacity:0.5 }} />
+              ) : w ? (
+                <>
+                  <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
+                    {w.resolved_avatar ? (
+                      <img src={w.resolved_avatar} alt="" loading="lazy"
+                        style={{ width:28, height:28, borderRadius:"50%",
+                          objectFit:"cover", border:`1px solid ${cat.color}`,
+                          flexShrink:0 }} />
+                    ) : (
+                      <div style={{ width:28, height:28, borderRadius:"50%",
+                        flexShrink:0, background:T2.bg3,
+                        border:`1px solid ${cat.color}`,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        fontSize:12, fontWeight:700, color:cat.color }}>
+                        {w.username[0].toUpperCase()}
+                      </div>
+                    )}
+                    <a href={`/u/${w.username}`}
+                      style={{ fontSize:12, fontWeight:700, color:T2.white,
+                        textDecoration:"none", overflow:"hidden",
+                        textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                      @{w.display_name || w.username}
+                    </a>
+                  </div>
+                  <div style={{ fontSize:9, color:cat.color, fontWeight:600,
+                    letterSpacing:"0.04em" }}>{cat.label}</div>
+                </>
+              ) : (
+                <div style={{ textAlign:"center", padding:"8px 0" }}>
+                  <div style={{ fontSize:20, opacity:0.3, marginBottom:4 }}>🏆</div>
+                  <div style={{ fontSize:10, color:T2.dim }}>No Winner</div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ActivityFeed() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -216,6 +352,7 @@ function ActivityFeed() {
           { data: recentReferrals },
           { data: luckyTouchFeed },
           { count: globalLuckyCount },
+          { data: recentSpotlights },
         ] = await Promise.all([
           supabase.from("Submissions")
             .select("username, created_at")
@@ -243,6 +380,12 @@ function ActivityFeed() {
           // Global Lucky Touch count — for community stat display
           supabase.from("LuckyTouchEvents")
             .select("*", { count: "exact", head: true }),
+          // Community Spotlight — recent active winners
+          supabase.from("CommunitySpotlights")
+            .select("username, category, display_name, week_start, created_at")
+            .eq("status", "active")
+            .order("created_at", { ascending: false })
+            .limit(8),
         ]);
 
         const feed = [];
@@ -329,6 +472,24 @@ function ActivityFeed() {
               : "received a Rare Lucky Touch",
             emoji: lt.reward_tier === "legendary" ? "☀️" : "🍀",
             time: lt.created_at,
+          });
+        });
+
+        // Community Spotlight feed events
+        const SPOT_LABELS = {
+          longest_streak:"🔥 won Longest Streak",
+          meme_lord:"😂 won Meme Lord",
+          biggest_shiller:"📣 won Biggest Shiller",
+          space_warrior:"🎧 won Space Warrior",
+        };
+        (recentSpotlights ?? []).forEach(s => {
+          feed.push({
+            type: "spotlight",
+            username: s.display_name || s.username,
+            text: SPOT_LABELS[s.category] ?? "won Community Spotlight",
+            emoji: "🏆",
+            time: s.created_at,
+            link: "/spotlight",
           });
         });
 
@@ -712,6 +873,7 @@ export default function Home() {
           <div className="nav-links" style={{ display:"flex", gap:28, alignItems:"center" }}>
             <a href="#upload" className="nav-link active">Dashboard</a>
             <Link href="/leaderboard" className="nav-link">Leaderboard</Link>
+            <Link href="/spotlight"   className="nav-link">Spotlight</Link>
             <Link href="/quests" className="nav-link">Quests</Link>
             <a href="https://touchgrass.today" className="nav-link" target="_blank" rel="noopener noreferrer">Website</a>
           </div>
@@ -981,6 +1143,11 @@ export default function Home() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* COMMUNITY SPOTLIGHT */}
+          <div className="card" style={{ padding:28 }}>
+            <SpotlightSection />
           </div>
 
           {/* ACTIVITY FEED WITH TABS */}
