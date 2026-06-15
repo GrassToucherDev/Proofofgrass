@@ -866,7 +866,8 @@ export default function Home() {
     input[type=text].field:focus,textarea.field:focus{border-color:${T.olive}50;}
     input[type=text].field::placeholder,textarea.field::placeholder{color:${T.dim};}
     /* ── MOBILE LAYOUT FIX ─────────────────────────────────────────────── */
-    html,body{max-width:100vw;overflow-x:hidden;box-sizing:border-box;}
+    html{overflow-x:hidden;}
+    body{max-width:100%;overflow-x:hidden;overflow-y:auto;box-sizing:border-box;}
     *,*::before,*::after{box-sizing:border-box;}
 
     /* Collapse grids at tablet */
@@ -933,7 +934,7 @@ export default function Home() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div style={{ minHeight:"100vh", background:T.bg, maxWidth:"100vw", overflowX:"hidden" }}>
+      <div style={{ minHeight:"100vh", background:T.bg }}>
 
         {/* ── NAV ─────────────────────────────────────────────────────────── */}
         <nav style={{ position:"sticky", top:0, zIndex:200, display:"flex", alignItems:"center",
