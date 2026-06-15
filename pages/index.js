@@ -3,6 +3,7 @@ import Link from "next/link";
 import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
 import { supabase } from "../utils/supabase";
+import { getSpotlightBadge, getSpotlightFeedText, SPOTLIGHT_BADGES } from "../utils/spotlightBadges";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -200,13 +201,15 @@ const SOL_DOMAIN  = "touchgrassburn.sol";
 // ─── Following Feed component ────────────────────────────────────────────────
 
 // ─── Activity Feed ───────────────────────────────────────────────────────────
-// ─── Spotlight section (dashboard) ───────────────────────────────────────────
-const SPOT_CATS = [
-  { key:"longest_streak",  emoji:"🔥", name:"Longest Streak",  label:"Streak Champion", color:"#f97316" },
-  { key:"meme_lord",       emoji:"😂", name:"Meme Lord",        label:"Meme Champion",   color:"#c8a84b" },
-  { key:"biggest_shiller", emoji:"📣", name:"Biggest Shiller",  label:"Community MVP",   color:"#93a85a" },
-  { key:"space_warrior",   emoji:"🎧", name:"Space Warrior",    label:"Spaces Champion", color:"#a78bfa" },
-];
+// ─── Spotlight section (dashboard) — uses SPOTLIGHT_BADGES as source of truth ─
+const SPOT_CATS = Object.values(SPOTLIGHT_BADGES).map(b => ({
+  key:   b.key,
+  emoji: b.emoji,
+  name:  b.title,
+  label: b.title,
+  color: b.color,
+  image: b.image,
+}));
 
 function SpotlightSection() {
   const [winners, setWinners] = useState([]);
@@ -288,7 +291,14 @@ function SpotlightSection() {
               borderRadius:12, padding:"14px 14px",
               boxShadow: w ? "0 0 18px rgba(200,168,75,0.1)" : "none",
             }}>
-              <div style={{ fontSize:20, marginBottom:6 }}>{cat.emoji}</div>
+              {cat.image ? (
+                <img src={cat.image} alt={cat.name} loading="lazy"
+                  style={{ width:36, height:36, objectFit:"contain", marginBottom:6,
+                    filter:`drop-shadow(0 0 6px ${cat.color}60)`,
+                    opacity: w ? 1 : 0.25 }} />
+              ) : (
+                <div style={{ fontSize:20, marginBottom:6 }}>{cat.emoji}</div>
+              )}
               <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.12em",
                 textTransform:"uppercase", color:cat.color, marginBottom:8 }}>
                 {cat.name}
@@ -476,20 +486,15 @@ function ActivityFeed() {
         });
 
         // Community Spotlight feed events
-        const SPOT_LABELS = {
-          longest_streak:"🔥 won Longest Streak",
-          meme_lord:"😂 won Meme Lord",
-          biggest_shiller:"📣 won Biggest Shiller",
-          space_warrior:"🎧 won Space Warrior",
-        };
         (recentSpotlights ?? []).forEach(s => {
           feed.push({
-            type: "spotlight",
+            type:     "spotlight",
             username: s.display_name || s.username,
-            text: SPOT_LABELS[s.category] ?? "won Community Spotlight",
-            emoji: "🏆",
-            time: s.created_at,
-            link: "/spotlight",
+            text:     getSpotlightFeedText(s.category),
+            emoji:    "🏆",
+            badgeImg: getSpotlightBadge(s.category)?.image ?? null,
+            time:     s.created_at,
+            link:     "/spotlight",
           });
         });
 
@@ -561,25 +566,34 @@ function ActivityFeed() {
         const isLuckyLegendary = item.type === "lucky_touch_legendary";
         const isLuckyRare      = item.type === "lucky_touch_rare";
         const isLucky          = isLuckyLegendary || isLuckyRare;
+        const isSpotlight      = item.type === "spotlight";
 
         const inner = (
           <div style={{ display:"flex", alignItems:"center", gap:10,
             padding:"10px 12px", borderRadius:10,
             background: isLuckyLegendary ? "linear-gradient(135deg,#1a1200,#2d2000)"
-              : isLuckyRare ? "rgba(167,139,250,0.08)"
+              : isLuckyRare    ? "rgba(167,139,250,0.08)"
+              : isSpotlight    ? "linear-gradient(135deg,#1a1600,#0e1008)"
               : T2.bg3,
             border: isLuckyLegendary ? "1px solid rgba(200,168,75,0.35)"
-              : isLuckyRare ? "1px solid rgba(167,139,250,0.25)"
+              : isLuckyRare    ? "1px solid rgba(167,139,250,0.25)"
+              : isSpotlight    ? "1px solid rgba(200,168,75,0.25)"
               : `1px solid ${T2.border}` }}>
-            <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>
+            {isSpotlight && item.badgeImg ? (
+              <img src={item.badgeImg} alt="" loading="lazy"
+                style={{ width:28, height:28, objectFit:"contain", flexShrink:0 }} />
+            ) : (
+              <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>
+            )}
             <div style={{ flex:1, minWidth:0 }}>
               <span className="feed-username" style={{ fontSize:12, fontWeight:600,
-                color: isLuckyLegendary ? T2.gold : T2.white }}>
+                color: isLuckyLegendary || isSpotlight ? T2.gold : T2.white }}>
                 @{item.username}
               </span>
               <span style={{ fontSize:12,
                 color: isLuckyLegendary ? "rgba(200,168,75,0.7)"
-                  : isLuckyRare ? "rgba(167,139,250,0.8)"
+                  : isLuckyRare    ? "rgba(167,139,250,0.8)"
+                  : isSpotlight    ? "rgba(200,168,75,0.6)"
                   : T2.dim }}> {item.text}</span>
             </div>
             {timeAgo && (

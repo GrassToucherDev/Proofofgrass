@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../../utils/supabase";
 import { resolveActiveCover, COVER_DEFINITIONS, isCoverUrlReady } from "../../../utils/coverDefinitions";
+import { getSpotlightBadge, SPOTLIGHT_BADGES } from "../../../utils/spotlightBadges";
 
 const T = {
   bg:"#0a0b08", bg2:"#111209", bg3:"#181a12",
@@ -421,7 +422,7 @@ export default function ProfilePage() {
   const [scoreEvents,    setScoreEvents]    = useState([]);
   const [scoreBreakdown, setScoreBreakdown] = useState({ daily_proof:0, streak_milestone:0, badge:0, referral:0, ecosystem:0 });
   // SPOTLIGHT: win count + most recent category
-  const [spotlightData,  setSpotlightData]  = useState({ count:0, latest:null });
+  const [spotlightData,  setSpotlightData]  = useState({ count:0, latest:null, badgeCounts:{} });
 
   useEffect(()=>{
     const saved = typeof window!=="undefined" ? localStorage.getItem("pog_username") : null;
@@ -461,8 +462,8 @@ export default function ProfilePage() {
         supabase.from("ScoreEvents").select("event_type,points,description,source_id,created_at").eq("username",username).order("created_at",{ascending:false}).limit(10),
         // GRASS SCORE: all users' scores, for global rank computation
         supabase.from("Profiles").select("username,grass_score").order("grass_score",{ascending:false}),
-        // SPOTLIGHT: win count and most recent category
-        supabase.from("CommunitySpotlights").select("category,week_start").eq("username",username).eq("status","active").order("week_start",{ascending:false}),
+        // SPOTLIGHT: full win data for badges and achievements section
+        supabase.from("CommunitySpotlights").select("id,category,week_start,week_end,display_name").eq("username",username).eq("status","active").order("week_start",{ascending:false}),
       ]);
 
       // GRASS SCORE: global rank (1-indexed position in grass_score DESC order)
@@ -472,11 +473,14 @@ export default function ProfilePage() {
 
       // Spotlight wins
       const wins = spotlightWins ?? [];
-      const SPOT_NAMES = { longest_streak:"Longest Streak", meme_lord:"Meme Lord",
-        biggest_shiller:"Biggest Shiller", space_warrior:"Space Warrior" };
+      // Build per-category win counts for the Achievements section
+      const badgeCounts = {};
+      wins.forEach(w => { badgeCounts[w.category] = (badgeCounts[w.category] ?? 0) + 1; });
+      const latestBadge = wins[0] ? getSpotlightBadge(wins[0].category) : null;
       setSpotlightData({
-        count:  wins.length,
-        latest: wins[0] ? { category: wins[0].category, name: SPOT_NAMES[wins[0].category] ?? wins[0].category } : null,
+        count:       wins.length,
+        badgeCounts, // { longest_streak: 2, meme_lord: 1, ... }
+        latest: wins[0] ? { category: wins[0].category, name: latestBadge?.title ?? wins[0].category } : null,
       });
 
       // GRASS SCORE: breakdown by event_type
@@ -1365,6 +1369,56 @@ export default function ProfilePage() {
                 {allBadgesDisplay.map(b=><Badge key={b.id} b={b} />)}
               </div>
             </div>
+
+            {/* ── SPOTLIGHT ACHIEVEMENTS ───────────────────────────────── */}
+            {spotlightData.count > 0 && (
+              <div className="card fade3" style={{marginTop:14}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+                  <div className="ct" style={{margin:0}}>🏆 Spotlight Achievements</div>
+                  <span style={{fontSize:11,color:T.dim}}>
+                    {spotlightData.count} win{spotlightData.count!==1?"s":""}
+                  </span>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:12}}>
+                  {Object.entries(spotlightData.badgeCounts).map(([category, count]) => {
+                    const badge = getSpotlightBadge(category);
+                    if (!badge) return null;
+                    return (
+                      <div key={category} style={{display:"flex",flexDirection:"column",
+                        alignItems:"center",gap:8,padding:"16px 12px",
+                        background:T.bg3,borderRadius:12,
+                        border:`1px solid ${badge.color}30`,
+                        textAlign:"center"}}>
+                        <img src={badge.image} alt={badge.title}
+                          style={{width:56,height:56,objectFit:"contain",
+                            filter:`drop-shadow(0 0 10px ${badge.color}60)`}} />
+                        <div>
+                          <div style={{fontSize:11,fontWeight:700,color:badge.color,
+                            lineHeight:1.3,marginBottom:2}}>{badge.title}</div>
+                          {count > 1 && (
+                            <div style={{fontSize:9,color:T.dim,letterSpacing:"0.06em"}}>
+                              ×{count}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {isOwner && (
+                  <div style={{marginTop:14,textAlign:"center"}}>
+                    <Link href={`/spotlight-card/${username}`}
+                      style={{fontSize:11,color:T.gold,textDecoration:"none",
+                        padding:"7px 16px",borderRadius:8,
+                        background:"rgba(200,168,75,0.08)",
+                        border:"1px solid rgba(200,168,75,0.3)",
+                        display:"inline-block"}}>
+                      🏆 Generate Spotlight Card
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ── PRESTIGE COVERS ──────────────────────────────────────── */}
             <div className="card fade3" style={{marginTop:14}}>

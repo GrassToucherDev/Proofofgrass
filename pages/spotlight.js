@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../utils/supabase";
+import { SPOTLIGHT_BADGES, getSpotlightBadge } from "../utils/spotlightBadges";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -11,15 +12,19 @@ const T = {
   white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
 };
 
-// ─── Category config ──────────────────────────────────────────────────────────
-const CATEGORIES = [
-  { key:"longest_streak",   emoji:"🔥", name:"Longest Streak",   label:"Streak Champion",    color:"#f97316" },
-  { key:"meme_lord",        emoji:"😂", name:"Meme Lord",         label:"Meme Champion",      color:T.gold    },
-  { key:"biggest_shiller",  emoji:"📣", name:"Biggest Shiller",   label:"Community MVP",      color:T.olive   },
-  { key:"space_warrior",    emoji:"🎧", name:"Space Warrior",     label:"Spaces Champion",    color:"#a78bfa" },
-];
+// ─── Category config — uses SPOTLIGHT_BADGES as single source of truth ────────
+const CATEGORIES = Object.values(SPOTLIGHT_BADGES).map(b => ({
+  key:   b.key,
+  emoji: b.emoji,
+  name:  b.title,
+  label: b.title,
+  color: b.color,
+  image: b.image,
+}));
 
-function getCat(key) { return CATEGORIES.find(c => c.key === key) ?? CATEGORIES[0]; }
+function getCat(key) {
+  return CATEGORIES.find(c => c.key === key) ?? CATEGORIES[0];
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getMondayOf(date) {
@@ -77,9 +82,16 @@ function WinnerCard({ winner, current, viewer }) {
           opacity:0.7 }} />
       )}
 
-      {/* Category header */}
-      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-        <span style={{ fontSize:20 }}>{cat.emoji}</span>
+      {/* Badge image + category header */}
+      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        {cat.image ? (
+          <img src={cat.image} alt={cat.name}
+            style={{ width:40, height:40, objectFit:"contain", flexShrink:0,
+              filter:`drop-shadow(0 0 8px ${cat.color}60)`,
+              opacity: empty ? 0.35 : 1 }} />
+        ) : (
+          <span style={{ fontSize:20 }}>{cat.emoji}</span>
+        )}
         <div>
           <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.16em",
             textTransform:"uppercase", color:cat.color }}>{cat.name}</div>
@@ -377,6 +389,7 @@ export default function SpotlightPage() {
                       {week.winners.map(w => {
                         const cat = getCat(w.category);
                         const avatarUrl = w.avatar_url || w.profile_avatar_url;
+                        const pastBadge = getSpotlightBadge(w.category);
                         return (
                           <Link key={w.id} href={`/u/${w.username}`}
                             style={{ textDecoration:"none",
@@ -386,22 +399,29 @@ export default function SpotlightPage() {
                               transition:"border-color 0.15s" }}
                             onMouseEnter={e => e.currentTarget.style.borderColor = T.borderGold}
                             onMouseLeave={e => e.currentTarget.style.borderColor = T.border}>
+                            {/* Badge image */}
+                            {pastBadge?.image && (
+                              <img src={pastBadge.image} alt={pastBadge.title} loading="lazy"
+                                style={{ width:32, height:32, objectFit:"contain", flexShrink:0,
+                                  filter:`drop-shadow(0 0 5px ${cat.color}50)` }} />
+                            )}
+                            {/* Avatar */}
                             {avatarUrl ? (
                               <img src={avatarUrl} alt="" loading="lazy"
-                                style={{ width:36, height:36, borderRadius:"50%",
+                                style={{ width:30, height:30, borderRadius:"50%",
                                   objectFit:"cover", flexShrink:0, border:`1px solid ${cat.color}` }} />
                             ) : (
-                              <div style={{ width:36, height:36, borderRadius:"50%",
+                              <div style={{ width:30, height:30, borderRadius:"50%",
                                 flexShrink:0, background:T.bg3, border:`1px solid ${cat.color}`,
                                 display:"flex", alignItems:"center", justifyContent:"center",
-                                fontSize:14, fontWeight:700, color:cat.color }}>
+                                fontSize:12, fontWeight:700, color:cat.color }}>
                                 {w.username[0].toUpperCase()}
                               </div>
                             )}
-                            <div style={{ minWidth:0 }}>
+                            <div style={{ minWidth:0, flex:1 }}>
                               <div style={{ fontSize:8, color:cat.color,
                                 letterSpacing:"0.08em", textTransform:"uppercase",
-                                fontWeight:700 }}>{cat.emoji} {cat.name}</div>
+                                fontWeight:700 }}>{cat.name}</div>
                               <div style={{ fontSize:13, fontWeight:600, color:T.white,
                                 overflow:"hidden", textOverflow:"ellipsis",
                                 whiteSpace:"nowrap" }}>
