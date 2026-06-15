@@ -645,14 +645,23 @@ export default function ProfilePage() {
     .skel{background:${T.bg3};border-radius:6px;animation:shimmer 1.8s ease-in-out infinite;}
     .nav-lk{color:${T.dim};font-size:13px;font-weight:500;text-decoration:none;letter-spacing:0.04em;transition:color 0.2s;}
     .nav-lk:hover{color:${T.white};}
+    /* ── MOBILE LAYOUT FIX ──────────────────────────────────────────────── */
+    html,body{max-width:100vw;overflow-x:hidden;box-sizing:border-box;}
+    *,*::before,*::after{box-sizing:border-box;}
+
     @media(max-width:768px){
-      .hi{flex-direction:column!important;align-items:stretch!important;}
-      .shud{width:100%!important;min-width:0!important;margin-top:12px!important;
-        padding:16px!important;order:2;}
-      .hi>.fade{order:1;}
-      .two{grid-template-columns:1fr!important;}
-      .three{grid-template-columns:1fr!important;}
-      .strip{flex-wrap:wrap!important;}
+      /* Hero layout */
+      .hi{flex-direction:column!important;align-items:stretch!important;width:100%!important;}
+      .shud{width:100%!important;min-width:0!important;max-width:100%!important;
+        margin-top:12px!important;padding:16px!important;order:2!important;}
+      .hi>.fade{order:1!important;min-width:0!important;width:100%!important;}
+
+      /* Grid collapses */
+      .two{grid-template-columns:1fr!important;width:100%!important;}
+      .three{grid-template-columns:1fr!important;width:100%!important;}
+
+      /* Stats strip — 2 columns */
+      .strip{flex-wrap:wrap!important;width:100%!important;}
       .strip>div{
         flex:1 1 calc(50% - 1px)!important;
         min-width:0!important;
@@ -661,31 +670,71 @@ export default function ProfilePage() {
         padding:14px 12px!important;
         box-sizing:border-box!important;
       }
-      .strip>div:last-child{
-        flex:1 1 calc(50% - 1px)!important;
-        border-bottom:none!important;
-      }
-      .strip>div:nth-last-child(2){
-        border-bottom:none!important;
-      }
+      .strip>div:last-child{flex:1 1 calc(50% - 1px)!important;border-bottom:none!important;}
+      .strip>div:nth-last-child(2){border-bottom:none!important;}
+
+      /* Cards — full width, no overflow */
+      .card{width:100%!important;max-width:100%!important;min-width:0!important;
+        box-sizing:border-box!important;}
+
+      /* Badge grid — 4 cols on 768, shrinks below */
       .badge-grid{grid-template-columns:repeat(4,1fr)!important;}
+
+      /* Cover gallery — 2 col on mobile */
+      .cover-grid{grid-template-columns:repeat(2,1fr)!important;}
+
+      /* Nav */
       .nav-links{display:none!important;}
       .nav-brand{font-size:15px!important;}
+
+      /* Hero action buttons — smaller, wrap */
+      .hero-actions{flex-wrap:wrap!important;gap:6px!important;}
       .hero-actions a,.hero-actions button{
-        font-size:10px!important;padding:6px 9px!important;letter-spacing:0.02em!important;}
+        font-size:10px!important;padding:6px 9px!important;
+        letter-spacing:0.02em!important;white-space:nowrap!important;}
+
+      /* Username truncation */
+      .profile-username{
+        white-space:nowrap!important;
+        overflow:hidden!important;
+        text-overflow:ellipsis!important;
+        max-width:calc(100vw - 48px)!important;
+      }
+
+      /* Proof scroll — already horizontal, cap width */
+      .proof-scroll{max-width:calc(100vw - 32px)!important;}
+
+      /* Main content padding */
+      .main-content{padding-left:14px!important;padding-right:14px!important;}
+
+      /* Grass Score breakdown grid — 2 col */
+      .score-breakdown{grid-template-columns:repeat(2,1fr)!important;}
+
+      /* Recent score activity */
+      .score-activity .score-row{flex-wrap:wrap!important;}
+
+      /* Impact flex — stack on mobile */
+      .impact-row{flex-direction:column!important;gap:16px!important;}
     }
+
     @media(max-width:480px){
       .strip>div{flex:1 1 calc(50% - 1px)!important;padding:12px 10px!important;}
       .strip>div:last-child{flex:1 1 calc(50% - 1px)!important;}
       .strip>div:nth-last-child(2){border-bottom:none!important;}
       .badge-grid{grid-template-columns:repeat(3,1fr)!important;}
+      .cover-grid{grid-template-columns:repeat(2,1fr)!important;}
+      .hero-actions a,.hero-actions button{font-size:9px!important;padding:5px 7px!important;}
+    }
+
+    @media(max-width:360px){
+      .badge-grid{grid-template-columns:repeat(2,1fr)!important;}
     }
   `;
 
   return (
     <>
       <style dangerouslySetInnerHTML={{__html:css}} />
-      <div style={{minHeight:"100vh",background:T.bg}}>
+      <div style={{minHeight:"100vh",background:T.bg,maxWidth:"100vw",overflowX:"hidden"}}>
 
         {/* NAV */}
         <nav style={{position:"sticky",top:0,zIndex:200,display:"flex",alignItems:"center",
@@ -714,7 +763,7 @@ export default function ProfilePage() {
         </nav>
 
         {/* HERO */}
-        <section style={{position:"relative",overflow:"hidden",
+        <section style={{position:"relative",overflow:"hidden",width:"100%",
           minHeight:"clamp(280px,40vh,460px)",display:"flex",alignItems:"flex-end"}}>
           {activeCover && isCoverUrlReady(activeCover.imageUrl) ? (
             <div style={{position:"absolute",inset:0,
@@ -773,7 +822,7 @@ export default function ProfilePage() {
                     <span style={{display:"inline-block",fontSize:8,color:T.olive,letterSpacing:"0.16em",
                       textTransform:"uppercase",fontWeight:700,border:`1px solid ${T.olive}`,
                       borderRadius:4,padding:"2px 7px",marginBottom:6}}>◎ VERIFIED OUTDOORS</span>
-                    <h1 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
+                    <h1 className="profile-username" style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
                       fontSize:"clamp(26px,4.5vw,50px)",fontWeight:700,color:T.white,
                       lineHeight:1,letterSpacing:"-0.02em"}}>{username||"—"}</h1>
                     <div style={{fontSize:12,color:T.dim,marginTop:3}}>@{username}
@@ -911,7 +960,7 @@ export default function ProfilePage() {
         </div>
 
         {/* MAIN CONTENT */}
-        <div style={{padding:"28px clamp(14px,5vw,64px)"}}>
+        <div className="main-content" style={{padding:"28px clamp(14px,5vw,64px)",maxWidth:"100%",overflowX:"hidden"}}>
 
           {/* ── GRASS SCORE ──────────────────────────────────────────────── */}
           <div className="card fade" style={{marginBottom:14}}>
@@ -940,7 +989,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Score breakdown */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",
+            <div className="score-breakdown" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",
               gap:8,marginBottom:18}}>
               {[
                 {key:"daily_proof",      label:"Daily Proofs",     icon:"📅"},
@@ -1319,7 +1368,7 @@ export default function ProfilePage() {
                   {unlockedCovers.length} / {COVER_DEFINITIONS.length} unlocked
                 </div>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10}}>
+              <div className="cover-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10}}>
                 {COVER_DEFINITIONS.map(cov => {
                   const isUnlocked = unlockedCovers.includes(cov.slug);
                   const isActive   = profileRow?.active_cover_id === cov.slug;
@@ -1495,7 +1544,7 @@ export default function ProfilePage() {
           )}
 
           {/* Rank + Top Streaks + Community */}
-          <div className="three" style={{display:"grid",gridTemplateColumns:"1fr 1.6fr 1fr",gap:14,marginBottom:14}}>
+          <div className="three" style={{display:"grid",gridTemplateColumns:"1fr 1.6fr 1fr",gap:14,marginBottom:14,width:"100%",maxWidth:"100%"}}>
 
             <div className="card fade">
               <div className="ct">Leaderboard Rank</div>
@@ -1573,42 +1622,9 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Active Challenges */}
-          {activeChallenges.length > 0 && (
-            <div className="card fade" style={{marginBottom:14}}>
-              <div className="ct">Active Challenges</div>
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                {activeChallenges.map(ch => {
-                  const opponent = norm(ch.challenger) === username ? norm(ch.challenged) : norm(ch.challenger);
-                  const isChallenger = norm(ch.challenger) === username;
-                  return (
-                    <a key={ch.id} href={`/challenge/${ch.slug}`}
-                      style={{textDecoration:"none",display:"flex",alignItems:"center",
-                        gap:14,padding:"14px 16px",background:T.bg3,
-                        border:`1px solid ${ch.status==="active"?T.olive:T.border}`,
-                        borderRadius:12,transition:"border-color 0.2s"}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:13,fontWeight:600,color:T.white,marginBottom:3}}>
-                          vs @{opponent}
-                        </div>
-                        <div style={{fontSize:10,color:T.dim}}>
-                          {ch.duration_days}-day challenge · {ch.status === "pending" ? (isChallenger ? "Waiting for response" : "Awaiting your response") : "Active"}
-                        </div>
-                      </div>
-                      <div style={{fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",
-                        color:ch.status==="active"?T.olive:T.dim,flexShrink:0}}>
-                        {ch.status === "active" ? "⚡ Active" : "⏳ Pending"}
-                      </div>
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {/* Impact */}
           <div className="card fade" style={{marginBottom:14}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:20}}>
+            <div className="impact-row" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:20}}>
               <div>
                 <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
                   fontSize:"clamp(20px,3.5vw,38px)",fontWeight:700,color:T.white,lineHeight:1.1}}>
