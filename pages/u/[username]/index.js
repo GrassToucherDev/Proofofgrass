@@ -891,7 +891,7 @@ export default function ProfilePage() {
                       ⚡ Challenge
                     </button>
                   )}
-                  {/* Spotlight winner badge */}
+                  {/* Spotlight winner badge + card button */}
                   {spotlightData.count > 0 && (
                     <Link href="/spotlight"
                       style={{display:"inline-flex",alignItems:"center",gap:5,
@@ -902,6 +902,13 @@ export default function ProfilePage() {
                         letterSpacing:"0.06em"}}>
                       🏆 Spotlight {spotlightData.count > 1 ? `×${spotlightData.count}` : "Winner"}
                       {spotlightData.latest && ` · ${spotlightData.latest.name}`}
+                    </Link>
+                  )}
+                  {/* Spotlight Card button — only for owner with wins */}
+                  {isOwner && spotlightData.count > 0 && (
+                    <Link href={`/spotlight-card/${username}`} className="btn-out"
+                      style={{borderColor:T.gold,color:T.gold,textDecoration:"none"}}>
+                      🏆 Spotlight Card
                     </Link>
                   )}
                 </div>

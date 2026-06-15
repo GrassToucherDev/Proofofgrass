@@ -58,7 +58,7 @@ function SpotlightAvatar({ winner, size = 64, color = T.gold }) {
 }
 
 // ─── Winner card (large, for spotlight page) ──────────────────────────────────
-function WinnerCard({ winner, current }) {
+function WinnerCard({ winner, current, viewer }) {
   const cat = getCat(winner?.category);
   const empty = !winner;
   return (
@@ -133,7 +133,7 @@ function WinnerCard({ winner, current }) {
             </div>
           )}
 
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
             {winner.x_link && (
               <a href={winner.x_link} target="_blank" rel="noopener noreferrer"
                 style={{ fontSize:10, color:T.dim, textDecoration:"none",
@@ -151,7 +151,18 @@ function WinnerCard({ winner, current }) {
                 🔗 Proof
               </a>
             )}
-            {winner.week_start && (
+            {/* Generate Spotlight Card — only shown to the winner themselves */}
+            {viewer && viewer === winner.username && (
+              <a href={`/spotlight-card/${winner.username}`}
+                style={{ fontSize:10, fontWeight:700, color:T.gold,
+                  textDecoration:"none", padding:"4px 10px", borderRadius:6,
+                  background:"rgba(200,168,75,0.1)",
+                  border:`1px solid rgba(200,168,75,0.35)`,
+                  marginLeft:"auto" }}>
+                🏆 Generate Spotlight Card
+              </a>
+            )}
+            {(!viewer || viewer !== winner.username) && winner.week_start && (
               <span style={{ fontSize:10, color:T.dim, marginLeft:"auto" }}>
                 {fmtWeek(winner.week_start, winner.week_end)}
               </span>
@@ -168,6 +179,14 @@ export default function SpotlightPage() {
   const [currentWinners, setCurrentWinners] = useState([]);
   const [pastWinners,    setPastWinners]    = useState([]);
   const [loading,        setLoading]        = useState(true);
+  const [viewer,         setViewer]         = useState(null); // logged-in username
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("pog_username");
+      if (saved) setViewer(saved.replace(/@/g,"").toLowerCase().trim());
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -308,7 +327,8 @@ export default function SpotlightPage() {
                 {CATEGORIES.map(cat => (
                   <WinnerCard key={cat.key}
                     winner={currentMap[cat.key] ?? null}
-                    current={true} />
+                    current={true}
+                    viewer={viewer} />
                 ))}
               </div>
             )}
