@@ -274,9 +274,9 @@ function SpotlightSection() {
         </a>
       </div>
 
-      {/* Horizontal scroll on mobile */}
-      <div style={{ display:"flex", gap:12, overflowX:"auto",
-        paddingBottom:4, scrollbarWidth:"none" }}>
+      {/* Horizontal scroll on mobile with snap */}
+      <div className="spotlight-scroll" style={{ display:"flex", gap:12, overflowX:"auto",
+        paddingBottom:4, scrollbarWidth:"none", WebkitOverflowScrolling:"touch" }}>
         {SPOT_CATS.map(cat => {
           const w = winnerMap[cat.key];
           return (
@@ -573,7 +573,7 @@ function ActivityFeed() {
               : `1px solid ${T2.border}` }}>
             <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>
             <div style={{ flex:1, minWidth:0 }}>
-              <span style={{ fontSize:12, fontWeight:600,
+              <span className="feed-username" style={{ fontSize:12, fontWeight:600,
                 color: isLuckyLegendary ? T2.gold : T2.white }}>
                 @{item.username}
               </span>
@@ -851,14 +851,75 @@ export default function Home() {
     input[type=text].field,textarea.field{width:100%;background:${T.bg3};border:1px solid ${T.border};border-radius:8px;padding:10px 13px;color:${T.white};font-size:13px;outline:none;transition:border-color 0.2s;resize:none;}
     input[type=text].field:focus,textarea.field:focus{border-color:${T.olive}50;}
     input[type=text].field::placeholder,textarea.field::placeholder{color:${T.dim};}
-    @media(max-width:960px){.main-grid{grid-template-columns:1fr !important;}.prog-grid{grid-template-columns:1fr !important;}}
-    @media(max-width:640px){.stat-strip{flex-wrap:wrap !important;}.stat-strip>div{min-width:50% !important;}.hero-btns{flex-direction:column !important;}.nav-links{display:none !important;}}
+    /* ── MOBILE LAYOUT FIX ─────────────────────────────────────────────── */
+    html,body{max-width:100vw;overflow-x:hidden;box-sizing:border-box;}
+    *,*::before,*::after{box-sizing:border-box;}
+
+    /* Collapse grids at tablet */
+    @media(max-width:960px){
+      .main-grid{grid-template-columns:1fr !important;}
+      .prog-grid{grid-template-columns:1fr !important;}
+    }
+
+    /* Full mobile fixes */
+    @media(max-width:768px){
+      .main-grid{
+        grid-template-columns:1fr !important;
+        width:100% !important;
+        max-width:100% !important;
+      }
+      .prog-grid{
+        grid-template-columns:1fr !important;
+        width:100% !important;
+        max-width:100% !important;
+      }
+      /* Every card fills full width */
+      .card{
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        border-right:none !important;
+      }
+      /* Stat strip wraps cleanly */
+      .stat-strip{flex-wrap:wrap !important;}
+      .stat-strip>div{min-width:50% !important;}
+      /* Hero buttons stack */
+      .hero-btns{flex-direction:column !important;align-items:stretch !important;}
+      /* Nav collapses */
+      .nav-links{display:none !important;}
+      /* Username input — don't overflow */
+      .username-input{width:120px !important;font-size:12px !important;}
+      /* Activity feed items — truncate long usernames */
+      .feed-username{
+        max-width:120px;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+        display:inline-block;
+      }
+      /* Spotlight cards horizontal scroll */
+      .spotlight-scroll{
+        scroll-snap-type:x mandatory;
+        -webkit-overflow-scrolling:touch;
+      }
+      .spotlight-scroll>*{
+        scroll-snap-align:start;
+      }
+      /* Quests banner stack */
+      .quests-banner{flex-direction:column !important;text-align:center !important;}
+      /* Footer CTA full width */
+      .footer-cta{flex-direction:column !important;text-align:center !important;align-items:center !important;}
+    }
+
+    @media(max-width:400px){
+      .username-input{width:100px !important;font-size:11px !important;}
+    }
   `;
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div style={{ minHeight:"100vh", background:T.bg }}>
+      <div style={{ minHeight:"100vh", background:T.bg, maxWidth:"100vw", overflowX:"hidden" }}>
 
         {/* ── NAV ─────────────────────────────────────────────────────────── */}
         <nav style={{ position:"sticky", top:0, zIndex:200, display:"flex", alignItems:"center",
@@ -960,9 +1021,16 @@ export default function Home() {
           <StatCard icon="◉" value={totalProofs !== null ? totalProofs.toLocaleString() : "…"} label="Proofs Logged" last />
         </div>
 
+        {/* ── COMMUNITY SPOTLIGHT (above the fold on mobile) ─────────────────── */}
+        <div style={{ padding:"20px clamp(14px,4vw,32px)", background:T.bg2,
+          borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
+          <SpotlightSection />
+        </div>
+
         {/* ── MAIN THREE-COLUMN GRID ─────────────────────────────────────────── */}
         <div className="main-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr",
-          gap:0, background:T.border, borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}` }}>
+          gap:0, background:T.border, borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`,
+          width:"100%", maxWidth:"100%" }}>
 
           {/* LOG YOUR PROOF */}
           <div id="upload" ref={uploadSectionRef} className="card" style={{ padding:26 }}>
@@ -1052,7 +1120,8 @@ export default function Home() {
 
         {/* ── PROGRESSION + RESULT CARD PREVIEW ─────────────────────────────── */}
         <div className="prog-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr",
-          gap:0, background:T.border, borderBottom:`1px solid ${T.border}` }}>
+          gap:0, background:T.border, borderBottom:`1px solid ${T.border}`,
+          width:"100%", maxWidth:"100%" }}>
 
           {/* PROGRESSION */}
           <div className="card" style={{ padding:28, borderRight:`1px solid ${T.border}` }}>
@@ -1145,11 +1214,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* COMMUNITY SPOTLIGHT */}
-          <div className="card" style={{ padding:28 }}>
-            <SpotlightSection />
-          </div>
-
           {/* ACTIVITY FEED WITH TABS */}
           <div className="card" style={{ padding:28 }}>
             
@@ -1164,7 +1228,7 @@ export default function Home() {
           background:T.bg2, borderTop:`1px solid ${T.border}`,
           borderBottom:`1px solid ${T.border}`,
           display:"flex", alignItems:"center", justifyContent:"space-between",
-          gap:16, flexWrap:"wrap",
+          gap:16, flexWrap:"wrap", width:"100%", maxWidth:"100%",
         }}>
           <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
             <div style={{ width:48, height:48, borderRadius:12, flexShrink:0,
@@ -1196,10 +1260,10 @@ export default function Home() {
 
         {/* ── FOOTER CTA ────────────────────────────────────────────────────── */}
         <section style={{ position:"relative", padding:"88px clamp(18px,5vw,72px)",
-          textAlign:"center", overflow:"hidden",
+          textAlign:"center", overflow:"hidden", width:"100%", maxWidth:"100%",
           background:`linear-gradient(180deg,${T.bg} 0%,#111408 100%)` }}>
           <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
-            width:500, height:500, borderRadius:"50%",
+            width:"min(500px,100vw)", height:"min(500px,100vw)", borderRadius:"50%",
             background:`radial-gradient(circle,${T.olive}0e 0%,transparent 70%)`, pointerEvents:"none" }} />
           <div style={{ position:"relative" }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:60, height:60, objectFit:"contain", opacity:0.7, marginBottom:20 }} />
@@ -1214,7 +1278,8 @@ export default function Home() {
 
         {/* ── FOOTER ───────────────────────────────────────────────────────── */}
         <footer style={{ borderTop:`1px solid ${T.border}`, padding:"20px clamp(14px,4vw,48px)",
-          display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12, background:T.bg }}>
+          display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12,
+          background:T.bg, width:"100%", maxWidth:"100%" }}>
           <div style={{ display:"flex", alignItems:"center", gap:7 }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:16, height:16, opacity:0.45 }} />
             <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:13, color:T.dim }}>touch grass © 2024</span>
