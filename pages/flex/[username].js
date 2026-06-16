@@ -361,7 +361,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.fillStyle = "#f5f4ef";
   ctx.shadowColor = "rgba(147,168,90,0.3)";
   ctx.shadowBlur = 14;
-  ctx.fillText(`@${username}`, 168, 262);
+  ctx.fillText(`@${username}`, 168, 240);
   ctx.shadowBlur = 0;
 
   // Tier title pill — pinned to bottom of hero section (hero divider ~y=370)

@@ -232,7 +232,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // BADGE_BOTTOM = 160 + 340 = 500
 
   // ── ZONE D — Category pill (y=524–586) ───────────────────────────────────────
-  const PILL_Y = 524;
+  const PILL_Y = 504;
   const PILL_H = 62;
   const PILL_W = 520;
   const PILL_X = W/2 - PILL_W/2;
@@ -262,12 +262,12 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   }
   ctx.fillStyle = "#f0efea";
   ctx.textAlign = "center";
-  ctx.fillText(displayName, W/2, 660);
+  ctx.fillText(displayName, W/2, 640);
 
   // ── ZONE D — Avatar (110px radius, centered below username) ──────────────────
   // Top = 680, center = 790, bottom = 900
   const AVATAR_R  = 110;
-  const AVATAR_CY = 790;
+  const AVATAR_CY = 770;
   if (avatarUrl) {
     try {
       const avatarImg = await loadImage(avatarUrl);
@@ -297,26 +297,26 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   ctx.font = "500 16px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.38)";
   ctx.letterSpacing = "0.2em";
-  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, 930);
+  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, 910);
 
   // ── ZONE E — Week (y=960–1040) ────────────────────────────────────────────────
-  div(950, 0.2);
+  div(930, 0.2);
 
   ctx.font = "700 50px 'Cormorant Garamond',Georgia,serif";
   ctx.fillStyle = "#c8a84b";
   ctx.letterSpacing = "0.01em";
-  ctx.fillText(weekNumber(win.week_start), W/2, 1010);
+  ctx.fillText(weekNumber(win.week_start), W/2, 990);
 
   ctx.font = "400 20px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.58)";
   ctx.letterSpacing = "0.04em";
-  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 1046);
+  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 1026);
 
   // ── ZONE F — Stats anchored near bottom (y=1080–1210) ────────────────────────
   // Canvas H=1350. Branding at 1290. Stats top 1042, height 148, bottom 1190. Gap to branding: 100px.
-  div(1030, 0.2);
+  div(1010, 0.2);
 
-  const STATS_Y = 1042;
+  const STATS_Y = 1022;
   const CARD_H  = 148;
   const stats = [];
   if (streakCount)            stats.push({ emoji:"🔥", value:`${streakCount}`, label:"Current Streak" });
