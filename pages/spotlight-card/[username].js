@@ -262,7 +262,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   }
   ctx.fillStyle = "#f0efea";
   ctx.textAlign = "center";
-  ctx.fillText(displayName, W/2, 640);
+  ctx.fillText(displayName, W/2, 630);
 
   // ── ZONE D — Avatar (110px radius, centered below username) ──────────────────
   // Top = 680, center = 790, bottom = 900
@@ -316,7 +316,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // Canvas H=1350. Branding at 1290. Stats top 1042, height 148, bottom 1190. Gap to branding: 100px.
   div(1010, 0.2);
 
-  const STATS_Y = 1062;
+  const STATS_Y = 1102;
   const CARD_H  = 148;
   const stats = [];
   if (streakCount)            stats.push({ emoji:"🔥", value:`${streakCount}`, label:"Current Streak" });
