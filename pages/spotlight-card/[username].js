@@ -262,8 +262,6 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   ctx.fillText(`${badge.emoji}  ${badge.label}`, W/2, PILL_Y + 40); // baseline inside pill
 
   // ── ZONE D — Username (baseline y=620) ───────────────────────────────────────
-  // PILL bottom = 492. Username top should be ~508. At 96px, baseline = top + 69 = 577.
-  // Using 620 gives comfortable 28px gap below pill bottom.
   const displayName = `@${win.display_name || win.username}`;
   let nameFontSize = 96;
   ctx.letterSpacing = "-0.01em";
@@ -276,48 +274,57 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   ctx.textAlign = "center";
   ctx.fillText(displayName, W/2, 620);
 
-  // ── ZONE D — Avatar (small, beside winner label) ──────────────────────────────
+  // ── ZONE D — Avatar (80px, centered below username) ──────────────────────────
+  // Avatar center at y=730, top at 650, bottom at 810
+  const AVATAR_R  = 80;
+  const AVATAR_CY = 730;
   if (avatarUrl) {
     try {
       const avatarImg = await loadImage(avatarUrl);
-      const avatarR = 18;
-      const avX = W/2 - 160;
-      const avY = 655;
       ctx.save();
       ctx.beginPath();
-      ctx.arc(avX, avY, avatarR, 0, Math.PI * 2);
+      ctx.arc(W/2, AVATAR_CY, AVATAR_R, 0, Math.PI * 2);
       ctx.clip();
-      ctx.drawImage(avatarImg, avX - avatarR, avY - avatarR, avatarR*2, avatarR*2);
+      ctx.drawImage(avatarImg, W/2 - AVATAR_R, AVATAR_CY - AVATAR_R, AVATAR_R*2, AVATAR_R*2);
       ctx.restore();
+      // Gold ring
       ctx.beginPath();
-      ctx.arc(avX, avY, avatarR + 1.5, 0, Math.PI * 2);
-      ctx.strokeStyle = "#c8a84b"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.arc(W/2, AVATAR_CY, AVATAR_R + 3, 0, Math.PI * 2);
+      ctx.strokeStyle = "#c8a84b";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      // Outer glow ring
+      ctx.beginPath();
+      ctx.arc(W/2, AVATAR_CY, AVATAR_R + 8, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(200,168,75,0.2)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
     } catch { /* skip */ }
   }
 
-  // ── ZONE D — Winner label (baseline y=668) ────────────────────────────────────
+  // ── ZONE D — Winner label (baseline y=850) ────────────────────────────────────
   ctx.font = "500 16px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.38)";
   ctx.letterSpacing = "0.2em";
-  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, 668);
+  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, 850);
 
-  // ── ZONE E — Week divider + number + date (y=700–790) ────────────────────────
-  div(692, 0.2);
+  // ── ZONE E — Week divider + number + date (y=880–970) ────────────────────────
+  div(872, 0.2);
 
   ctx.font = "700 52px 'Cormorant Garamond',Georgia,serif";
   ctx.fillStyle = "#c8a84b";
   ctx.letterSpacing = "0.01em";
-  ctx.fillText(weekNumber(win.week_start), W/2, 760);
+  ctx.fillText(weekNumber(win.week_start), W/2, 940);
 
   ctx.font = "400 20px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.58)";
   ctx.letterSpacing = "0.04em";
-  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 796);
+  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 976);
 
-  // ── ZONE F — Stats divider + 3 cards (y=820–970) ─────────────────────────────
-  div(814, 0.2);
+  // ── ZONE F — Stats divider + 3 cards (y=1000–1140) ───────────────────────────
+  div(994, 0.2);
 
-  const STATS_Y = 830;
+  const STATS_Y = 1008;
   const CARD_H  = 128;
   const stats = [];
   if (streakCount)            stats.push({ emoji:"🔥", value:`${streakCount}`, label:"STREAK" });
