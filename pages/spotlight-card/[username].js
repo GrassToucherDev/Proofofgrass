@@ -211,42 +211,35 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   ctx.letterSpacing = "0";
   ctx.fillText("🏆", W/2, 186);
 
-  // ── ZONE C — Badge (210px, 22% smaller) ──────────────────────────────────
-  const badgeSize = 210;
+  // ── ZONE C — Badge (280px) ───────────────────────────────────────────────────
+  const badgeSize = 280;
   const badgeX    = W/2 - badgeSize/2;
   const badgeY    = 196;
 
   try {
     const badgeImg = await loadImage(badge.image);
-    // Glow pass
     ctx.save();
     ctx.shadowColor = badge.color;
-    ctx.shadowBlur  = 40;
+    ctx.shadowBlur  = 48;
     ctx.drawImage(badgeImg, badgeX, badgeY, badgeSize, badgeSize);
     ctx.restore();
-    // Crisp pass
     ctx.drawImage(badgeImg, badgeX, badgeY, badgeSize, badgeSize);
   } catch {
-    // Fallback circle + emoji
     ctx.beginPath();
     ctx.arc(W/2, badgeY + badgeSize/2, badgeSize/2, 0, Math.PI * 2);
     ctx.fillStyle = badge.color + "18"; ctx.fill();
     ctx.strokeStyle = badge.color + "60"; ctx.lineWidth = 2; ctx.stroke();
-    ctx.font = "60px serif";
-    ctx.fillText(badge.emoji, W/2, badgeY + badgeSize/2 + 20);
+    ctx.font = "72px serif";
+    ctx.fillText(badge.emoji, W/2, badgeY + badgeSize/2 + 24);
   }
 
-  // ZONE C bottom = badgeY + badgeSize = 406
-  const BADGE_BOTTOM = badgeY + badgeSize; // 406
+  // BADGE_BOTTOM = 196 + 280 = 476
 
-  // ── ZONE D — Category pill (y=430–492) ──────────────────────────────────────
-  // All Y values are absolute baselines. Canvas fillText Y = baseline (not top).
-  // Font ascender ≈ 72% of font size. So 96px font top = baseline - 69px.
-
-  const PILL_Y    = 430;  // pill top
-  const PILL_H    = 62;
-  const PILL_W    = 520;
-  const PILL_X    = W/2 - PILL_W/2;
+  // ── ZONE D — Category pill (y=500–562) ───────────────────────────────────────
+  const PILL_Y = 500;
+  const PILL_H = 62;
+  const PILL_W = 520;
+  const PILL_X = W/2 - PILL_W/2;
 
   const pillBg = ctx.createLinearGradient(PILL_X, PILL_Y, PILL_X + PILL_W, PILL_Y + PILL_H);
   pillBg.addColorStop(0, badge.color + "30");
@@ -259,9 +252,10 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   ctx.fillStyle = badge.color;
   ctx.letterSpacing = "0.1em";
   ctx.textAlign = "center";
-  ctx.fillText(`${badge.emoji}  ${badge.label}`, W/2, PILL_Y + 40); // baseline inside pill
+  ctx.fillText(`${badge.emoji}  ${badge.label}`, W/2, PILL_Y + 40);
 
-  // ── ZONE D — Username (baseline y=620) ───────────────────────────────────────
+  // ── ZONE D — Username (baseline y=660) ───────────────────────────────────────
+  // PILL bottom = 562. 660 baseline = top ~591. Gap from pill: 29px. Clean.
   const displayName = `@${win.display_name || win.username}`;
   let nameFontSize = 96;
   ctx.letterSpacing = "-0.01em";
@@ -272,12 +266,12 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   }
   ctx.fillStyle = "#f0efea";
   ctx.textAlign = "center";
-  ctx.fillText(displayName, W/2, 620);
+  ctx.fillText(displayName, W/2, 660);
 
-  // ── ZONE D — Avatar (80px, centered below username) ──────────────────────────
-  // Avatar center at y=730, top at 650, bottom at 810
-  const AVATAR_R  = 80;
-  const AVATAR_CY = 730;
+  // ── ZONE D — Avatar (110px radius, centered below username) ──────────────────
+  // Top = 680, center = 790, bottom = 900
+  const AVATAR_R  = 110;
+  const AVATAR_CY = 790;
   if (avatarUrl) {
     try {
       const avatarImg = await loadImage(avatarUrl);
@@ -295,36 +289,38 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
       ctx.stroke();
       // Outer glow ring
       ctx.beginPath();
-      ctx.arc(W/2, AVATAR_CY, AVATAR_R + 8, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(200,168,75,0.2)";
+      ctx.arc(W/2, AVATAR_CY, AVATAR_R + 9, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(200,168,75,0.18)";
       ctx.lineWidth = 1;
       ctx.stroke();
     } catch { /* skip */ }
   }
 
-  // ── ZONE D — Winner label (baseline y=850) ────────────────────────────────────
+  // ── ZONE D — Winner label (baseline y=930) ────────────────────────────────────
+  // Avatar bottom = 900. Winner label top ~916. Baseline 930. Gap: 16px. Tight but clean.
   ctx.font = "500 16px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.38)";
   ctx.letterSpacing = "0.2em";
-  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, 850);
+  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, 930);
 
-  // ── ZONE E — Week divider + number + date (y=880–970) ────────────────────────
-  div(872, 0.2);
+  // ── ZONE E — Week (y=960–1040) ────────────────────────────────────────────────
+  div(950, 0.2);
 
-  ctx.font = "700 52px 'Cormorant Garamond',Georgia,serif";
+  ctx.font = "700 50px 'Cormorant Garamond',Georgia,serif";
   ctx.fillStyle = "#c8a84b";
   ctx.letterSpacing = "0.01em";
-  ctx.fillText(weekNumber(win.week_start), W/2, 940);
+  ctx.fillText(weekNumber(win.week_start), W/2, 1010);
 
   ctx.font = "400 20px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.58)";
   ctx.letterSpacing = "0.04em";
-  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 976);
+  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 1046);
 
-  // ── ZONE F — Stats divider + 3 cards (y=1000–1140) ───────────────────────────
-  div(994, 0.2);
+  // ── ZONE F — Stats anchored near bottom (y=1080–1210) ────────────────────────
+  // Canvas H=1350. Branding at 1290. Stats top 1080, height 128, bottom 1208. Gap to branding: 82px.
+  div(1068, 0.2);
 
-  const STATS_Y = 1008;
+  const STATS_Y = 1082;
   const CARD_H  = 128;
   const stats = [];
   if (streakCount)            stats.push({ emoji:"🔥", value:`${streakCount}`, label:"STREAK" });
