@@ -945,9 +945,8 @@ export default function Home() {
     input[type=text].field:focus,textarea.field:focus{border-color:${T.olive}50;}
     input[type=text].field::placeholder,textarea.field::placeholder{color:${T.dim};}
     /* ── MOBILE LAYOUT FIX ─────────────────────────────────────────────── */
-    html,body{box-sizing:border-box;}
     *,*::before,*::after{box-sizing:border-box;}
-    html,body{overflow-x:clip;overflow-y:auto;}
+    html{overflow-x:hidden;}
 
     /* Collapse grids at tablet */
     @media(max-width:960px){
