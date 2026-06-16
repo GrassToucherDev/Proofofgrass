@@ -232,7 +232,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // BADGE_BOTTOM = 160 + 340 = 500
 
   // ── ZONE D — Category pill (y=524–586) ───────────────────────────────────────
-  const PILL_Y = 504;
+  const PILL_Y = 484;
   const PILL_H = 62;
   const PILL_W = 520;
   const PILL_X = W/2 - PILL_W/2;
@@ -253,7 +253,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // ── ZONE D — Username (baseline y=660) ───────────────────────────────────────
   // PILL bottom = 562. 660 baseline = top ~591. Gap from pill: 29px. Clean.
   const displayName = `@${win.display_name || win.username}`;
-  let nameFontSize = 96;
+  let nameFontSize = 92;
   ctx.letterSpacing = "-0.01em";
   ctx.font = `700 ${nameFontSize}px 'Cormorant Garamond',Georgia,serif`;
   while (ctx.measureText(displayName).width > 980 && nameFontSize > 52) {
@@ -316,7 +316,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // Canvas H=1350. Branding at 1290. Stats top 1042, height 148, bottom 1190. Gap to branding: 100px.
   div(1010, 0.2);
 
-  const STATS_Y = 1022;
+  const STATS_Y = 1062;
   const CARD_H  = 148;
   const stats = [];
   if (streakCount)            stats.push({ emoji:"🔥", value:`${streakCount}`, label:"Current Streak" });
