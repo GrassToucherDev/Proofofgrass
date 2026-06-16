@@ -346,6 +346,85 @@ function SpotlightSection() {
   );
 }
 
+// ─── Recent Milestones widget ─────────────────────────────────────────────────
+const MILESTONE_ICONS = {
+  streak:      "🔥",
+  grass_score: "🌱",
+  proof_count: "🌿",
+  referral:    "🤝",
+  spotlight:   "🏆",
+  lucky_touch: "🍀",
+};
+
+function RecentMilestones() {
+  const [milestones, setMilestones] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("MilestoneEvents")
+        .select("username,milestone_type,milestone_label,created_at")
+        .order("created_at", { ascending:false })
+        .limit(8);
+      setMilestones(data ?? []);
+      setLoading(false);
+    })();
+  }, []);
+
+  const T2 = {
+    bg2:"#0e100b", bg3:"#141710", border:"rgba(255,255,255,0.055)",
+    borderGold:"rgba(200,168,75,0.35)", gold:"#c8a84b",
+    white:"#f0efea", dim:"rgba(240,239,234,0.24)", olive:"#93a85a",
+  };
+
+  if (!loading && milestones.length === 0) return null;
+
+  return (
+    <div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+        marginBottom:14 }}>
+        <div>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em",
+            textTransform:"uppercase", color:T2.gold, marginBottom:3 }}>Platform</div>
+          <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            fontSize:18, fontWeight:700, color:T2.white }}>Recent Milestones</div>
+        </div>
+      </div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+        {loading ? (
+          [1,2,3].map(i => (
+            <div key={i} style={{ height:40, borderRadius:8, background:T2.bg3, opacity:0.5 }} />
+          ))
+        ) : milestones.map((m, i) => (
+          <a key={i} href={`/u/${m.username}`}
+            style={{ display:"flex", alignItems:"center", gap:10,
+              padding:"9px 12px", borderRadius:9, textDecoration:"none",
+              background:T2.bg3, border:`1px solid ${T2.border}`,
+              transition:"border-color 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = T2.borderGold}
+            onMouseLeave={e => e.currentTarget.style.borderColor = T2.border}>
+            <span style={{ fontSize:16, flexShrink:0 }}>
+              {MILESTONE_ICONS[m.milestone_type] ?? "⭐"}
+            </span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <span style={{ fontSize:12, fontWeight:600, color:T2.gold }}>
+                @{m.username}
+              </span>
+              <span style={{ fontSize:12, color:T2.dim }}> {m.milestone_label}</span>
+            </div>
+            <span style={{ fontSize:9, color:T2.dim, flexShrink:0 }}>
+              {m.created_at ? new Date(m.created_at).toLocaleDateString("en-US",
+                { month:"short", day:"numeric" }) : ""}
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ActivityFeed() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1227,6 +1306,11 @@ export default function Home() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* RECENT MILESTONES */}
+          <div className="card" style={{ padding:28 }}>
+            <RecentMilestones />
           </div>
 
           {/* ACTIVITY FEED WITH TABS */}

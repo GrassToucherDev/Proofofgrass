@@ -175,12 +175,12 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   ctx.font = "600 20px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.5)";
   ctx.letterSpacing = "0.18em";
-  ctx.fillText("PROOF OF GRASS", W/2, 126);
+  ctx.fillText("PROOF OF GRASS", W/2, 132);
 
   ctx.font = "700 13px 'DM Sans',sans-serif";
   ctx.fillStyle = "#c8a84b";
   ctx.letterSpacing = "0.24em";
-  ctx.fillText("COMMUNITY SPOTLIGHT", W/2, 154);
+  ctx.fillText("COMMUNITY SPOTLIGHT", W/2, 164);
 
   // Top divider
   const div = (y) => {
@@ -192,14 +192,14 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   div(172);
 
   // ── Trophy ──────────────────────────────────────────────────────────────────
-  ctx.font = "80px serif";
+  ctx.font = "96px serif";
   ctx.letterSpacing = "0";
-  ctx.fillText("🏆", W/2, 268);
+  ctx.fillText("🏆", W/2, 256);
 
   // ── Badge image (centerpiece) ───────────────────────────────────────────────
-  const badgeSize = 260;
+  const badgeSize = 320;
   const badgeX = W/2 - badgeSize/2;
-  const badgeY = 288;
+  const badgeY = 268;
   try {
     const badgeImg = await loadImage(badge.image);
     // Badge glow
@@ -224,8 +224,8 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   }
 
   // ── Avatar (below badge) ────────────────────────────────────────────────────
-  const avatarY = badgeY + badgeSize + 24;
-  const avatarSize = 96;
+  const avatarY = badgeY + badgeSize + 28;
+  const avatarSize = 110;
   let hasAvatar = false;
   if (avatarUrl) {
     try {
@@ -249,7 +249,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   const textY = hasAvatar ? avatarY + avatarSize + 32 : avatarY + 8;
 
   // ── Category pill ────────────────────────────────────────────────────────────
-  const pillW = 360, pillH = 46, pillX = W/2 - pillW/2, pillY2 = textY;
+  const pillW = 420, pillH = 58, pillX = W/2 - pillW/2, pillY2 = textY;
   const pillBg = ctx.createLinearGradient(pillX, pillY2, pillX+pillW, pillY2+pillH);
   pillBg.addColorStop(0, badge.color + "20");
   pillBg.addColorStop(1, badge.color + "0c");
@@ -267,9 +267,9 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // ── Username ─────────────────────────────────────────────────────────────────
   const displayName = `@${win.display_name || win.username}`;
   ctx.letterSpacing = "-0.01em";
-  let nameFontSize = 62;
+  let nameFontSize = 76;
   ctx.font = `700 ${nameFontSize}px 'Cormorant Garamond',Georgia,serif`;
-  while (ctx.measureText(displayName).width > 860 && nameFontSize > 36) {
+  while (ctx.measureText(displayName).width > 900 && nameFontSize > 40) {
     nameFontSize -= 4;
     ctx.font = `700 ${nameFontSize}px 'Cormorant Garamond',Georgia,serif`;
   }
@@ -280,22 +280,22 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   ctx.font = "600 15px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.42)";
   ctx.letterSpacing = "0.2em";
-  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, textY + 144);
+  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, textY + 170);
 
   // ── Stars ────────────────────────────────────────────────────────────────────
   ctx.font = "22px serif";
   ctx.letterSpacing = "0";
-  ctx.fillText("✦  ✦  ✦", W/2, textY + 188);
+  ctx.fillText("✦  ✦  ✦", W/2, textY + 218);
 
   // ── Week ─────────────────────────────────────────────────────────────────────
   ctx.font = "700 26px 'Cormorant Garamond',Georgia,serif";
   ctx.fillStyle = "#c8a84b";
   ctx.letterSpacing = "0.02em";
-  ctx.fillText(weekNumber(win.week_start), W/2, textY + 234);
+  ctx.fillText(weekNumber(win.week_start), W/2, textY + 270);
   ctx.font = "400 16px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.35)";
   ctx.letterSpacing = "0.06em";
-  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, textY + 260);
+  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, textY + 302);
 
   // ── Stats row (if available) ─────────────────────────────────────────────────
   if (streakCount || grassScore || spotlightWinCount) {
@@ -325,7 +325,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   ctx.fillStyle = "rgba(240,239,234,0.25)";
   ctx.letterSpacing = "0.08em";
   ctx.textAlign = "center";
-  ctx.fillText("ProofOfGrass.app", W/2, H - 68);
+  ctx.fillText("ProofOfGrass.app", W/2, H - 58);
 
   return canvas.toDataURL("image/png");
 }

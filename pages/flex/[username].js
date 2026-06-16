@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../utils/supabase";
-import { resolveActiveCover } from "../../utils/coverDefinitions";
+import { resolveActiveCover, isCoverUrlReady } from "../../utils/coverDefinitions";
 
 const T = {
   bg:     "#080a06", bg2: "#0e100b", bg3: "#141710", bg4: "#1a1e13",
@@ -238,7 +238,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // card composition is unchanged — only the background treatment differs.
   // Cover-image-on -> existing-gradient-on -> existing-elements-on, exactly
   // matching the layered order requested.
-  if (coverUrl) {
+  if (coverUrl && coverUrl !== "PASTE_URL_HERE") {
     try {
       const coverImg = await loadImage(coverUrl);
       // Cover image to fill W x H (object-fit: cover behavior)
@@ -731,23 +731,9 @@ export default function FlexCardPage() {
   const [generatingImg, setGeneratingImg] = useState(false);
   const [downloaded,    setDownloaded]    = useState(false);
 
-  // Step 1 — Download/save the card image
+    // Step 1 — Pure download (Save Card = download only, Post to X handles sharing)
   const downloadCard = useCallback(async () => {
     setGeneratingImg(true);
-    const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
-
-    // On mobile Safari, window.open() MUST be called synchronously (before any await)
-    // or the browser blocks it as a popup. Open it now, write to it after generation.
-    let mobileWin = null;
-    if (isMob && !(navigator.share && navigator.canShare)) {
-      mobileWin = window.open("", "_blank");
-      if (mobileWin) {
-        mobileWin.document.write(`<html><body style="margin:0;background:#0a0b08;display:flex;align-items:center;justify-content:center;height:100vh">
-          <p style="color:#93a85a;font-family:sans-serif;font-size:16px;text-align:center">Generating your card…</p>
-        </body></html>`);
-      }
-    }
-
     try {
       const dataUrl = await generateShareImage({
         username, streak, tier, tierTitle, grassScore,
@@ -758,63 +744,17 @@ export default function FlexCardPage() {
         hasST: profileRow?.has_screen_toucher    ?? false,
         avatarUrl: profileRow?.avatar_url || null,
         avatarFrame: profileRow?.avatar_frame || null,
-        // PRESTIGE COVERS: pass active cover image to share card generator
         coverUrl: activeCover?.imageUrl || null,
       });
-
-      if (isMob) {
-        // Try Web Share API first (best experience — saves to Photos)
-        if (navigator.share && navigator.canShare) {
-          try {
-            const res  = await fetch(dataUrl);
-            const blob = await res.blob();
-            const file = new File([blob], `proof-of-grass-${username}-day${streak}.png`, { type:"image/png" });
-            if (navigator.canShare({ files:[file] })) {
-              await navigator.share({
-                files: [file],
-                title: `Day ${streak} — ${tier.label} 🌿`,
-                text: `Day ${streak} — ${tier.label} 🌿\n\nThis is my Proof of Grass flex card. Building my outdoor legacy daily on @XTouchGrass\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/flex/${username}`,
-              });
-              setDownloaded(true);
-              setTimeout(() => setDownloaded(false), 4000);
-              setGeneratingImg(false);
-              return;
-            }
-          } catch(shareErr) {
-            if (shareErr?.name === "AbortError") {
-              setGeneratingImg(false);
-              return;
-            }
-            // Fall through to window approach
-          }
-        }
-
-        // Fallback: write image to the pre-opened window
-        if (mobileWin) {
-          mobileWin.document.open();
-          mobileWin.document.write(`<html><body style="margin:0;background:#0a0b08">
-            <img src="${dataUrl}" style="width:100%;display:block" />
-            <p style="color:#93a85a;text-align:center;font-family:sans-serif;padding:16px;font-size:15px;margin:0">
-              Long-press the image above to save it to your Photos
-            </p>
-          </body></html>`);
-          mobileWin.document.close();
-        }
-      } else {
-        // Desktop: standard anchor download
-        const link = document.createElement("a");
-        link.download = `proof-of-grass-${username}-day${streak}.png`;
-        link.href = dataUrl;
-        link.click();
-      }
-
+      const link = document.createElement("a");
+      link.download = `proof-of-grass-${username}-day${streak}.png`;
+      link.href = dataUrl;
+      link.click();
       setDownloaded(true);
       setTimeout(() => setDownloaded(false), 4000);
-      // Mark weekly flex quest as complete
       try { localStorage.setItem("pog_flexed_week", new Date().toISOString()); } catch(e) {}
     } catch(e) {
       console.error("download error", e);
-      if (mobileWin) mobileWin.close();
     }
     setGeneratingImg(false);
   }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow]);
@@ -988,9 +928,11 @@ export default function FlexCardPage() {
 
             {/* ── HERO ─────────────────────────────────────────────────── */}
             <div className="fade" style={{ padding:"28px 28px 22px",
-              background: activeCover?.imageUrl
+              background: activeCover && isCoverUrlReady(activeCover.imageUrl)
                 ? `linear-gradient(135deg,rgba(20,21,16,0.55),rgba(20,21,16,0.85)), url(${activeCover.imageUrl})`
-                : `linear-gradient(135deg,${T.bg3},${T.bg2})`,
+                : activeCover?.fallback
+                  ? activeCover.fallback
+                  : `linear-gradient(135deg,${T.bg3},${T.bg2})`,
               backgroundSize:"cover", backgroundPosition:"center",
               borderBottom:`1px solid ${T.border}`, position:"relative",
               display:"flex", alignItems:"flex-start", justifyContent:"space-between",
@@ -1358,17 +1300,22 @@ export default function FlexCardPage() {
           {/* ── SHARE ACTIONS ─────────────────────────────────────────────── */}
           <div className="fade3" style={{ display:"flex", gap:10, marginTop:20,
             justifyContent:"center", flexWrap:"wrap" }}>
-            {/* Step 1 — Save/Download */}
-            <button onClick={downloadCard} disabled={generatingImg} className="btn-share"
+            {/* Post to X — generates card + shares on mobile, opens intent on desktop */}
+            <button onClick={shareToX} disabled={generatingImg} className="btn-share"
               style={{ opacity:generatingImg?0.7:1 }}>
-              {generatingImg ? "Generating…" : downloaded ? "✓ Saved!" : "↓ Save Card"}
+              {generatingImg ? "Generating…" : (
+                <span style={{display:"flex",alignItems:"center",gap:7}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                  Post to X
+                </span>
+              )}
             </button>
-            {/* Step 2 — Share on X */}
-            <button onClick={shareToX} className="btn-ghost">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-              </svg>
-              Post on X
+            {/* Save — pure download only, no share sheet */}
+            <button onClick={downloadCard} disabled={generatingImg} className="btn-ghost"
+              style={{ opacity:generatingImg?0.7:1 }}>
+              {downloaded ? "✓ Downloaded!" : "↓ Save Card"}
             </button>
             <button onClick={copyLink} className="btn-ghost">
               {copied ? "✓ Copied" : "↗ Copy Link"}
@@ -1380,7 +1327,7 @@ export default function FlexCardPage() {
           {downloaded && (
             <p style={{ textAlign:"center", fontSize:11, color:"rgba(147,168,90,0.7)",
               marginTop:8 }}>
-              Card saved — attach it to your post on X ↑
+              Card saved to device ✓
             </p>
           )}
 
