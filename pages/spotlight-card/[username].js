@@ -208,7 +208,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
 
   // ── ZONE B+C — Badge (340px, no trophy) ─────────────────────────────────────
   // Trophy removed — badge IS the statement. Moved up to fill the space.
-  const badgeSize = 340;
+  const badgeSize = 380;
   const badgeX    = W/2 - badgeSize/2;
   const badgeY    = 160;
 
@@ -232,7 +232,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // BADGE_BOTTOM = 160 + 340 = 500
 
   // ── ZONE D — Category pill (y=524–586) ───────────────────────────────────────
-  const PILL_Y = 484;
+  const PILL_Y = 464;
   const PILL_H = 62;
   const PILL_W = 520;
   const PILL_X = W/2 - PILL_W/2;
@@ -305,12 +305,12 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   ctx.font = "700 50px 'Cormorant Garamond',Georgia,serif";
   ctx.fillStyle = "#c8a84b";
   ctx.letterSpacing = "0.01em";
-  ctx.fillText(weekNumber(win.week_start), W/2, 990);
+  ctx.fillText(weekNumber(win.week_start), W/2, 1000);
 
   ctx.font = "400 20px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.58)";
   ctx.letterSpacing = "0.04em";
-  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 1026);
+  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 1036);
 
   // ── ZONE F — Stats anchored near bottom (y=1080–1210) ────────────────────────
   // Canvas H=1350. Branding at 1290. Stats top 1042, height 148, bottom 1190. Gap to branding: 100px.
