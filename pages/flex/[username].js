@@ -759,12 +759,11 @@ export default function FlexCardPage() {
     setGeneratingImg(false);
   }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow]);
 
-  // Step 2 — Share to X (native share with image on mobile, intent on desktop)
   const shareToX = useCallback(async () => {
+    if (generatingImg) return; // prevent double-fire
     const text = `Day ${streak} — ${tier.label} 🌿\n\nBuilding my outdoor legacy daily on @XTouchGrass\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/flex/${username}`;
     const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
 
-    // On desktop: open window BEFORE any await (Safari/Chrome block post-await popups)
     let desktopWin = null;
     if (!isMob || !(navigator.share && navigator.canShare)) {
       desktopWin = window.open("", "_blank");
@@ -786,12 +785,10 @@ export default function FlexCardPage() {
         hasST: profileRow?.has_screen_toucher    ?? false,
         avatarUrl: profileRow?.avatar_url || null,
         avatarFrame: profileRow?.avatar_frame || null,
-        // PRESTIGE COVERS: pass active cover image to share card generator
         coverUrl: activeCover?.imageUrl || null,
       });
 
       if (isMob && navigator.share && navigator.canShare) {
-        // Mobile — native share with image attached
         try {
           const res  = await fetch(dataUrl);
           const blob = await res.blob();
@@ -799,14 +796,12 @@ export default function FlexCardPage() {
           if (navigator.canShare({ files:[file] })) {
             await navigator.share({ files:[file], title:`Day ${streak} — ${tier.label} 🌿`, text });
             try { localStorage.setItem("pog_flexed_week", new Date().toISOString()); } catch(e) {}
-            setGeneratingImg(false);
             return;
           }
         } catch(e) {
-          if (e?.name === "AbortError") { setGeneratingImg(false); return; }
-          console.warn("native share failed, opening tab fallback", e);
+          if (e?.name === "AbortError") return;
+          console.warn("native share failed, fallback to tab", e);
         }
-        // Mobile fallback — show image in new tab
         const win = window.open("", "_blank");
         if (win) {
           win.document.open();
@@ -819,8 +814,6 @@ export default function FlexCardPage() {
           win.document.close();
         }
       } else {
-        // Desktop — write card image into the pre-opened window for download,
-        // then redirect to X intent
         if (desktopWin) {
           desktopWin.document.open();
           desktopWin.document.write(`<html><body style="margin:0;background:#0a0b08">
@@ -844,11 +837,10 @@ export default function FlexCardPage() {
       console.error("shareToX error", e);
       if (desktopWin) desktopWin.close();
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+    } finally {
+      setGeneratingImg(false); // always resets — no stuck state
     }
-    setGeneratingImg(false);
-  }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow]);
-
-  const css = `
+  }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow, generatingImg]);  const css = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{scroll-behavior:smooth;}
@@ -899,12 +891,12 @@ export default function FlexCardPage() {
             <Link href={`/u/${username}`} className="nav-lk">Profile</Link>
           </div>
           <div style={{ display:"flex", gap:8, flexShrink:0 }}>
-            <button onClick={shareToX} className="btn-share"
-              style={{ fontSize:11, padding:"7px 14px" }}>
+            <button onClick={shareToX} disabled={generatingImg} className="btn-share"
+              style={{ fontSize:11, padding:"7px 14px", opacity:generatingImg?0.5:1 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
               </svg>
-              Share on X
+              {generatingImg ? "…" : "Share on X"}
             </button>
           </div>
         </nav>
