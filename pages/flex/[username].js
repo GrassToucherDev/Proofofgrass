@@ -619,8 +619,21 @@ function hexPath(ctx, r) {
 function loadImage(src) {
   return new Promise((res, rej) => {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => res(img);
-    img.onerror = rej;
+    img.onerror = () => {
+      // CORS failed — fetch and convert to blob URL instead
+      fetch(src)
+        .then(r => r.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          const img2 = new Image();
+          img2.onload = () => { URL.revokeObjectURL(url); res(img2); };
+          img2.onerror = rej;
+          img2.src = url;
+        })
+        .catch(rej);
+    };
     img.src = src;
   });
 }
@@ -827,7 +840,7 @@ export default function FlexCardPage() {
       }
     } catch(e) {
       console.error("shareToX error", e);
-      if (desktopWin) desktopWin.close();
+      if (sharedWin) sharedWin.close();
       // Fallback: open X intent directly
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
     } finally {
