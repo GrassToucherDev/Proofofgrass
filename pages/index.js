@@ -971,11 +971,11 @@ export default function Home() {
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
         <section style={{ position:"relative", height:"clamp(460px,70vh,720px)", overflow:"hidden" }}>
-          <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,#1a2d0e,#2d4a18 22%,#1e3410 52%,#0e1a08)" }}>
-            <div style={{ position:"absolute", inset:0, opacity:0.2, backgroundImage:"radial-gradient(ellipse at 65% 35%,#4a7a28,transparent 55%),radial-gradient(ellipse at 30% 70%,#2d5a18,transparent 45%)" }} />
+          <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"linear-gradient(155deg,#1a2d0e,#2d4a18 22%,#1e3410 52%,#0e1a08)" }}>
+            <div style={{ position:"absolute", inset:0, opacity:0.2, pointerEvents:"none", backgroundImage:"radial-gradient(ellipse at 65% 35%,#4a7a28,transparent 55%),radial-gradient(ellipse at 30% 70%,#2d5a18,transparent 45%)" }} />
           </div>
-          <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg,rgba(14,15,11,0.92) 0%,rgba(14,15,11,0.16) 52%,rgba(14,15,11,0.80) 100%)" }} />
-          <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"36%", background:"linear-gradient(180deg,transparent,rgba(14,15,11,0.97))" }} />
+          <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"linear-gradient(90deg,rgba(14,15,11,0.92) 0%,rgba(14,15,11,0.16) 52%,rgba(14,15,11,0.80) 100%)" }} />
+          <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"36%", pointerEvents:"none", background:"linear-gradient(180deg,transparent,rgba(14,15,11,0.97))" }} />
 
           {/* Left */}
           <div style={{ position:"absolute", left:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", maxWidth:480 }}>
