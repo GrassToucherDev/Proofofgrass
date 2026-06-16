@@ -166,166 +166,185 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   try {
     const logo = await loadImage("/touchgrass-transparent.png");
     ctx.save(); ctx.globalAlpha = 0.65;
-    ctx.drawImage(logo, W/2-20, 64, 40, 40);
+    ctx.drawImage(logo, W/2-18, 54, 36, 36);
     ctx.restore();
   } catch { /* continue */ }
 
   ctx.textAlign = "center";
-
-  ctx.font = "600 20px 'DM Sans',sans-serif";
+  ctx.font = "600 22px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.5)";
   ctx.letterSpacing = "0.18em";
-  ctx.fillText("PROOF OF GRASS", W/2, 132);
+  ctx.fillText("PROOF OF GRASS", W/2, 108);
 
-  ctx.font = "700 13px 'DM Sans',sans-serif";
+  ctx.font = "700 14px 'DM Sans',sans-serif";
   ctx.fillStyle = "#c8a84b";
   ctx.letterSpacing = "0.24em";
-  ctx.fillText("COMMUNITY SPOTLIGHT", W/2, 164);
+  ctx.fillText("COMMUNITY SPOTLIGHT", W/2, 134);
 
-  // Top divider
-  const div = (y) => {
-    const g = ctx.createLinearGradient(W*0.2,0,W*0.8,0);
-    g.addColorStop(0,"transparent"); g.addColorStop(0.5,"rgba(200,168,75,0.38)"); g.addColorStop(1,"transparent");
+  // Divider helper
+  const div = (y, op = 0.35) => {
+    const g = ctx.createLinearGradient(W*0.15,0,W*0.85,0);
+    g.addColorStop(0,"transparent");
+    g.addColorStop(0.5,`rgba(200,168,75,${op})`);
+    g.addColorStop(1,"transparent");
     ctx.strokeStyle = g; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(W*0.2,y); ctx.lineTo(W*0.8,y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*0.15,y); ctx.lineTo(W*0.85,y); ctx.stroke();
   };
-  div(172);
+  div(146);
 
   // ── Trophy ──────────────────────────────────────────────────────────────────
-  ctx.font = "96px serif";
+  ctx.font = "68px serif";
   ctx.letterSpacing = "0";
-  ctx.fillText("🏆", W/2, 256);
+  ctx.fillText("🏆", W/2, 212);
 
   // ── Badge image (centerpiece) ───────────────────────────────────────────────
-  const badgeSize = 320;
+  const badgeSize = 270;
   const badgeX = W/2 - badgeSize/2;
-  const badgeY = 268;
+  const badgeY = 224;
   try {
     const badgeImg = await loadImage(badge.image);
-    // Badge glow
     ctx.save();
-    ctx.shadowColor  = badge.color;
-    ctx.shadowBlur   = 48;
+    ctx.shadowColor = badge.color;
+    ctx.shadowBlur  = 52;
     ctx.drawImage(badgeImg, badgeX, badgeY, badgeSize, badgeSize);
     ctx.restore();
-    // Second pass without shadow for crisp render
     ctx.drawImage(badgeImg, badgeX, badgeY, badgeSize, badgeSize);
   } catch {
-    // Fallback: emoji + colored circle if image fails
     ctx.beginPath();
     ctx.arc(W/2, badgeY + badgeSize/2, badgeSize/2, 0, Math.PI*2);
-    ctx.fillStyle = badge.color + "18";
-    ctx.fill();
-    ctx.strokeStyle = badge.color + "60";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.font = "80px serif";
-    ctx.fillText(badge.emoji, W/2, badgeY + badgeSize/2 + 28);
+    ctx.fillStyle = badge.color + "18"; ctx.fill();
+    ctx.strokeStyle = badge.color + "60"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.font = "72px serif";
+    ctx.fillText(badge.emoji, W/2, badgeY + badgeSize/2 + 24);
   }
 
-  // ── Avatar (below badge) ────────────────────────────────────────────────────
-  const avatarY = badgeY + badgeSize + 28;
-  const avatarSize = 110;
+  // Fixed anchor — all content below badge uses absolute Y, not relative stack
+  const BASE = badgeY + badgeSize; // ~494
+
+  // ── Avatar (small, tight to badge) ───────────────────────────────────────────
+  const avatarSize = 76;
+  const avatarCY   = BASE + 46;
   let hasAvatar = false;
   if (avatarUrl) {
     try {
       const avatarImg = await loadImage(avatarUrl);
       ctx.save();
       ctx.beginPath();
-      ctx.arc(W/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
+      ctx.arc(W/2, avatarCY, avatarSize/2, 0, Math.PI*2);
       ctx.clip();
-      ctx.drawImage(avatarImg, W/2 - avatarSize/2, avatarY, avatarSize, avatarSize);
+      ctx.drawImage(avatarImg, W/2 - avatarSize/2, avatarCY - avatarSize/2, avatarSize, avatarSize);
       ctx.restore();
-      // Avatar ring
       ctx.beginPath();
-      ctx.arc(W/2, avatarY + avatarSize/2, avatarSize/2 + 2.5, 0, Math.PI*2);
-      ctx.strokeStyle = "#c8a84b";
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      ctx.arc(W/2, avatarCY, avatarSize/2 + 2, 0, Math.PI*2);
+      ctx.strokeStyle = "#c8a84b"; ctx.lineWidth = 2; ctx.stroke();
       hasAvatar = true;
     } catch { /* skip */ }
   }
 
-  const textY = hasAvatar ? avatarY + avatarSize + 32 : avatarY + 8;
-
-  // ── Category pill ────────────────────────────────────────────────────────────
-  const pillW = 420, pillH = 58, pillX = W/2 - pillW/2, pillY2 = textY;
-  const pillBg = ctx.createLinearGradient(pillX, pillY2, pillX+pillW, pillY2+pillH);
-  pillBg.addColorStop(0, badge.color + "20");
-  pillBg.addColorStop(1, badge.color + "0c");
-  ctx.fillStyle = pillBg;
-  roundRect(ctx, pillX, pillY2, pillW, pillH, 23); ctx.fill();
-  ctx.strokeStyle = badge.color + "55";
-  ctx.lineWidth = 1;
-  roundRect(ctx, pillX, pillY2, pillW, pillH, 23); ctx.stroke();
-  ctx.font = "700 19px 'DM Sans',sans-serif";
-  ctx.fillStyle = badge.color;
-  ctx.letterSpacing = "0.14em";
-  ctx.textAlign = "center";
-  ctx.fillText(`${badge.emoji}  ${badge.label}`, W/2, pillY2 + 30);
-
-  // ── Username ─────────────────────────────────────────────────────────────────
+  // ── Username — dominant focal point ──────────────────────────────────────────
+  const usernameY = hasAvatar ? BASE + 102 : BASE + 52;
   const displayName = `@${win.display_name || win.username}`;
+  let nameFontSize = 92;
   ctx.letterSpacing = "-0.01em";
-  let nameFontSize = 76;
   ctx.font = `700 ${nameFontSize}px 'Cormorant Garamond',Georgia,serif`;
-  while (ctx.measureText(displayName).width > 900 && nameFontSize > 40) {
+  while (ctx.measureText(displayName).width > 960 && nameFontSize > 52) {
     nameFontSize -= 4;
     ctx.font = `700 ${nameFontSize}px 'Cormorant Garamond',Georgia,serif`;
   }
   ctx.fillStyle = "#f0efea";
-  ctx.fillText(displayName, W/2, textY + 104);
+  ctx.textAlign = "center";
+  ctx.fillText(displayName, W/2, usernameY);
 
-  // ── Winner label ─────────────────────────────────────────────────────────────
-  ctx.font = "600 15px 'DM Sans',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.42)";
+  // ── Category pill — championship title ───────────────────────────────────────
+  const pillY  = usernameY + 18;
+  const pillW  = 500, pillH = 68, pillX = W/2 - pillW/2;
+  const pillBg = ctx.createLinearGradient(pillX, pillY, pillX+pillW, pillY+pillH);
+  pillBg.addColorStop(0, badge.color + "28");
+  pillBg.addColorStop(1, badge.color + "10");
+  ctx.fillStyle = pillBg;
+  roundRect(ctx, pillX, pillY, pillW, pillH, 34); ctx.fill();
+  ctx.strokeStyle = badge.color + "80"; ctx.lineWidth = 1.5;
+  roundRect(ctx, pillX, pillY, pillW, pillH, 34); ctx.stroke();
+  ctx.font = "700 28px 'DM Sans',sans-serif";
+  ctx.fillStyle = badge.color;
+  ctx.letterSpacing = "0.1em";
+  ctx.fillText(`${badge.emoji}  ${badge.label}`, W/2, pillY + 43);
+
+  // ── Winner label ──────────────────────────────────────────────────────────────
+  ctx.font = "500 17px 'DM Sans',sans-serif";
+  ctx.fillStyle = "rgba(240,239,234,0.36)";
   ctx.letterSpacing = "0.2em";
-  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, textY + 170);
+  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, pillY + pillH + 34);
 
-  // ── Stars ────────────────────────────────────────────────────────────────────
-  ctx.font = "22px serif";
-  ctx.letterSpacing = "0";
-  ctx.fillText("✦  ✦  ✦", W/2, textY + 218);
+  // ── Week — large, prominent ───────────────────────────────────────────────────
+  const weekY = pillY + pillH + 56;
+  div(weekY - 14, 0.2);
 
-  // ── Week ─────────────────────────────────────────────────────────────────────
-  ctx.font = "700 26px 'Cormorant Garamond',Georgia,serif";
+  ctx.font = "700 56px 'Cormorant Garamond',Georgia,serif";
   ctx.fillStyle = "#c8a84b";
   ctx.letterSpacing = "0.02em";
-  ctx.fillText(weekNumber(win.week_start), W/2, textY + 270);
-  ctx.font = "400 16px 'DM Sans',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.35)";
-  ctx.letterSpacing = "0.06em";
-  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, textY + 302);
+  ctx.fillText(weekNumber(win.week_start), W/2, weekY + 50);
 
-  // ── Stats row (if available) ─────────────────────────────────────────────────
-  if (streakCount || grassScore || spotlightWinCount) {
-    div(textY + 278);
-    const stats = [];
-    if (streakCount)      stats.push({ label:"STREAK",   value:`${streakCount}d` });
-    if (grassScore)       stats.push({ label:"GRASS",    value:Number(grassScore).toLocaleString() });
-    if (spotlightWinCount > 0) stats.push({ label:"WINS", value:`×${spotlightWinCount}` });
-    const colW = Math.floor(660 / stats.length);
-    const startX = W/2 - (colW * stats.length)/2 + colW/2;
+  ctx.font = "400 22px 'DM Sans',sans-serif";
+  ctx.fillStyle = "rgba(240,239,234,0.6)";
+  ctx.letterSpacing = "0.04em";
+  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, weekY + 84);
+
+  div(weekY + 104, 0.2);
+
+  // ── Stats — 3 stat cards, large numbers, clear labels ────────────────────────
+  const statsY = weekY + 118;
+  const stats = [];
+  if (streakCount)           stats.push({ emoji:"🔥", value:`${streakCount}`, label:"Current Streak" });
+  if (grassScore)            stats.push({ emoji:"⚡", value:Number(grassScore).toLocaleString(), label:"Grass Score" });
+  if (spotlightWinCount > 0) stats.push({ emoji:"🏆", value:`${spotlightWinCount}`, label:"Spotlight Wins" });
+
+  if (stats.length > 0) {
+    const totalW = 920;
+    const colW   = Math.floor(totalW / stats.length);
+    const startX = W/2 - totalW/2;
+    const cardH  = 128;
+
     stats.forEach((s, i) => {
-      const sx = startX + i * colW;
-      ctx.font = "700 26px 'Cormorant Garamond',Georgia,serif";
-      ctx.fillStyle = "#f0efea";
+      const cx    = startX + i * colW + colW/2;
+      const cardW = colW - 16;
+      const cardX = cx - cardW/2;
+
+      // Card bg
+      const cardBg = ctx.createLinearGradient(cardX, statsY, cardX, statsY + cardH);
+      cardBg.addColorStop(0, "rgba(255,255,255,0.05)");
+      cardBg.addColorStop(1, "rgba(255,255,255,0.01)");
+      ctx.fillStyle = cardBg;
+      roundRect(ctx, cardX, statsY, cardW, cardH, 18); ctx.fill();
+      ctx.strokeStyle = "rgba(200,168,75,0.22)"; ctx.lineWidth = 1;
+      roundRect(ctx, cardX, statsY, cardW, cardH, 18); ctx.stroke();
+
+      // Emoji
+      ctx.font = "26px serif";
       ctx.letterSpacing = "0";
-      ctx.fillText(s.value, sx, textY + 320);
-      ctx.font = "500 10px 'DM Sans',sans-serif";
-      ctx.fillStyle = "rgba(240,239,234,0.3)";
-      ctx.letterSpacing = "0.14em";
-      ctx.fillText(s.label, sx, textY + 340);
+      ctx.fillText(s.emoji, cx, statsY + 34);
+
+      // Value — big
+      ctx.font = "700 48px 'Cormorant Garamond',Georgia,serif";
+      ctx.fillStyle = "#f0efea";
+      ctx.letterSpacing = "-0.01em";
+      ctx.fillText(s.value, cx, statsY + 86);
+
+      // Label
+      ctx.font = "500 13px 'DM Sans',sans-serif";
+      ctx.fillStyle = "rgba(240,239,234,0.4)";
+      ctx.letterSpacing = "0.08em";
+      ctx.fillText(s.label.toUpperCase(), cx, statsY + 112);
     });
   }
 
-  // ── Bottom divider + branding ────────────────────────────────────────────────
-  div(H - 112);
-  ctx.font = "500 16px 'DM Sans',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.25)";
-  ctx.letterSpacing = "0.08em";
+  // ── Bottom branding ───────────────────────────────────────────────────────────
+  div(H - 96, 0.28);
+  ctx.font = "500 20px 'DM Sans',sans-serif";
+  ctx.fillStyle = "rgba(240,239,234,0.28)";
+  ctx.letterSpacing = "0.1em";
   ctx.textAlign = "center";
-  ctx.fillText("ProofOfGrass.app", W/2, H - 58);
+  ctx.fillText("ProofOfGrass.app", W/2, H - 56);
 
   return canvas.toDataURL("image/png");
 }
