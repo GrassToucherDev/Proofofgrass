@@ -23,7 +23,7 @@ export const SPOTLIGHT_BADGES = {
       accent:"#f97316",
     },
     xCaption: (username, week) =>
-      `🔥 I just won the Longest Streak Champion Spotlight on Proof of Grass!\n\n${week}\n\n💪 Touching grass every day pays off.\n\nProofOfGrass.app`,
+      `🔥 I just won the Longest Streak Champion Spotlight on Proof of Grass!\n\n${week}\n\n💪 Touching grass every day pays off.\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\n\n@XTouchGrass | ProofOfGrass.app`,
   },
   meme_lord: {
     key:        "meme_lord",
@@ -40,7 +40,7 @@ export const SPOTLIGHT_BADGES = {
       accent:"#c8a84b",
     },
     xCaption: (username, week) =>
-      `😂 I won Meme Lord in the Community Spotlight on Proof of Grass!\n\n${week}\n\nThe memes are real. So is the grass.\n\nProofOfGrass.app`,
+      `😂 I won Meme Lord in the Community Spotlight on Proof of Grass!\n\n${week}\n\nThe memes are real. So is the grass.\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\n\n@XTouchGrass | ProofOfGrass.app`,
   },
   biggest_shiller: {
     key:        "biggest_shiller",
@@ -57,7 +57,7 @@ export const SPOTLIGHT_BADGES = {
       accent:"#93a85a",
     },
     xCaption: (username, week) =>
-      `📣 I won Biggest Shiller in the Community Spotlight on Proof of Grass!\n\n${week}\n\nBuilding the movement one post at a time.\n\nProofOfGrass.app`,
+      `📣 I won Biggest Shiller in the Community Spotlight on Proof of Grass!\n\n${week}\n\nBuilding the movement one post at a time.\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\n\n@XTouchGrass | ProofOfGrass.app`,
   },
   space_warrior: {
     key:        "space_warrior",
@@ -74,7 +74,7 @@ export const SPOTLIGHT_BADGES = {
       accent:"#a78bfa",
     },
     xCaption: (username, week) =>
-      `🎧 I won Space Warrior in the Community Spotlight on Proof of Grass!\n\n${week}\n\nSpaces don't sleep. Neither does the grass.\n\nProofOfGrass.app`,
+      `🎧 I won Space Warrior in the Community Spotlight on Proof of Grass!\n\n${week}\n\nSpaces don't sleep. Neither does the grass.\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\n\n@XTouchGrass | ProofOfGrass.app`,
   },
 };
 
@@ -92,5 +92,5 @@ export function getSpotlightFeedText(category) {
 // Helper: get X caption for a win
 export function getSpotlightCaption(category, username, weekLabel) {
   const b = getSpotlightBadge(category);
-  return b ? b.xCaption(username, weekLabel) : `🏆 I won Community Spotlight on Proof of Grass!\n\nProofOfGrass.app`;
+  return b ? b.xCaption(username, weekLabel) : `🏆 I won Community Spotlight on Proof of Grass!\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\n\n@XTouchGrass | ProofOfGrass.app`;
 }
