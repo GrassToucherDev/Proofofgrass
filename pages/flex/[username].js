@@ -763,14 +763,15 @@ export default function FlexCardPage() {
     if (generatingImg) return; // prevent double-fire
     const text = `Day ${streak} — ${tier.label} 🌿\n\nBuilding my outdoor legacy daily on @XTouchGrass\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/flex/${username}`;
     const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
+    const canNativeShare = isMob && !!(navigator.share && navigator.canShare);
 
-    let desktopWin = null;
-    if (!isMob || !(navigator.share && navigator.canShare)) {
-      desktopWin = window.open("", "_blank");
-      if (desktopWin) {
-        desktopWin.document.write(`<html><body style="margin:0;background:#0a0b08;display:flex;align-items:center;justify-content:center;height:100vh">
-          <p style="color:#93a85a;font-family:sans-serif;font-size:16px">Generating your card…</p>
-        </body></html>`);
+    // CRITICAL: window.open() MUST be called synchronously before any await
+    // or browsers block it as a popup. Open now, write content after generation.
+    let sharedWin = null;
+    if (!canNativeShare) {
+      sharedWin = window.open("", "_blank");
+      if (sharedWin) {
+        sharedWin.document.write(`<html><body style="margin:0;background:#0a0b08;display:flex;align-items:center;justify-content:center;height:100vh"><p style="color:#93a85a;font-family:sans-serif;font-size:16px;text-align:center">Generating your card…</p></body></html>`);
       }
     }
 
@@ -788,7 +789,8 @@ export default function FlexCardPage() {
         coverUrl: activeCover?.imageUrl || null,
       });
 
-      if (isMob && navigator.share && navigator.canShare) {
+      if (canNativeShare) {
+        // Mobile native share — attach image directly
         try {
           const res  = await fetch(dataUrl);
           const blob = await res.blob();
@@ -800,47 +802,40 @@ export default function FlexCardPage() {
           }
         } catch(e) {
           if (e?.name === "AbortError") return;
-          console.warn("native share failed, fallback to tab", e);
+          console.warn("native share failed", e);
         }
-        const win = window.open("", "_blank");
-        if (win) {
-          win.document.open();
-          win.document.write(`<html><body style="margin:0;background:#0a0b08">
-            <img src="${dataUrl}" style="width:100%;display:block"/>
-            <p style="color:#93a85a;text-align:center;font-family:sans-serif;padding:16px;font-size:15px">
-              Long-press image to save, then post on X
-            </p>
-          </body></html>`);
-          win.document.close();
+        // Mobile native share failed — show image in the pre-opened window
+        if (sharedWin) {
+          sharedWin.document.open();
+          sharedWin.document.write(`<html><body style="margin:0;background:#0a0b08"><img src="${dataUrl}" style="width:100%;display:block"/><p style="color:#93a85a;text-align:center;font-family:sans-serif;padding:16px;font-size:15px">Long-press image to save, then post on X</p></body></html>`);
+          sharedWin.document.close();
         }
       } else {
-        if (desktopWin) {
-          desktopWin.document.open();
-          desktopWin.document.write(`<html><body style="margin:0;background:#0a0b08">
-            <img src="${dataUrl}" style="width:100%;max-width:600px;display:block;margin:0 auto"/>
-            <p style="color:#93a85a;text-align:center;font-family:sans-serif;padding:16px;font-size:14px">
-              Right-click the image above to save it, then attach it to your X post
-            </p>
-            <p style="text-align:center;padding-bottom:20px">
-              <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}"
-                target="_blank"
-                style="display:inline-block;background:#93a85a;color:#0a0b08;padding:12px 24px;
-                border-radius:8px;text-decoration:none;font-family:sans-serif;font-weight:700;font-size:14px">
-                Post on X →
-              </a>
+        // Desktop — write card into pre-opened window with download hint + X button
+        if (sharedWin) {
+          sharedWin.document.open();
+          sharedWin.document.write(`<html><body style="margin:0;background:#0a0b08;font-family:sans-serif;padding:24px">
+            <img src="${dataUrl}" style="width:100%;max-width:540px;display:block;margin:0 auto;border-radius:12px"/>
+            <p style="color:#93a85a;text-align:center;padding:16px 0 8px;font-size:14px">Right-click the image to save it, then attach to your X post</p>
+            <p style="text-align:center;padding-bottom:24px">
+              <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}" target="_blank"
+                style="display:inline-block;background:#93a85a;color:#0a0b08;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">Post on X →</a>
             </p>
           </body></html>`);
-          desktopWin.document.close();
+          sharedWin.document.close();
         }
       }
     } catch(e) {
       console.error("shareToX error", e);
       if (desktopWin) desktopWin.close();
+      // Fallback: open X intent directly
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
     } finally {
-      setGeneratingImg(false); // always resets — no stuck state
+      setGeneratingImg(false);
     }
-  }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow, generatingImg]);  const css = `
+  }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow, generatingImg]);
+
+  const css = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{scroll-behavior:smooth;}

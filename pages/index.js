@@ -947,7 +947,7 @@ export default function Home() {
     /* ── MOBILE LAYOUT FIX ─────────────────────────────────────────────── */
     html,body{box-sizing:border-box;}
     *,*::before,*::after{box-sizing:border-box;}
-    html{overflow-x:clip;}
+    html,body{overflow-x:clip;overflow-y:auto;}
 
     /* Collapse grids at tablet */
     @media(max-width:960px){
@@ -1049,7 +1049,7 @@ export default function Home() {
         </nav>
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
-        <section style={{ position:"relative", height:"clamp(460px,70vh,720px)", overflow:"clip" }}>
+        <section style={{ position:"relative", minHeight:"clamp(460px,70vh,720px)" }}>
           <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"linear-gradient(155deg,#1a2d0e,#2d4a18 22%,#1e3410 52%,#0e1a08)" }}>
             <div style={{ position:"absolute", inset:0, opacity:0.2, pointerEvents:"none", backgroundImage:"radial-gradient(ellipse at 65% 35%,#4a7a28,transparent 55%),radial-gradient(ellipse at 30% 70%,#2d5a18,transparent 45%)" }} />
           </div>
