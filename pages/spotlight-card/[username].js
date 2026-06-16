@@ -210,7 +210,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // Trophy removed — badge IS the statement. Moved up to fill the space.
   const badgeSize = 380;
   const badgeX    = W/2 - badgeSize/2;
-  const badgeY    = 140;
+  const badgeY    = 110;
 
   try {
     const badgeImg = await loadImage(badge.image);
