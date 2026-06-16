@@ -356,12 +356,12 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.textAlign = "left";
 
   // @username — pushed down from badge, more breathing room
-  const uFontSize = username.length > 14 ? 66 : username.length > 11 ? 76 : username.length > 8 ? 86 : 96;
+  const uFontSize = username.length > 14 ? 56 : username.length > 11 ? 64 : username.length > 8 ? 72 : 82;
   ctx.font = `700 ${uFontSize}px 'Georgia', serif`;
   ctx.fillStyle = "#f5f4ef";
   ctx.shadowColor = "rgba(147,168,90,0.3)";
   ctx.shadowBlur = 14;
-  ctx.fillText(`@${username}`, 72, 262);
+  ctx.fillText(`@${username}`, 168, 262);
   ctx.shadowBlur = 0;
 
   // Tier title pill — pinned to bottom of hero section (hero divider ~y=370)
@@ -527,7 +527,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   const qSize = quote.length > 50 ? 30 : quote.length > 38 ? 34 : 38;
   ctx.font = `italic ${qSize}px 'Georgia', serif`;
   ctx.textAlign = "center";
-  ctx.fillText(quote, W / 2, 865);
+  ctx.fillText(quote, W / 2, 845);
   ctx.textAlign = "left";
   ctx.textAlign = "left";
 
@@ -811,18 +811,17 @@ export default function FlexCardPage() {
           if (navigator.canShare({ files:[file] })) {
             await navigator.share({ files:[file], title:`Day ${streak} — ${tier.label} 🌿`, text });
             try { localStorage.setItem("pog_flexed_week", new Date().toISOString()); } catch(e) {}
-            return;
+            return; // finally still runs
           }
         } catch(e) {
-          if (e?.name === "AbortError") return;
-          console.warn("native share failed", e);
+          if (e?.name === "AbortError") return; // finally still runs
+          console.warn("native share failed, falling back to download", e);
         }
-        // Mobile native share failed — show image in the pre-opened window
-        if (sharedWin) {
-          sharedWin.document.open();
-          sharedWin.document.write(`<html><body style="margin:0;background:#0a0b08"><img src="${dataUrl}" style="width:100%;display:block"/><p style="color:#93a85a;text-align:center;font-family:sans-serif;padding:16px;font-size:15px">Long-press image to save, then post on X</p></body></html>`);
-          sharedWin.document.close();
-        }
+        // Mobile fallback — native share unavailable, just download the image
+        const link = document.createElement("a");
+        link.download = `proof-of-grass-${username}-day${streak}.png`;
+        link.href = dataUrl;
+        link.click();
       } else {
         // Desktop — write card into pre-opened window with download hint + X button
         if (sharedWin) {
