@@ -279,7 +279,7 @@ function SpotlightSection() {
 
       {/* Horizontal scroll on mobile with snap */}
       <div className="spotlight-scroll" style={{ display:"flex", gap:12, overflowX:"auto",
-        paddingBottom:4, scrollbarWidth:"none", WebkitOverflowScrolling:"touch" }}>
+        overflowY:"visible", paddingBottom:4, scrollbarWidth:"none" }}>
         {SPOT_CATS.map(cat => {
           const w = winnerMap[cat.key];
           return (
@@ -992,8 +992,9 @@ export default function Home() {
       }
       /* Spotlight cards horizontal scroll */
       .spotlight-scroll{
+        overflow-x:auto;
+        overflow-y:visible;
         scroll-snap-type:x mandatory;
-        -webkit-overflow-scrolling:touch;
       }
       .spotlight-scroll>*{
         scroll-snap-align:start;
