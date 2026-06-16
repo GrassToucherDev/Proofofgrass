@@ -239,26 +239,31 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // ZONE C bottom = badgeY + badgeSize = 406
   const BADGE_BOTTOM = badgeY + badgeSize; // 406
 
-  // ── ZONE D — Category → Username → Winner label ───────────────────────────
-  // Category FIRST (what was won), then username (who won)
+  // ── ZONE D — Category pill (y=430–492) ──────────────────────────────────────
+  // All Y values are absolute baselines. Canvas fillText Y = baseline (not top).
+  // Font ascender ≈ 72% of font size. So 96px font top = baseline - 69px.
 
-  // Category pill
-  const pillY = BADGE_BOTTOM + 24;         // 430
-  const pillW = 520, pillH = 62, pillX = W/2 - pillW/2;
-  const pillBg = ctx.createLinearGradient(pillX, pillY, pillX + pillW, pillY + pillH);
+  const PILL_Y    = 430;  // pill top
+  const PILL_H    = 62;
+  const PILL_W    = 520;
+  const PILL_X    = W/2 - PILL_W/2;
+
+  const pillBg = ctx.createLinearGradient(PILL_X, PILL_Y, PILL_X + PILL_W, PILL_Y + PILL_H);
   pillBg.addColorStop(0, badge.color + "30");
   pillBg.addColorStop(1, badge.color + "14");
   ctx.fillStyle = pillBg;
-  roundRect(ctx, pillX, pillY, pillW, pillH, 31); ctx.fill();
+  roundRect(ctx, PILL_X, PILL_Y, PILL_W, PILL_H, 31); ctx.fill();
   ctx.strokeStyle = badge.color + "90"; ctx.lineWidth = 1.5;
-  roundRect(ctx, pillX, pillY, pillW, pillH, 31); ctx.stroke();
+  roundRect(ctx, PILL_X, PILL_Y, PILL_W, PILL_H, 31); ctx.stroke();
   ctx.font = "700 26px 'DM Sans',sans-serif";
   ctx.fillStyle = badge.color;
   ctx.letterSpacing = "0.1em";
-  ctx.fillText(`${badge.emoji}  ${badge.label}`, W/2, pillY + 39);
+  ctx.textAlign = "center";
+  ctx.fillText(`${badge.emoji}  ${badge.label}`, W/2, PILL_Y + 40); // baseline inside pill
 
-  // Username — hero element, immediately below category
-  const usernameY = pillY + pillH + 18;   // ~510
+  // ── ZONE D — Username (baseline y=620) ───────────────────────────────────────
+  // PILL bottom = 492. Username top should be ~508. At 96px, baseline = top + 69 = 577.
+  // Using 620 gives comfortable 28px gap below pill bottom.
   const displayName = `@${win.display_name || win.username}`;
   let nameFontSize = 96;
   ctx.letterSpacing = "-0.01em";
@@ -269,101 +274,91 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   }
   ctx.fillStyle = "#f0efea";
   ctx.textAlign = "center";
-  ctx.fillText(displayName, W/2, usernameY);
+  ctx.fillText(displayName, W/2, 620);
 
-  // Avatar — small circle next to winner label line
-  const winnerLabelY = usernameY + 22;    // ~532
-  let hasAvatar = false;
-  const avatarR = 22; // small inline avatar
+  // ── ZONE D — Avatar (small, beside winner label) ──────────────────────────────
   if (avatarUrl) {
     try {
       const avatarImg = await loadImage(avatarUrl);
-      const avX = W/2 - 180; // offset left of center text
+      const avatarR = 18;
+      const avX = W/2 - 160;
+      const avY = 655;
       ctx.save();
       ctx.beginPath();
-      ctx.arc(avX, winnerLabelY - 6, avatarR, 0, Math.PI * 2);
+      ctx.arc(avX, avY, avatarR, 0, Math.PI * 2);
       ctx.clip();
-      ctx.drawImage(avatarImg, avX - avatarR, winnerLabelY - 6 - avatarR, avatarR*2, avatarR*2);
+      ctx.drawImage(avatarImg, avX - avatarR, avY - avatarR, avatarR*2, avatarR*2);
       ctx.restore();
       ctx.beginPath();
-      ctx.arc(avX, winnerLabelY - 6, avatarR + 1.5, 0, Math.PI * 2);
+      ctx.arc(avX, avY, avatarR + 1.5, 0, Math.PI * 2);
       ctx.strokeStyle = "#c8a84b"; ctx.lineWidth = 1.5; ctx.stroke();
-      hasAvatar = true;
     } catch { /* skip */ }
   }
 
-  // Winner label
+  // ── ZONE D — Winner label (baseline y=668) ────────────────────────────────────
   ctx.font = "500 16px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.38)";
   ctx.letterSpacing = "0.2em";
-  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, winnerLabelY);
+  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, 668);
 
-  const ZONE_D_BOTTOM = winnerLabelY + 16; // ~548
-
-  // ── ZONE E — Week ─────────────────────────────────────────────────────────
-  div(ZONE_D_BOTTOM + 10, 0.2);
-  const weekY = ZONE_D_BOTTOM + 20;
+  // ── ZONE E — Week divider + number + date (y=700–790) ────────────────────────
+  div(692, 0.2);
 
   ctx.font = "700 52px 'Cormorant Garamond',Georgia,serif";
   ctx.fillStyle = "#c8a84b";
   ctx.letterSpacing = "0.01em";
-  ctx.fillText(weekNumber(win.week_start), W/2, weekY + 48);
+  ctx.fillText(weekNumber(win.week_start), W/2, 760);
 
   ctx.font = "400 20px 'DM Sans',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.58)";
   ctx.letterSpacing = "0.04em";
-  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, weekY + 80);
+  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 796);
 
-  const ZONE_E_BOTTOM = weekY + 94; // ~662
+  // ── ZONE F — Stats divider + 3 cards (y=820–970) ─────────────────────────────
+  div(814, 0.2);
 
-  // ── ZONE F — Stats (3 cards) ──────────────────────────────────────────────
-  div(ZONE_E_BOTTOM + 8, 0.2);
-  const statsY = ZONE_E_BOTTOM + 22; // ~684
-
+  const STATS_Y = 830;
+  const CARD_H  = 128;
   const stats = [];
   if (streakCount)            stats.push({ emoji:"🔥", value:`${streakCount}`, label:"STREAK" });
   if (grassScore)             stats.push({ emoji:"⚡", value:Number(grassScore).toLocaleString(), label:"GRASS SCORE" });
   if (spotlightWinCount > 0)  stats.push({ emoji:"🏆", value:`${spotlightWinCount}`, label:"SPOTLIGHT WINS" });
 
   if (stats.length > 0) {
-    const cardH   = 130;
-    const totalW  = 940;
-    const colW    = Math.floor(totalW / stats.length);
-    const startX  = W/2 - totalW/2;
+    const totalW = 940;
+    const colW   = Math.floor(totalW / stats.length);
+    const startX = W/2 - totalW/2;
 
     stats.forEach((s, i) => {
       const cx    = startX + i * colW + colW/2;
       const cardW = colW - 14;
       const cardX = cx - cardW/2;
 
-      // Card background
-      const cardBg = ctx.createLinearGradient(cardX, statsY, cardX, statsY + cardH);
+      const cardBg = ctx.createLinearGradient(cardX, STATS_Y, cardX, STATS_Y + CARD_H);
       cardBg.addColorStop(0, "rgba(255,255,255,0.055)");
       cardBg.addColorStop(1, "rgba(255,255,255,0.01)");
       ctx.fillStyle = cardBg;
-      roundRect(ctx, cardX, statsY, cardW, cardH, 16); ctx.fill();
+      roundRect(ctx, cardX, STATS_Y, cardW, CARD_H, 16); ctx.fill();
       ctx.strokeStyle = "rgba(200,168,75,0.2)"; ctx.lineWidth = 1;
-      roundRect(ctx, cardX, statsY, cardW, cardH, 16); ctx.stroke();
+      roundRect(ctx, cardX, STATS_Y, cardW, CARD_H, 16); ctx.stroke();
 
-      // Emoji
       ctx.font = "24px serif";
       ctx.letterSpacing = "0";
-      ctx.fillText(s.emoji, cx, statsY + 30);
+      ctx.fillText(s.emoji, cx, STATS_Y + 32);
 
-      // Value
       ctx.font = "700 50px 'Cormorant Garamond',Georgia,serif";
       ctx.fillStyle = "#f0efea";
       ctx.letterSpacing = "-0.01em";
-      ctx.fillText(s.value, cx, statsY + 88);
+      ctx.fillText(s.value, cx, STATS_Y + 90);
 
-      // Label
       ctx.font = "500 11px 'DM Sans',sans-serif";
       ctx.fillStyle = "rgba(240,239,234,0.38)";
       ctx.letterSpacing = "0.1em";
-      ctx.fillText(s.label, cx, statsY + 112);
+      ctx.fillText(s.label, cx, STATS_Y + 114);
     });
   }
 
+  // ── ZONE G — Bottom branding ──────────────────────────────────────────────
   // ── ZONE G — Bottom branding ──────────────────────────────────────────────
   div(H - 90, 0.25);
   ctx.font = "500 18px 'DM Sans',sans-serif";
