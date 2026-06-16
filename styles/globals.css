@@ -17,7 +17,7 @@
 
 html {
   height: 100%;
-  /* Prevent font size adjustment on orientation change */
+  overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -28,10 +28,6 @@ body {
   background: #080a06;
   color: #f0efea;
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  /* Smooth scrolling except for route transitions */
-  overflow-y: scroll;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: none;
 }
 
 /* Standalone PWA — add safe area padding to body */
@@ -41,16 +37,8 @@ body {
     padding-bottom: var(--sab);
   }
 
-  /* Nav bar should account for status bar in standalone */
   nav[style*="sticky"] {
     padding-top: calc(var(--sat) + 0px);
-  }
-}
-
-/* Prevent pull-to-refresh on iOS PWA */
-@media (display-mode: standalone) {
-  html, body {
-    overscroll-behavior-y: none;
   }
 }
 
