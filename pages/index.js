@@ -279,7 +279,7 @@ function SpotlightSection() {
 
       {/* Horizontal scroll on mobile with snap */}
       <div className="spotlight-scroll" style={{ display:"flex", gap:12, overflowX:"auto",
-        paddingBottom:4, scrollbarWidth:"none", WebkitOverflowScrolling:"touch" }}>
+        overflowY:"visible", paddingBottom:4, scrollbarWidth:"none" }}>
         {SPOT_CATS.map(cat => {
           const w = winnerMap[cat.key];
           return (
@@ -945,9 +945,8 @@ export default function Home() {
     input[type=text].field:focus,textarea.field:focus{border-color:${T.olive}50;}
     input[type=text].field::placeholder,textarea.field::placeholder{color:${T.dim};}
     /* ── MOBILE LAYOUT FIX ─────────────────────────────────────────────── */
-    html,body{box-sizing:border-box;}
     *,*::before,*::after{box-sizing:border-box;}
-    html{overflow-x:clip;}
+    html{overflow-x:hidden;}
 
     /* Collapse grids at tablet */
     @media(max-width:960px){
@@ -993,8 +992,9 @@ export default function Home() {
       }
       /* Spotlight cards horizontal scroll */
       .spotlight-scroll{
+        overflow-x:auto;
+        overflow-y:visible;
         scroll-snap-type:x mandatory;
-        -webkit-overflow-scrolling:touch;
       }
       .spotlight-scroll>*{
         scroll-snap-align:start;
@@ -1029,6 +1029,7 @@ export default function Home() {
             <a href="#upload" className="nav-link active">Dashboard</a>
             <Link href="/leaderboard" className="nav-link">Leaderboard</Link>
             <Link href="/spotlight"   className="nav-link">Spotlight</Link>
+            <Link href="/create"      className="nav-link">Create</Link>
             <Link href="/quests" className="nav-link">Quests</Link>
             <a href="https://touchgrass.today" className="nav-link" target="_blank" rel="noopener noreferrer">Website</a>
           </div>
@@ -1049,7 +1050,7 @@ export default function Home() {
         </nav>
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
-        <section style={{ position:"relative", height:"clamp(460px,70vh,720px)", overflow:"clip" }}>
+        <section style={{ position:"relative", minHeight:"clamp(460px,70vh,720px)", pointerEvents:"none" }}>
           <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"linear-gradient(155deg,#1a2d0e,#2d4a18 22%,#1e3410 52%,#0e1a08)" }}>
             <div style={{ position:"absolute", inset:0, opacity:0.2, pointerEvents:"none", backgroundImage:"radial-gradient(ellipse at 65% 35%,#4a7a28,transparent 55%),radial-gradient(ellipse at 30% 70%,#2d5a18,transparent 45%)" }} />
           </div>
@@ -1057,7 +1058,7 @@ export default function Home() {
           <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"36%", pointerEvents:"none", background:"linear-gradient(180deg,transparent,rgba(14,15,11,0.97))" }} />
 
           {/* Left */}
-          <div style={{ position:"absolute", left:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", maxWidth:480 }}>
+          <div style={{ position:"absolute", left:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", maxWidth:480, pointerEvents:"auto" }}>
             <div className="fade-1" style={{ fontSize:10, letterSpacing:"0.22em", color:T.olive, textTransform:"uppercase", marginBottom:12, fontWeight:600 }}>Verified Outdoors</div>
             <h1 className="fade-2" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(44px,6.5vw,88px)", fontWeight:700, color:T.white, lineHeight:0.94, letterSpacing:"-0.02em", marginBottom:18 }}>
               Proof<br />of Grass
@@ -1084,7 +1085,7 @@ export default function Home() {
 
           {/* Right streak HUD — only show when signed in */}
           {hasUser && currentStreak > 0 && (
-            <div style={{ position:"absolute", right:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", textAlign:"right" }}>
+            <div style={{ position:"absolute", right:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", textAlign:"right", pointerEvents:"auto" }}>
               <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.dim, textTransform:"uppercase", marginBottom:8 }}>Your Streak</div>
               <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.white, lineHeight:0.9, letterSpacing:"-0.03em" }}>
                 <span style={{ fontSize:"0.42em", color:T.muted, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>
