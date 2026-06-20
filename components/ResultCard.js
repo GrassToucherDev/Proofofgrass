@@ -606,6 +606,42 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [clipboardDetected, setClipboardDetected] = useState(false); // true when valid X link auto-found
   const [clipboardFeedback, setClipboardFeedback] = useState(null); // null | "detected" | "invalid"
 
+  // ── Location (optional, privacy-safe) ───────────────────────────────────────
+  // locationMode: null (not chosen yet) | 'gps' | 'manual' | 'none'
+  const [locationMode,   setLocationMode]   = useState(null);
+  const [locationCity,   setLocationCity]   = useState("");
+  const [locationRegion, setLocationRegion] = useState("");
+  const [locationCountry,setLocationCountry]= useState("");
+  const [gpsLat,         setGpsLat]         = useState(null); // rounded, never exact
+  const [gpsLng,         setGpsLng]         = useState(null);
+  const [gpsRequesting,  setGpsRequesting]  = useState(false);
+  const [gpsError,       setGpsError]       = useState("");
+
+  const requestGpsLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setGpsError("Location not supported on this device.");
+      return;
+    }
+    setGpsRequesting(true);
+    setGpsError("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        // Round to 2 decimal places (~1.1km precision) — exact coords never stored
+        const roundedLat = Math.round(pos.coords.latitude  * 100) / 100;
+        const roundedLng = Math.round(pos.coords.longitude * 100) / 100;
+        setGpsLat(roundedLat);
+        setGpsLng(roundedLng);
+        setLocationMode("gps");
+        setGpsRequesting(false);
+      },
+      (err) => {
+        setGpsError(err.code === 1 ? "Location permission denied." : "Couldn't get your location.");
+        setGpsRequesting(false);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  }, []);
+
   // Auto-detect X post link from clipboard on mount
   useEffect(() => {
     async function tryClipboard() {
@@ -687,10 +723,31 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     setSubmitStatus("loading");
     setSubmitError("");
     try {
+      // Build location payload — only sends what the user actually chose.
+      // locationMode null/'none' → all location fields stay null/default,
+      // matching "skip" behavior exactly.
+      const locationPayload = locationMode === "gps"
+        ? {
+            p_location_lat_rounded: gpsLat,
+            p_location_lng_rounded: gpsLng,
+            p_location_label:       "Nearby Region", // V1: no paid reverse geocoding
+            p_location_source:      "gps",
+          }
+        : locationMode === "manual" && locationCity.trim()
+        ? {
+            p_location_city:    locationCity.trim()   || null,
+            p_location_region:  locationRegion.trim() || null,
+            p_location_country: locationCountry.trim()|| null,
+            p_location_label:   [locationCity.trim(), locationRegion.trim()].filter(Boolean).join(", ") || null,
+            p_location_source:  "manual",
+          }
+        : { p_location_source: "none" };
+
       const { data: result, error: rpcError } = await supabase.rpc("lock_in_streak", {
         p_username:     username,
         p_tweet_url:    null,
         p_verification: "self_attested",
+        ...locationPayload,
       });
 
       if (rpcError) {
@@ -1292,6 +1349,95 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
               borderRadius:8,padding:"10px 20px",
               fontSize:12,fontWeight:700,textDecoration:"none",
             }}>↓ Save Card to Photos</a>
+          )}
+        </div>
+      )}
+
+      {/* Location (optional, privacy-safe) */}
+      {downloadUrl && !inAppBrowserMode && submitStatus !== "success" && (
+        <div style={{width:"100%",maxWidth:420}}>
+          {locationMode === null ? (
+            <div style={{display:"flex",flexDirection:"column",gap:8,
+              background:"rgba(147,168,90,0.06)",border:"1px solid rgba(147,168,90,0.2)",
+              borderRadius:10,padding:14}}>
+              <div style={{fontSize:11,fontWeight:600,color:"#93a85a",letterSpacing:"0.04em"}}>
+                📍 Add Location <span style={{color:"rgba(240,239,234,0.4)",fontWeight:400}}>(optional)</span>
+              </div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                <button onClick={requestGpsLocation} disabled={gpsRequesting}
+                  style={{flex:"1 1 auto",fontSize:11,fontWeight:600,padding:"8px 12px",
+                    borderRadius:7,border:"1px solid rgba(147,168,90,0.35)",
+                    background:"rgba(147,168,90,0.1)",color:"#93a85a",cursor:"pointer",
+                    opacity:gpsRequesting?0.6:1}}>
+                  {gpsRequesting ? "Locating…" : "📍 Use My Location"}
+                </button>
+                <button onClick={() => setLocationMode("manual")}
+                  style={{flex:"1 1 auto",fontSize:11,fontWeight:600,padding:"8px 12px",
+                    borderRadius:7,border:"1px solid rgba(255,255,255,0.12)",
+                    background:"rgba(255,255,255,0.04)",color:"rgba(240,239,234,0.7)",cursor:"pointer"}}>
+                  ✏️ Enter City
+                </button>
+                <button onClick={() => setLocationMode("none")}
+                  style={{flex:"1 1 auto",fontSize:11,fontWeight:600,padding:"8px 12px",
+                    borderRadius:7,border:"1px solid rgba(255,255,255,0.08)",
+                    background:"transparent",color:"rgba(240,239,234,0.4)",cursor:"pointer"}}>
+                  Skip
+                </button>
+              </div>
+              {gpsError && (
+                <div style={{fontSize:10,color:"#f87171"}}>{gpsError}</div>
+              )}
+              <div style={{fontSize:9.5,color:"rgba(240,239,234,0.35)",lineHeight:1.5}}>
+                We only show approximate locations. Exact location is never displayed.
+              </div>
+            </div>
+          ) : locationMode === "manual" ? (
+            <div style={{display:"flex",flexDirection:"column",gap:8,
+              background:"rgba(147,168,90,0.06)",border:"1px solid rgba(147,168,90,0.2)",
+              borderRadius:10,padding:14}}>
+              <div style={{fontSize:11,fontWeight:600,color:"#93a85a"}}>📍 Enter Your City</div>
+              <input value={locationCity} onChange={e => setLocationCity(e.target.value)}
+                placeholder="City (e.g. Margate)"
+                style={{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.1)",
+                  borderRadius:7,padding:"8px 10px",fontSize:12,color:"#f0efea",outline:"none"}} />
+              <div style={{display:"flex",gap:6}}>
+                <input value={locationRegion} onChange={e => setLocationRegion(e.target.value)}
+                  placeholder="State/Region"
+                  style={{flex:1,background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.1)",
+                    borderRadius:7,padding:"8px 10px",fontSize:12,color:"#f0efea",outline:"none"}} />
+                <input value={locationCountry} onChange={e => setLocationCountry(e.target.value)}
+                  placeholder="Country"
+                  style={{flex:1,background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.1)",
+                    borderRadius:7,padding:"8px 10px",fontSize:12,color:"#f0efea",outline:"none"}} />
+              </div>
+              <button onClick={() => { if (!locationCity.trim()) setLocationMode(null); }}
+                style={{fontSize:10,color:"rgba(240,239,234,0.4)",background:"none",
+                  border:"none",cursor:"pointer",textAlign:"left",textDecoration:"underline"}}>
+                ← Back
+              </button>
+            </div>
+          ) : locationMode === "gps" ? (
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,
+              background:"rgba(147,168,90,0.08)",border:"1px solid rgba(147,168,90,0.25)",
+              borderRadius:10,padding:"10px 14px"}}>
+              <span style={{fontSize:11,color:"#93a85a"}}>📍 Approximate location added</span>
+              <button onClick={() => { setLocationMode(null); setGpsLat(null); setGpsLng(null); }}
+                style={{fontSize:10,color:"rgba(240,239,234,0.4)",background:"none",
+                  border:"none",cursor:"pointer",textDecoration:"underline"}}>
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,
+              background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",
+              borderRadius:10,padding:"10px 14px"}}>
+              <span style={{fontSize:11,color:"rgba(240,239,234,0.4)"}}>No location added</span>
+              <button onClick={() => setLocationMode(null)}
+                style={{fontSize:10,color:"#93a85a",background:"none",
+                  border:"none",cursor:"pointer",textDecoration:"underline"}}>
+                Add location
+              </button>
+            </div>
           )}
         </div>
       )}

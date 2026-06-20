@@ -426,6 +426,7 @@ export default function ProfilePage() {
   const [scoreBreakdown, setScoreBreakdown] = useState({ daily_proof:0, streak_milestone:0, badge:0, referral:0, ecosystem:0 });
   // SPOTLIGHT: win count + most recent category
   const [spotlightData,  setSpotlightData]  = useState({ count:0, latest:null, badgeCounts:{} });
+  const [explorerData,   setExplorerData]   = useState({ locationsCount:0, citiesCount:0, countriesCount:0, latestLabel:null });
 
   useEffect(()=>{
     const saved = typeof window!=="undefined" ? localStorage.getItem("pog_username") : null;
@@ -455,7 +456,7 @@ export default function ProfilePage() {
         .limit(5);
       setActiveChallenges(challengeRows ?? []);
 
-      const [{data:allStreaks},{data:recentSubs},{data:impactRows},{data:chalRows},{data:referralRows},{data:scoreEventRows},{data:allScores},{data:spotlightWins}] = await Promise.all([
+      const [{data:allStreaks},{data:recentSubs},{data:impactRows},{data:chalRows},{data:referralRows},{data:scoreEventRows},{data:allScores},{data:spotlightWins},{data:locationRows}] = await Promise.all([
         supabase.from("Streaks").select("username,current_streak").order("current_streak",{ascending:false}),
         supabase.from("Submissions").select("created_at,photo_url").eq("username",username).in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(10),
         supabase.from("Impact").select("trees_funded,co2_lbs,donated_usd").eq("username",username),
@@ -467,6 +468,8 @@ export default function ProfilePage() {
         supabase.from("Profiles").select("username,grass_score").order("grass_score",{ascending:false}),
         // SPOTLIGHT: full win data for badges and achievements section
         supabase.from("CommunitySpotlights").select("id,category,week_start,week_end,display_name").eq("username",username).eq("status","active").order("week_start",{ascending:false}),
+        // EXPLORER STATS: location data from this user's submissions
+        supabase.from("Submissions").select("location_label,location_city,location_country,created_at").eq("username",username).not("location_source","eq","none").order("created_at",{ascending:false}),
       ]);
 
       // GRASS SCORE: global rank (1-indexed position in grass_score DESC order)
@@ -484,6 +487,18 @@ export default function ProfilePage() {
         count:       wins.length,
         badgeCounts, // { longest_streak: 2, meme_lord: 1, ... }
         latest: wins[0] ? { category: wins[0].category, name: latestBadge?.title ?? wins[0].category } : null,
+      });
+
+      // Explorer stats — derived from this user's submissions with location data
+      const locRows = locationRows ?? [];
+      const uniqueLocationLabels = new Set(locRows.map(r => r.location_label).filter(Boolean));
+      const uniqueCities         = new Set(locRows.map(r => r.location_city).filter(Boolean));
+      const uniqueCountries      = new Set(locRows.map(r => r.location_country).filter(Boolean));
+      setExplorerData({
+        locationsCount: uniqueLocationLabels.size,
+        citiesCount:    uniqueCities.size,
+        countriesCount: uniqueCountries.size,
+        latestLabel:    locRows[0]?.location_label ?? null,
       });
 
       // GRASS SCORE: breakdown by event_type
@@ -1427,6 +1442,47 @@ export default function ProfilePage() {
                         display:"inline-block"}}>
                       🏆 Generate Spotlight Card
                     </Link>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── EXPLORER STATS ───────────────────────────────────────── */}
+            {explorerData.locationsCount > 0 && (
+              <div className="card fade3" style={{marginTop:14}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+                  <div className="ct" style={{margin:0}}>🌎 Explorer Stats</div>
+                  <Link href="/map" style={{fontSize:10,color:T.olive,textDecoration:"none"}}>View Map →</Link>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:explorerData.latestLabel?14:0}}>
+                  <div style={{textAlign:"center",padding:"14px 8px",background:T.bg3,borderRadius:10,border:`1px solid ${T.border}`}}>
+                    <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:700,color:T.olive}}>
+                      {explorerData.locationsCount}
+                    </div>
+                    <div style={{fontSize:9,color:T.dim,textTransform:"uppercase",letterSpacing:"0.04em",marginTop:4}}>
+                      📍 Locations
+                    </div>
+                  </div>
+                  <div style={{textAlign:"center",padding:"14px 8px",background:T.bg3,borderRadius:10,border:`1px solid ${T.border}`}}>
+                    <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:700,color:T.olive}}>
+                      {explorerData.citiesCount}
+                    </div>
+                    <div style={{fontSize:9,color:T.dim,textTransform:"uppercase",letterSpacing:"0.04em",marginTop:4}}>
+                      🏙 Cities
+                    </div>
+                  </div>
+                  <div style={{textAlign:"center",padding:"14px 8px",background:T.bg3,borderRadius:10,border:`1px solid ${T.border}`}}>
+                    <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:700,color:T.olive}}>
+                      {explorerData.countriesCount}
+                    </div>
+                    <div style={{fontSize:9,color:T.dim,textTransform:"uppercase",letterSpacing:"0.04em",marginTop:4}}>
+                      🌎 Countries
+                    </div>
+                  </div>
+                </div>
+                {explorerData.latestLabel && (
+                  <div style={{fontSize:11,color:T.dim,textAlign:"center"}}>
+                    Last logged from <span style={{color:T.white,fontWeight:600}}>{explorerData.latestLabel}</span>
                   </div>
                 )}
               </div>

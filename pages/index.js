@@ -201,6 +201,70 @@ const SOL_DOMAIN  = "touchgrassburn.sol";
 // ─── Following Feed component ────────────────────────────────────────────────
 
 // ─── Activity Feed ───────────────────────────────────────────────────────────
+// ─── Map preview card (dashboard) ────────────────────────────────────────────
+function MapPreviewCard() {
+  const [stats, setStats] = useState({ mapped:0, regions:0, countries:0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("Submissions")
+        .select("location_label,location_country")
+        .not("location_source", "eq", "none")
+        .in("status", ["pending","approved"])
+        .limit(5000);
+
+      const rows = data ?? [];
+      const uniqueLabels    = new Set(rows.map(r => r.location_label).filter(Boolean));
+      const uniqueCountries = new Set(rows.map(r => r.location_country).filter(Boolean));
+
+      setStats({ mapped: rows.length, regions: uniqueLabels.size, countries: uniqueCountries.size });
+      setLoading(false);
+    })();
+  }, []);
+
+  const T2 = {
+    bg3:"#141710", border:"rgba(255,255,255,0.055)", borderGold:"rgba(200,168,75,0.35)",
+    gold:"#c8a84b", olive:"#93a85a", white:"#f0efea", dim:"rgba(240,239,234,0.24)",
+  };
+
+  return (
+    <a href="/map" style={{ textDecoration:"none", display:"block",
+      background: "linear-gradient(145deg,#0e100b,#141710)",
+      border:`1px solid ${T2.borderGold}`, borderRadius:14, padding:"22px 20px",
+      boxShadow:"0 0 24px rgba(200,168,75,0.08)", transition:"transform 0.15s" }}
+      onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
+      onMouseLeave={e => e.currentTarget.style.transform = ""}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ fontSize:18 }}>🌎</span>
+          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:16,
+            fontWeight:700, color:T2.white }}>Proof of Grass Map</span>
+        </div>
+        <span style={{ fontSize:10, color:T2.gold, fontWeight:600 }}>View Map →</span>
+      </div>
+      <div style={{ display:"flex", gap:20 }}>
+        {[
+          ["Mapped Proofs", stats.mapped],
+          ["Regions", stats.regions],
+          ["Countries", stats.countries],
+        ].map(([label, value]) => (
+          <div key={label}>
+            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:20,
+              fontWeight:700, color:T2.olive }}>
+              {loading ? "—" : value}
+            </div>
+            <div style={{ fontSize:9, color:T2.dim, textTransform:"uppercase", letterSpacing:"0.06em" }}>
+              {label}
+            </div>
+          </div>
+        ))}
+      </div>
+    </a>
+  );
+}
+
 // ─── Spotlight section (dashboard) — uses SPOTLIGHT_BADGES as source of truth ─
 const SPOT_CATS = Object.values(SPOTLIGHT_BADGES).map(b => ({
   key:   b.key,
@@ -1050,6 +1114,7 @@ export default function Home() {
             <Link href="/leaderboard" className="nav-link">Leaderboard</Link>
             <Link href="/spotlight"   className="nav-link">Spotlight</Link>
             <Link href="/create"      className="nav-link">Create</Link>
+            <Link href="/map"         className="nav-link">Map</Link>
             <Link href="/quests" className="nav-link">Quests</Link>
             <a href="https://touchgrass.today" className="nav-link" target="_blank" rel="noopener noreferrer">Website</a>
           </div>
@@ -1140,6 +1205,12 @@ export default function Home() {
         <div style={{ padding:"20px clamp(14px,4vw,32px)", background:T.bg2,
           borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
           <SpotlightSection />
+        </div>
+
+        {/* ── MAP PREVIEW ──────────────────────────────────────────────────── */}
+        <div style={{ padding:"20px clamp(14px,4vw,32px)", background:T.bg,
+          borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
+          <MapPreviewCard />
         </div>
 
         {/* ── MAIN THREE-COLUMN GRID ─────────────────────────────────────────── */}
