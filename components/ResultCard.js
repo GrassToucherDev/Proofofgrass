@@ -710,56 +710,14 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         setLuckyTouch(result.lucky_touch);
       }
 
-      // ── Generate + upload + attach proof photo, fully synchronous with this submission ──
-      // (Previously this relied on a separate useEffect redrawing the canvas on
-      // currentStreak change, which raced against this function — the photo
-      // upload often hadn't happened yet when this attach step ran, or attached
-      // a stale image from a previous render. Now we draw + upload here directly.)
-      try {
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const dataUrl = canvas.toDataURL("image/png");
-          const res  = await fetch(dataUrl);
-          const blob = await res.blob();
-          const fileName = `${username}/${new Date().toISOString().slice(0,10)}.png`;
-
-          const { error: uploadErr } = await supabase
-            .storage.from("proof-photos").upload(fileName, blob, {
-              contentType: "image/png", upsert: true,
-            });
-
-          if (!uploadErr) {
-            const { data: urlData } = supabase.storage.from("proof-photos").getPublicUrl(fileName);
-            const publicUrl = urlData?.publicUrl;
-
-            if (publicUrl) {
-              // Give the RPC a moment to commit before we query for the submission row
-              await new Promise(r => setTimeout(r, 800));
-              const { data: latestSub } = await supabase
-                .from("Submissions")
-                .select("id")
-                .eq("username", username)
-                .in("status", ["pending", "approved"])
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-              if (latestSub?.id) {
-                await supabase.from("Submissions")
-                  .update({ photo_url: publicUrl })
-                  .eq("id", latestSub.id);
-                console.log("[photo] attached to submission", latestSub.id);
-              } else {
-                console.warn("[photo] no submission found after lockInStreak");
-              }
-            }
-          } else {
-            console.error("[photo] upload failed:", uploadErr.message);
-          }
-        }
-      } catch(photoErr) {
-        console.warn("[photo] generate/upload/attach failed (non-fatal):", photoErr?.message);
-      }
+      // ── Proof photo handling ────────────────────────────────────────────────
+      // No upload happens here anymore. The original photo is uploaded to
+      // `proof-photos/${username}/${date}.png` immediately when the user
+      // selects/takes the photo (see handleImageUpload in index.js) — well
+      // before this submit handler even runs. The profile page derives the
+      // public URL directly from username + submission date, so there's no
+      // database write-back or attach step needed, and no race condition
+      // between canvas rendering and submission timing.
 
       // ── Insert referral on first proof ────────────────────────────────────
       try {
@@ -1029,6 +987,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas || !imageSrc) return; // nothing to draw yet — wait for a real image
     const ctx = canvas.getContext("2d");
     const W = 1600;
     const H = 900;
@@ -1036,6 +995,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     canvas.height = H;
 
     const img = new Image();
+    img.onerror = () => {
+      console.error("[canvas] failed to load imageSrc — certificate will be blank:", imageSrc);
+    };
     img.onload = () => {
       const W = 1600, H = 900;
 

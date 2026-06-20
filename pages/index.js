@@ -895,12 +895,32 @@ export default function Home() {
   }, [username, purchaseTxSig, purchaseWallet]);
 
   // ── Image upload ──────────────────────────────────────────────────────────
-  const handleImageUpload = useCallback((file) => {
+  // Uploads the original photo to storage immediately on selection — matches
+  // the path the profile page expects (`${username}/${today}.png`), so no
+  // canvas generation, submission-time upload, or DB write-back is needed.
+  // This removes the entire race-condition-prone flow that previously lived
+  // inside ResultCard's lockInStreak function.
+  const handleImageUpload = useCallback(async (file) => {
     if (!file || !(file instanceof Blob)) return;
     setImageSrc(URL.createObjectURL(file));
     setShowResult(false);
     setTimeout(() => setShowResult(true), 80);
-  }, []);
+
+    if (!hasUser) return; // no username yet — can't build the storage path
+    try {
+      const today = new Date().toISOString().slice(0,10);
+      const fileName = `${username}/${today}.png`;
+      const { error: uploadErr } = await supabase
+        .storage.from("proof-photos").upload(fileName, file, {
+          contentType: file.type || "image/png", upsert: true,
+        });
+      if (uploadErr) {
+        console.error("[photo] upload failed:", uploadErr.message);
+      }
+    } catch(e) {
+      console.error("[photo] upload exception:", e?.message);
+    }
+  }, [username, hasUser]);
 
   // ── Derived display values ────────────────────────────────────────────────
   const toneColor = { success:"#4ade80", warning:T.gold, reset:T.red, neutral:T.dim }[streakTone] || T.dim;

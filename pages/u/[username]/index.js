@@ -142,7 +142,8 @@ function Badge({b}) {
 }
 
 function ProofCard({proof, idx}) {
-  const hasPic = !!proof.photo_url;
+  const [imgFailed, setImgFailed] = useState(false);
+  const hasPic = !!proof.photo_url && !imgFailed;
   return (
     <div style={{borderRadius:12,overflow:"hidden",flexShrink:0,
       width:"clamp(130px,20vw,190px)",
@@ -153,7 +154,9 @@ function ProofCard({proof, idx}) {
       onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.03)";}}
       onMouseLeave={e=>{e.currentTarget.style.transform="";}}>
       {hasPic
-        ? <img src={proof.photo_url} alt="" style={{width:"100%",height:140,objectFit:"cover"}} />
+        ? <img src={proof.photo_url} alt="" loading="lazy"
+            onError={() => setImgFailed(true)}
+            style={{width:"100%",height:140,objectFit:"cover"}} />
         : <div style={{height:140,display:"flex",alignItems:"center",justifyContent:"center",fontSize:40,opacity:0.4}}>🌿</div>
       }
       <div style={{position:"absolute",top:8,right:9,textAlign:"right"}}>
@@ -524,11 +527,20 @@ export default function ProfilePage() {
       setTotalUsers(allRows.length || 1);
 
       const streak = sr?.current_streak??1;
-      setRecentProofs((recentSubs??[]).map((sub,i)=>({
-        day: Math.max(1,streak-i),
-        photo_url: sub.photo_url||null,
-        when: new Date(sub.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"}),
-      })));
+      setRecentProofs((recentSubs??[]).map((sub,i)=>{
+        // Derive the storage URL directly from username + submission date —
+        // matches the upload path `${username}/${date}.png` exactly, so no
+        // database write-back or attach step is needed at submission time.
+        const subDate = new Date(sub.created_at).toISOString().slice(0,10);
+        const derivedPath = `${username}/${subDate}.png`;
+        const { data: urlData } = supabase.storage.from("proof-photos").getPublicUrl(derivedPath);
+        return {
+          day: Math.max(1,streak-i),
+          // Prefer the DB column if present (legacy rows), otherwise derive it
+          photo_url: sub.photo_url || urlData?.publicUrl || null,
+          when: new Date(sub.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"}),
+        };
+      }));
 
       setTopStreaks((topRows??[]).map(r=>({username:norm(r.username),streak:r.current_streak??1})));
       setCommunityTop((topRows??[]).filter(r=>norm(r.username)!==username).slice(0,5).map(r=>({username:norm(r.username),streak:r.current_streak??1})));
