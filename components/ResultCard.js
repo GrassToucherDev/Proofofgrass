@@ -583,7 +583,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const sharableFileRef   = useRef(null); // pre-built File object ready for navigator.share()
-  const pendingPhotoUrlRef = useRef(null); // photo URL waiting to be attached after lockInStreak
+  // (photo upload + attach now happens synchronously inside lockInStreak — no ref needed)
   const [caption, setCaption] = useState(() => pickCaption(initialStreak, null));
   const [copied, setCopied] = useState(false);
 
@@ -710,33 +710,55 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         setLuckyTouch(result.lucky_touch);
       }
 
-      // ── Attach pending photo URL to the submission just created ───────────
-      if (pendingPhotoUrlRef.current) {
-        const photoUrl = pendingPhotoUrlRef.current;
-        pendingPhotoUrlRef.current = null; // clear so it's not reused
-        try {
-          // Give the RPC a moment to commit before we query
-          await new Promise(r => setTimeout(r, 800));
-          const { data: latestSub } = await supabase
-            .from("Submissions")
-            .select("id")
-            .eq("username", username)
-            .in("status", ["pending", "approved"])
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+      // ── Generate + upload + attach proof photo, fully synchronous with this submission ──
+      // (Previously this relied on a separate useEffect redrawing the canvas on
+      // currentStreak change, which raced against this function — the photo
+      // upload often hadn't happened yet when this attach step ran, or attached
+      // a stale image from a previous render. Now we draw + upload here directly.)
+      try {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const dataUrl = canvas.toDataURL("image/png");
+          const res  = await fetch(dataUrl);
+          const blob = await res.blob();
+          const fileName = `${username}/${new Date().toISOString().slice(0,10)}.png`;
 
-          if (latestSub?.id) {
-            await supabase.from("Submissions")
-              .update({ photo_url: photoUrl })
-              .eq("id", latestSub.id);
-            console.log("[photo] attached to submission", latestSub.id);
+          const { error: uploadErr } = await supabase
+            .storage.from("proof-photos").upload(fileName, blob, {
+              contentType: "image/png", upsert: true,
+            });
+
+          if (!uploadErr) {
+            const { data: urlData } = supabase.storage.from("proof-photos").getPublicUrl(fileName);
+            const publicUrl = urlData?.publicUrl;
+
+            if (publicUrl) {
+              // Give the RPC a moment to commit before we query for the submission row
+              await new Promise(r => setTimeout(r, 800));
+              const { data: latestSub } = await supabase
+                .from("Submissions")
+                .select("id")
+                .eq("username", username)
+                .in("status", ["pending", "approved"])
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (latestSub?.id) {
+                await supabase.from("Submissions")
+                  .update({ photo_url: publicUrl })
+                  .eq("id", latestSub.id);
+                console.log("[photo] attached to submission", latestSub.id);
+              } else {
+                console.warn("[photo] no submission found after lockInStreak");
+              }
+            }
           } else {
-            console.warn("[photo] no submission found after lockInStreak");
+            console.error("[photo] upload failed:", uploadErr.message);
           }
-        } catch(photoErr) {
-          console.warn("[photo] attach failed (non-fatal):", photoErr?.message);
         }
+      } catch(photoErr) {
+        console.warn("[photo] generate/upload/attach failed (non-fatal):", photoErr?.message);
       }
 
       // ── Insert referral on first proof ────────────────────────────────────
@@ -1195,41 +1217,21 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       }
 
       const logo = new Image();
-      // Upload certificate to Supabase Storage and save photo_url on latest submission
-      const savePhotoUrl = async (dataUrl) => {
+      // Cache the rendered certificate for preview display and native share —
+      // does NOT upload to storage here anymore. The actual proof photo upload
+      // + attach-to-submission now happens synchronously inside lockInStreak()
+      // right after a successful RPC call, avoiding the render-timing race that
+      // previously caused images to upload but never attach to any submission.
+      const cacheForPreview = (dataUrl) => {
         setDownloadUrl(dataUrl);
-        if (!username) { console.log("[photo] no username, skipping upload"); return; }
         try {
-          // Convert dataURL to blob
-          const res  = await fetch(dataUrl);
-          const blob = await res.blob();
-          // Pre-cache as a File so navigator.share() needs zero awaits at share time
-          sharableFileRef.current = new File([blob], "proof-of-grass.png", { type: "image/png" });
-          // Use upsert:true so re-uploads on same day overwrite cleanly
-          const fileName = `${username}/${new Date().toISOString().slice(0,10)}.png`;
-          console.log("[photo] uploading to proof-photos/", fileName);
-
-          const { data: uploaded, error: uploadErr } = await supabase
-            .storage.from("proof-photos").upload(fileName, blob, {
-              contentType: "image/png", upsert: true,
+          fetch(dataUrl)
+            .then(res => res.blob())
+            .then(blob => {
+              sharableFileRef.current = new File([blob], "proof-of-grass.png", { type: "image/png" });
             });
-
-          if (uploadErr) {
-            console.error("[photo] upload failed:", uploadErr.message, uploadErr);
-            return;
-          }
-          console.log("[photo] upload success:", uploaded);
-
-          const { data: urlData } = supabase.storage.from("proof-photos").getPublicUrl(fileName);
-          const publicUrl = urlData?.publicUrl;
-          if (!publicUrl) { console.warn("[photo] no public URL returned"); return; }
-          console.log("[photo] public URL:", publicUrl);
-
-          // Store URL in ref — will be attached to the submission AFTER lockInStreak creates it
-          pendingPhotoUrlRef.current = publicUrl;
-          console.log("[photo] URL ready to attach after streak lock:", publicUrl);
         } catch (e) {
-          console.error("[photo] exception:", e);
+          console.warn("[photo] preview cache failed:", e?.message);
         }
       };
 
@@ -1241,9 +1243,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         ctx.globalAlpha = 0.60;
         ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
         ctx.restore();
-        savePhotoUrl(canvas.toDataURL("image/png"));
+        cacheForPreview(canvas.toDataURL("image/png"));
       };
-      logo.onerror = () => savePhotoUrl(canvas.toDataURL("image/png"));
+      logo.onerror = () => cacheForPreview(canvas.toDataURL("image/png"));
       logo.src = "/touchgrass-transparent.png";
     };
         img.src = imageSrc;
