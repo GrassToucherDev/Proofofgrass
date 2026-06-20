@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { supabase } from "../utils/supabase";
-import { COVER_DEFINITIONS, isCoverUrlReady } from "../utils/coverDefinitions";
+import { supabase } from "../../utils/supabase";
+import { COVER_DEFINITIONS, isCoverUrlReady } from "../../utils/coverDefinitions";
 
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { supabase } from "../utils/supabase";
+import { supabase } from "../../utils/supabase";
 
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
