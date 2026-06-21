@@ -288,6 +288,81 @@ export default function BurnerCollectionPage() {
     a.click();
   };
 
+  // ── Share to X — exact same process/format as the Flex Card share flow ──────
+  const shareToX = useCallback(async () => {
+    if (generating || !userData || !username) return; // prevent double-fire
+    const theme = getBurnTheme(selectedTheme);
+    const text = `🔥 ${theme.title} — Double Burner Collection\n\n"${quote}"\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/burns`;
+    const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
+    const canNativeShare = isMob && !!(navigator.share && navigator.canShare);
+
+    // CRITICAL: window.open() MUST be called synchronously before any await
+    // or browsers block it as a popup. Open now, write content after generation.
+    let sharedWin = null;
+    if (!canNativeShare) {
+      sharedWin = window.open("", "_blank");
+      if (sharedWin) {
+        sharedWin.document.write(`<html><body style="margin:0;background:#0a0b08;display:flex;align-items:center;justify-content:center;height:100vh"><p style="color:#93a85a;font-family:sans-serif;font-size:16px;text-align:center">Generating your card…</p></body></html>`);
+      }
+    }
+
+    setGenerating(true);
+    try {
+      const dataUrl = await generateBurnCard({
+        theme, format, username,
+        avatarUrl: userData.avatarUrl,
+        streak: userData.streak,
+        grassScore: userData.grassScore,
+        shieldCount: userData.shieldCount,
+        totalBurned: userData.totalBurned,
+        quote,
+      });
+      setPreview(dataUrl);
+
+      if (canNativeShare) {
+        // Mobile native share — attach image directly
+        try {
+          const res  = await fetch(dataUrl);
+          const blob = await res.blob();
+          const file = new File([blob], `double-burner-${selectedTheme}-${format}.png`, { type:"image/png" });
+          if (navigator.canShare({ files:[file] })) {
+            await navigator.share({ files:[file], title:`${theme.title} — Double Burner Collection`, text });
+            return; // finally still runs
+          }
+        } catch(e) {
+          if (e?.name === "AbortError") return; // finally still runs
+          console.warn("native share failed, falling back to download", e);
+        }
+        // Mobile fallback — native share unavailable, just download the image
+        const link = document.createElement("a");
+        link.download = `double-burner-${selectedTheme}-${format}.png`;
+        link.href = dataUrl;
+        link.click();
+      } else {
+        // Desktop — write card into pre-opened window with download hint + X button
+        if (sharedWin) {
+          sharedWin.document.open();
+          sharedWin.document.write(`<html><body style="margin:0;background:#0a0b08;font-family:sans-serif;padding:24px">
+            <img src="${dataUrl}" style="width:100%;max-width:540px;display:block;margin:0 auto;border-radius:12px"/>
+            <p style="color:#93a85a;text-align:center;padding:16px 0 8px;font-size:14px">Right-click the image to save it, then attach to your X post</p>
+            <p style="text-align:center;padding-bottom:24px">
+              <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}" target="_blank"
+                style="display:inline-block;background:#93a85a;color:#0a0b08;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">Post on X →</a>
+            </p>
+          </body></html>`);
+          sharedWin.document.close();
+        }
+      }
+    } catch(e) {
+      console.error("shareToX error", e);
+      if (sharedWin) sharedWin.close();
+      // Fallback: open X intent directly
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+    } finally {
+      setGenerating(false);
+    }
+  }, [generating, userData, username, selectedTheme, format, quote]);
+
   const reroll = () => setQuote(getRandomBurnQuote());
 
   const css = `
@@ -307,6 +382,9 @@ export default function BurnerCollectionPage() {
     .fmt-btn{ flex:1; padding:10px; border-radius:8px; border:1px solid ${T.border};
       background:${T.bg3}; color:${T.dim}; cursor:pointer; font-size:12px; font-weight:600; }
     .fmt-btn.active{ background:rgba(147,168,90,0.12); border-color:${T.borderG}; color:${T.olive}; }
+    .btn-share{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:${T.white};color:${T.bg};border:none;border-radius:10px;padding:13px 24px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;letter-spacing:0.04em;width:100%;}
+    .btn-share:hover{background:#e8e7e2;transform:translateY(-1px);}
+    .btn-share:disabled{opacity:0.6;cursor:default;transform:none;}
   `;
 
   return (
@@ -423,10 +501,23 @@ export default function BurnerCollectionPage() {
                     boxShadow:"0 0 30px rgba(200,168,75,0.15)", marginBottom:16 }}>
                     <img src={preview} alt="Double Burner card" style={{ width:"100%", display:"block" }} />
                   </div>
-                  <button className="btn" onClick={download}
-                    style={{ width:"100%", background:T.white, color:T.bg }}>
-                    ↓ Save Card
-                  </button>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    <button onClick={shareToX} disabled={generating} className="btn-share">
+                      {generating ? "Generating…" : (
+                        <>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                          </svg>
+                          Post to X
+                        </>
+                      )}
+                    </button>
+                    <button className="btn" onClick={download} disabled={generating}
+                      style={{ width:"100%", background:T.bg3, color:T.dim,
+                        border:`1px solid ${T.border}`, opacity:generating?0.6:1 }}>
+                      ↓ Save Card
+                    </button>
+                  </div>
                 </div>
               )}
             </>
