@@ -170,15 +170,15 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
 
   // Username below avatar — large
   ctx.textAlign = "center";
-  let nameSize = isPortrait ? 46 : 38;
+  let nameSize = isPortrait ? 58 : 48;
   ctx.font = `700 ${nameSize}px 'Cormorant Garamond',Georgia,serif`;
-  while (ctx.measureText(`@${username}`).width > W - 140 && nameSize > 26) {
+  while (ctx.measureText(`@${username}`).width > W - 120 && nameSize > 30) {
     nameSize -= 3;
     ctx.font = `700 ${nameSize}px 'Cormorant Garamond',Georgia,serif`;
   }
-  ctx.fillStyle = "#f0efea";
+  ctx.fillStyle = "#ffffff";
   ctx.letterSpacing = "0";
-  const nameY = avatarCY + avatarR + (isPortrait ? 56 : 48);
+  const nameY = avatarCY + avatarR + (isPortrait ? 64 : 54);
   ctx.fillText(`@${username}`, W/2, nameY);
 
   // ── Burn stats row — Grass Score, Shields, Total Burned (streak removed) ────
@@ -193,14 +193,14 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
 
   stats.forEach((s, i) => {
     const cx = startX + i*colW + colW/2;
-    ctx.font = `700 ${isPortrait?38:33}px 'Cormorant Garamond',Georgia,serif`;
+    ctx.font = `700 ${isPortrait?48:42}px 'Cormorant Garamond',Georgia,serif`;
     ctx.fillStyle = "#ffffff";
     ctx.letterSpacing = "0";
     ctx.fillText(s.value, cx, statsY);
-    ctx.font = "700 12px 'DM Sans',sans-serif";
-    ctx.fillStyle = "rgba(240,239,234,0.7)";
+    ctx.font = "700 14px 'DM Sans',sans-serif";
+    ctx.fillStyle = "rgba(240,239,234,0.85)";
     ctx.letterSpacing = "0.1em";
-    ctx.fillText(s.label, cx, statsY + 26);
+    ctx.fillText(s.label, cx, statsY + 32);
   });
 
   // Divider above stats
