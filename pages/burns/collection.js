@@ -121,30 +121,36 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
   ctx.fillText(theme.title.toUpperCase(), W/2, 102);
 
   // ── LEFT COLUMN: PFP, username, badge ───────────────────────────────────────
-  const leftX = isPortrait ? 130 : 150;
-  const avatarR = isPortrait ? 64 : 56;
-  const avatarCY = isPortrait ? 200 : 180;
+  // (avatar position now computed in the bottom section, above the stats)
+
+  // (PFP, username, badge moved below — now centered above the stat bar
+  // instead of sitting in a separate left column)
+  // ── BOTTOM: PFP + username + badge, centered above stat row ─────────────────
+  const avatarR = isPortrait ? 50 : 44;
+  const statsY = isPortrait ? H - 130 : H - 120;
+  const avatarCY = statsY - 230;
 
   let hasAvatar = false;
   if (avatarUrl) {
     try {
       const avImg = await loadImage(avatarUrl);
       ctx.save();
-      ctx.beginPath(); ctx.arc(leftX, avatarCY, avatarR, 0, Math.PI*2); ctx.clip();
-      ctx.drawImage(avImg, leftX-avatarR, avatarCY-avatarR, avatarR*2, avatarR*2);
+      ctx.beginPath(); ctx.arc(W/2, avatarCY, avatarR, 0, Math.PI*2); ctx.clip();
+      ctx.drawImage(avImg, W/2-avatarR, avatarCY-avatarR, avatarR*2, avatarR*2);
       ctx.restore();
-      ctx.beginPath(); ctx.arc(leftX, avatarCY, avatarR+3, 0, Math.PI*2);
+      ctx.beginPath(); ctx.arc(W/2, avatarCY, avatarR+3, 0, Math.PI*2);
       ctx.strokeStyle = theme.accent; ctx.lineWidth = 2.5; ctx.stroke();
       hasAvatar = true;
     } catch { /* skip */ }
   }
   if (!hasAvatar) {
-    ctx.beginPath(); ctx.arc(leftX, avatarCY, avatarR, 0, Math.PI*2);
+    ctx.beginPath(); ctx.arc(W/2, avatarCY, avatarR, 0, Math.PI*2);
     ctx.fillStyle = "rgba(20,23,16,0.8)"; ctx.fill();
     ctx.strokeStyle = theme.accent; ctx.lineWidth = 2.5; ctx.stroke();
     ctx.font = `700 ${avatarR*0.7}px 'Cormorant Garamond',Georgia,serif`;
     ctx.fillStyle = theme.accent;
-    ctx.fillText((username||"?")[0].toUpperCase(), leftX, avatarCY + avatarR*0.25);
+    ctx.textAlign = "center";
+    ctx.fillText((username||"?")[0].toUpperCase(), W/2, avatarCY + avatarR*0.25);
   }
 
   // Username below avatar
@@ -153,13 +159,13 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
   ctx.font = `700 ${nameSize}px 'Cormorant Garamond',Georgia,serif`;
   ctx.fillStyle = "#f0efea";
   ctx.letterSpacing = "0";
-  const nameY = avatarCY + avatarR + 36;
-  ctx.fillText(`@${username}`, leftX, nameY);
+  const nameY = avatarCY + avatarR + 32;
+  ctx.fillText(`@${username}`, W/2, nameY);
 
   // Double Burner badge pill
-  const badgeY = nameY + 22;
+  const badgeY = nameY + 16;
   const badgeW = isPortrait ? 180 : 160, badgeH = 32;
-  const badgeX = leftX - badgeW/2;
+  const badgeX = W/2 - badgeW/2;
   const badgeBg = ctx.createLinearGradient(badgeX, badgeY, badgeX+badgeW, badgeY+badgeH);
   badgeBg.addColorStop(0, "rgba(249,115,22,0.25)");
   badgeBg.addColorStop(1, "rgba(200,168,75,0.18)");
@@ -170,19 +176,19 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
   ctx.font = "700 12px 'DM Sans',sans-serif";
   ctx.fillStyle = "#fbbf24";
   ctx.letterSpacing = "0.06em";
-  ctx.fillText("🔥 DOUBLE BURNER", leftX, badgeY + 21);
+  ctx.fillText("🔥 DOUBLE BURNER", W/2, badgeY + 21);
 
   // Burn-tier frame label (future-ready)
   if (tier) {
-    const tierY = badgeY + badgeH + 22;
+    const tierY = badgeY + badgeH + 20;
     ctx.font = "600 11px 'DM Sans',sans-serif";
     ctx.fillStyle = tier.color;
     ctx.letterSpacing = "0.12em";
-    ctx.fillText(`${tier.label.toUpperCase()} TIER`, leftX, tierY);
+    ctx.fillText(`${tier.label.toUpperCase()} TIER`, W/2, tierY);
   }
 
-  // ── CENTER: Large quote ──────────────────────────────────────────────────
-  const quoteY = isPortrait ? 540 : 480;
+  // ── CENTER: Large quote (between top branding and PFP block) ────────────────
+  const quoteY = isPortrait ? 480 : 420;
   ctx.textAlign = "center";
   let qSize = isPortrait ? 42 : 36;
   ctx.font = `700 ${qSize}px 'Cormorant Garamond',Georgia,serif`;
@@ -201,13 +207,11 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
   ctx.moveTo(W/2 - 60, quoteY + 28); ctx.lineTo(W/2 + 60, quoteY + 28);
   ctx.stroke();
 
-  // ── BOTTOM: Burn stats row ───────────────────────────────────────────────
-  const statsY = isPortrait ? H - 220 : H - 200;
+  // ── Burn stats row — Grass Score, Shields, Total Burned (streak removed) ────
   const stats = [
-    { label:"STREAK",     value:`${streak}d` },
-    { label:"GRASS SCORE",value:fmtBurned(grassScore) },
-    { label:"SHIELDS",    value:`${shieldCount}` },
-    { label:"TOTAL BURNED",value:fmtBurned(totalBurned) },
+    { label:"GRASS SCORE",  value:fmtBurned(grassScore) },
+    { label:"SHIELDS",      value:`${shieldCount}` },
+    { label:"TOTAL BURNED", value:fmtBurned(totalBurned) },
   ];
   const totalW = W - 200;
   const colW = totalW / stats.length;
@@ -229,7 +233,7 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
   const divG = ctx.createLinearGradient(W*0.12,0,W*0.88,0);
   divG.addColorStop(0,"transparent"); divG.addColorStop(0.5,"rgba(200,168,75,0.3)"); divG.addColorStop(1,"transparent");
   ctx.strokeStyle = divG; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(W*0.12, statsY-50); ctx.lineTo(W*0.88, statsY-50); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W*0.12, statsY-60); ctx.lineTo(W*0.88, statsY-60); ctx.stroke();
 
   // ── Bottom branding ───────────────────────────────────────────────────────
   ctx.font = "500 18px 'DM Sans',sans-serif";
