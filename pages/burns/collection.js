@@ -125,10 +125,10 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
 
   // (PFP, username, badge moved below — now centered above the stat bar
   // instead of sitting in a separate left column)
-  // ── BOTTOM: PFP + username + badge, centered above stat row ─────────────────
-  const avatarR = isPortrait ? 50 : 44;
+  // ── BOTTOM: PFP + username, centered above stat row ──────────────────────────
+  const avatarR = isPortrait ? 54 : 46;
   const statsY = isPortrait ? H - 130 : H - 120;
-  const avatarCY = statsY - 230;
+  const avatarCY = statsY - 150;
 
   let hasAvatar = false;
   if (avatarUrl) {
@@ -161,31 +161,6 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
   ctx.letterSpacing = "0";
   const nameY = avatarCY + avatarR + 32;
   ctx.fillText(`@${username}`, W/2, nameY);
-
-  // Double Burner badge pill
-  const badgeY = nameY + 16;
-  const badgeW = isPortrait ? 180 : 160, badgeH = 32;
-  const badgeX = W/2 - badgeW/2;
-  const badgeBg = ctx.createLinearGradient(badgeX, badgeY, badgeX+badgeW, badgeY+badgeH);
-  badgeBg.addColorStop(0, "rgba(249,115,22,0.25)");
-  badgeBg.addColorStop(1, "rgba(200,168,75,0.18)");
-  ctx.fillStyle = badgeBg;
-  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 16); ctx.fill();
-  ctx.strokeStyle = "rgba(249,115,22,0.55)"; ctx.lineWidth = 1;
-  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 16); ctx.stroke();
-  ctx.font = "700 12px 'DM Sans',sans-serif";
-  ctx.fillStyle = "#fbbf24";
-  ctx.letterSpacing = "0.06em";
-  ctx.fillText("🔥 DOUBLE BURNER", W/2, badgeY + 21);
-
-  // Burn-tier frame label (future-ready)
-  if (tier) {
-    const tierY = badgeY + badgeH + 20;
-    ctx.font = "600 11px 'DM Sans',sans-serif";
-    ctx.fillStyle = tier.color;
-    ctx.letterSpacing = "0.12em";
-    ctx.fillText(`${tier.label.toUpperCase()} TIER`, W/2, tierY);
-  }
 
   // ── CENTER: Large quote (between top branding and PFP block) ────────────────
   const quoteY = isPortrait ? 480 : 420;
@@ -233,7 +208,7 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
   const divG = ctx.createLinearGradient(W*0.12,0,W*0.88,0);
   divG.addColorStop(0,"transparent"); divG.addColorStop(0.5,"rgba(200,168,75,0.3)"); divG.addColorStop(1,"transparent");
   ctx.strokeStyle = divG; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(W*0.12, statsY-60); ctx.lineTo(W*0.88, statsY-60); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W*0.12, statsY-46); ctx.lineTo(W*0.88, statsY-46); ctx.stroke();
 
   // ── Bottom branding ───────────────────────────────────────────────────────
   ctx.font = "500 18px 'DM Sans',sans-serif";
