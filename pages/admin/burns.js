@@ -26,6 +26,11 @@ export default function AdminBurns() {
   const [error,     setError]     = useState("");
   const [success,   setSuccess]   = useState("");
 
+  // ── Pending Shield Purchases (the missing approval step) ────────────────────
+  const [pendingShields, setPendingShields] = useState([]);
+  const [shieldsLoading, setShieldsLoading]  = useState(false);
+  const [processingId,   setProcessingId]    = useState(null);
+
   const checkPw = () => {
     if (pw === ADMIN_PASSWORD) { setAuthed(true); setPwError(""); }
     else setPwError("Incorrect password.");
@@ -39,7 +44,71 @@ export default function AdminBurns() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (authed) loadBurns(); }, [authed, loadBurns]);
+  const loadPendingShields = useCallback(async () => {
+    setShieldsLoading(true);
+    const { data } = await supabase.from("ShieldPurchases").select("*")
+      .eq("status", "pending").order("created_at", { ascending:false });
+    setPendingShields(data ?? []);
+    setShieldsLoading(false);
+  }, []);
+
+  useEffect(() => { if (authed) { loadBurns(); loadPendingShields(); } }, [authed, loadBurns, loadPendingShields]);
+
+  const EVENT_START = new Date("2026-06-21T00:00:00Z");
+  const EVENT_END   = new Date("2026-07-02T00:00:00Z");
+
+  // Approve a shield purchase: mark approved, credit the shield, AND record
+  // it in BurnEvents so it shows up on /burns immediately. This is the link
+  // that was previously missing — ShieldPurchases and BurnEvents were two
+  // disconnected tables.
+  const approveShield = async (purchase) => {
+    setProcessingId(purchase.id);
+    try {
+      // 1. Mark the purchase approved
+      const { error: updateErr } = await supabase
+        .from("ShieldPurchases")
+        .update({ status: "approved" })
+        .eq("id", purchase.id);
+      if (updateErr) throw updateErr;
+
+      // 2. Credit the shield to the user's Streaks row
+      const { data: streakRow } = await supabase
+        .from("Streaks").select("shield_count").eq("username", purchase.username).maybeSingle();
+      await supabase.from("Streaks")
+        .update({ shield_count: (streakRow?.shield_count ?? 0) + 1 })
+        .eq("username", purchase.username);
+
+      // 3. Record in BurnEvents — apply Double Burn Event match if the
+      //    purchase falls within the event window
+      const purchaseDate = new Date(purchase.created_at);
+      const inEventWindow = purchaseDate >= EVENT_START && purchaseDate < EVENT_END;
+      const amount = Number(purchase.token_amount || 50000);
+
+      await supabase.from("BurnEvents").insert({
+        username: purchase.username,
+        burn_type: "shield_burn",
+        amount_burned: amount,
+        treasury_match_amount: inEventWindow ? amount : 0,
+        shield_count: 1,
+        tx_signature: purchase.tx_signature || null,
+        metadata: { source: "ShieldPurchases", shield_purchase_id: purchase.id },
+      });
+
+      setSuccess(`Approved @${purchase.username}'s shield and recorded the burn.`);
+      loadPendingShields();
+      loadBurns();
+    } catch(e) {
+      setError(`Failed to approve: ${e.message}`);
+    }
+    setProcessingId(null);
+  };
+
+  const rejectShield = async (purchase) => {
+    setProcessingId(purchase.id);
+    await supabase.from("ShieldPurchases").update({ status:"rejected" }).eq("id", purchase.id);
+    loadPendingShields();
+    setProcessingId(null);
+  };
 
   // Auto-fill treasury match = amount burned for shield_burn type
   const handleAmountChange = (val) => {
@@ -143,6 +212,63 @@ export default function AdminBurns() {
             <div style={{ fontSize:10, letterSpacing:"0.22em", color:T.gold, textTransform:"uppercase", marginBottom:8, fontWeight:600 }}>Admin</div>
             <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(28px,4vw,44px)",
               fontWeight:700, color:T.white, lineHeight:1 }}>Burn Event Entry</h1>
+          </div>
+
+          {/* Pending Shield Purchases — approve credits shield + records BurnEvent */}
+          <div style={{ background:T.bg2, border:`1px solid ${pendingShields.length ? T.borderGold : T.border}`,
+            borderRadius:14, padding:"24px 22px", marginBottom:28 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:T.gold, letterSpacing:"0.1em", textTransform:"uppercase" }}>
+                🛡 Pending Shield Purchases {pendingShields.length > 0 && `(${pendingShields.length})`}
+              </div>
+              <button className="btn" onClick={loadPendingShields}
+                style={{ padding:"6px 14px", background:T.bg3, color:T.olive, border:`1px solid ${T.borderG}` }}>
+                ↻ Refresh
+              </button>
+            </div>
+
+            {shieldsLoading ? (
+              <div style={{ color:T.dim, fontSize:12, padding:16 }}>Loading…</div>
+            ) : pendingShields.length === 0 ? (
+              <div style={{ color:T.dim, fontSize:12.5, padding:"12px 0" }}>No pending shield purchases.</div>
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                {pendingShields.map(p => (
+                  <div key={p.id} style={{ background:T.bg3, border:`1px solid ${T.border}`, borderRadius:10,
+                    padding:"14px 16px", display:"flex", flexWrap:"wrap", alignItems:"center", gap:12 }}>
+                    <div style={{ flex:"1 1 200px" }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:T.white, marginBottom:4 }}>
+                        @{p.username}
+                      </div>
+                      <div style={{ fontSize:10.5, color:T.dim, wordBreak:"break-all" }}>
+                        Wallet: {p.wallet_address}
+                      </div>
+                      <div style={{ fontSize:10.5, color:T.dim, wordBreak:"break-all" }}>
+                        Tx: {p.tx_signature}
+                      </div>
+                      <a href={`https://solscan.io/tx/${p.tx_signature}`} target="_blank" rel="noopener noreferrer"
+                        style={{ fontSize:10.5, color:T.olive }}>
+                        View on Solscan →
+                      </a>
+                    </div>
+                    <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+                      <button className="btn" onClick={() => approveShield(p)}
+                        disabled={processingId === p.id}
+                        style={{ background:T.olive, color:"#0e1108", padding:"8px 16px" }}>
+                        {processingId === p.id ? "…" : "✓ Approve"}
+                      </button>
+                      <button className="btn" onClick={() => rejectShield(p)}
+                        disabled={processingId === p.id}
+                        style={{ background:"transparent", color:T.red, border:`1px solid ${T.red}`, padding:"8px 16px" }}>
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {error   && <div style={{ fontSize:12, color:T.red,   marginTop:14 }}>{error}</div>}
+            {success && <div style={{ fontSize:12, color:T.olive, marginTop:14 }}>{success}</div>}
           </div>
 
           {/* Entry form */}
