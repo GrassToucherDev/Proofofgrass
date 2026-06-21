@@ -300,11 +300,20 @@ export default function BurnsPage() {
                   </div>
                 ))}
               </div>
-              <a href="/#shield-section" style={{ fontSize:12, fontWeight:700, padding:"11px 22px", borderRadius:9,
-                background:T.olive, color:"#0e1108", border:"none", cursor:"pointer",
-                textDecoration:"none", display:"inline-block" }}>
-                🛡 Get Shield
-              </a>
+              <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                <a href="/#shield-section" style={{ fontSize:12, fontWeight:700, padding:"11px 22px", borderRadius:9,
+                  background:T.olive, color:"#0e1108", border:"none", cursor:"pointer",
+                  textDecoration:"none", display:"inline-block" }}>
+                  🛡 Get Shield
+                </a>
+                {userStats.hasBadge && (
+                  <Link href="/burns/collection" style={{ fontSize:12, fontWeight:700, padding:"11px 22px", borderRadius:9,
+                    background:"rgba(249,115,22,0.15)", border:"1px solid rgba(249,115,22,0.4)", color:T.fire,
+                    textDecoration:"none", display:"inline-block" }}>
+                    🔥 Double Burner Collection →
+                  </Link>
+                )}
+              </div>
             </div>
           )}
 
