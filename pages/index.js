@@ -282,6 +282,12 @@ function DoubleBurnBanner() {
             display:"inline-flex", alignItems:"center", gap:6, textDecoration:"none" }}>
             🛡 Get Shield
           </a>
+          <a href="/burns/collection" onClick={e => e.stopPropagation()}
+            style={{ fontSize:12, fontWeight:700, padding:"11px 22px", borderRadius:9,
+            background:"rgba(249,115,22,0.18)", border:"1px solid rgba(249,115,22,0.5)", color:"#fb923c",
+            display:"inline-flex", alignItems:"center", gap:6, textDecoration:"none" }}>
+            🔥 Collection
+          </a>
           <span style={{ fontSize:12, fontWeight:700, padding:"11px 22px", borderRadius:9,
             background:"rgba(200,168,75,0.15)", border:`1px solid ${T2.borderGold}`, color:T2.gold,
             display:"inline-flex", alignItems:"center", gap:6 }}>
