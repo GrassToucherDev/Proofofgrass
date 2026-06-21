@@ -201,6 +201,77 @@ const SOL_DOMAIN  = "touchgrassburn.sol";
 // ─── Following Feed component ────────────────────────────────────────────────
 
 // ─── Activity Feed ───────────────────────────────────────────────────────────
+// ─── Double Burn Event Banner (homepage) ──────────────────────────────────────
+function DoubleBurnBanner() {
+  const T2 = {
+    bg2:"#0e100b", border:"rgba(255,255,255,0.055)", borderGold:"rgba(200,168,75,0.4)",
+    gold:"#c8a84b", olive:"#93a85a", white:"#f0efea",
+  };
+
+  return (
+    <a href="/burns" className="burn-banner" style={{
+      display:"block", position:"relative", textDecoration:"none",
+      overflow:"hidden", borderRadius:16,
+      border:`1px solid ${T2.borderGold}`,
+      backgroundImage:`url('/banners/double_burn_event.png')`,
+      backgroundSize:"cover", backgroundPosition:"center",
+      minHeight:200,
+    }}>
+      {/* Dark overlay for text readability */}
+      <div style={{ position:"absolute", inset:0,
+        background:"linear-gradient(180deg,rgba(8,10,6,0.35) 0%,rgba(8,10,6,0.75) 100%)" }} />
+
+      {/* Fire glow pulse */}
+      <div className="burn-glow-pulse" style={{ position:"absolute", inset:0, pointerEvents:"none" }} />
+
+      {/* Floating embers */}
+      <div className="burn-embers" style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden" }}>
+        {[...Array(8)].map((_, i) => (
+          <span key={i} className="ember" style={{
+            left:`${10 + i * 11}%`,
+            animationDelay:`${i * 0.7}s`,
+            animationDuration:`${5 + (i % 3)}s`,
+          }} />
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ position:"relative", zIndex:2, padding:"32px clamp(18px,4vw,40px)",
+        display:"flex", flexDirection:"column", justifyContent:"flex-end", minHeight:200 }}>
+
+        <div className="burn-shimmer-text" style={{ fontSize:11, fontWeight:700, letterSpacing:"0.16em",
+          textTransform:"uppercase", color:T2.gold, marginBottom:8 }}>
+          🔥 Double Burn Event
+        </div>
+
+        <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(22px,4vw,32px)",
+          fontWeight:700, color:T2.white, lineHeight:1.15, marginBottom:6,
+          textShadow:"0 2px 12px rgba(0,0,0,0.6)" }}>
+          100K $TOUCHGRASS burned per Shield
+        </div>
+
+        <div style={{ fontSize:12.5, color:"rgba(240,239,234,0.75)", marginBottom:18,
+          textShadow:"0 1px 8px rgba(0,0,0,0.6)" }}>
+          Every Streak Shield burn matched 100% by treasury through July 1st
+        </div>
+
+        <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+          <span className="burn-btn-glow" style={{ fontSize:12, fontWeight:700,
+            padding:"11px 22px", borderRadius:9, background:T2.olive, color:"#0e1108",
+            display:"inline-flex", alignItems:"center", gap:6 }}>
+            🛡 Get Shield
+          </span>
+          <span style={{ fontSize:12, fontWeight:700, padding:"11px 22px", borderRadius:9,
+            background:"rgba(200,168,75,0.15)", border:`1px solid ${T2.borderGold}`, color:T2.gold,
+            display:"inline-flex", alignItems:"center", gap:6 }}>
+            View Burns →
+          </span>
+        </div>
+      </div>
+    </a>
+  );
+}
+
 // ─── Map preview card (dashboard) ────────────────────────────────────────────
 function MapPreviewCard() {
   const [stats, setStats] = useState({ mapped:0, regions:0, countries:0 });
@@ -1032,6 +1103,65 @@ export default function Home() {
     *,*::before,*::after{box-sizing:border-box;}
     html{overflow-x:hidden;}
 
+    /* ── Double Burn Event banner animations ──────────────────────────────── */
+    @keyframes burnGlowPulse {
+      0%, 100% { opacity: 0.15; }
+      50%      { opacity: 0.4; }
+    }
+    .burn-glow-pulse {
+      background: radial-gradient(ellipse at 30% 20%, rgba(249,115,22,0.5), transparent 60%);
+      animation: burnGlowPulse 4s ease-in-out infinite;
+    }
+
+    @keyframes emberFloat {
+      0%   { transform: translateY(0) scale(1); opacity: 0; }
+      10%  { opacity: 0.9; }
+      90%  { opacity: 0.3; }
+      100% { transform: translateY(-160px) scale(0.4); opacity: 0; }
+    }
+    .ember {
+      position: absolute;
+      bottom: 10%;
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fbbf24, #f97316);
+      box-shadow: 0 0 6px 1px rgba(249,115,22,0.6);
+      animation-name: emberFloat;
+      animation-timing-function: ease-out;
+      animation-iteration-count: infinite;
+    }
+
+    @keyframes shimmerSweep {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .burn-shimmer-text {
+      background-image: linear-gradient(90deg, #c8a84b 0%, #f0d98c 50%, #c8a84b 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmerSweep 3.5s linear infinite;
+    }
+
+    @keyframes btnGlowPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(147,168,90,0.4); }
+      50%      { box-shadow: 0 0 16px 2px rgba(147,168,90,0.5); }
+    }
+    .burn-btn-glow { animation: btnGlowPulse 2.4s ease-in-out infinite; }
+
+    .burn-banner:hover { border-color: rgba(200,168,75,0.65) !important; }
+
+    @media(prefers-reduced-motion: reduce) {
+      .burn-glow-pulse, .ember, .burn-shimmer-text, .burn-btn-glow {
+        animation: none !important;
+      }
+    }
+
+    @media(max-width:640px) {
+      .burn-banner { min-height: 170px !important; }
+    }
+
     /* Collapse grids at tablet */
     @media(max-width:960px){
       .main-grid{grid-template-columns:1fr !important;}
@@ -1115,6 +1245,7 @@ export default function Home() {
             <Link href="/spotlight"   className="nav-link">Spotlight</Link>
             <Link href="/create"      className="nav-link">Create</Link>
             <Link href="/map"         className="nav-link">Map</Link>
+            <Link href="/burns"       className="nav-link">Shields & Burns</Link>
             <Link href="/quests" className="nav-link">Quests</Link>
             <a href="https://touchgrass.today" className="nav-link" target="_blank" rel="noopener noreferrer">Website</a>
           </div>
@@ -1133,6 +1264,11 @@ export default function Home() {
             )}
           </div>
         </nav>
+
+        {/* ── DOUBLE BURN EVENT BANNER ─────────────────────────────────────── */}
+        <div style={{ padding:"16px clamp(14px,4vw,32px) 0" }}>
+          <DoubleBurnBanner />
+        </div>
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
         <section style={{ position:"relative", minHeight:"clamp(460px,70vh,720px)", pointerEvents:"none" }}>
