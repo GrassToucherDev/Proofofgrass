@@ -110,15 +110,15 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
 
   // ── Top branding ─────────────────────────────────────────────────────────
   ctx.textAlign = "center";
-  ctx.font = "600 18px 'DM Sans',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.55)";
+  ctx.font = "700 19px 'DM Sans',sans-serif";
+  ctx.fillStyle = "rgba(240,239,234,0.92)";
   ctx.letterSpacing = "0.18em";
   ctx.fillText("DOUBLE BURNER COLLECTION", W/2, 78);
 
-  ctx.font = "700 13px 'DM Sans',sans-serif";
+  ctx.font = "700 14px 'DM Sans',sans-serif";
   ctx.fillStyle = theme.accent;
   ctx.letterSpacing = "0.22em";
-  ctx.fillText(theme.title.toUpperCase(), W/2, 102);
+  ctx.fillText(theme.title.toUpperCase(), W/2, 103);
 
   // ── Quote — directly under the theme name ────────────────────────────────────
   const quoteY = isPortrait ? 160 : 148;
@@ -193,14 +193,14 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
 
   stats.forEach((s, i) => {
     const cx = startX + i*colW + colW/2;
-    ctx.font = `700 ${isPortrait?30:26}px 'Cormorant Garamond',Georgia,serif`;
-    ctx.fillStyle = "#f0efea";
+    ctx.font = `700 ${isPortrait?38:33}px 'Cormorant Garamond',Georgia,serif`;
+    ctx.fillStyle = "#ffffff";
     ctx.letterSpacing = "0";
     ctx.fillText(s.value, cx, statsY);
-    ctx.font = "500 10px 'DM Sans',sans-serif";
-    ctx.fillStyle = "rgba(240,239,234,0.4)";
+    ctx.font = "700 12px 'DM Sans',sans-serif";
+    ctx.fillStyle = "rgba(240,239,234,0.7)";
     ctx.letterSpacing = "0.1em";
-    ctx.fillText(s.label, cx, statsY + 22);
+    ctx.fillText(s.label, cx, statsY + 26);
   });
 
   // Divider above stats
