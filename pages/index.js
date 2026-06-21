@@ -215,7 +215,7 @@ function DoubleBurnBanner() {
       border:`1px solid ${T2.borderGold}`,
       backgroundImage:`url('/banners/double_burn_event.png')`,
       backgroundSize:"cover", backgroundPosition:"center",
-      minHeight:200,
+      minHeight:"clamp(170px,28vw,360px)",
     }}>
       {/* Dark overlay for text readability */}
       <div style={{ position:"absolute", inset:0,
@@ -237,7 +237,7 @@ function DoubleBurnBanner() {
 
       {/* Content */}
       <div style={{ position:"relative", zIndex:2, padding:"32px clamp(18px,4vw,40px)",
-        display:"flex", flexDirection:"column", justifyContent:"flex-end", minHeight:200 }}>
+        display:"flex", flexDirection:"column", justifyContent:"flex-end", minHeight:"clamp(170px,28vw,360px)" }}>
 
         <div className="burn-shimmer-text" style={{ fontSize:11, fontWeight:700, letterSpacing:"0.16em",
           textTransform:"uppercase", color:T2.gold, marginBottom:8 }}>
@@ -1158,9 +1158,7 @@ export default function Home() {
       }
     }
 
-    @media(max-width:640px) {
-      .burn-banner { min-height: 170px !important; }
-    }
+    /* burn-banner height now responsive via clamp() inline style — no override needed */
 
     /* Collapse grids at tablet */
     @media(max-width:960px){
