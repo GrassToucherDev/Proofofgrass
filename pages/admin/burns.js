@@ -240,16 +240,16 @@ export default function AdminBurns() {
                       <div style={{ fontSize:13, fontWeight:700, color:T.white, marginBottom:4 }}>
                         @{p.username}
                       </div>
-                      <div style={{ fontSize:10.5, color:T.dim, wordBreak:"break-all" }}>
+                      <div style={{ fontSize:10.5, color:T.dim, wordBreak:"break-all", marginBottom:6 }}>
                         Wallet: {p.wallet_address}
                       </div>
-                      <div style={{ fontSize:10.5, color:T.dim, wordBreak:"break-all" }}>
-                        Tx: {p.tx_signature}
-                      </div>
-                      <a href={`https://solscan.io/tx/${p.tx_signature}`} target="_blank" rel="noopener noreferrer"
-                        style={{ fontSize:10.5, color:T.olive }}>
-                        View on Solscan →
+                      <a href={`https://solscan.io/account/${p.wallet_address}`} target="_blank" rel="noopener noreferrer"
+                        style={{ fontSize:10.5, color:T.olive, fontWeight:600 }}>
+                        🔍 Check Wallet Activity on Solscan →
                       </a>
+                      <div style={{ fontSize:9.5, color:T.dim, marginTop:4 }}>
+                        Verify a 50,000 $TOUCHGRASS transfer to the burn address before approving.
+                      </div>
                     </div>
                     <div style={{ display:"flex", gap:8, flexShrink:0 }}>
                       <button className="btn" onClick={() => approveShield(p)}

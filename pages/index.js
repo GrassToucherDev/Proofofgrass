@@ -865,7 +865,7 @@ export default function Home() {
   const [loadingUser,         setLoadingUser]          = useState(false);
 
   // ── Shield purchase ───────────────────────────────────────────────────────
-  const [purchaseTxSig,   setPurchaseTxSig]   = useState("");
+  // (tx signature no longer collected — admin verifies wallet address directly on Solscan)
   const [purchaseWallet,  setPurchaseWallet]  = useState("");
   const [purchaseStatus,  setPurchaseStatus]  = useState(null);
   const [purchaseError,   setPurchaseError]   = useState("");
@@ -1045,22 +1045,19 @@ export default function Home() {
   // ── Shield buy handler ────────────────────────────────────────────────────
   const handleBuyShield = useCallback(async () => {
     if (!username) return;
-    const tx = purchaseTxSig.trim();
     const wallet = purchaseWallet.trim();
-    if (!tx || !wallet) { setPurchaseError("Enter your wallet and tx signature."); return; }
+    if (!wallet) { setPurchaseError("Enter your wallet address."); return; }
     setPurchaseStatus("loading"); setPurchaseError("");
-    const { error } = await supabase.from("ShieldPurchases").insert([{ username, wallet_address: wallet, tx_signature: tx, token_amount: 50000, status: "pending" }]);
+    const { error } = await supabase.from("ShieldPurchases").insert([{ username, wallet_address: wallet, token_amount: 50000, status: "pending" }]);
     if (error) {
-      const msg = error.message ?? "";
-      const isDupe = msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique");
-      setPurchaseError(isDupe ? "This transaction has already been submitted." : (msg || "Submission failed — try again."));
+      setPurchaseError(error.message || "Submission failed — try again.");
       setPurchaseStatus("error");
       return;
     }
     setPurchaseStatus("success");
-    setPurchaseTxSig(""); setPurchaseWallet("");
-    supabase.from("ShieldPurchases").select("tx_signature,status,created_at").eq("username",username).order("created_at",{ascending:false}).limit(1).maybeSingle().then(({ data }) => setLatestPurchase(data ?? null));
-  }, [username, purchaseTxSig, purchaseWallet]);
+    setPurchaseWallet("");
+    supabase.from("ShieldPurchases").select("status,created_at").eq("username",username).order("created_at",{ascending:false}).limit(1).maybeSingle().then(({ data }) => setLatestPurchase(data ?? null));
+  }, [username, purchaseWallet]);
 
   // ── Image upload ──────────────────────────────────────────────────────────
   // Uploads the original photo to storage immediately on selection — matches
@@ -1570,13 +1567,12 @@ export default function Home() {
                       {copiedAddr ? "✓ copied" : "Copy Address"}
                     </button>
                   </div>
-                  {showPasteTip && <div style={{ fontSize:10, color:T.dim }}>Paste your transaction below once sent.</div>}
+                  {showPasteTip && <div style={{ fontSize:10, color:T.dim }}>Submit your wallet address below once sent — we'll verify on-chain.</div>}
                   <input type="text" className="field" placeholder="Your wallet address" value={purchaseWallet} onChange={e => setPurchaseWallet(e.target.value)} />
-                  <input type="text" className="field" placeholder="Transaction signature" value={purchaseTxSig} onChange={e => setPurchaseTxSig(e.target.value)} />
                   {purchaseError && <div style={{ fontSize:10, color:T.red }}>{purchaseError}</div>}
                   {latestPurchase && purchaseStatus !== "success" && (
                     <div style={{ fontSize:10, color: latestPurchase.status==="approved" ? "#4ade80" : latestPurchase.status==="rejected" ? T.red : T.gold }}>
-                      {latestPurchase.status==="approved" ? "✅ Shield credited" : latestPurchase.status==="rejected" ? "❌ Rejected — check tx" : "⏳ Pending review"}
+                      {latestPurchase.status==="approved" ? "✅ Shield credited" : latestPurchase.status==="rejected" ? "❌ Rejected — wallet not verified" : "⏳ Pending review"}
                     </div>
                   )}
                   <button className="btn-olive" style={{ justifyContent:"center" }}
