@@ -197,6 +197,26 @@ function ResultMini({ day }) {
 // ─── Shield buy section ───────────────────────────────────────────────────────
 const BURN_ADDR   = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const SOL_DOMAIN  = "touchgrassburn.sol";
+const TOUCHGRASS_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
+const SHIELD_AMOUNT = 50000;
+
+// Solana Pay URL — opens the user's own wallet app with the transaction
+// pre-filled (recipient, amount, token). The user still reviews and signs
+// it themselves inside their wallet. No custom signing code here at all.
+function buildSolanaPayUrl() {
+  const params = new URLSearchParams({
+    amount: String(SHIELD_AMOUNT),
+    "spl-token": TOUCHGRASS_MINT,
+    label: "Touch Grass Shield",
+    message: "50,000 $TOUCHGRASS — Streak Shield",
+  });
+  return `solana:${BURN_ADDR}?${params.toString()}`;
+}
+
+function buildQrCodeUrl(data, size = 220) {
+  // Free, no-key QR generation service — avoids adding an npm dependency
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&color=240-239-234&bgcolor=10-12-8&data=${encodeURIComponent(data)}`;
+}
 
 // ─── Following Feed component ────────────────────────────────────────────────
 
@@ -256,11 +276,12 @@ function DoubleBurnBanner() {
         </div>
 
         <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-          <span className="burn-btn-glow" style={{ fontSize:12, fontWeight:700,
+          <a href="/#shield-section" onClick={e => e.stopPropagation()}
+            className="burn-btn-glow" style={{ fontSize:12, fontWeight:700,
             padding:"11px 22px", borderRadius:9, background:T2.olive, color:"#0e1108",
-            display:"inline-flex", alignItems:"center", gap:6 }}>
+            display:"inline-flex", alignItems:"center", gap:6, textDecoration:"none" }}>
             🛡 Get Shield
-          </span>
+          </a>
           <span style={{ fontSize:12, fontWeight:700, padding:"11px 22px", borderRadius:9,
             background:"rgba(200,168,75,0.15)", border:`1px solid ${T2.borderGold}`, color:T2.gold,
             display:"inline-flex", alignItems:"center", gap:6 }}>
@@ -870,6 +891,18 @@ export default function Home() {
   // ── Misc ──────────────────────────────────────────────────────────────────
   const [mounted,        setMounted]        = useState(false);
   const [showShieldBuy,  setShowShieldBuy]  = useState(false);
+
+  // Auto-open + scroll to shield purchase when arriving via #shield-section
+  // (e.g. from the Double Burn banner's "Get Shield" link)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#shield-section") {
+      setShowShieldBuy(true);
+      setTimeout(() => {
+        document.getElementById("shield-section")?.scrollIntoView({ behavior:"smooth", block:"center" });
+      }, 150);
+    }
+  }, []);
   const uploadSectionRef = useRef(null);
 
   useEffect(() => {
@@ -1486,7 +1519,7 @@ export default function Home() {
             )}
 
             {/* Shield section */}
-            <div style={{ marginTop:20, padding:"14px 16px", borderRadius:10, background:T.bg3, border:`1px solid ${T.border}` }}>
+            <div id="shield-section" style={{ marginTop:20, padding:"14px 16px", borderRadius:10, background:T.bg3, border:`1px solid ${T.border}` }}>
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: showShieldBuy ? 14 : 0 }}>
                 <span style={{ fontSize:18 }}>🛡</span>
                 <div style={{ flex:1 }}>
@@ -1502,8 +1535,29 @@ export default function Home() {
 
               {showShieldBuy && (
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+
+                  {/* Solana Pay one-tap (mobile wallets) */}
+                  <a href={buildSolanaPayUrl()}
+                    style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                      background:"linear-gradient(135deg,#93a85a,#7a9148)", color:"#0e1108",
+                      borderRadius:8, padding:"11px 14px", fontSize:12, fontWeight:700,
+                      textDecoration:"none", letterSpacing:"0.02em" }}>
+                    ⚡ Open in Wallet — Pay 50,000 $TOUCHGRASS
+                  </a>
+                  <div style={{ fontSize:9.5, color:T.dim, textAlign:"center" }}>
+                    Opens your wallet app with the payment pre-filled. You review and approve it there.
+                  </div>
+
+                  {/* QR code for scanning from another device */}
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6,
+                    padding:"14px 0", borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`, margin:"4px 0" }}>
+                    <img src={buildQrCodeUrl(buildSolanaPayUrl())} alt="Scan to pay with Solana wallet"
+                      style={{ width:140, height:140, borderRadius:8, border:`1px solid ${T.border}` }} />
+                    <div style={{ fontSize:9.5, color:T.dim }}>Scan with your wallet app</div>
+                  </div>
+
                   <div style={{ fontSize:10, color:T.dim, marginBottom:2 }}>
-                    Send 50,000 $TOUCHGRASS to <span style={{ color:T.olive }}>{SOL_DOMAIN}</span>
+                    Or send manually to <span style={{ color:T.olive }}>{SOL_DOMAIN}</span>
                     {" "}(<span style={{ fontSize:9 }}>{BURN_ADDR.slice(0,8)}…</span>), then submit below.
                   </div>
                   <div style={{ display:"flex", gap:8 }}>

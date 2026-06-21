@@ -217,10 +217,11 @@ export default function BurnsPage() {
             </div>
 
             <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-              <button style={{ fontSize:13, fontWeight:700, padding:"13px 26px", borderRadius:10,
-                background:T.olive, color:"#0e1108", border:"none", cursor:"pointer" }}>
+              <a href="/#shield-section" style={{ fontSize:13, fontWeight:700, padding:"13px 26px", borderRadius:10,
+                background:T.olive, color:"#0e1108", border:"none", cursor:"pointer",
+                textDecoration:"none", display:"inline-block" }}>
                 🛡 Get Shield
-              </button>
+              </a>
               <a href="#history" style={{ fontSize:13, fontWeight:700, padding:"13px 26px", borderRadius:10,
                 background:"rgba(200,168,75,0.15)", border:`1px solid ${T.borderGold}`, color:T.gold,
                 textDecoration:"none", display:"inline-block" }}>
@@ -299,10 +300,11 @@ export default function BurnsPage() {
                   </div>
                 ))}
               </div>
-              <button style={{ fontSize:12, fontWeight:700, padding:"11px 22px", borderRadius:9,
-                background:T.olive, color:"#0e1108", border:"none", cursor:"pointer" }}>
+              <a href="/#shield-section" style={{ fontSize:12, fontWeight:700, padding:"11px 22px", borderRadius:9,
+                background:T.olive, color:"#0e1108", border:"none", cursor:"pointer",
+                textDecoration:"none", display:"inline-block" }}>
                 🛡 Get Shield
-              </button>
+              </a>
             </div>
           )}
 
