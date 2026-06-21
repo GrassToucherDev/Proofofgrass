@@ -120,54 +120,12 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
   ctx.letterSpacing = "0.22em";
   ctx.fillText(theme.title.toUpperCase(), W/2, 102);
 
-  // ── LEFT COLUMN: PFP, username, badge ───────────────────────────────────────
-  // (avatar position now computed in the bottom section, above the stats)
-
-  // (PFP, username, badge moved below — now centered above the stat bar
-  // instead of sitting in a separate left column)
-  // ── BOTTOM: PFP + username, centered above stat row ──────────────────────────
-  const avatarR = isPortrait ? 54 : 46;
-  const statsY = isPortrait ? H - 130 : H - 120;
-  const avatarCY = statsY - 150;
-
-  let hasAvatar = false;
-  if (avatarUrl) {
-    try {
-      const avImg = await loadImage(avatarUrl);
-      ctx.save();
-      ctx.beginPath(); ctx.arc(W/2, avatarCY, avatarR, 0, Math.PI*2); ctx.clip();
-      ctx.drawImage(avImg, W/2-avatarR, avatarCY-avatarR, avatarR*2, avatarR*2);
-      ctx.restore();
-      ctx.beginPath(); ctx.arc(W/2, avatarCY, avatarR+3, 0, Math.PI*2);
-      ctx.strokeStyle = theme.accent; ctx.lineWidth = 2.5; ctx.stroke();
-      hasAvatar = true;
-    } catch { /* skip */ }
-  }
-  if (!hasAvatar) {
-    ctx.beginPath(); ctx.arc(W/2, avatarCY, avatarR, 0, Math.PI*2);
-    ctx.fillStyle = "rgba(20,23,16,0.8)"; ctx.fill();
-    ctx.strokeStyle = theme.accent; ctx.lineWidth = 2.5; ctx.stroke();
-    ctx.font = `700 ${avatarR*0.7}px 'Cormorant Garamond',Georgia,serif`;
-    ctx.fillStyle = theme.accent;
-    ctx.textAlign = "center";
-    ctx.fillText((username||"?")[0].toUpperCase(), W/2, avatarCY + avatarR*0.25);
-  }
-
-  // Username below avatar
+  // ── Quote — directly under the theme name ────────────────────────────────────
+  const quoteY = isPortrait ? 160 : 148;
   ctx.textAlign = "center";
-  let nameSize = isPortrait ? 26 : 22;
-  ctx.font = `700 ${nameSize}px 'Cormorant Garamond',Georgia,serif`;
-  ctx.fillStyle = "#f0efea";
-  ctx.letterSpacing = "0";
-  const nameY = avatarCY + avatarR + 32;
-  ctx.fillText(`@${username}`, W/2, nameY);
-
-  // ── CENTER: Large quote (between top branding and PFP block) ────────────────
-  const quoteY = isPortrait ? 480 : 420;
-  ctx.textAlign = "center";
-  let qSize = isPortrait ? 42 : 36;
+  let qSize = isPortrait ? 34 : 28;
   ctx.font = `700 ${qSize}px 'Cormorant Garamond',Georgia,serif`;
-  while (ctx.measureText(`"${quote}"`).width > W - 200 && qSize > 24) {
+  while (ctx.measureText(`"${quote}"`).width > W - 200 && qSize > 20) {
     qSize -= 2;
     ctx.font = `700 ${qSize}px 'Cormorant Garamond',Georgia,serif`;
   }
@@ -179,8 +137,49 @@ async function generateBurnCard({ theme, format, username, avatarUrl, streak, gr
   ctx.strokeStyle = theme.accent + "80";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(W/2 - 60, quoteY + 28); ctx.lineTo(W/2 + 60, quoteY + 28);
+  ctx.moveTo(W/2 - 50, quoteY + 22); ctx.lineTo(W/2 + 50, quoteY + 22);
   ctx.stroke();
+
+  // ── BOTTOM: Large PFP + large username, centered above stat row ──────────────
+  const avatarR = isPortrait ? 110 : 92;
+  const statsY = isPortrait ? H - 130 : H - 120;
+  const avatarCY = statsY - 260;
+
+  let hasAvatar = false;
+  if (avatarUrl) {
+    try {
+      const avImg = await loadImage(avatarUrl);
+      ctx.save();
+      ctx.beginPath(); ctx.arc(W/2, avatarCY, avatarR, 0, Math.PI*2); ctx.clip();
+      ctx.drawImage(avImg, W/2-avatarR, avatarCY-avatarR, avatarR*2, avatarR*2);
+      ctx.restore();
+      ctx.beginPath(); ctx.arc(W/2, avatarCY, avatarR+4, 0, Math.PI*2);
+      ctx.strokeStyle = theme.accent; ctx.lineWidth = 3.5; ctx.stroke();
+      hasAvatar = true;
+    } catch { /* skip */ }
+  }
+  if (!hasAvatar) {
+    ctx.beginPath(); ctx.arc(W/2, avatarCY, avatarR, 0, Math.PI*2);
+    ctx.fillStyle = "rgba(20,23,16,0.8)"; ctx.fill();
+    ctx.strokeStyle = theme.accent; ctx.lineWidth = 3.5; ctx.stroke();
+    ctx.font = `700 ${avatarR*0.7}px 'Cormorant Garamond',Georgia,serif`;
+    ctx.fillStyle = theme.accent;
+    ctx.textAlign = "center";
+    ctx.fillText((username||"?")[0].toUpperCase(), W/2, avatarCY + avatarR*0.25);
+  }
+
+  // Username below avatar — large
+  ctx.textAlign = "center";
+  let nameSize = isPortrait ? 46 : 38;
+  ctx.font = `700 ${nameSize}px 'Cormorant Garamond',Georgia,serif`;
+  while (ctx.measureText(`@${username}`).width > W - 140 && nameSize > 26) {
+    nameSize -= 3;
+    ctx.font = `700 ${nameSize}px 'Cormorant Garamond',Georgia,serif`;
+  }
+  ctx.fillStyle = "#f0efea";
+  ctx.letterSpacing = "0";
+  const nameY = avatarCY + avatarR + (isPortrait ? 56 : 48);
+  ctx.fillText(`@${username}`, W/2, nameY);
 
   // ── Burn stats row — Grass Score, Shields, Total Burned (streak removed) ────
   const stats = [
