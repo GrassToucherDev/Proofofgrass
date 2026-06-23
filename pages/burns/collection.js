@@ -631,11 +631,33 @@ export default function BurnerCollectionPage() {
         .select("avatar_url,grass_score,double_burn_shields,double_burn_total_burned,double_burn_tier,double_burn_badge_awarded,double_burn_card_number,double_burn_selected_tier")
         .eq("username", u).maybeSingle();
 
-      const hasBadge = !!profile?.double_burn_badge_awarded;
       const shields  = profile?.double_burn_shields ?? 0;
+
+      // Grant access if any of these are true:
+      // 1. double_burn_badge_awarded is explicitly set (primary signal)
+      // 2. double_burn_shields > 0 (shield was credited but RPC may not have run)
+      // 3. double_burn_total_burned > 0 (burn was recorded)
+      // 4. double_burn_card_number is set (participant number was assigned)
+      // Falls back to checking BurnEvents directly if all profile fields are missing.
+      const hasBadge = !!profile?.double_burn_badge_awarded
+        || shields > 0
+        || (profile?.double_burn_total_burned ?? 0) > 0
+        || profile?.double_burn_card_number != null;
+
+      // If still no signal from Profiles, check BurnEvents directly
+      let isHolderFinal = hasBadge;
+      if (!hasBadge) {
+        const { count } = await supabase
+          .from("BurnEvents")
+          .select("id", { count: "exact", head: true })
+          .eq("username", u)
+          .eq("burn_type", "shield_burn");
+        isHolderFinal = (count ?? 0) > 0;
+      }
+
       const unlocked = getUnlockedTiers(shields);
 
-      setIsHolder(hasBadge);
+      setIsHolder(isHolderFinal);
       setUserData({
         avatarUrl:   profile?.avatar_url ?? null,
         grassScore:  profile?.grass_score ?? 0,
