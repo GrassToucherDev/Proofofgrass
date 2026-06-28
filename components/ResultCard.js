@@ -1,9 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { supabase } from "../utils/supabase";
 
-// Caption pools — streak-accurate, doubles previous count
-// beginner: days 1-2 | momentum: days 3-6 | strong: days 7-13
-// elite: days 14-29 | veteran: days 30-49 | legendary: days 50-99 | mythic: days 100+
 const CAPTION_POOLS = {
   beginner: [
     "just touched grass. strong start. 🌿",
@@ -529,7 +526,6 @@ function isValidXStatusUrl(raw) {
     const url = new URL(raw.trim());
     const validHosts = ["x.com", "www.x.com", "twitter.com", "www.twitter.com"];
     if (!validHosts.includes(url.hostname.toLowerCase())) return false;
-    // Path must contain /status/ followed by digits anywhere in it
     return /\/status\/\d+/i.test(url.pathname);
   } catch {
     return false;
@@ -551,10 +547,6 @@ function getMilestoneMsg(streak) {
   return null;
 }
 
-// username — already normalized by index.js
-// initialStreak — preloaded by index.js before this component mounts
-// onStreakUpdate — callback so index.js stays in sync after submit
-// ─── Referral badge thresholds ───────────────────────────────────────────────
 const REFERRAL_BADGES = [
   { count:1,   slug:"community-builder",     name:"Community Builder",    emoji:"🤝" },
   { count:5,   slug:"grass-recruiter",       name:"Grass Recruiter",      emoji:"🌱" },
@@ -582,37 +574,33 @@ async function checkAndAwardReferralBadge(referrerUsername) {
 export default function ResultCard({ imageSrc, username, initialStreak = 1, onStreakUpdate }) {
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
-  const sharableFileRef   = useRef(null); // pre-built File object ready for navigator.share()
-  // (photo upload + attach now happens synchronously inside lockInStreak — no ref needed)
+  const sharableFileRef = useRef(null);
   const [caption, setCaption] = useState(() => pickCaption(initialStreak, null));
   const [copied, setCopied] = useState(false);
-
-  // currentStreak is seeded from initialStreak prop
   const [currentStreak, setCurrentStreak] = useState(initialStreak);
 
-  // Keep in sync if parent re-computes streak while component is mounted
   useEffect(() => {
     setCurrentStreak(initialStreak);
-    // Refresh caption pool to match the new streak tier
     setCaption((prev) => pickCaption(initialStreak, prev));
   }, [initialStreak]);
 
-  // Submission form state — no username input here, it comes from props
   const [tweetUrl, setTweetUrl] = useState("");
-  const [submitStatus, setSubmitStatus] = useState(null); // null | "loading" | "success" | "error"
+  const [submitStatus, setSubmitStatus] = useState(null);
   const [submitError, setSubmitError] = useState("");
-  const [luckyTouch, setLuckyTouch] = useState(null); // null | {triggered, tier, type, points}
-  const [inAppBrowserMode, setInAppBrowserMode] = useState(false); // true when inside X/IG in-app browser
-  const [clipboardDetected, setClipboardDetected] = useState(false); // true when valid X link auto-found
-  const [clipboardFeedback, setClipboardFeedback] = useState(null); // null | "detected" | "invalid"
+  const [luckyTouch, setLuckyTouch] = useState(null);
+  const [inAppBrowserMode, setInAppBrowserMode] = useState(false);
+  const [clipboardDetected, setClipboardDetected] = useState(false);
+  const [clipboardFeedback, setClipboardFeedback] = useState(null);
 
-  // ── Location (optional, privacy-safe) ───────────────────────────────────────
-  // locationMode: null (not chosen yet) | 'gps' | 'manual' | 'none'
+  // ── Instagram share state ─────────────────────────────────────────────────
+  const [igCopied, setIgCopied] = useState(false);
+  const [igDesktop, setIgDesktop] = useState(false);
+
   const [locationMode,   setLocationMode]   = useState(null);
   const [locationCity,   setLocationCity]   = useState("");
   const [locationRegion, setLocationRegion] = useState("");
   const [locationCountry,setLocationCountry]= useState("");
-  const [gpsLat,         setGpsLat]         = useState(null); // rounded, never exact
+  const [gpsLat,         setGpsLat]         = useState(null);
   const [gpsLng,         setGpsLng]         = useState(null);
   const [gpsRequesting,  setGpsRequesting]  = useState(false);
   const [gpsError,       setGpsError]       = useState("");
@@ -626,7 +614,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     setGpsError("");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        // Round to 2 decimal places (~1.1km precision) — exact coords never stored
         const roundedLat = Math.round(pos.coords.latitude  * 100) / 100;
         const roundedLng = Math.round(pos.coords.longitude * 100) / 100;
         setGpsLat(roundedLat);
@@ -642,7 +629,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     );
   }, []);
 
-  // Auto-detect X post link from clipboard on mount
   useEffect(() => {
     async function tryClipboard() {
       try {
@@ -659,7 +645,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     tryClipboard();
   }, []);
 
-  // Local countdown for the lock-in screen (ms until next UTC midnight)
   const [lockCountdown, setLockCountdown] = useState("");
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -688,7 +673,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         setClipboardFeedback("invalid");
       }
     } catch {
-      // Clipboard permission denied or unavailable
       setClipboardFeedback("invalid");
     }
     setTimeout(() => setClipboardFeedback(null), 2000);
@@ -711,26 +695,22 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   }, [caption]);
 
   const [shared, setShared] = useState(false);
-  const [shareHint, setShareHint] = useState(false); // "Select X, then tap Post" nudge
+  const [shareHint, setShareHint] = useState(false);
 
   const buildShareText = useCallback(() =>
     `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE} · proofofgrass.app`,
   [caption, currentStreak]);
 
-  // ── Submission — always fires after share, no tweetUrl dependency ──────
   const lockInStreak = useCallback(async () => {
     if (!username) return;
     setSubmitStatus("loading");
     setSubmitError("");
     try {
-      // Build location payload — only sends what the user actually chose.
-      // locationMode null/'none' → all location fields stay null/default,
-      // matching "skip" behavior exactly.
       const locationPayload = locationMode === "gps"
         ? {
             p_location_lat_rounded: gpsLat,
             p_location_lng_rounded: gpsLng,
-            p_location_label:       "Nearby Region", // V1: no paid reverse geocoding
+            p_location_label:       "Nearby Region",
             p_location_source:      "gps",
           }
         : locationMode === "manual" && locationCity.trim()
@@ -762,21 +742,10 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       onStreakUpdate?.(newStreak);
       setSubmitStatus("success");
 
-      // Lucky Touch — show popup if triggered
       if (result?.lucky_touch?.triggered) {
         setLuckyTouch(result.lucky_touch);
       }
 
-      // ── Proof photo handling ────────────────────────────────────────────────
-      // No upload happens here anymore. The original photo is uploaded to
-      // `proof-photos/${username}/${date}.png` immediately when the user
-      // selects/takes the photo (see handleImageUpload in index.js) — well
-      // before this submit handler even runs. The profile page derives the
-      // public URL directly from username + submission date, so there's no
-      // database write-back or attach step needed, and no race condition
-      // between canvas rendering and submission timing.
-
-      // ── Insert referral on first proof ────────────────────────────────────
       try {
         const referrer = typeof localStorage !== "undefined"
           ? localStorage.getItem("pog_referrer") : null;
@@ -793,7 +762,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                 status: "pending",
                 source_url: typeof window !== "undefined" ? window.location.href : null,
               }]);
-              // Increment referrer pending count
               const { data: rp } = await supabase.from("Profiles")
                 .select("referral_count_pending").eq("username", referrer).maybeSingle();
               await supabase.from("Profiles").update({
@@ -806,7 +774,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         console.warn("[referral] insert non-fatal:", refErr?.message);
       }
 
-      // ── Check referral conversion at Day 10 ───────────────────────────────
       try {
         const newStreak = result?.current_streak ?? currentStreak;
         if (newStreak >= 10) {
@@ -820,13 +787,11 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
               .select("id", { count:"exact", head:true })
               .eq("username", username).in("status", ["pending","approved"]);
             if (proofCount >= 7) {
-              // Convert
               await supabase.from("Referrals").update({
                 status: "converted",
                 converted_at: new Date().toISOString(),
                 referred_reached_day_10: true,
               }).eq("id", pendingRef.id);
-              // Update referrer counts
               const { data: rProf } = await supabase.from("Profiles")
                 .select("referral_count_successful,referral_count_pending")
                 .eq("username", pendingRef.referrer_username).maybeSingle();
@@ -834,11 +799,8 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                 referral_count_successful: (rProf?.referral_count_successful ?? 0) + 1,
                 referral_count_pending: Math.max(0, (rProf?.referral_count_pending ?? 1) - 1),
               }).eq("username", pendingRef.referrer_username);
-              // Award badge if threshold reached
               await checkAndAwardReferralBadge(pendingRef.referrer_username);
-              // Clear stored referrer since it's been used
               if (typeof localStorage !== "undefined") localStorage.removeItem("pog_referrer");
-              console.log("[referral] converted:", username, "→", pendingRef.referrer_username);
             }
           }
         }
@@ -846,7 +808,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         console.warn("[referral] conversion non-fatal:", convErr?.message);
       }
 
-      // ── Update ChallengeProgress for any active challenges ──────────────
       try {
         const todayUTC = new Date().toISOString().slice(0, 10);
         const { data: activeChals } = await supabase
@@ -857,7 +818,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
         if (activeChals?.length) {
           for (const ch of activeChals) {
-            // Only increment if not already logged today
             const { data: prog } = await supabase
               .from("ChallengeProgress")
               .select("id, days_complete, last_checked")
@@ -871,8 +831,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                 .from("ChallengeProgress")
                 .update({ days_complete: newDays, last_checked: todayUTC })
                 .eq("id", prog.id);
-
-              // Log the event
               await supabase.from("ChallengeEvents").insert([{
                 challenge_id: ch.id,
                 username,
@@ -883,7 +841,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         }
       } catch (chalErr) {
         console.warn("challenge progress update failed", chalErr);
-        // Non-fatal — streak still locked in
       }
 
     } catch (err) {
@@ -893,13 +850,11 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     }
   }, [username, currentStreak, onStreakUpdate]);
 
-  // ── Share to X — then lock in streak regardless of share path ───────────
-  // Detect X / Twitter in-app browser — blocks window.open and Web Share API
   const isInAppBrowser = typeof navigator !== "undefined" && (
     /Twitter/i.test(navigator.userAgent) ||
     /Instagram/i.test(navigator.userAgent) ||
-    /FBAN|FBAV/i.test(navigator.userAgent) ||  // Facebook in-app
-    /MicroMessenger/i.test(navigator.userAgent) // WeChat
+    /FBAN|FBAV/i.test(navigator.userAgent) ||
+    /MicroMessenger/i.test(navigator.userAgent)
   );
 
   const handleShareAndSubmit = useCallback(async () => {
@@ -916,7 +871,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
     let cancelled = false;
 
-    // ── X in-app browser — can't open windows or use Web Share ───────────
     if (isInAppBrowser) {
       await lockInStreak();
       setInAppBrowserMode(true);
@@ -924,20 +878,14 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     }
 
     if (canShareFiles) {
-      // Use pre-cached file if available, otherwise build synchronously from dataURL
-      // The file must be ready BEFORE any await to keep the user-gesture chain intact
       let file = sharableFileRef.current;
-
       if (!file && downloadUrl.startsWith("data:")) {
-        // dataURL is already in memory — convert synchronously via fetch (fast, no network)
         try {
           const res = await fetch(downloadUrl);
           const blob = await res.blob();
           file = new File([blob], "proof-of-grass.png", { type: "image/png" });
           sharableFileRef.current = file;
-        } catch(e) {
-          file = null;
-        }
+        } catch(e) { file = null; }
       }
 
       if (file && navigator.canShare({ files: [file] })) {
@@ -958,14 +906,12 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           }
         }
       } else {
-        // canShare returned false — fall back to X intent
         navigator.clipboard.writeText(text).catch(() => {});
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
         setShared(true);
         setTimeout(() => setShared(false), 2500);
       }
     } else {
-      // Desktop — open intent, copy caption to clipboard
       navigator.clipboard.writeText(text).catch(() => {});
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
       setShared(true);
@@ -975,9 +921,8 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     if (!cancelled) {
       await lockInStreak();
     }
-  }, [downloadUrl, buildShareText, lockInStreak, isInAppBrowser]); // sharableFileRef is a ref, intentionally omitted from deps
+  }, [downloadUrl, buildShareText, lockInStreak, isInAppBrowser]);
 
-  // Alias for any other buttons that call this
   const handleShareAndPost = handleShareAndSubmit;
 
   const handleSubmit = useCallback(async () => {
@@ -986,7 +931,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       setSubmitStatus("error");
       return;
     }
-    // tweetUrl is optional — only validate format if one was provided
     if (tweetUrl.trim() && !isValidXStatusUrl(tweetUrl)) {
       setSubmitError("That doesn't look like a valid X post link. You can leave it blank for now.");
       setSubmitStatus("error");
@@ -995,8 +939,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     setSubmitStatus("loading");
     setSubmitError("");
 
-    // Single atomic RPC — handles duplicate check, submission insert,
-    // streak calc, and Streaks upsert in one Postgres transaction.
     const { data: result, error: rpcError } = await supabase.rpc("lock_in_streak", {
       p_username:     username,
       p_tweet_url:    tweetUrl.trim() || null,
@@ -1011,7 +953,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     }
 
     if (result?.status === "already_submitted") {
-      setSubmitError("You\'ve already submitted today. Come back tomorrow. 🌿");
+      setSubmitError("You've already submitted today. Come back tomorrow. 🌿");
       setSubmitStatus("error");
       return;
     }
@@ -1028,13 +970,62 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     setSubmitStatus("success");
     setTweetUrl("");
 
-    // Lucky Touch — show popup if triggered
     if (result?.lucky_touch?.triggered) {
       setLuckyTouch(result.lucky_touch);
     }
   }, [username, tweetUrl, currentStreak, onStreakUpdate]);
 
-  // dateStr computed once on client mount to avoid SSR mismatch
+  // ── Instagram share ────────────────────────────────────────────────────────
+  const shareToInstagram = useCallback(async () => {
+    if (!downloadUrl) return;
+
+    const igCaption = `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE} · proofofgrass.app`;
+    const isMob = typeof navigator !== "undefined" &&
+      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    // Copy caption to clipboard before any async work
+    try {
+      await navigator.clipboard.writeText(igCaption);
+      setIgCopied(true);
+      setTimeout(() => setIgCopied(false), 4000);
+    } catch { /* continue regardless */ }
+
+    if (isMob && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
+      // Reuse pre-cached file if available
+      let file = sharableFileRef.current;
+      if (!file && downloadUrl.startsWith("data:")) {
+        try {
+          const res = await fetch(downloadUrl);
+          const blob = await res.blob();
+          file = new File([blob], "proof-of-grass.png", { type: "image/png" });
+          sharableFileRef.current = file;
+        } catch(e) { file = null; }
+      }
+      if (file && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          return;
+        } catch(e) {
+          if (e?.name === "AbortError") return;
+          // Fall through to download
+        }
+      }
+      // Fallback — download
+      const link = document.createElement("a");
+      link.download = "proof-of-grass.png";
+      link.href = downloadUrl;
+      link.click();
+    } else {
+      // Desktop — download + show instruction
+      const link = document.createElement("a");
+      link.download = "proof-of-grass.png";
+      link.href = downloadUrl;
+      link.click();
+      setIgDesktop(true);
+      setTimeout(() => setIgDesktop(false), 6000);
+    }
+  }, [downloadUrl, caption, currentStreak]);
+
   const [dateStr, setDateStr] = useState("");
   useEffect(() => {
     setDateStr(new Date().toLocaleDateString("en-US", {
@@ -1044,7 +1035,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !imageSrc) return; // nothing to draw yet — wait for a real image
+    if (!canvas || !imageSrc) return;
     const ctx = canvas.getContext("2d");
     const W = 1600;
     const H = 900;
@@ -1053,12 +1044,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
     const img = new Image();
     img.onerror = () => {
-      console.error("[canvas] failed to load imageSrc — certificate will be blank:", imageSrc);
+      console.error("[canvas] failed to load imageSrc:", imageSrc);
     };
     img.onload = () => {
-      const W = 1600, H = 900;
-
-      // ── FULL BLEED — smart cover crop, biased right for portrait shots ──
       const scale = Math.max(W / img.width, H / img.height);
       const dw = img.width * scale;
       const dh = img.height * scale;
@@ -1067,38 +1055,31 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       const dy = (H - dh) / 2;
       ctx.drawImage(img, dx, dy, dw, dh);
 
-      // ── EDITORIAL VIGNETTE — four-edge soft burn, never a panel ────────
-      // Top
       const vTop = ctx.createLinearGradient(0, 0, 0, H * 0.28);
-      vTop.addColorStop(0,   "rgba(0,0,0,0.52)");
-      vTop.addColorStop(1,   "rgba(0,0,0,0)");
+      vTop.addColorStop(0, "rgba(0,0,0,0.52)");
+      vTop.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = vTop; ctx.fillRect(0, 0, W, H * 0.28);
 
-      // Bottom
       const vBot = ctx.createLinearGradient(0, H * 0.72, 0, H);
-      vBot.addColorStop(0,   "rgba(0,0,0,0)");
-      vBot.addColorStop(1,   "rgba(0,0,0,0.58)");
+      vBot.addColorStop(0, "rgba(0,0,0,0)");
+      vBot.addColorStop(1, "rgba(0,0,0,0.58)");
       ctx.fillStyle = vBot; ctx.fillRect(0, H * 0.72, W, H * 0.28);
 
-      // Left edge blush
       const vLeft = ctx.createLinearGradient(0, 0, W * 0.18, 0);
-      vLeft.addColorStop(0,   "rgba(0,0,0,0.28)");
-      vLeft.addColorStop(1,   "rgba(0,0,0,0)");
+      vLeft.addColorStop(0, "rgba(0,0,0,0.28)");
+      vLeft.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = vLeft; ctx.fillRect(0, 0, W * 0.18, H);
 
-      // Right edge blush
       const vRight = ctx.createLinearGradient(W * 0.82, 0, W, 0);
-      vRight.addColorStop(0,   "rgba(0,0,0,0)");
-      vRight.addColorStop(1,   "rgba(0,0,0,0.32)");
+      vRight.addColorStop(0, "rgba(0,0,0,0)");
+      vRight.addColorStop(1, "rgba(0,0,0,0.32)");
       ctx.fillStyle = vRight; ctx.fillRect(W * 0.82, 0, W * 0.18, H);
 
-      // ── THIN CINEMATIC BORDER ───────────────────────────────────────────
       const INSET = 22;
       ctx.strokeStyle = currentStreak >= 50 ? "rgba(212,175,55,0.55)" : "rgba(255,255,255,0.22)";
       ctx.lineWidth = 0.8;
       ctx.strokeRect(INSET, INSET, W - INSET * 2, H - INSET * 2);
 
-      // ── CORNER BRACKETS ─────────────────────────────────────────────────
       const bracketLen = 28;
       const bGap = INSET;
       ctx.strokeStyle = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.55)";
@@ -1113,8 +1094,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           ctx.stroke();
         });
 
-      // ── HELPER: ultra-light text ─────────────────────────────────────────
-      // ghost() — text with automatic drop shadow for legibility over any photo
       const ghost = (text, x, y, size, align = "left", col = "rgba(255,255,255,0.90)", font = "400") => {
         ctx.save();
         ctx.font = `${font} ${size}px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
@@ -1132,7 +1111,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       const accentText = currentStreak >= 50 ? "rgba(212,175,55,1.0)" : "rgba(160,230,160,1.0)";
       const mutedText  = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.70)";
 
-      // ── TOP-LEFT — brand lockup ───────────────────────────────────────────
       const TL_X = INSET + 22, TL_Y = INSET + 44;
       ghost("PROOF OF GRASS", TL_X, TL_Y, 16, "left", "rgba(255,255,255,0.95)", "600");
       ghost("verified outdoors", TL_X, TL_Y + 22, 20, "left", "rgba(255,255,255,0.88)", "700");
@@ -1140,7 +1118,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.lineWidth = 0.6;
       ctx.beginPath(); ctx.moveTo(TL_X, TL_Y + 32); ctx.lineTo(TL_X + 160, TL_Y + 32); ctx.stroke();
 
-      // ── TOP-RIGHT — streak counter ────────────────────────────────────────
       const TR_X = W - INSET - 28, TR_Y = INSET + 44;
       ghost("STREAK", TR_X, TR_Y, 13, "right", mutedText, "500");
 
@@ -1169,7 +1146,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         ghost(`· ${tierLabel} ·`, TR_X, TR_Y + 118, 14, "right", accentText, "400");
       }
 
-      // ── LEFT EDGE — vertical tagline ──────────────────────────────────────
       ctx.save();
       ctx.translate(INSET + 16, H * 0.72);
       ctx.rotate(-Math.PI / 2);
@@ -1182,7 +1158,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.fillText("KEEP GOING.  LIVE BETTER.  TOUCH MORE.", 0, 0);
       ctx.restore();
 
-      // ── RIGHT EDGE — vertical secondary ───────────────────────────────────
       ctx.save();
       ctx.translate(W - INSET - 16, H * 0.42);
       ctx.rotate(Math.PI / 2);
@@ -1195,12 +1170,10 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.fillText("REAL MOMENTS.  REAL LIFE.", 0, 0);
       ctx.restore();
 
-      // ── BOTTOM-LEFT — certification metadata ──────────────────────────────
       const BL_X = INSET + 22, BL_BASE = H - INSET - 28;
       ghost("DATE OF CERTIFICATION", BL_X, BL_BASE - 22, 12, "left", mutedText, "500");
       ghost(dateStr, BL_X, BL_BASE, 20, "left", "rgba(255,255,255,0.95)", "300");
 
-      // ── BOTTOM-RIGHT — prestige seal ──────────────────────────────────────
       const BR_X = W - INSET - 28;
       const BR_BASE = H - INSET - 28;
       ghost("CERTIFIED BY", BR_X, BR_BASE - 24, 12, "right", mutedText, "400");
@@ -1236,11 +1209,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       }
 
       const logo = new Image();
-      // Cache the rendered certificate for preview display and native share —
-      // does NOT upload to storage here anymore. The actual proof photo upload
-      // + attach-to-submission now happens synchronously inside lockInStreak()
-      // right after a successful RPC call, avoiding the render-timing race that
-      // previously caused images to upload but never attach to any submission.
       const cacheForPreview = (dataUrl) => {
         setDownloadUrl(dataUrl);
         try {
@@ -1267,16 +1235,14 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       logo.onerror = () => cacheForPreview(canvas.toDataURL("image/png"));
       logo.src = "/touchgrass-transparent.png";
     };
-        img.src = imageSrc;
+    img.src = imageSrc;
   }, [imageSrc, dateStr, currentStreak]);
 
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:24,width:"100%"}}>
 
-      {/* Hidden canvas */}
       <canvas ref={canvasRef} style={{display:"none"}} />
 
-      {/* Card preview */}
       <div style={{width:"100%"}}>
         <div style={{width:"100%",overflow:"hidden",borderRadius:6,
           border:"1px solid #1a3a1e",
@@ -1294,7 +1260,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </div>
       </div>
 
-      {/* Download — also locks in streak so bypass is impossible */}
       {downloadUrl && (
         <a href={downloadUrl} download="proof-of-grass.png"
           onClick={()=>{ if (submitStatus!=="success") lockInStreak(); }}
@@ -1311,7 +1276,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </a>
       )}
 
-      {/* In-app browser warning */}
       {isInAppBrowser && !inAppBrowserMode && downloadUrl && (
         <div style={{
           background:"rgba(200,168,75,0.08)",
@@ -1326,7 +1290,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </div>
       )}
 
-      {/* In-app browser locked state */}
       {inAppBrowserMode && (
         <div style={{
           background:"rgba(147,168,90,0.06)",
@@ -1353,7 +1316,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </div>
       )}
 
-      {/* Location (optional, privacy-safe) */}
       {downloadUrl && !inAppBrowserMode && submitStatus !== "success" && (
         <div style={{width:"100%",maxWidth:420}}>
           {locationMode === null ? (
@@ -1384,9 +1346,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                   Skip
                 </button>
               </div>
-              {gpsError && (
-                <div style={{fontSize:10,color:"#f87171"}}>{gpsError}</div>
-              )}
+              {gpsError && <div style={{fontSize:10,color:"#f87171"}}>{gpsError}</div>}
               <div style={{fontSize:9.5,color:"rgba(240,239,234,0.35)",lineHeight:1.5}}>
                 We only show approximate locations. Exact location is never displayed.
               </div>
@@ -1442,7 +1402,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </div>
       )}
 
-      {/* Share button */}
+      {/* Share to X + lock in streak */}
       {downloadUrl && !inAppBrowserMode && (
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,width:"100%"}}>
           <button onClick={handleShareAndSubmit}
@@ -1486,9 +1446,38 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </div>
       )}
 
+      {/* Share to Instagram */}
+      {downloadUrl && !inAppBrowserMode && (
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,width:"100%"}}>
+          <button onClick={shareToInstagram} style={{
+            display:"inline-flex",alignItems:"center",justifyContent:"center",gap:10,
+            padding:"13px 32px",width:"100%",
+            fontFamily:"monospace",fontSize:13,fontWeight:700,
+            letterSpacing:"0.15em",textTransform:"uppercase",
+            borderRadius:3,cursor:"pointer",border:"none",
+            background:"linear-gradient(135deg,#833ab4,#fd1d1d,#f77737)",
+            color:"#fff",
+          }}>
+            📸 share to instagram
+          </button>
+          {igCopied && (
+            <p style={{fontFamily:"monospace",fontSize:11,color:"#a78bfa",
+              textAlign:"center",letterSpacing:"0.06em",margin:0,lineHeight:1.6}}>
+              ✓ caption copied — paste it into instagram after the image loads
+            </p>
+          )}
+          {igDesktop && (
+            <p style={{fontFamily:"monospace",fontSize:11,
+              color:"rgba(147,168,90,0.55)",textAlign:"center",
+              letterSpacing:"0.06em",margin:0,lineHeight:1.6}}>
+              card saved · open instagram on your phone → new post → camera roll
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Caption Generator */}
       <div style={{width:"100%"}}>
-        {/* Header */}
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
           <div style={{flex:1,height:1,background:"linear-gradient(to right,transparent,#1f3d22)"}}/>
           <span style={{fontFamily:"monospace",fontSize:10,letterSpacing:"0.3em",
@@ -1496,15 +1485,13 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           <div style={{flex:1,height:1,background:"linear-gradient(to left,transparent,#1f3d22)"}}/>
         </div>
 
-        {/* Caption box */}
         <div style={{
           position:"relative",borderRadius:4,
           border:"1px solid #1a3520",background:"#0a140b",
           padding:"20px 24px",
           boxShadow:"inset 0 1px 0 rgba(74,222,128,0.06),0 0 24px rgba(0,0,0,0.4)",
         }}>
-          {/* Corner accents */}
-          {[{t:0,l:0,bt:"border-top",bl:"border-left"},{t:0,r:0},{b:0,l:0},{b:0,r:0}].map((_,i)=>(
+          {[{t:0,l:0},{t:0,r:0},{b:0,l:0},{b:0,r:0}].map((_,i)=>(
             <span key={i} style={{
               position:"absolute",width:10,height:10,
               top: i<2?0:undefined, bottom: i>=2?0:undefined,
@@ -1529,7 +1516,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           </p>
         </div>
 
-        {/* Buttons */}
         <div style={{display:"flex",gap:10,marginTop:10}}>
           <button onClick={handleNewCaption} style={{
             flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,
@@ -1552,138 +1538,121 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </div>
       </div>
 
-    {/* ── LUCKY TOUCH MODAL ──────────────────────────────────────────────── */}
-    {luckyTouch?.triggered && (
-      <div style={{
-        position:"fixed", inset:0, zIndex:9999,
-        display:"flex", alignItems:"center", justifyContent:"center",
-        background:"rgba(4,5,3,0.85)", backdropFilter:"blur(8px)",
-        padding:"24px",
-      }}
-      onClick={() => setLuckyTouch(null)}>
+      {luckyTouch?.triggered && (
         <div style={{
-          position:"relative",
-          background: luckyTouch.tier === "legendary"
-            ? "linear-gradient(145deg,#1a1200,#2d2000,#1a0e00)"
-            : luckyTouch.tier === "rare"
-            ? "linear-gradient(145deg,#0a0e14,#141e2a,#0a0e14)"
-            : "linear-gradient(145deg,#0a100a,#141e10,#0a100a)",
-          border: `1px solid ${
-            luckyTouch.tier === "legendary" ? "#c8a84b"
-            : luckyTouch.tier === "rare"    ? "#a78bfa"
-            : "#93a85a"
-          }`,
-          borderRadius:20,
-          padding:"40px 32px",
-          maxWidth:340,
-          width:"100%",
-          textAlign:"center",
-          boxShadow: luckyTouch.tier === "legendary"
-            ? "0 0 60px rgba(200,168,75,0.35), 0 0 120px rgba(200,168,75,0.15)"
-            : luckyTouch.tier === "rare"
-            ? "0 0 40px rgba(167,139,250,0.3)"
-            : "0 0 30px rgba(147,168,90,0.2)",
-          animation: "ltPop 0.4s cubic-bezier(0.34,1.56,0.64,1)",
+          position:"fixed", inset:0, zIndex:9999,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          background:"rgba(4,5,3,0.85)", backdropFilter:"blur(8px)",
+          padding:"24px",
         }}
-        onClick={e => e.stopPropagation()}>
-
-          {/* Icon */}
+        onClick={() => setLuckyTouch(null)}>
           <div style={{
-            fontSize: luckyTouch.tier === "legendary" ? 56 : 48,
-            marginBottom:16,
-            filter: luckyTouch.tier === "legendary"
-              ? "drop-shadow(0 0 16px rgba(200,168,75,0.8))"
+            position:"relative",
+            background: luckyTouch.tier === "legendary"
+              ? "linear-gradient(145deg,#1a1200,#2d2000,#1a0e00)"
               : luckyTouch.tier === "rare"
-              ? "drop-shadow(0 0 12px rgba(167,139,250,0.7))"
-              : "drop-shadow(0 0 8px rgba(147,168,90,0.6))",
-          }}>
-            {luckyTouch.tier === "legendary" ? "☀️" : "🍀"}
-          </div>
-
-          {/* Tier label */}
-          <div style={{
-            fontSize:9, fontWeight:700, letterSpacing:"0.22em",
-            textTransform:"uppercase", marginBottom:10,
-            color: luckyTouch.tier === "legendary" ? "#c8a84b"
-              : luckyTouch.tier === "rare"          ? "#a78bfa"
-              : "#93a85a",
-          }}>
-            {luckyTouch.tier === "legendary" ? "☀ Sun's Blessing"
-              : luckyTouch.tier === "rare"   ? "🍀 Rare Lucky Touch"
-              : "🍀 Lucky Touch"}
-          </div>
-
-          {/* Title */}
-          <div style={{
-            fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize: luckyTouch.tier === "legendary" ? 32 : 28,
-            fontWeight:700, lineHeight:1.1, marginBottom:12,
-            color:"#f0efea",
-          }}>
-            {luckyTouch.tier === "legendary"
-              ? "A Rare Blessing"
+              ? "linear-gradient(145deg,#0a0e14,#141e2a,#0a0e14)"
+              : "linear-gradient(145deg,#0a100a,#141e10,#0a100a)",
+            border: `1px solid ${
+              luckyTouch.tier === "legendary" ? "#c8a84b"
+              : luckyTouch.tier === "rare"    ? "#a78bfa"
+              : "#93a85a"
+            }`,
+            borderRadius:20,
+            padding:"40px 32px",
+            maxWidth:340,
+            width:"100%",
+            textAlign:"center",
+            boxShadow: luckyTouch.tier === "legendary"
+              ? "0 0 60px rgba(200,168,75,0.35), 0 0 120px rgba(200,168,75,0.15)"
               : luckyTouch.tier === "rare"
-              ? "Rare Reward"
-              : "Lucky Touch"}
-          </div>
-
-          {/* Reward */}
-          <div style={{
-            fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize:22, fontWeight:600, marginBottom:8,
-            color: luckyTouch.tier === "legendary" ? "#c8a84b"
-              : luckyTouch.tier === "rare"          ? "#a78bfa"
-              : "#93a85a",
-          }}>
-            {luckyTouch.type === "shield"
-              ? "🛡 +1 Shield"
-              : `🌱 +${luckyTouch.points} Grass Score`}
-          </div>
-
-          {/* Flavour text */}
-          <div style={{
-            fontSize:12, color:"rgba(240,239,234,0.45)",
-            lineHeight:1.6, marginBottom:28,
-          }}>
-            {luckyTouch.tier === "legendary"
-              ? "A rare blessing from the Touch Grass Sun."
-              : luckyTouch.tier === "rare"
-              ? "Not everyone gets this. Keep touching grass."
-              : "Keep touching grass."}
-          </div>
-
-          {/* Dismiss */}
-          <button
-            onClick={() => setLuckyTouch(null)}
-            style={{
-              width:"100%", padding:"14px",
-              background: luckyTouch.tier === "legendary" ? "#c8a84b"
-                : luckyTouch.tier === "rare"               ? "#a78bfa"
-                : "#93a85a",
-              color: luckyTouch.tier === "rare" ? "#f0efea" : "#0e1108",
-              border:"none", borderRadius:10, cursor:"pointer",
-              fontFamily:"'DM Sans',sans-serif", fontSize:13,
-              fontWeight:700, letterSpacing:"0.06em",
+              ? "0 0 40px rgba(167,139,250,0.3)"
+              : "0 0 30px rgba(147,168,90,0.2)",
+            animation: "ltPop 0.4s cubic-bezier(0.34,1.56,0.64,1)",
+          }}
+          onClick={e => e.stopPropagation()}>
+            <div style={{
+              fontSize: luckyTouch.tier === "legendary" ? 56 : 48,
+              marginBottom:16,
+              filter: luckyTouch.tier === "legendary"
+                ? "drop-shadow(0 0 16px rgba(200,168,75,0.8))"
+                : luckyTouch.tier === "rare"
+                ? "drop-shadow(0 0 12px rgba(167,139,250,0.7))"
+                : "drop-shadow(0 0 8px rgba(147,168,90,0.6))",
             }}>
-            Keep Going ✦
-          </button>
+              {luckyTouch.tier === "legendary" ? "☀️" : "🍀"}
+            </div>
+            <div style={{
+              fontSize:9, fontWeight:700, letterSpacing:"0.22em",
+              textTransform:"uppercase", marginBottom:10,
+              color: luckyTouch.tier === "legendary" ? "#c8a84b"
+                : luckyTouch.tier === "rare"          ? "#a78bfa"
+                : "#93a85a",
+            }}>
+              {luckyTouch.tier === "legendary" ? "☀ Sun's Blessing"
+                : luckyTouch.tier === "rare"   ? "🍀 Rare Lucky Touch"
+                : "🍀 Lucky Touch"}
+            </div>
+            <div style={{
+              fontFamily:"'Cormorant Garamond',Georgia,serif",
+              fontSize: luckyTouch.tier === "legendary" ? 32 : 28,
+              fontWeight:700, lineHeight:1.1, marginBottom:12,
+              color:"#f0efea",
+            }}>
+              {luckyTouch.tier === "legendary"
+                ? "A Rare Blessing"
+                : luckyTouch.tier === "rare"
+                ? "Rare Reward"
+                : "Lucky Touch"}
+            </div>
+            <div style={{
+              fontFamily:"'Cormorant Garamond',Georgia,serif",
+              fontSize:22, fontWeight:600, marginBottom:8,
+              color: luckyTouch.tier === "legendary" ? "#c8a84b"
+                : luckyTouch.tier === "rare"          ? "#a78bfa"
+                : "#93a85a",
+            }}>
+              {luckyTouch.type === "shield"
+                ? "🛡 +1 Shield"
+                : `🌱 +${luckyTouch.points} Grass Score`}
+            </div>
+            <div style={{
+              fontSize:12, color:"rgba(240,239,234,0.45)",
+              lineHeight:1.6, marginBottom:28,
+            }}>
+              {luckyTouch.tier === "legendary"
+                ? "A rare blessing from the Touch Grass Sun."
+                : luckyTouch.tier === "rare"
+                ? "Not everyone gets this. Keep touching grass."
+                : "Keep touching grass."}
+            </div>
+            <button
+              onClick={() => setLuckyTouch(null)}
+              style={{
+                width:"100%", padding:"14px",
+                background: luckyTouch.tier === "legendary" ? "#c8a84b"
+                  : luckyTouch.tier === "rare"               ? "#a78bfa"
+                  : "#93a85a",
+                color: luckyTouch.tier === "rare" ? "#f0efea" : "#0e1108",
+                border:"none", borderRadius:10, cursor:"pointer",
+                fontFamily:"'DM Sans',sans-serif", fontSize:13,
+                fontWeight:700, letterSpacing:"0.06em",
+              }}>
+              Keep Going ✦
+            </button>
+          </div>
+          <style>{`
+            @keyframes ltPop {
+              from { opacity:0; transform:scale(0.82) translateY(16px); }
+              to   { opacity:1; transform:scale(1)    translateY(0);     }
+            }
+          `}</style>
         </div>
-
-        {/* Pop-in animation */}
-        <style>{`
-          @keyframes ltPop {
-            from { opacity:0; transform:scale(0.82) translateY(16px); }
-            to   { opacity:1; transform:scale(1)    translateY(0);     }
-          }
-        `}</style>
-      </div>
-    )}
+      )}
 
     </div>
   );
 }
-
-// ─── HELPERS ────────────────────────────────────────────────────────────────
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
