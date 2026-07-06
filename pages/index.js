@@ -198,6 +198,113 @@ function buildSolanaPayUrl() {
 function buildQrCodeUrl(data, size = 220) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&color=240-239-234&bgcolor=10-12-8&data=${encodeURIComponent(data)}`;
 }
+// ─── PromoBanner — reusable seasonal / consumable announcement ───────────────
+// Props: image (filename in promo-assets bucket), title, description,
+//        buttonText, href, secondaryText, secondaryHref
+function PromoBanner({ image, title, description, buttonText, href, secondaryText = "View Consumables", secondaryHref = "/burns" }) {
+  // Build public URL from existing Supabase client — same pattern used elsewhere
+  const imgUrl = supabase.storage.from("promo-assets").getPublicUrl(image).data.publicUrl;
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div style={{ width:"100%", padding:"0 clamp(14px,4vw,32px)", boxSizing:"border-box" }}>
+      {/* Image wrapper — links to /burns on click */}
+      <Link href={href} style={{ display:"block", textDecoration:"none", position:"relative",
+        borderRadius:24, overflow:"hidden",
+        boxShadow: hovered
+          ? "0 0 40px rgba(147,168,90,0.22), 0 12px 48px rgba(0,0,0,0.55)"
+          : "0 6px 32px rgba(0,0,0,0.45)",
+        transform: hovered ? "scale(1.008)" : "scale(1)",
+        transition:"transform 0.25s ease, box-shadow 0.25s ease",
+      }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}>
+
+        {/* Aspect-ratio container — 1500:1000 = 3:2 */}
+        <div style={{ position:"relative", width:"100%", paddingBottom:"66.666%", background:"#0e1008" }}>
+          <img
+            src={imgUrl}
+            alt={title}
+            loading="lazy"
+            style={{
+              position:"absolute", inset:0,
+              width:"100%", height:"100%",
+              objectFit:"cover", objectPosition:"center",
+              display:"block",
+              borderRadius:24,
+            }}
+          />
+
+          {/* Floating CTA — lower right corner */}
+          <div style={{
+            position:"absolute", bottom:20, right:20,
+            background:"linear-gradient(135deg,#93a85a,#7a9148)",
+            color:"#fff",
+            fontSize:13, fontWeight:700, letterSpacing:"0.06em",
+            padding:"11px 22px",
+            borderRadius:999,
+            boxShadow: hovered
+              ? "0 6px 24px rgba(147,168,90,0.55)"
+              : "0 4px 14px rgba(147,168,90,0.35)",
+            transform: hovered ? "translateY(-3px)" : "translateY(0)",
+            transition:"transform 0.2s ease, box-shadow 0.2s ease",
+            pointerEvents:"none", // parent Link handles click
+            whiteSpace:"nowrap",
+          }}>
+            {buttonText}
+          </div>
+        </div>
+      </Link>
+
+      {/* Info card below image */}
+      <div style={{
+        marginTop:16,
+        background:"linear-gradient(145deg,#141510,#1c1e17)",
+        border:"1px solid rgba(147,168,90,0.2)",
+        borderRadius:16,
+        padding:"22px 24px",
+        display:"flex",
+        alignItems:"center",
+        justifyContent:"space-between",
+        gap:16,
+        flexWrap:"wrap",
+        boxShadow:"0 4px 24px rgba(0,0,0,0.3)",
+      }}>
+        <div style={{ flex:1, minWidth:220 }}>
+          <div style={{
+            fontFamily:"'Cormorant Garamond',Georgia,serif",
+            fontSize:"clamp(17px,2.2vw,22px)",
+            fontWeight:700, color:"#f0efea",
+            marginBottom:6,
+          }}>
+            {title}
+          </div>
+          <div style={{ fontSize:13, color:"rgba(240,239,234,0.55)", lineHeight:1.65, maxWidth:520 }}>
+            {description.split("\n\n").map((para, i) => (
+              <p key={i} style={{ margin: i > 0 ? "8px 0 0" : 0 }}>{para}</p>
+            ))}
+          </div>
+        </div>
+        <Link href={secondaryHref} style={{
+          display:"inline-flex", alignItems:"center",
+          background:"transparent",
+          color:"#93a85a",
+          border:"1px solid rgba(147,168,90,0.4)",
+          fontSize:12, fontWeight:700, letterSpacing:"0.1em",
+          textTransform:"uppercase", textDecoration:"none",
+          padding:"10px 22px", borderRadius:999,
+          flexShrink:0,
+          transition:"background 0.2s, color 0.2s",
+        }}
+          onMouseEnter={e => { e.currentTarget.style.background="rgba(147,168,90,0.12)"; e.currentTarget.style.color="#a8c86a"; }}
+          onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="#93a85a"; }}>
+          {secondaryText} →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 // ─── Map preview card ─────────────────────────────────────────────────────────
 function MapPreviewCard() {
   const [stats, setStats] = useState({ mapped:0, regions:0, countries:0 });
@@ -942,6 +1049,17 @@ export default function Home() {
             </div>
           )}
         </section>
+
+        {/* ── PROMO BANNER — Sunset Pass ───────────────────────────────────── */}
+        <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
+          <PromoBanner
+            image="sunset_pass.png"
+            title="🌅 New Consumable"
+            description={`Sunset Pass extends your daily submission window by 2 hours.\n\nPerfect for busy days when you need a little extra time to lock in your proof.`}
+            buttonText="Get Sunset Pass"
+            href="/burns"
+          />
+        </div>
 
         {/* ── ENTER USERNAME BANNER ─────────────────────────────────────────── */}
         {mounted && !hasUser && (
