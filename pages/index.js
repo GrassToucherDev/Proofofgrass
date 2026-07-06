@@ -4,7 +4,6 @@ import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
 import { supabase } from "../utils/supabase";
 import { getSpotlightBadge, getSpotlightFeedText, SPOTLIGHT_BADGES } from "../utils/spotlightBadges";
-
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const T = {
   bg:      "#0e0f0b",
@@ -19,12 +18,10 @@ const T = {
   dim:     "rgba(240,239,234,0.24)",
   red:     "#ef4444",
 };
-
 // ─── Pure helpers (no Supabase) ───────────────────────────────────────────────
 function normalizeUsername(val) {
   return String(val ?? "").replace(/@/g, "").toLowerCase().trim();
 }
-
 function computePreviewStreak(row) {
   if (!row?.last_submission_date) return 1;
   const today = new Date().toISOString().slice(0, 10);
@@ -34,7 +31,6 @@ function computePreviewStreak(row) {
   if (last === yesterday) return row.current_streak + 1;
   return 1;
 }
-
 function getStreakTier(n) {
   if (n >= 1000) return "TRANSCENDENT";
   if (n >= 500)  return "ASCENDED";
@@ -48,7 +44,6 @@ function getStreakTier(n) {
   if (n >= 3)    return "GROWING";
   return "SEED";
 }
-
 function getTierColor(tier) {
   return {
     TRANSCENDENT:"#f0fdf4", ASCENDED:"#e0f2fe",
@@ -57,19 +52,16 @@ function getTierColor(tier) {
     ROOTED:"#86efac", GROWING:"#6ee7b7", SEED:"#93a85a",
   }[tier] ?? T.olive;
 }
-
 function fmtBurned(n) {
   if (!n) return "—";
   if (n >= 1000000) return `${(n/1000000).toFixed(1)}M`;
   if (n >= 1000)    return `${(n/1000).toFixed(0)}K`;
   return n.toLocaleString();
 }
-
 // ─── Small UI atoms ───────────────────────────────────────────────────────────
 function Skeleton({ w="100%", h=12 }) {
   return <div style={{ width:w, height:h, background:T.bg3, borderRadius:4, flexShrink:0, opacity:0.6 }} />;
 }
-
 function StatCard({ icon, value, label, sub, accent, last }) {
   return (
     <div style={{ flex:"1 1 0", minWidth:0, display:"flex", flexDirection:"column", alignItems:"center",
@@ -87,7 +79,6 @@ function StatCard({ icon, value, label, sub, accent, last }) {
     </div>
   );
 }
-
 function LBRow({ rank, username, streak, tier }) {
   const col = getTierColor(tier);
   return (
@@ -113,7 +104,6 @@ function LBRow({ rank, username, streak, tier }) {
     </div>
   );
 }
-
 function ProofRow({ username, streak, created_at }) {
   const tier = getStreakTier(streak);
   const col  = getTierColor(tier);
@@ -142,7 +132,6 @@ function ProofRow({ username, streak, created_at }) {
     </div>
   );
 }
-
 function TierBadge({ name, day, completed, active }) {
   const col = completed ? T.olive : active ? T.gold : "rgba(255,255,255,0.14)";
   return (
@@ -160,7 +149,6 @@ function TierBadge({ name, day, completed, active }) {
     </div>
   );
 }
-
 function ResultMini({ day }) {
   const isLeg = day >= 50;
   return (
@@ -193,16 +181,11 @@ function ResultMini({ day }) {
     </div>
   );
 }
-
 // ─── Shield buy section ───────────────────────────────────────────────────────
 const BURN_ADDR   = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const SOL_DOMAIN  = "touchgrassburn.sol";
 const TOUCHGRASS_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const SHIELD_AMOUNT = 50000;
-
-// Solana Pay URL — opens the user's own wallet app with the transaction
-// pre-filled (recipient, amount, token). The user still reviews and signs
-// it themselves inside their wallet. No custom signing code here at all.
 function buildSolanaPayUrl() {
   const params = new URLSearchParams({
     amount: String(SHIELD_AMOUNT),
@@ -212,21 +195,13 @@ function buildSolanaPayUrl() {
   });
   return `solana:${BURN_ADDR}?${params.toString()}`;
 }
-
 function buildQrCodeUrl(data, size = 220) {
-  // Free, no-key QR generation service — avoids adding an npm dependency
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&color=240-239-234&bgcolor=10-12-8&data=${encodeURIComponent(data)}`;
 }
-
-// ─── Following Feed component ────────────────────────────────────────────────
-
-// ─── Activity Feed ───────────────────────────────────────────────────────────
-
-// ─── Map preview card (dashboard) ────────────────────────────────────────────
+// ─── Map preview card ─────────────────────────────────────────────────────────
 function MapPreviewCard() {
   const [stats, setStats] = useState({ mapped:0, regions:0, countries:0 });
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -235,21 +210,17 @@ function MapPreviewCard() {
         .not("location_source", "eq", "none")
         .in("status", ["pending","approved"])
         .limit(5000);
-
       const rows = data ?? [];
       const uniqueLabels    = new Set(rows.map(r => r.location_label).filter(Boolean));
       const uniqueCountries = new Set(rows.map(r => r.location_country).filter(Boolean));
-
       setStats({ mapped: rows.length, regions: uniqueLabels.size, countries: uniqueCountries.size });
       setLoading(false);
     })();
   }, []);
-
   const T2 = {
     bg3:"#141710", border:"rgba(255,255,255,0.055)", borderGold:"rgba(200,168,75,0.35)",
     gold:"#c8a84b", olive:"#93a85a", white:"#f0efea", dim:"rgba(240,239,234,0.24)",
   };
-
   return (
     <a href="/map" style={{ textDecoration:"none", display:"block",
       background: "linear-gradient(145deg,#0e100b,#141710)",
@@ -285,8 +256,7 @@ function MapPreviewCard() {
     </a>
   );
 }
-
-// ─── Spotlight section (dashboard) — uses SPOTLIGHT_BADGES as source of truth ─
+// ─── Spotlight section ────────────────────────────────────────────────────────
 const SPOT_CATS = Object.values(SPOTLIGHT_BADGES).map(b => ({
   key:   b.key,
   emoji: b.emoji,
@@ -295,32 +265,24 @@ const SPOT_CATS = Object.values(SPOTLIGHT_BADGES).map(b => ({
   color: b.color,
   image: b.image,
 }));
-
 function SpotlightSection() {
   const [winners, setWinners] = useState([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     (async () => {
-      // Get this week's Monday
       const d = new Date();
       const day = d.getUTCDay();
       d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
       const thisMonday = d.toISOString().slice(0, 10);
-
       const { data: spotlights } = await supabase
         .from("CommunitySpotlights")
         .select("*")
         .eq("status", "active")
         .eq("week_start", thisMonday);
-
       if (!spotlights?.length) { setLoading(false); return; }
-
-      // Fetch profile avatars
       const usernames = [...new Set(spotlights.map(s => s.username))];
       const { data: profiles } = await supabase
         .from("Profiles").select("username, avatar_url").in("username", usernames);
-
       const avatarMap = Object.fromEntries((profiles ?? []).map(p => [p.username, p.avatar_url]));
       setWinners(spotlights.map(s => ({
         ...s,
@@ -329,40 +291,28 @@ function SpotlightSection() {
       setLoading(false);
     })();
   }, []);
-
   const winnerMap = Object.fromEntries(winners.map(w => [w.category, w]));
-
   const T2 = {
     bg2:"#0e100b", bg3:"#141710", border:"rgba(255,255,255,0.055)",
     borderGold:"rgba(200,168,75,0.35)", gold:"#c8a84b",
     white:"#f0efea", dim:"rgba(240,239,234,0.24)", muted:"rgba(240,239,234,0.52)",
   };
-
   return (
     <div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
         marginBottom:16, flexWrap:"wrap", gap:8 }}>
         <div>
           <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em",
-            textTransform:"uppercase", color:T2.gold, marginBottom:4 }}>
-            Community
-          </div>
+            textTransform:"uppercase", color:T2.gold, marginBottom:4 }}>Community</div>
           <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize:18, fontWeight:700, color:T2.white }}>
-            Community Spotlight
-          </div>
-          <div style={{ fontSize:11, color:T2.dim, marginTop:2 }}>
-            This week's Touch Grass winners
-          </div>
+            fontSize:18, fontWeight:700, color:T2.white }}>Community Spotlight</div>
+          <div style={{ fontSize:11, color:T2.dim, marginTop:2 }}>This week's Touch Grass winners</div>
         </div>
         <a href="/spotlight" style={{ fontSize:11, color:T2.gold,
-          textDecoration:"none", fontWeight:600, letterSpacing:"0.04em",
-          whiteSpace:"nowrap" }}>
+          textDecoration:"none", fontWeight:600, letterSpacing:"0.04em", whiteSpace:"nowrap" }}>
           View Spotlight →
         </a>
       </div>
-
-      {/* Horizontal scroll on mobile with snap */}
       <div className="spotlight-scroll" style={{ display:"flex", gap:12, overflowX:"auto",
         overflowY:"visible", paddingBottom:4, scrollbarWidth:"none" }}>
         {SPOT_CATS.map(cat => {
@@ -370,8 +320,7 @@ function SpotlightSection() {
           return (
             <div key={cat.key} style={{
               flexShrink:0, width:160,
-              background: w ? `linear-gradient(145deg,${T2.bg2},${T2.bg3})`
-                           : T2.bg2,
+              background: w ? `linear-gradient(145deg,${T2.bg2},${T2.bg3})` : T2.bg2,
               border:`1px solid ${w ? T2.borderGold : T2.border}`,
               borderRadius:12, padding:"14px 14px",
               boxShadow: w ? "0 0 18px rgba(200,168,75,0.1)" : "none",
@@ -379,15 +328,12 @@ function SpotlightSection() {
               {cat.image ? (
                 <img src={cat.image} alt={cat.name} loading="lazy"
                   style={{ width:36, height:36, objectFit:"contain", marginBottom:6,
-                    filter:`drop-shadow(0 0 6px ${cat.color}60)`,
-                    opacity: w ? 1 : 0.25 }} />
+                    filter:`drop-shadow(0 0 6px ${cat.color}60)`, opacity: w ? 1 : 0.25 }} />
               ) : (
                 <div style={{ fontSize:20, marginBottom:6 }}>{cat.emoji}</div>
               )}
               <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.12em",
-                textTransform:"uppercase", color:cat.color, marginBottom:8 }}>
-                {cat.name}
-              </div>
+                textTransform:"uppercase", color:cat.color, marginBottom:8 }}>{cat.name}</div>
               {loading ? (
                 <div style={{ height:32, borderRadius:6, background:T2.bg3, opacity:0.5 }} />
               ) : w ? (
@@ -395,27 +341,23 @@ function SpotlightSection() {
                   <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
                     {w.resolved_avatar ? (
                       <img src={w.resolved_avatar} alt="" loading="lazy"
-                        style={{ width:28, height:28, borderRadius:"50%",
-                          objectFit:"cover", border:`1px solid ${cat.color}`,
-                          flexShrink:0 }} />
+                        style={{ width:28, height:28, borderRadius:"50%", objectFit:"cover",
+                          border:`1px solid ${cat.color}`, flexShrink:0 }} />
                     ) : (
-                      <div style={{ width:28, height:28, borderRadius:"50%",
-                        flexShrink:0, background:T2.bg3,
-                        border:`1px solid ${cat.color}`,
+                      <div style={{ width:28, height:28, borderRadius:"50%", flexShrink:0,
+                        background:T2.bg3, border:`1px solid ${cat.color}`,
                         display:"flex", alignItems:"center", justifyContent:"center",
                         fontSize:12, fontWeight:700, color:cat.color }}>
                         {w.username[0].toUpperCase()}
                       </div>
                     )}
                     <a href={`/u/${w.username}`}
-                      style={{ fontSize:12, fontWeight:700, color:T2.white,
-                        textDecoration:"none", overflow:"hidden",
-                        textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                      style={{ fontSize:12, fontWeight:700, color:T2.white, textDecoration:"none",
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                       @{w.display_name || w.username}
                     </a>
                   </div>
-                  <div style={{ fontSize:9, color:cat.color, fontWeight:600,
-                    letterSpacing:"0.04em" }}>{cat.label}</div>
+                  <div style={{ fontSize:9, color:cat.color, fontWeight:600, letterSpacing:"0.04em" }}>{cat.label}</div>
                 </>
               ) : (
                 <div style={{ textAlign:"center", padding:"8px 0" }}>
@@ -430,21 +372,14 @@ function SpotlightSection() {
     </div>
   );
 }
-
-// ─── Recent Milestones widget ─────────────────────────────────────────────────
+// ─── Recent Milestones ────────────────────────────────────────────────────────
 const MILESTONE_ICONS = {
-  streak:      "🔥",
-  grass_score: "🌱",
-  proof_count: "🌿",
-  referral:    "🤝",
-  spotlight:   "🏆",
-  lucky_touch: "🍀",
+  streak:"🔥", grass_score:"🌱", proof_count:"🌿",
+  referral:"🤝", spotlight:"🏆", lucky_touch:"🍀",
 };
-
 function RecentMilestones() {
   const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -456,19 +391,15 @@ function RecentMilestones() {
       setLoading(false);
     })();
   }, []);
-
   const T2 = {
     bg2:"#0e100b", bg3:"#141710", border:"rgba(255,255,255,0.055)",
     borderGold:"rgba(200,168,75,0.35)", gold:"#c8a84b",
     white:"#f0efea", dim:"rgba(240,239,234,0.24)", olive:"#93a85a",
   };
-
   if (!loading && milestones.length === 0) return null;
-
   return (
     <div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-        marginBottom:14 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
         <div>
           <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em",
             textTransform:"uppercase", color:T2.gold, marginBottom:3 }}>Platform</div>
@@ -476,7 +407,6 @@ function RecentMilestones() {
             fontSize:18, fontWeight:700, color:T2.white }}>Recent Milestones</div>
         </div>
       </div>
-
       <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
         {loading ? (
           [1,2,3].map(i => (
@@ -484,24 +414,18 @@ function RecentMilestones() {
           ))
         ) : milestones.map((m, i) => (
           <a key={i} href={`/u/${m.username}`}
-            style={{ display:"flex", alignItems:"center", gap:10,
-              padding:"9px 12px", borderRadius:9, textDecoration:"none",
-              background:T2.bg3, border:`1px solid ${T2.border}`,
-              transition:"border-color 0.15s" }}
+            style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
+              borderRadius:9, textDecoration:"none", background:T2.bg3,
+              border:`1px solid ${T2.border}`, transition:"border-color 0.15s" }}
             onMouseEnter={e => e.currentTarget.style.borderColor = T2.borderGold}
             onMouseLeave={e => e.currentTarget.style.borderColor = T2.border}>
-            <span style={{ fontSize:16, flexShrink:0 }}>
-              {MILESTONE_ICONS[m.milestone_type] ?? "⭐"}
-            </span>
+            <span style={{ fontSize:16, flexShrink:0 }}>{MILESTONE_ICONS[m.milestone_type] ?? "⭐"}</span>
             <div style={{ flex:1, minWidth:0 }}>
-              <span style={{ fontSize:12, fontWeight:600, color:T2.gold }}>
-                @{m.username}
-              </span>
+              <span style={{ fontSize:12, fontWeight:600, color:T2.gold }}>@{m.username}</span>
               <span style={{ fontSize:12, color:T2.dim }}> {m.milestone_label}</span>
             </div>
             <span style={{ fontSize:9, color:T2.dim, flexShrink:0 }}>
-              {m.created_at ? new Date(m.created_at).toLocaleDateString("en-US",
-                { month:"short", day:"numeric" }) : ""}
+              {m.created_at ? new Date(m.created_at).toLocaleDateString("en-US",{ month:"short", day:"numeric" }) : ""}
             </span>
           </a>
         ))}
@@ -509,16 +433,13 @@ function RecentMilestones() {
     </div>
   );
 }
-
 function ActivityFeed() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [globalLuckyCount, setGlobalLuckyCount] = useState(null);
-
   useEffect(() => {
     (async () => {
       try {
-        // Fetch recent activity from multiple sources in parallel
         const [
           { data: recentSubs },
           { data: recentChals },
@@ -528,273 +449,103 @@ function ActivityFeed() {
           { count: globalLuckyCount },
           { data: recentSpotlights },
         ] = await Promise.all([
-          supabase.from("Submissions")
-            .select("username, created_at")
-            .in("status", ["pending","approved"])
-            .order("created_at", { ascending: false })
-            .limit(8),
-          supabase.from("Challenges")
-            .select("challenger, challenged, duration_days, status, created_at, slug")
-            .order("created_at", { ascending: false })
-            .limit(5),
-          supabase.from("Streaks")
-            .select("username, current_streak, best_streak")
-            .order("current_streak", { ascending: false })
-            .limit(5),
-          supabase.from("Referrals")
-            .select("referrer_username, referred_username, status, converted_at, created_at")
-            .order("created_at", { ascending: false })
-            .limit(6),
-          // Lucky Touch — Rare and Legendary only (no common, avoid feed spam)
-          supabase.from("LuckyTouchEvents")
-            .select("username, reward_tier, reward_type, created_at")
-            .in("reward_tier", ["rare", "legendary"])
-            .order("created_at", { ascending: false })
-            .limit(5),
-          // Global Lucky Touch count — for community stat display
-          supabase.from("LuckyTouchEvents")
-            .select("*", { count: "exact", head: true }),
-          // Community Spotlight — recent active winners
-          supabase.from("CommunitySpotlights")
-            .select("username, category, display_name, week_start, created_at")
-            .eq("status", "active")
-            .order("created_at", { ascending: false })
-            .limit(8),
+          supabase.from("Submissions").select("username, created_at").in("status", ["pending","approved"]).order("created_at", { ascending: false }).limit(8),
+          supabase.from("Challenges").select("challenger, challenged, duration_days, status, created_at, slug").order("created_at", { ascending: false }).limit(5),
+          supabase.from("Streaks").select("username, current_streak, best_streak").order("current_streak", { ascending: false }).limit(5),
+          supabase.from("Referrals").select("referrer_username, referred_username, status, converted_at, created_at").order("created_at", { ascending: false }).limit(6),
+          supabase.from("LuckyTouchEvents").select("username, reward_tier, reward_type, created_at").in("reward_tier", ["rare", "legendary"]).order("created_at", { ascending: false }).limit(5),
+          supabase.from("LuckyTouchEvents").select("*", { count: "exact", head: true }),
+          supabase.from("CommunitySpotlights").select("username, category, display_name, week_start, created_at").eq("status", "active").order("created_at", { ascending: false }).limit(8),
         ]);
-
         const feed = [];
-
-        // Proof submissions
-        (recentSubs ?? []).forEach(s => {
-          feed.push({
-            type: "proof",
-            username: s.username,
-            text: "logged outdoor proof",
-            emoji: "🌿",
-            time: s.created_at,
-          });
-        });
-
-        // Challenges issued
+        (recentSubs ?? []).forEach(s => { feed.push({ type:"proof", username:s.username, text:"logged outdoor proof", emoji:"🌿", time:s.created_at }); });
         (recentChals ?? []).forEach(c => {
-          if (c.status === "pending" || c.status === "active") {
-            feed.push({
-              type: "challenge",
-              username: c.challenger,
-              text: `challenged @${c.challenged} to a ${c.duration_days}-day streak`,
-              emoji: "⚡",
-              time: c.created_at,
-              link: `/challenge/${c.slug}`,
-            });
-          }
-          if (c.status === "completed") {
-            feed.push({
-              type: "challenge_complete",
-              username: c.challenger,
-              text: `completed a ${c.duration_days}-day challenge with @${c.challenged}`,
-              emoji: "🏆",
-              time: c.created_at,
-              link: `/challenge/${c.slug}`,
-            });
-          }
+          if (c.status === "pending" || c.status === "active") feed.push({ type:"challenge", username:c.challenger, text:`challenged @${c.challenged} to a ${c.duration_days}-day streak`, emoji:"⚡", time:c.created_at, link:`/challenge/${c.slug}` });
+          if (c.status === "completed") feed.push({ type:"challenge_complete", username:c.challenger, text:`completed a ${c.duration_days}-day challenge with @${c.challenged}`, emoji:"🏆", time:c.created_at, link:`/challenge/${c.slug}` });
         });
-
-        // Milestone events — users with notable streaks
         (topStreaks ?? []).forEach(s => {
           const milestones = [7,14,30,50,100,180,200,250,365,500,750,1000];
           const hit = milestones.find(m => s.current_streak === m);
           if (hit) {
             const tierName = hit>=1000?"TRANSCENDENT":hit>=500?"ASCENDED":hit>=365?"ETERNAL":hit>=180?"MYTHIC":hit>=100?"IMMORTAL":hit>=50?"LEGENDARY":hit>=30?"ELITE":hit>=14?"LOCKED IN":"ROOTED";
-            feed.push({
-              type: "milestone",
-              username: s.username,
-              text: `reached Day ${hit} — ${tierName} unlocked`,
-              emoji: hit>=100?"👑":hit>=50?"🌟":hit>=30?"🌳":"🌱",
-              time: null,
-            });
+            feed.push({ type:"milestone", username:s.username, text:`reached Day ${hit} — ${tierName} unlocked`, emoji:hit>=100?"👑":hit>=50?"🌟":hit>=30?"🌳":"🌱", time:null });
           }
         });
-
-        // Referral events
         (recentReferrals ?? []).forEach(r => {
-          if (r.status === "converted") {
-            feed.push({
-              type: "referral_converted",
-              username: r.referrer_username,
-              text: `helped @${r.referred_username} reach Day 10`,
-              emoji: "🤝",
-              time: r.converted_at || r.created_at,
-            });
-          } else {
-            feed.push({
-              type: "referral_pending",
-              username: r.referrer_username,
-              text: `invited a new Toucher to the movement`,
-              emoji: "🌱",
-              time: r.created_at,
-            });
-          }
+          if (r.status === "converted") feed.push({ type:"referral_converted", username:r.referrer_username, text:`helped @${r.referred_username} reach Day 10`, emoji:"🤝", time:r.converted_at||r.created_at });
+          else feed.push({ type:"referral_pending", username:r.referrer_username, text:"invited a new Toucher to the movement", emoji:"🌱", time:r.created_at });
         });
-
-        // Lucky Touch feed events (Rare + Legendary only)
         (luckyTouchFeed ?? []).forEach(lt => {
-          feed.push({
-            type: lt.reward_tier === "legendary" ? "lucky_touch_legendary" : "lucky_touch_rare",
-            username: lt.username,
-            text: lt.reward_tier === "legendary"
-              ? "received Sun's Blessing ☀️"
-              : "received a Rare Lucky Touch",
-            emoji: lt.reward_tier === "legendary" ? "☀️" : "🍀",
-            time: lt.created_at,
-          });
+          feed.push({ type:lt.reward_tier==="legendary"?"lucky_touch_legendary":"lucky_touch_rare", username:lt.username, text:lt.reward_tier==="legendary"?"received Sun's Blessing ☀️":"received a Rare Lucky Touch", emoji:lt.reward_tier==="legendary"?"☀️":"🍀", time:lt.created_at });
         });
-
-        // Community Spotlight feed events
         (recentSpotlights ?? []).forEach(s => {
-          feed.push({
-            type:     "spotlight",
-            username: s.display_name || s.username,
-            text:     getSpotlightFeedText(s.category),
-            emoji:    "🏆",
-            badgeImg: getSpotlightBadge(s.category)?.image ?? null,
-            time:     s.created_at,
-            link:     "/spotlight",
-          });
+          feed.push({ type:"spotlight", username:s.display_name||s.username, text:getSpotlightFeedText(s.category), emoji:"🏆", badgeImg:getSpotlightBadge(s.category)?.image??null, time:s.created_at, link:"/spotlight" });
         });
-
-        // Sort by time, milestones last
-        feed.sort((a, b) => {
-          if (!a.time && !b.time) return 0;
-          if (!a.time) return 1;
-          if (!b.time) return -1;
-          return new Date(b.time) - new Date(a.time);
-        });
-
+        feed.sort((a, b) => { if (!a.time && !b.time) return 0; if (!a.time) return 1; if (!b.time) return -1; return new Date(b.time) - new Date(a.time); });
         setItems(feed.slice(0, 10));
         setGlobalLuckyCount(globalLuckyCount ?? 0);
-      } catch(e) {
-        console.warn("activity feed error", e);
-      }
+      } catch(e) { console.warn("activity feed error", e); }
       setLoading(false);
     })();
   }, []);
-
-  const T2 = { olive:"#93a85a", gold:"#c8a84b", white:"#f0efea",
-    dim:"rgba(240,239,234,0.22)", bg3:"#181a12", border:"rgba(255,255,255,0.06)" };
-
+  const T2 = { olive:"#93a85a", gold:"#c8a84b", white:"#f0efea", dim:"rgba(240,239,234,0.22)", bg3:"#181a12", border:"rgba(255,255,255,0.06)" };
   if (loading) return (
     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-      {[1,2,3,4].map(i => (
-        <div key={i} style={{ height:44, borderRadius:8, background:T2.bg3,
-          animation:"shimmer 1.8s ease-in-out infinite" }} />
-      ))}
+      {[1,2,3,4].map(i => <div key={i} style={{ height:44, borderRadius:8, background:T2.bg3 }} />)}
     </div>
   );
-
-  if (items.length === 0) return (
-    <p style={{ fontSize:12, color:T2.dim, textAlign:"center", padding:"16px 0" }}>
-      No recent activity yet.
-    </p>
-  );
-
+  if (items.length === 0) return <p style={{ fontSize:12, color:T2.dim, textAlign:"center", padding:"16px 0" }}>No recent activity yet.</p>;
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-
-      {/* Global Lucky Touch community stat */}
       {globalLuckyCount > 0 && (
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-          padding:"10px 14px", background:T2.bg3, borderRadius:10,
-          border:`1px solid rgba(147,168,90,0.15)`, marginBottom:4 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", background:T2.bg3, borderRadius:10, border:`1px solid rgba(147,168,90,0.15)`, marginBottom:4 }}>
           <div style={{ display:"flex", alignItems:"center", gap:7 }}>
             <span style={{ fontSize:16 }}>🍀</span>
-            <span style={{ fontSize:11, color:T2.dim, letterSpacing:"0.04em" }}>
-              Community Lucky Touches
-            </span>
+            <span style={{ fontSize:11, color:T2.dim, letterSpacing:"0.04em" }}>Community Lucky Touches</span>
           </div>
-          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize:18, fontWeight:700, color:T2.olive }}>
-            {globalLuckyCount.toLocaleString()} discovered
-          </span>
+          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:700, color:T2.olive }}>{globalLuckyCount.toLocaleString()} discovered</span>
         </div>
       )}
-
       {items.map((item, i) => {
-        const timeAgo = item.time ? (() => {
-          const diff = Date.now() - new Date(item.time);
-          const mins = Math.floor(diff/60000);
-          const hrs  = Math.floor(diff/3600000);
-          const days = Math.floor(diff/86400000);
-          return days>0?`${days}d ago`:hrs>0?`${hrs}h ago`:mins>0?`${mins}m ago`:"just now";
-        })() : "";
-
+        const timeAgo = item.time ? (() => { const diff=Date.now()-new Date(item.time); const mins=Math.floor(diff/60000); const hrs=Math.floor(diff/3600000); const days=Math.floor(diff/86400000); return days>0?`${days}d ago`:hrs>0?`${hrs}h ago`:mins>0?`${mins}m ago`:"just now"; })() : "";
         const isLuckyLegendary = item.type === "lucky_touch_legendary";
         const isLuckyRare      = item.type === "lucky_touch_rare";
-        const isLucky          = isLuckyLegendary || isLuckyRare;
         const isSpotlight      = item.type === "spotlight";
-
         const inner = (
-          <div style={{ display:"flex", alignItems:"center", gap:10,
-            padding:"10px 12px", borderRadius:10,
-            background: isLuckyLegendary ? "linear-gradient(135deg,#1a1200,#2d2000)"
-              : isLuckyRare    ? "rgba(167,139,250,0.08)"
-              : isSpotlight    ? "linear-gradient(135deg,#1a1600,#0e1008)"
-              : T2.bg3,
-            border: isLuckyLegendary ? "1px solid rgba(200,168,75,0.35)"
-              : isLuckyRare    ? "1px solid rgba(167,139,250,0.25)"
-              : isSpotlight    ? "1px solid rgba(200,168,75,0.25)"
-              : `1px solid ${T2.border}` }}>
-            {isSpotlight && item.badgeImg ? (
-              <img src={item.badgeImg} alt="" loading="lazy"
-                style={{ width:28, height:28, objectFit:"contain", flexShrink:0 }} />
-            ) : (
-              <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>
-            )}
+          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:10,
+            background:isLuckyLegendary?"linear-gradient(135deg,#1a1200,#2d2000)":isLuckyRare?"rgba(167,139,250,0.08)":isSpotlight?"linear-gradient(135deg,#1a1600,#0e1008)":T2.bg3,
+            border:isLuckyLegendary?"1px solid rgba(200,168,75,0.35)":isLuckyRare?"1px solid rgba(167,139,250,0.25)":isSpotlight?"1px solid rgba(200,168,75,0.25)":`1px solid ${T2.border}` }}>
+            {isSpotlight && item.badgeImg ? <img src={item.badgeImg} alt="" loading="lazy" style={{ width:28, height:28, objectFit:"contain", flexShrink:0 }} /> : <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>}
             <div style={{ flex:1, minWidth:0 }}>
-              <span className="feed-username" style={{ fontSize:12, fontWeight:600,
-                color: isLuckyLegendary || isSpotlight ? T2.gold : T2.white }}>
-                @{item.username}
-              </span>
-              <span style={{ fontSize:12,
-                color: isLuckyLegendary ? "rgba(200,168,75,0.7)"
-                  : isLuckyRare    ? "rgba(167,139,250,0.8)"
-                  : isSpotlight    ? "rgba(200,168,75,0.6)"
-                  : T2.dim }}> {item.text}</span>
+              <span className="feed-username" style={{ fontSize:12, fontWeight:600, color:isLuckyLegendary||isSpotlight?T2.gold:T2.white }}>@{item.username}</span>
+              <span style={{ fontSize:12, color:isLuckyLegendary?"rgba(200,168,75,0.7)":isLuckyRare?"rgba(167,139,250,0.8)":isSpotlight?"rgba(200,168,75,0.6)":T2.dim }}> {item.text}</span>
             </div>
-            {timeAgo && (
-              <span style={{ fontSize:10, color:T2.dim, flexShrink:0 }}>{timeAgo}</span>
-            )}
+            {timeAgo && <span style={{ fontSize:10, color:T2.dim, flexShrink:0 }}>{timeAgo}</span>}
           </div>
         );
-
-        return item.link
-          ? <Link key={i} href={item.link} style={{ textDecoration:"none" }}>{inner}</Link>
-          : <div key={i}>{inner}</div>;
+        return item.link ? <Link key={i} href={item.link} style={{ textDecoration:"none" }}>{inner}</Link> : <div key={i}>{inner}</div>;
       })}
     </div>
   );
 }
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Home() {
-  // ── Username (restored from localStorage) ────────────────────────────────
   const [rawUsername, setRawUsername] = useState("");
   const username = normalizeUsername(rawUsername);
   const hasUser  = username.length > 0;
 
-  // ── User streak state (mirrors old index.js exactly) ─────────────────────
-  const [currentStreak,       setCurrentStreak]       = useState(1);
-  const [displayStreak,       setDisplayStreak]        = useState(1);
-  const [streakStatus,        setStreakStatus]         = useState("");
-  const [streakTone,          setStreakTone]           = useState("neutral");
-  const [shieldEligible,      setShieldEligible]       = useState(false);
-  const [missedOneDayNoShield,setMissedOneDayNoShield] = useState(false);
-  const [hasPostedToday,      setHasPostedToday]       = useState(null);
-  const [userStats,           setUserStats]            = useState(null);
-  const [latestPurchase,      setLatestPurchase]       = useState(null);
-  const [loadingUser,         setLoadingUser]          = useState(false);
+  const [currentStreak,        setCurrentStreak]        = useState(1);
+  const [displayStreak,        setDisplayStreak]         = useState(1);
+  const [streakStatus,         setStreakStatus]          = useState("");
+  const [streakTone,           setStreakTone]            = useState("neutral");
+  const [shieldEligible,       setShieldEligible]        = useState(false);
+  const [missedOneDayNoShield, setMissedOneDayNoShield]  = useState(false);
+  const [hasPostedToday,       setHasPostedToday]        = useState(null);
+  const [userStats,            setUserStats]             = useState(null);
+  const [latestPurchase,       setLatestPurchase]        = useState(null);
+  const [loadingUser,          setLoadingUser]           = useState(false);
 
-  // ── Shield purchase ───────────────────────────────────────────────────────
-  // (tx signature no longer collected — admin verifies wallet address directly on Solscan)
+  // Shield purchase
   const [purchaseWallet,  setPurchaseWallet]  = useState("");
   const [purchaseStatus,  setPurchaseStatus]  = useState(null);
   const [purchaseError,   setPurchaseError]   = useState("");
@@ -802,27 +553,29 @@ export default function Home() {
   const [copiedAddr,      setCopiedAddr]      = useState(false);
   const [showPasteTip,    setShowPasteTip]    = useState(false);
 
-  // ── Image / result card ───────────────────────────────────────────────────
-  const [imageSrc,    setImageSrc]    = useState(null);
-  const [showResult,  setShowResult]  = useState(false);
+  // Image / result card
+  const [imageSrc,   setImageSrc]   = useState(null);
+  const [showResult, setShowResult] = useState(false);
 
-  // ── Community stats ───────────────────────────────────────────────────────
+  // Community stats
   const [dailyCount,  setDailyCount]  = useState(null);
   const [totalBurned, setTotalBurned] = useState(null);
   const [topStreaker,  setTopStreaker] = useState(null);
   const [totalProofs,  setTotalProofs] = useState(null);
 
-  // ── Leaderboard + feed ────────────────────────────────────────────────────
+  // Leaderboard + feed
   const [leaders,      setLeaders]      = useState([]);
   const [recentProofs, setRecentProofs] = useState([]);
   const [previewDays,  setPreviewDays]  = useState([67, 23, 11]);
 
-  // ── Misc ──────────────────────────────────────────────────────────────────
-  const [mounted,        setMounted]        = useState(false);
-  const [showShieldBuy,  setShowShieldBuy]  = useState(false);
+  // Misc
+  const [mounted,       setMounted]       = useState(false);
+  const [showShieldBuy, setShowShieldBuy] = useState(false);
 
-  // Auto-open + scroll to shield purchase when arriving via #shield-section
-  // (e.g. from the Double Burn banner's "Get Shield" link)
+  // Sunset Pass activation state
+  const [sunsetActivating, setSunsetActivating] = useState(false);
+  const [sunsetMsg,        setSunsetMsg]        = useState("");
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.location.hash === "#shield-section") {
@@ -832,33 +585,29 @@ export default function Home() {
       }, 150);
     }
   }, []);
+
   const uploadSectionRef = useRef(null);
 
   useEffect(() => {
     setMounted(true);
     const saved = localStorage.getItem("pog_username");
     if (saved) setRawUsername(normalizeUsername(saved));
-
-    // Capture referral param from URL — store until first proof submitted
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
     if (ref && ref.length > 0) {
       const normalized = ref.toLowerCase().replace(/@/g,"").trim();
-      // Only store if not already set (first referrer wins)
       if (!localStorage.getItem("pog_referrer")) {
         localStorage.setItem("pog_referrer", normalized);
-        console.log("[referral] captured ref:", normalized);
       }
     }
   }, []);
 
-  // ── Persist username ──────────────────────────────────────────────────────
   useEffect(() => {
     if (typeof window !== "undefined" && username)
       localStorage.setItem("pog_username", username);
   }, [username]);
 
-  // ── Debounced user data preload (identical logic to old index.js) ─────────
+  // ── Debounced user data load ──────────────────────────────────────────────
   useEffect(() => {
     if (!username) {
       setCurrentStreak(1); setDisplayStreak(1); setStreakStatus("");
@@ -884,8 +633,6 @@ export default function Home() {
             .eq("username", username),
         ]);
 
-        const userStreak  = streakRow?.current_streak ?? 1;
-        // Fetch all ordered streaks and find position — avoids head:true filter bug
         const { data: allStreaksForRank } = await supabase
           .from("Streaks").select("username,current_streak")
           .order("current_streak", { ascending: false });
@@ -894,33 +641,60 @@ export default function Home() {
         );
         const rankCount = rankIdx >= 0 ? rankIdx : (allStreaksForRank?.length ?? 1) - 1;
 
-        const lastDate   = streakRow?.last_submission_date
+        const lastDate = streakRow?.last_submission_date
           ? new Date(streakRow.last_submission_date).toISOString().slice(0, 10)
           : null;
-        const shieldCount = streakRow?.shield_count ?? 0;
-        const actual      = streakRow?.current_streak ?? 1;
-        const projected   = actual + 1;
-        const displayVal  = computePreviewStreak(streakRow);
-        const missedOne   = lastDate === twoDaysAgo;
 
-        if (!lastDate)                setStreakStatus("start your streak today"),    setStreakTone("neutral");
-        else if (lastDate===todayStr) setStreakStatus("streak locked in for today"), setStreakTone("success");
+        // ── CHANGE 1: Read shield count from UserConsumables ─────────────
+        const { data: consumableRow } = await supabase
+          .from("UserConsumables")
+          .select("quantity")
+          .eq("username", username)
+          .eq("consumable_type", "shield")
+          .maybeSingle();
+        const shieldCount = consumableRow?.quantity ?? streakRow?.shield_count ?? 0;
+
+        // ── CHANGE 2: Read sunset pass count from UserConsumables ─────────
+        const { data: sunsetRow } = await supabase
+          .from("UserConsumables")
+          .select("quantity")
+          .eq("username", username)
+          .eq("consumable_type", "sunset_pass")
+          .maybeSingle();
+        const sunsetPassCount = sunsetRow?.quantity ?? 0;
+
+        const actual    = streakRow?.current_streak ?? 1;
+        const projected = actual + 1;
+        const displayVal = computePreviewStreak(streakRow);
+        const missedOne  = lastDate === twoDaysAgo;
+
+        if (!lastDate)                    setStreakStatus("start your streak today"),        setStreakTone("neutral");
+        else if (lastDate===todayStr)     setStreakStatus("streak locked in for today"),     setStreakTone("success");
         else if (lastDate===yesterdayStr) setStreakStatus(`submit today to reach day ${projected}`), setStreakTone("warning");
         else if (missedOne && shieldCount > 0) setStreakStatus(`day ${actual} — shield available`), setStreakTone("reset");
-        else setStreakStatus("streak lost — start again today"), setStreakTone("reset");
+        else                              setStreakStatus("streak lost — start again today"), setStreakTone("reset");
 
         setShieldEligible(missedOne && shieldCount > 0);
         setMissedOneDayNoShield(missedOne && shieldCount === 0);
         setHasPostedToday(lastDate === todayStr);
         setCurrentStreak(actual);
         setDisplayStreak(displayVal);
-        setUserStats({ posts: postCount ?? 0, bestStreak: streakRow?.best_streak ?? actual, rank: rankCount + 1, shields: shieldCount });
+
+        // ── CHANGE 3: Include sunsetPasses in userStats ───────────────────
+        setUserStats({
+          posts:        postCount ?? 0,
+          bestStreak:   streakRow?.best_streak ?? actual,
+          rank:         rankCount + 1,
+          shields:      shieldCount,
+          sunsetPasses: sunsetPassCount,
+        });
 
         supabase.from("ShieldPurchases")
           .select("tx_signature, status, created_at")
           .eq("username", username)
           .order("created_at", { ascending:false }).limit(1).maybeSingle()
           .then(({ data }) => setLatestPurchase(data ?? null));
+
       } catch (e) {
         console.error("preload failed", e);
         setStreakTone("neutral"); setStreakStatus("");
@@ -965,11 +739,7 @@ export default function Home() {
     setRecentProofs(data.map(r => ({ username: normalizeUsername(r.username), streak: sMap[normalizeUsername(r.username)] ?? 1, created_at: r.created_at })));
   }, []);
 
-  useEffect(() => {
-    fetchStats();
-    fetchLeaderboard();
-    fetchRecentProofs();
-  }, []);
+  useEffect(() => { fetchStats(); fetchLeaderboard(); fetchRecentProofs(); }, []);
 
   // ── Shield buy handler ────────────────────────────────────────────────────
   const handleBuyShield = useCallback(async () => {
@@ -978,29 +748,39 @@ export default function Home() {
     if (!wallet) { setPurchaseError("Enter your wallet address."); return; }
     setPurchaseStatus("loading"); setPurchaseError("");
     const { error } = await supabase.from("ShieldPurchases").insert([{ username, wallet_address: wallet, token_amount: 50000, status: "pending" }]);
-    if (error) {
-      setPurchaseError(error.message || "Submission failed — try again.");
-      setPurchaseStatus("error");
-      return;
-    }
-    setPurchaseStatus("success");
-    setPurchaseWallet("");
+    if (error) { setPurchaseError(error.message || "Submission failed — try again."); setPurchaseStatus("error"); return; }
+    setPurchaseStatus("success"); setPurchaseWallet("");
     supabase.from("ShieldPurchases").select("status,created_at").eq("username",username).order("created_at",{ascending:false}).limit(1).maybeSingle().then(({ data }) => setLatestPurchase(data ?? null));
   }, [username, purchaseWallet]);
 
+  // ── Sunset Pass activation ────────────────────────────────────────────────
+  const handleActivateSunsetPass = useCallback(async () => {
+    if (!username || sunsetActivating) return;
+    setSunsetActivating(true); setSunsetMsg("");
+    try {
+      const { data, error } = await supabase.rpc("activate_sunset_pass", { p_username: username });
+      if (error) throw error;
+      if (data?.status === "success") {
+        setSunsetMsg(`✅ ${data.message}`);
+        // Decrement local count immediately
+        setUserStats(s => s ? { ...s, sunsetPasses: Math.max(0, (s.sunsetPasses ?? 1) - 1) } : s);
+      } else {
+        setSunsetMsg(`⚠️ ${data?.message || "Could not activate pass."}`);
+      }
+    } catch(e) {
+      setSunsetMsg(`⚠️ ${e.message || "Activation failed."}`);
+    }
+    setSunsetActivating(false);
+    setTimeout(() => setSunsetMsg(""), 6000);
+  }, [username, sunsetActivating]);
+
   // ── Image upload ──────────────────────────────────────────────────────────
-  // Uploads the original photo to storage immediately on selection — matches
-  // the path the profile page expects (`${username}/${today}.png`), so no
-  // canvas generation, submission-time upload, or DB write-back is needed.
-  // This removes the entire race-condition-prone flow that previously lived
-  // inside ResultCard's lockInStreak function.
   const handleImageUpload = useCallback(async (file) => {
     if (!file || !(file instanceof Blob)) return;
     setImageSrc(URL.createObjectURL(file));
     setShowResult(false);
     setTimeout(() => setShowResult(true), 80);
-
-    if (!hasUser) return; // no username yet — can't build the storage path
+    if (!hasUser) return;
     try {
       const today = new Date().toISOString().slice(0,10);
       const fileName = `${username}/${today}.png`;
@@ -1008,12 +788,8 @@ export default function Home() {
         .storage.from("proof-photos").upload(fileName, file, {
           contentType: file.type || "image/png", upsert: true,
         });
-      if (uploadErr) {
-        console.error("[photo] upload failed:", uploadErr.message);
-      }
-    } catch(e) {
-      console.error("[photo] upload exception:", e?.message);
-    }
+      if (uploadErr) console.error("[photo] upload failed:", uploadErr.message);
+    } catch(e) { console.error("[photo] upload exception:", e?.message); }
   }, [username, hasUser]);
 
   // ── Derived display values ────────────────────────────────────────────────
@@ -1028,7 +804,7 @@ export default function Home() {
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html{scroll-behavior:smooth;}
+    html{scroll-behavior:smooth;overflow-x:hidden;}
     body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:${T.bg};}
@@ -1058,70 +834,22 @@ export default function Home() {
     input[type=text].field,textarea.field{width:100%;background:${T.bg3};border:1px solid ${T.border};border-radius:8px;padding:10px 13px;color:${T.white};font-size:13px;outline:none;transition:border-color 0.2s;resize:none;}
     input[type=text].field:focus,textarea.field:focus{border-color:${T.olive}50;}
     input[type=text].field::placeholder,textarea.field::placeholder{color:${T.dim};}
-    /* ── MOBILE LAYOUT FIX ─────────────────────────────────────────────── */
-    *,*::before,*::after{box-sizing:border-box;}
-    html{overflow-x:hidden;}
-
-    /* Collapse grids at tablet */
-    @media(max-width:960px){
-      .main-grid{grid-template-columns:1fr !important;}
-      .prog-grid{grid-template-columns:1fr !important;}
-    }
-
-    /* Full mobile fixes */
+    @media(max-width:960px){.main-grid{grid-template-columns:1fr !important;}.prog-grid{grid-template-columns:1fr !important;}}
     @media(max-width:768px){
-      .main-grid{
-        grid-template-columns:1fr !important;
-        width:100% !important;
-        max-width:100% !important;
-      }
-      .prog-grid{
-        grid-template-columns:1fr !important;
-        width:100% !important;
-        max-width:100% !important;
-      }
-      /* Every card fills full width */
-      .card{
-        width:100% !important;
-        max-width:100% !important;
-        min-width:0 !important;
-        border-right:none !important;
-      }
-      /* Stat strip wraps cleanly */
+      .main-grid,.prog-grid{grid-template-columns:1fr !important;width:100% !important;max-width:100% !important;}
+      .card{width:100% !important;max-width:100% !important;min-width:0 !important;border-right:none !important;}
       .stat-strip{flex-wrap:wrap !important;}
       .stat-strip>div{min-width:50% !important;}
-      /* Hero buttons stack */
       .hero-btns{flex-direction:column !important;align-items:stretch !important;}
-      /* Nav collapses */
       .nav-links{display:none !important;}
-      /* Username input — don't overflow */
       .username-input{width:120px !important;font-size:12px !important;}
-      /* Activity feed items — truncate long usernames */
-      .feed-username{
-        max-width:120px;
-        overflow:hidden;
-        text-overflow:ellipsis;
-        white-space:nowrap;
-        display:inline-block;
-      }
-      /* Spotlight cards horizontal scroll */
-      .spotlight-scroll{
-        overflow-x:auto;
-        overflow-y:visible;
-        scroll-snap-type:x mandatory;
-      }
-      .spotlight-scroll>*{
-        scroll-snap-align:start;
-      }
-      /* Quests banner stack */
+      .feed-username{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;}
+      .spotlight-scroll{overflow-x:auto;overflow-y:visible;scroll-snap-type:x mandatory;}
+      .spotlight-scroll>*{scroll-snap-align:start;}
       .quests-banner{flex-direction:column !important;text-align:center !important;}
-      /* Footer CTA full width */
       .footer-cta{flex-direction:column !important;text-align:center !important;align-items:center !important;}
     }
-
-    @media(max-width:400px){
-      .username-input{width:100px !important;font-size:11px !important;}
-    }
+    @media(max-width:400px){.username-input{width:100px !important;font-size:11px !important;}}
   `;
 
   return (
@@ -1129,28 +857,24 @@ export default function Home() {
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <div style={{ minHeight:"100vh", background:T.bg }}>
 
-        {/* ── NAV ─────────────────────────────────────────────────────────── */}
+        {/* ── NAV ──────────────────────────────────────────────────────────── */}
         <nav style={{ position:"sticky", top:0, zIndex:200, display:"flex", alignItems:"center",
           justifyContent:"space-between", padding:"0 clamp(14px,4vw,48px)", height:56,
           background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}` }}>
-
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:26, height:26, objectFit:"contain" }} />
             <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
           </Link>
-
           <div className="nav-links" style={{ display:"flex", gap:28, alignItems:"center" }}>
             <a href="#upload" className="nav-link active">Dashboard</a>
             <Link href="/leaderboard" className="nav-link">Leaderboard</Link>
             <Link href="/spotlight"   className="nav-link">Spotlight</Link>
             <Link href="/create"      className="nav-link">Create</Link>
             <Link href="/map"         className="nav-link">Map</Link>
-            <Link href="/burns"       className="nav-link">Shields & Burns</Link>
-            <Link href="/quests" className="nav-link">Quests</Link>
+            <Link href="/burns"       className="nav-link">🎒 Consumables</Link>
+            <Link href="/quests"      className="nav-link">Quests</Link>
             <a href="https://touchgrass.today" className="nav-link" target="_blank" rel="noopener noreferrer">Website</a>
           </div>
-
-          {/* Username input + profile link */}
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
             <input className="username-input" type="text" placeholder="your username"
               value={rawUsername} onChange={e => setRawUsername(e.target.value)}
@@ -1172,8 +896,6 @@ export default function Home() {
           </div>
           <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"linear-gradient(90deg,rgba(14,15,11,0.92) 0%,rgba(14,15,11,0.16) 52%,rgba(14,15,11,0.80) 100%)" }} />
           <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"36%", pointerEvents:"none", background:"linear-gradient(180deg,transparent,rgba(14,15,11,0.97))" }} />
-
-          {/* Left */}
           <div style={{ position:"absolute", left:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", maxWidth:480, pointerEvents:"auto" }}>
             <div className="fade-1" style={{ fontSize:10, letterSpacing:"0.22em", color:T.olive, textTransform:"uppercase", marginBottom:12, fontWeight:600 }}>Verified Outdoors</div>
             <h1 className="fade-2" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(44px,6.5vw,88px)", fontWeight:700, color:T.white, lineHeight:0.94, letterSpacing:"-0.02em", marginBottom:18 }}>
@@ -1187,9 +909,16 @@ export default function Home() {
               <Link href="/leaderboard" className="btn-ghost">View Leaderboard</Link>
             </div>
 
+            {/* ── CHANGE 4: Stats strip with Shields + Passes ──────────────── */}
             {hasUser && userStats && (
-              <div className="fade-3" style={{ marginTop:24, display:"flex", gap:18 }}>
-                {[["Posts", userStats.posts], ["Best", `${userStats.bestStreak}d`], ["Rank", `#${userStats.rank}`], ["Shields", userStats.shields]].map(([label, val]) => (
+              <div className="fade-3" style={{ marginTop:24, display:"flex", gap:18, flexWrap:"wrap" }}>
+                {[
+                  ["Posts",   userStats.posts],
+                  ["Best",    `${userStats.bestStreak}d`],
+                  ["Rank",    `#${userStats.rank}`],
+                  ["Shields", userStats.shields],
+                  ["Passes",  userStats.sunsetPasses ?? 0],
+                ].map(([label, val]) => (
                   <div key={label} style={{ textAlign:"center" }}>
                     <div style={{ fontSize:15, fontWeight:700, color:T.white, fontFamily:"'Cormorant Garamond',Georgia,serif" }}>{val}</div>
                     <div style={{ fontSize:8, color:T.dim, letterSpacing:"0.12em", textTransform:"uppercase" }}>{label}</div>
@@ -1199,7 +928,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Right streak HUD — only show when signed in */}
           {hasUser && currentStreak > 0 && (
             <div style={{ position:"absolute", right:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", textAlign:"right", pointerEvents:"auto" }}>
               <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.dim, textTransform:"uppercase", marginBottom:8 }}>Your Streak</div>
@@ -1215,7 +943,7 @@ export default function Home() {
           )}
         </section>
 
-        {/* ── ENTER USERNAME BANNER ────────────────────────────────────────── */}
+        {/* ── ENTER USERNAME BANNER ─────────────────────────────────────────── */}
         {mounted && !hasUser && (
           <div style={{ background:`${T.olive}08`, borderBottom:`1px solid ${T.borderG}`,
             padding:"11px clamp(14px,4vw,48px)", display:"flex", alignItems:"center",
@@ -1224,7 +952,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── STATS STRIP ───────────────────────────────────────────────────── */}
+        {/* ── STATS STRIP ──────────────────────────────────────────────────── */}
         <div className="stat-strip" style={{ display:"flex", background:T.bg2, borderBottom:`1px solid ${T.border}` }}>
           <StatCard icon="◎" value={dailyCount !== null ? dailyCount.toLocaleString() : "…"} label="Active Touchers Today" />
           <StatCard icon="◈" value={fmtBurned(totalBurned)} label="$TOUCHGRASS Burned" />
@@ -1232,19 +960,17 @@ export default function Home() {
           <StatCard icon="◉" value={totalProofs !== null ? totalProofs.toLocaleString() : "…"} label="Proofs Logged" last />
         </div>
 
-        {/* ── COMMUNITY SPOTLIGHT (above the fold on mobile) ─────────────────── */}
-        <div style={{ padding:"20px clamp(14px,4vw,32px)", background:T.bg2,
-          borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
+        {/* ── COMMUNITY SPOTLIGHT ───────────────────────────────────────────── */}
+        <div style={{ padding:"20px clamp(14px,4vw,32px)", background:T.bg2, borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
           <SpotlightSection />
         </div>
 
         {/* ── MAP PREVIEW ──────────────────────────────────────────────────── */}
-        <div style={{ padding:"20px clamp(14px,4vw,32px)", background:T.bg,
-          borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
+        <div style={{ padding:"20px clamp(14px,4vw,32px)", background:T.bg, borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
           <MapPreviewCard />
         </div>
 
-        {/* ── MAIN THREE-COLUMN GRID ─────────────────────────────────────────── */}
+        {/* ── MAIN THREE-COLUMN GRID ────────────────────────────────────────── */}
         <div className="main-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr",
           gap:0, background:T.border, borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`,
           width:"100%", maxWidth:"100%" }}>
@@ -1252,7 +978,6 @@ export default function Home() {
           {/* LOG YOUR PROOF */}
           <div id="upload" ref={uploadSectionRef} className="card" style={{ padding:26 }}>
             <div className="card-title">Log Your Proof</div>
-
             {!hasUser ? (
               <div style={{ border:`1.5px dashed ${T.borderG}`, borderRadius:12, padding:"32px 20px", textAlign:"center" }}>
                 <div style={{ fontSize:28, marginBottom:12, opacity:0.4 }}>🌿</div>
@@ -1296,6 +1021,28 @@ export default function Home() {
                 </button>
               </div>
             )}
+
+            {/* ── CHANGE 5: Sunset Pass reminder card ──────────────────────── */}
+            {mounted && hasUser && !hasPostedToday && (userStats?.sunsetPasses ?? 0) > 0 && (
+              <div style={{ marginTop:14, padding:"12px 14px", borderRadius:10,
+                background:"rgba(249,115,22,0.06)", border:"1px solid rgba(249,115,22,0.3)" }}>
+                <div style={{ fontSize:11, color:"#f97316", fontWeight:600, marginBottom:4 }}>🌅 Running late?</div>
+                <div style={{ fontSize:11, color:T.muted, marginBottom:10, lineHeight:1.5 }}>
+                  Use a Sunset Pass to extend today's proof window by 2 hours.
+                  You have <strong style={{ color:"#f97316" }}>{userStats.sunsetPasses}</strong> pass{userStats.sunsetPasses !== 1 ? "es" : ""}.
+                </div>
+                {sunsetMsg ? (
+                  <div style={{ fontSize:11, color: sunsetMsg.startsWith("✅") ? "#4ade80" : "#f97316" }}>{sunsetMsg}</div>
+                ) : (
+                  <button onClick={handleActivateSunsetPass} disabled={sunsetActivating}
+                    style={{ fontSize:11, fontWeight:700, color:"#0a0c08", background:"#f97316",
+                      border:"none", borderRadius:7, padding:"8px 16px", cursor:"pointer",
+                      opacity:sunsetActivating?0.7:1 }}>
+                    {sunsetActivating ? "Activating…" : "🌅 Use Sunset Pass"}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* RECENT PROOFS */}
@@ -1335,7 +1082,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── PROGRESSION + RESULT CARD PREVIEW ─────────────────────────────── */}
+        {/* ── PROGRESSION + CARDS ───────────────────────────────────────────── */}
         <div className="prog-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr",
           gap:0, background:T.border, borderBottom:`1px solid ${T.border}`,
           width:"100%", maxWidth:"100%" }}>
@@ -1346,9 +1093,9 @@ export default function Home() {
             {hasUser && currentStreak > 0 ? (
               <>
                 <div style={{ display:"flex", justifyContent:"space-around", marginBottom:28 }}>
-                  <TierBadge name="Rooted"    day={14}  completed={currentStreak>=14} active={currentStreak>=7  && currentStreak<14} />
-                  <TierBadge name="Elite"     day={30}  completed={currentStreak>=30} active={currentStreak>=14 && currentStreak<30} />
-                  <TierBadge name="Legendary" day={50}  completed={currentStreak>=50} active={currentStreak>=30 && currentStreak<50} />
+                  <TierBadge name="Rooted"    day={14}  completed={currentStreak>=14}  active={currentStreak>=7   && currentStreak<14} />
+                  <TierBadge name="Elite"     day={30}  completed={currentStreak>=30}  active={currentStreak>=14  && currentStreak<30} />
+                  <TierBadge name="Legendary" day={50}  completed={currentStreak>=50}  active={currentStreak>=30  && currentStreak<50} />
                   <TierBadge name="Immortal"  day={100} completed={currentStreak>=100} active={currentStreak>=50  && currentStreak<100} />
                   <TierBadge name="Mythic"    day={180} completed={currentStreak>=180} active={currentStreak>=100 && currentStreak<180} />
                   <TierBadge name="Eternal"   day={365} completed={currentStreak>=365} active={currentStreak>=180 && currentStreak<365} />
@@ -1396,11 +1143,8 @@ export default function Home() {
                   {showShieldBuy ? "Close" : "Buy →"}
                 </button>
               </div>
-
               {showShieldBuy && (
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-
-                  {/* Solana Pay one-tap (mobile wallets) */}
                   <a href={buildSolanaPayUrl()}
                     style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8,
                       background:"linear-gradient(135deg,#93a85a,#7a9148)", color:"#0e1108",
@@ -1411,15 +1155,12 @@ export default function Home() {
                   <div style={{ fontSize:9.5, color:T.dim, textAlign:"center" }}>
                     Opens your wallet app with the payment pre-filled. You review and approve it there.
                   </div>
-
-                  {/* QR code for scanning from another device */}
                   <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6,
                     padding:"14px 0", borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`, margin:"4px 0" }}>
                     <img src={buildQrCodeUrl(buildSolanaPayUrl())} alt="Scan to pay with Solana wallet"
                       style={{ width:140, height:140, borderRadius:8, border:`1px solid ${T.border}` }} />
                     <div style={{ fontSize:9.5, color:T.dim }}>Scan with your wallet app</div>
                   </div>
-
                   <div style={{ fontSize:10, color:T.dim, marginBottom:2 }}>
                     Or send manually to <span style={{ color:T.olive }}>{SOL_DOMAIN}</span>
                     {" "}(<span style={{ fontSize:9 }}>{BURN_ADDR.slice(0,8)}…</span>), then submit below.
@@ -1456,46 +1197,31 @@ export default function Home() {
             <RecentMilestones />
           </div>
 
-          {/* ACTIVITY FEED WITH TABS */}
+          {/* ACTIVITY FEED */}
           <div className="card" style={{ padding:28 }}>
-            
             <ActivityFeed />
           </div>
-
         </div>
 
-        {/* ── QUESTS BANNER ────────────────────────────────────────────────── */}
-        <div style={{
-          margin:"0", padding:"24px clamp(14px,4vw,48px)",
-          background:T.bg2, borderTop:`1px solid ${T.border}`,
-          borderBottom:`1px solid ${T.border}`,
+        {/* ── QUESTS BANNER ─────────────────────────────────────────────────── */}
+        <div style={{ margin:"0", padding:"24px clamp(14px,4vw,48px)", background:T.bg2,
+          borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`,
           display:"flex", alignItems:"center", justifyContent:"space-between",
-          gap:16, flexWrap:"wrap", width:"100%", maxWidth:"100%",
-        }}>
+          gap:16, flexWrap:"wrap", width:"100%", maxWidth:"100%" }}>
           <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
             <div style={{ width:48, height:48, borderRadius:12, flexShrink:0,
               background:`${T.olive}14`, border:`1px solid ${T.borderG}`,
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>
-              ⭐
-            </div>
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>⭐</div>
             <div style={{ minWidth:0 }}>
-              <div style={{ fontSize:14, fontWeight:600, color:T.white, marginBottom:2 }}>
-                Community Quests
-              </div>
-              <div style={{ fontSize:11, color:T.dim }}>
-                Complete quests, earn XP, unlock badges, vote on DexScreener.
-              </div>
+              <div style={{ fontSize:14, fontWeight:600, color:T.white, marginBottom:2 }}>Community Quests</div>
+              <div style={{ fontSize:11, color:T.dim }}>Complete quests, earn XP, unlock badges, vote on DexScreener.</div>
             </div>
           </div>
-          <Link href="/quests" style={{
-            display:"inline-flex", alignItems:"center", gap:6,
-            background:T.olive, color:"#0e1108",
-            fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700,
-            letterSpacing:"0.1em", textTransform:"uppercase",
-            padding:"10px 20px", borderRadius:8, textDecoration:"none",
-            flexShrink:0, transition:"background 0.2s",
-            whiteSpace:"nowrap",
-          }}>
+          <Link href="/quests" style={{ display:"inline-flex", alignItems:"center", gap:6,
+            background:T.olive, color:"#0e1108", fontFamily:"'DM Sans',sans-serif",
+            fontSize:12, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
+            padding:"10px 20px", borderRadius:8, textDecoration:"none", flexShrink:0,
+            transition:"background 0.2s", whiteSpace:"nowrap" }}>
             View Quests →
           </Link>
         </div>
@@ -1535,7 +1261,6 @@ export default function Home() {
         </footer>
 
       </div>
-
     </>
   );
 }
