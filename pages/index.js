@@ -199,107 +199,108 @@ function buildQrCodeUrl(data, size = 220) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&color=240-239-234&bgcolor=10-12-8&data=${encodeURIComponent(data)}`;
 }
 // ─── PromoBanner — reusable seasonal / consumable announcement ───────────────
-// Props: image (filename in promo-assets bucket), title, description,
-//        buttonText, href, secondaryText, secondaryHref
-function PromoBanner({ image, title, description, buttonText, href, secondaryText = "", secondaryHref = "/burns" }) {
-  // Build public URL from existing Supabase client — same pattern used elsewhere
+// Props: image, title, description, buttonText, href,
+//        secondaryText, secondaryHref, steps (array of strings)
+function PromoBanner({ image, title, description, buttonText, href,
+  secondaryText = "", secondaryHref = "/", steps = [] }) {
   const imgUrl = supabase.storage.from("promo-assets").getPublicUrl(image).data.publicUrl;
   const [hovered, setHovered] = useState(false);
 
   return (
     <div style={{ width:"100%", padding:"0 clamp(14px,4vw,32px)", boxSizing:"border-box" }}>
-      {/* Image wrapper — links to /burns on click */}
-      <Link href={href} style={{ display:"block", textDecoration:"none", position:"relative",
-        borderRadius:24, overflow:"hidden",
+
+      {/* Image — no wrapping link so the floating buttons work independently */}
+      <div style={{ position:"relative", borderRadius:24, overflow:"hidden",
         boxShadow: hovered
-          ? "0 0 40px rgba(147,168,90,0.22), 0 12px 48px rgba(0,0,0,0.55)"
+          ? "0 0 40px rgba(249,115,22,0.2), 0 12px 48px rgba(0,0,0,0.55)"
           : "0 6px 32px rgba(0,0,0,0.45)",
-        transform: hovered ? "scale(1.008)" : "scale(1)",
-        transition:"transform 0.25s ease, box-shadow 0.25s ease",
-      }}
+        transform: hovered ? "scale(1.005)" : "scale(1)",
+        transition:"transform 0.25s ease, box-shadow 0.25s ease" }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}>
 
-        {/* Aspect-ratio container — 1500:1000 = 3:2 */}
+        {/* 3:2 aspect ratio container */}
         <div style={{ position:"relative", width:"100%", paddingBottom:"66.666%", background:"#0e1008" }}>
-          <img
-            src={imgUrl}
-            alt={title}
-            loading="lazy"
-            style={{
-              position:"absolute", inset:0,
-              width:"100%", height:"100%",
-              objectFit:"cover", objectPosition:"center",
-              display:"block",
-              borderRadius:24,
-            }}
-          />
+          <img src={imgUrl} alt={title} loading="lazy"
+            style={{ position:"absolute", inset:0, width:"100%", height:"100%",
+              objectFit:"cover", objectPosition:"center", display:"block" }} />
 
-          {/* Floating CTA — lower right corner */}
-          <div style={{
-            position:"absolute", bottom:20, right:20,
-            background:"linear-gradient(135deg,#93a85a,#7a9148)",
-            color:"#fff",
-            fontSize:13, fontWeight:700, letterSpacing:"0.06em",
-            padding:"11px 22px",
-            borderRadius:999,
-            boxShadow: hovered
-              ? "0 6px 24px rgba(147,168,90,0.55)"
-              : "0 4px 14px rgba(147,168,90,0.35)",
-            transform: hovered ? "translateY(-3px)" : "translateY(0)",
-            transition:"transform 0.2s ease, box-shadow 0.2s ease",
-            pointerEvents:"none", // parent Link handles click
-            whiteSpace:"nowrap",
-          }}>
-            {buttonText}
+          {/* Dark gradient at bottom for button legibility */}
+          <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"40%",
+            background:"linear-gradient(to top,rgba(0,0,0,0.72),transparent)",
+            pointerEvents:"none" }} />
+
+          {/* Floating buttons — bottom of image */}
+          <div style={{ position:"absolute", bottom:20, left:0, right:0,
+            display:"flex", gap:10, justifyContent:"center",
+            padding:"0 20px", flexWrap:"wrap" }}>
+            <a href={href} target="_blank" rel="noopener noreferrer"
+              style={{ display:"inline-flex", alignItems:"center", gap:7,
+                background:"linear-gradient(135deg,#f97316,#c2410c)",
+                color:"#fff", fontSize:13, fontWeight:700,
+                letterSpacing:"0.05em", padding:"11px 22px",
+                borderRadius:999, textDecoration:"none", whiteSpace:"nowrap",
+                boxShadow:"0 4px 18px rgba(249,115,22,0.45)",
+                transition:"transform 0.15s, box-shadow 0.15s" }}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 24px rgba(249,115,22,0.6)";}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 4px 18px rgba(249,115,22,0.45)";}}>
+              {buttonText}
+            </a>
+            {secondaryText && (
+              <Link href={secondaryHref}
+                style={{ display:"inline-flex", alignItems:"center", gap:7,
+                  background:"linear-gradient(135deg,#93a85a,#7a9148)",
+                  color:"#fff", fontSize:13, fontWeight:700,
+                  letterSpacing:"0.05em", padding:"11px 22px",
+                  borderRadius:999, textDecoration:"none", whiteSpace:"nowrap",
+                  boxShadow:"0 4px 18px rgba(147,168,90,0.4)",
+                  transition:"transform 0.15s, box-shadow 0.15s" }}
+                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 24px rgba(147,168,90,0.55)";}}
+                onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 4px 18px rgba(147,168,90,0.4)";}}>
+                {secondaryText}
+              </Link>
+            )}
           </div>
         </div>
-      </Link>
+      </div>
 
-      {/* Info card below image */}
-      <div style={{
-        marginTop:16,
-        background:"linear-gradient(145deg,#141510,#1c1e17)",
-        border:"1px solid rgba(147,168,90,0.2)",
-        borderRadius:16,
-        padding:"22px 24px",
-        display:"flex",
-        alignItems:"center",
-        justifyContent:"space-between",
-        gap:16,
-        flexWrap:"wrap",
-        boxShadow:"0 4px 24px rgba(0,0,0,0.3)",
-      }}>
-        <div style={{ flex:1, minWidth:220 }}>
-          <div style={{
-            fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize:"clamp(17px,2.2vw,22px)",
-            fontWeight:700, color:"#f0efea",
-            marginBottom:6,
-          }}>
-            {title}
-          </div>
-          <div style={{ fontSize:13, color:"rgba(240,239,234,0.55)", lineHeight:1.65, maxWidth:520 }}>
-            {description.split("\n\n").map((para, i) => (
-              <p key={i} style={{ margin: i > 0 ? "8px 0 0" : 0 }}>{para}</p>
+      {/* Info card */}
+      <div style={{ marginTop:16, background:"linear-gradient(145deg,#141510,#1c1e17)",
+        border:"1px solid rgba(249,115,22,0.25)", borderRadius:16,
+        padding:"22px 24px", boxShadow:"0 4px 24px rgba(0,0,0,0.3)" }}>
+
+        <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+          fontSize:"clamp(17px,2.2vw,22px)", fontWeight:700,
+          color:"#f0efea", marginBottom:8 }}>
+          {title}
+        </div>
+
+        <div style={{ fontSize:13, color:"rgba(240,239,234,0.55)",
+          lineHeight:1.65, marginBottom: steps.length ? 18 : 0 }}>
+          {description.split("\n\n").map((para, i) => (
+            <p key={i} style={{ margin: i > 0 ? "8px 0 0" : 0 }}>{para}</p>
+          ))}
+        </div>
+
+        {/* Steps */}
+        {steps.length > 0 && (
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:4 }}>
+            {steps.map((step, i) => (
+              <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10,
+                flex:"1 1 180px", background:"rgba(249,115,22,0.05)",
+                border:"1px solid rgba(249,115,22,0.15)", borderRadius:10,
+                padding:"10px 12px" }}>
+                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                  fontSize:22, fontWeight:700, color:"rgba(249,115,22,0.4)",
+                  lineHeight:1, flexShrink:0 }}>
+                  {String(i+1).padStart(2,"0")}
+                </div>
+                <div style={{ fontSize:12, color:"rgba(240,239,234,0.65)",
+                  lineHeight:1.5, paddingTop:2 }}>{step}</div>
+              </div>
             ))}
           </div>
-        </div>
-        {secondaryText && <Link href={secondaryHref} style={{
-          display:"inline-flex", alignItems:"center",
-          background:"transparent",
-          color:"#93a85a",
-          border:"1px solid rgba(147,168,90,0.4)",
-          fontSize:12, fontWeight:700, letterSpacing:"0.1em",
-          textTransform:"uppercase", textDecoration:"none",
-          padding:"10px 22px", borderRadius:999,
-          flexShrink:0,
-          transition:"background 0.2s, color 0.2s",
-        }}
-          onMouseEnter={e => { e.currentTarget.style.background="rgba(147,168,90,0.12)"; e.currentTarget.style.color="#a8c86a"; }}
-          onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="#93a85a"; }}>
-          {secondaryText} →
-        </Link>}
+        )}
       </div>
     </div>
   );
@@ -1054,10 +1055,18 @@ export default function Home() {
         <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
           <PromoBanner
             image="fight_club.png"
-            title="🥊 Crypto Fight Club"
-            description={`Touch Grass is in the ring. Vote for us on Crypto Fight Club and show the world that going outside is the ultimate alpha.\n\nThrow your punch. Support Touch Grass.`}
-            buttonText="🥊 Vote Now"
+            title="🥊 Throw Your Punch — Support Touch Grass!"
+            description="Touch Grass is fighting in the Crypto Fight Club arena. Throw your punches, screenshot your score, and earn Grass Score + an exclusive Grass Jab badge."
+            buttonText="🥊 Fight Now"
             href="https://fight.cryptofightclub.wtf"
+            secondaryText="🌿 Proof of Punch"
+            secondaryHref="/fight"
+            steps={[
+              "Click Fight Now and head to Crypto Fight Club",
+              "Throw your punches to support Touch Grass",
+              "Screenshot your punch count from the fight page",
+              "Upload your screenshot to claim your Grass Jab badge and Grass Score",
+            ]}
           />
         </div>
 
