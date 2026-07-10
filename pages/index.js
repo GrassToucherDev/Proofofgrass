@@ -201,7 +201,7 @@ function buildQrCodeUrl(data, size = 220) {
 // ─── PromoBanner — reusable seasonal / consumable announcement ───────────────
 // Props: image (filename in promo-assets bucket), title, description,
 //        buttonText, href, secondaryText, secondaryHref
-function PromoBanner({ image, title, description, buttonText, href, secondaryText = "View Consumables", secondaryHref = "/burns" }) {
+function PromoBanner({ image, title, description, buttonText, href, secondaryText = "", secondaryHref = "/burns" }) {
   // Build public URL from existing Supabase client — same pattern used elsewhere
   const imgUrl = supabase.storage.from("promo-assets").getPublicUrl(image).data.publicUrl;
   const [hovered, setHovered] = useState(false);
@@ -285,7 +285,7 @@ function PromoBanner({ image, title, description, buttonText, href, secondaryTex
             ))}
           </div>
         </div>
-        <Link href={secondaryHref} style={{
+        {secondaryText && <Link href={secondaryHref} style={{
           display:"inline-flex", alignItems:"center",
           background:"transparent",
           color:"#93a85a",
@@ -299,7 +299,7 @@ function PromoBanner({ image, title, description, buttonText, href, secondaryTex
           onMouseEnter={e => { e.currentTarget.style.background="rgba(147,168,90,0.12)"; e.currentTarget.style.color="#a8c86a"; }}
           onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="#93a85a"; }}>
           {secondaryText} →
-        </Link>
+        </Link>}
       </div>
     </div>
   );
@@ -1053,11 +1053,11 @@ export default function Home() {
         {/* ── PROMO BANNER — Sunset Pass ───────────────────────────────────── */}
         <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
           <PromoBanner
-            image="sunset_pass.png"
-            title="🌅 New Consumable"
-            description={`Sunset Pass extends your daily submission window by 2 hours.\n\nPerfect for busy days when you need a little extra time to lock in your proof.`}
-            buttonText="Get Sunset Pass"
-            href="/burns"
+            image="fight_club.png"
+            title="🥊 Crypto Fight Club"
+            description={`Touch Grass is in the ring. Vote for us on Crypto Fight Club and show the world that going outside is the ultimate alpha.\n\nThrow your punch. Support Touch Grass.`}
+            buttonText="🥊 Vote Now"
+            href="https://fight.cryptofightclub.wtf"
           />
         </div>
 
