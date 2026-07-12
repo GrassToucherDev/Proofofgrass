@@ -684,6 +684,10 @@ export default function Home() {
   const [sunsetActivating, setSunsetActivating] = useState(false);
   const [sunsetMsg,        setSunsetMsg]        = useState("");
 
+  // ── Pending challenges ────────────────────────────────────────────────────
+  const [pendingChallenges, setPendingChallenges] = useState([]);
+  const [challengeActioning, setChallengeActioning] = useState(null); // challenge id being actioned
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.location.hash === "#shield-section") {
@@ -803,6 +807,14 @@ export default function Home() {
           .order("created_at", { ascending:false }).limit(1).maybeSingle()
           .then(({ data }) => setLatestPurchase(data ?? null));
 
+        // Fetch pending challenges where this user is the one being challenged
+        supabase.from("Challenges")
+          .select("id,slug,challenger,challenged,duration_days,message,created_at")
+          .eq("challenged", username)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .then(({ data }) => setPendingChallenges(data ?? []));
+
       } catch (e) {
         console.error("preload failed", e);
         setStreakTone("neutral"); setStreakStatus("");
@@ -848,6 +860,37 @@ export default function Home() {
   }, []);
 
   useEffect(() => { fetchStats(); fetchLeaderboard(); fetchRecentProofs(); }, []);
+
+  // ── Challenge accept / decline ───────────────────────────────────────────
+  const handleChallengeAction = useCallback(async (challenge, action) => {
+    setChallengeActioning(challenge.id);
+    try {
+      if (action === "accept") {
+        const now    = new Date().toISOString();
+        const endsAt = new Date(Date.now() + challenge.duration_days * 86400000).toISOString();
+        await supabase.from("Challenges").update({
+          status: "active", started_at: now, ends_at: endsAt,
+        }).eq("id", challenge.id);
+        await supabase.from("ChallengeProgress").upsert([
+          { challenge_id: challenge.id, username: challenge.challenger, days_complete: 0, status: "active" },
+          { challenge_id: challenge.id, username: challenge.challenged, days_complete: 0, status: "active" },
+        ], { onConflict: "challenge_id,username" });
+        await supabase.from("ChallengeEvents").insert([
+          { challenge_id: challenge.id, username, event_type: "accepted" },
+        ]);
+      } else {
+        await supabase.from("Challenges").update({ status: "declined" }).eq("id", challenge.id);
+        await supabase.from("ChallengeEvents").insert([
+          { challenge_id: challenge.id, username, event_type: "declined" },
+        ]);
+      }
+      // Remove from pending list
+      setPendingChallenges(prev => prev.filter(c => c.id !== challenge.id));
+    } catch(e) {
+      console.error("challenge action failed", e);
+    }
+    setChallengeActioning(null);
+  }, [username]);
 
   // ── Shield buy handler ────────────────────────────────────────────────────
   const handleBuyShield = useCallback(async () => {
@@ -1050,6 +1093,76 @@ export default function Home() {
             </div>
           )}
         </section>
+
+        {/* ── PENDING CHALLENGE ALERTS ─────────────────────────────────────── */}
+        {mounted && hasUser && pendingChallenges.length > 0 && (
+          <div style={{ borderBottom:`1px solid rgba(200,168,75,0.3)`,
+            background:"linear-gradient(180deg,rgba(200,168,75,0.06),rgba(200,168,75,0.02))" }}>
+            {pendingChallenges.map((ch, i) => (
+              <div key={ch.id} style={{
+                padding:"16px clamp(14px,4vw,48px)",
+                borderBottom: i < pendingChallenges.length - 1
+                  ? `1px solid rgba(200,168,75,0.15)` : "none",
+                display:"flex", alignItems:"center",
+                gap:14, flexWrap:"wrap",
+              }}>
+                {/* Icon + text */}
+                <div style={{ display:"flex", alignItems:"center", gap:12, flex:1, minWidth:220 }}>
+                  <div style={{ width:40, height:40, borderRadius:10, flexShrink:0,
+                    background:"rgba(200,168,75,0.12)",
+                    border:"1px solid rgba(200,168,75,0.4)",
+                    display:"flex", alignItems:"center",
+                    justifyContent:"center", fontSize:20 }}>
+                    ⚡
+                  </div>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:T.white, marginBottom:2 }}>
+                      @{ch.challenger} challenged you!
+                    </div>
+                    <div style={{ fontSize:11, color:T.muted, lineHeight:1.5 }}>
+                      {ch.duration_days}-day outdoor streak challenge
+                      {ch.message ? ` · "${ch.message}"` : ""}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display:"flex", gap:8, flexShrink:0, alignItems:"center" }}>
+                  <button
+                    onClick={() => handleChallengeAction(ch, "accept")}
+                    disabled={challengeActioning === ch.id}
+                    style={{ background:T.olive, color:"#0e1108",
+                      border:"none", borderRadius:8,
+                      padding:"9px 18px", fontSize:12, fontWeight:700,
+                      cursor:"pointer", letterSpacing:"0.06em",
+                      opacity: challengeActioning === ch.id ? 0.6 : 1,
+                      transition:"all 0.2s" }}>
+                    {challengeActioning === ch.id ? "…" : "✓ Accept"}
+                  </button>
+                  <button
+                    onClick={() => handleChallengeAction(ch, "decline")}
+                    disabled={challengeActioning === ch.id}
+                    style={{ background:"transparent",
+                      color:T.red,
+                      border:`1px solid rgba(239,68,68,0.35)`,
+                      borderRadius:8, padding:"9px 18px",
+                      fontSize:12, fontWeight:600, cursor:"pointer",
+                      opacity: challengeActioning === ch.id ? 0.6 : 1,
+                      transition:"all 0.2s" }}>
+                    Decline
+                  </button>
+                  <Link href={`/challenge/${ch.slug}`}
+                    style={{ fontSize:11, color:T.gold,
+                      textDecoration:"none", padding:"9px 12px",
+                      borderRadius:8, border:`1px solid rgba(200,168,75,0.3)`,
+                      whiteSpace:"nowrap" }}>
+                    View →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ── ENTER USERNAME BANNER ─────────────────────────────────────────── */}
         {mounted && !hasUser && (
