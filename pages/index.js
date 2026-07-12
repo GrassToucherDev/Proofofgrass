@@ -1051,25 +1051,6 @@ export default function Home() {
           )}
         </section>
 
-        {/* ── PROMO BANNER — Sunset Pass ───────────────────────────────────── */}
-        <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
-          <PromoBanner
-            image="fight_club.png"
-            title="🥊 Throw Your Punch — Support Touch Grass!"
-            description="Touch Grass is fighting in the Crypto Fight Club arena. Throw your punches, screenshot your score, and earn Grass Score + an exclusive Grass Jab badge."
-            buttonText="🥊 Fight Now"
-            href="https://fight.cryptofightclub.wtf"
-            secondaryText="🌿 Proof of Punch"
-            secondaryHref="/fight"
-            steps={[
-              "Click Fight Now and head to Crypto Fight Club",
-              "Throw your punches to support Touch Grass",
-              "Screenshot your punch count from the fight page",
-              "Upload your screenshot to claim your Grass Jab badge and Grass Score",
-            ]}
-          />
-        </div>
-
         {/* ── ENTER USERNAME BANNER ─────────────────────────────────────────── */}
         {mounted && !hasUser && (
           <div style={{ background:`${T.olive}08`, borderBottom:`1px solid ${T.borderG}`,
