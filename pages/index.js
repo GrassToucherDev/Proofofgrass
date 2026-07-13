@@ -561,8 +561,8 @@ function ActivityFeed() {
           supabase.from("Challenges").select("challenger, challenged, duration_days, status, created_at, slug").order("created_at", { ascending: false }).limit(5),
           supabase.from("Streaks").select("username, current_streak, best_streak").order("current_streak", { ascending: false }).limit(5),
           supabase.from("Referrals").select("referrer_username, referred_username, status, converted_at, created_at").order("created_at", { ascending: false }).limit(6),
-          supabase.from("LuckyTouchEvents").select("username, reward_tier, reward_type, created_at").in("reward_tier", ["rare", "legendary"]).order("created_at", { ascending: false }).limit(5),
-          supabase.from("LuckyTouchEvents").select("*", { count: "exact", head: true }),
+          Promise.resolve({ data: [] }),
+          Promise.resolve({ count: 0 }),
           supabase.from("CommunitySpotlights").select("username, category, display_name, week_start, created_at").eq("status", "active").order("created_at", { ascending: false }).limit(8),
         ]);
         const feed = [];
@@ -583,15 +583,13 @@ function ActivityFeed() {
           if (r.status === "converted") feed.push({ type:"referral_converted", username:r.referrer_username, text:`helped @${r.referred_username} reach Day 10`, emoji:"🤝", time:r.converted_at||r.created_at });
           else feed.push({ type:"referral_pending", username:r.referrer_username, text:"invited a new Toucher to the movement", emoji:"🌱", time:r.created_at });
         });
-        (luckyTouchFeed ?? []).forEach(lt => {
-          feed.push({ type:lt.reward_tier==="legendary"?"lucky_touch_legendary":"lucky_touch_rare", username:lt.username, text:lt.reward_tier==="legendary"?"received Sun's Blessing ☀️":"received a Rare Lucky Touch", emoji:lt.reward_tier==="legendary"?"☀️":"🍀", time:lt.created_at });
-        });
+        // Lucky Touch feed removed — feature exists, not surfaced on dashboard
         (recentSpotlights ?? []).forEach(s => {
           feed.push({ type:"spotlight", username:s.display_name||s.username, text:getSpotlightFeedText(s.category), emoji:"🏆", badgeImg:getSpotlightBadge(s.category)?.image??null, time:s.created_at, link:"/spotlight" });
         });
         feed.sort((a, b) => { if (!a.time && !b.time) return 0; if (!a.time) return 1; if (!b.time) return -1; return new Date(b.time) - new Date(a.time); });
         setItems(feed.slice(0, 10));
-        setGlobalLuckyCount(globalLuckyCount ?? 0);
+        // globalLuckyCount removed from feed
       } catch(e) { console.warn("activity feed error", e); }
       setLoading(false);
     })();
@@ -605,28 +603,18 @@ function ActivityFeed() {
   if (items.length === 0) return <p style={{ fontSize:12, color:T2.dim, textAlign:"center", padding:"16px 0" }}>No recent activity yet.</p>;
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-      {globalLuckyCount > 0 && (
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", background:T2.bg3, borderRadius:10, border:`1px solid rgba(147,168,90,0.15)`, marginBottom:4 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-            <span style={{ fontSize:16 }}>🍀</span>
-            <span style={{ fontSize:11, color:T2.dim, letterSpacing:"0.04em" }}>Community Lucky Touches</span>
-          </div>
-          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:700, color:T2.olive }}>{globalLuckyCount.toLocaleString()} discovered</span>
-        </div>
-      )}
+
       {items.map((item, i) => {
         const timeAgo = item.time ? (() => { const diff=Date.now()-new Date(item.time); const mins=Math.floor(diff/60000); const hrs=Math.floor(diff/3600000); const days=Math.floor(diff/86400000); return days>0?`${days}d ago`:hrs>0?`${hrs}h ago`:mins>0?`${mins}m ago`:"just now"; })() : "";
-        const isLuckyLegendary = item.type === "lucky_touch_legendary";
-        const isLuckyRare      = item.type === "lucky_touch_rare";
-        const isSpotlight      = item.type === "spotlight";
+        const isSpotlight = item.type === "spotlight";
         const inner = (
           <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:10,
-            background:isLuckyLegendary?"linear-gradient(135deg,#1a1200,#2d2000)":isLuckyRare?"rgba(167,139,250,0.08)":isSpotlight?"linear-gradient(135deg,#1a1600,#0e1008)":T2.bg3,
-            border:isLuckyLegendary?"1px solid rgba(200,168,75,0.35)":isLuckyRare?"1px solid rgba(167,139,250,0.25)":isSpotlight?"1px solid rgba(200,168,75,0.25)":`1px solid ${T2.border}` }}>
+            background:isSpotlight?"linear-gradient(135deg,#1a1600,#0e1008)":T2.bg3,
+            border:isSpotlight?"1px solid rgba(200,168,75,0.25)":`1px solid ${T2.border}` }}>
             {isSpotlight && item.badgeImg ? <img src={item.badgeImg} alt="" loading="lazy" style={{ width:28, height:28, objectFit:"contain", flexShrink:0 }} /> : <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>}
             <div style={{ flex:1, minWidth:0 }}>
-              <span className="feed-username" style={{ fontSize:12, fontWeight:600, color:isLuckyLegendary||isSpotlight?T2.gold:T2.white }}>@{item.username}</span>
-              <span style={{ fontSize:12, color:isLuckyLegendary?"rgba(200,168,75,0.7)":isLuckyRare?"rgba(167,139,250,0.8)":isSpotlight?"rgba(200,168,75,0.6)":T2.dim }}> {item.text}</span>
+              <span className="feed-username" style={{ fontSize:12, fontWeight:600, color:isSpotlight?T2.gold:T2.white }}>@{item.username}</span>
+              <span style={{ fontSize:12, color:isSpotlight?"rgba(200,168,75,0.6)":T2.dim }}> {item.text}</span>
             </div>
             {timeAgo && <span style={{ fontSize:10, color:T2.dim, flexShrink:0 }}>{timeAgo}</span>}
           </div>
@@ -1296,8 +1284,8 @@ export default function Home() {
           <MapPreviewCard />
         </div>
 
-        {/* ── MAIN THREE-COLUMN GRID ────────────────────────────────────────── */}
-        <div className="main-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr",
+        {/* ── MAIN TWO-COLUMN GRID ─────────────────────────────────────────── */}
+        <div className="main-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr",
           gap:0, background:T.border, borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`,
           width:"100%", maxWidth:"100%" }}>
 
@@ -1388,24 +1376,6 @@ export default function Home() {
             }
           </div>
 
-          {/* LEADERBOARD */}
-          <div className="card" style={{ padding:26, borderLeft:`1px solid ${T.border}` }}>
-            <div className="card-title-row">
-              <span className="card-title" style={{ margin:0 }}>Leaderboard</span>
-              <Link href="/leaderboard" className="view-all">View All</Link>
-            </div>
-            {leaders.length > 0
-              ? leaders.slice(0,6).map((r, i) => <LBRow key={i} rank={i+1} {...r} />)
-              : [1,2,3,4,5].map(i => (
-                <div key={i} style={{ display:"flex", gap:10, alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${T.border}` }}>
-                  <Skeleton w={14} h={10} />
-                  <Skeleton w={32} h={32} />
-                  <div style={{ flex:1 }}><Skeleton h={10} /></div>
-                  <Skeleton w={28} h={18} />
-                </div>
-              ))
-            }
-          </div>
         </div>
 
         {/* ── PROGRESSION + CARDS ───────────────────────────────────────────── */}
