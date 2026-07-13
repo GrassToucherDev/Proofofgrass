@@ -679,6 +679,7 @@ export default function Home() {
   // Misc
   const [mounted,       setMounted]       = useState(false);
   const [showShieldBuy, setShowShieldBuy] = useState(false);
+  const [showMenu,      setShowMenu]      = useState(false);
 
   // Sunset Pass activation state
   const [sunsetActivating, setSunsetActivating] = useState(false);
@@ -970,6 +971,22 @@ export default function Home() {
     .nav-link{color:${T.dim};font-size:13px;font-weight:500;text-decoration:none;letter-spacing:0.05em;transition:color 0.2s;}
     .nav-link:hover{color:${T.white};}
     .nav-link.active{color:${T.olive};}
+    .hbg-btn{background:none;border:1px solid ${T.border};border-radius:8px;padding:7px 10px;cursor:pointer;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;transition:border-color 0.2s;flex-shrink:0;}
+    .hbg-btn:hover{border-color:${T.olive};}
+    .hbg-line{width:18px;height:1.5px;background:${T.white};border-radius:2px;transition:all 0.25s;}
+    .menu-overlay{position:fixed;inset:0;z-index:298;background:rgba(0,0,0,0);}
+    .menu-panel{position:fixed;top:56px;right:0;z-index:299;width:min(280px,90vw);
+      background:${T.bg2};border-left:1px solid ${T.border};border-bottom:1px solid ${T.border};
+      border-radius:0 0 0 16px;padding:8px 0 16px;
+      box-shadow:-8px 8px 40px rgba(0,0,0,0.6);
+      animation:menuSlide 0.18s ease both;}
+    @keyframes menuSlide{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+    .menu-item{display:flex;align-items:center;gap:12px;padding:11px 22px;font-size:13px;font-weight:500;
+      color:${T.muted};text-decoration:none;transition:all 0.15s;cursor:pointer;border:none;background:none;
+      width:100%;text-align:left;font-family:'DM Sans',sans-serif;letter-spacing:0.02em;}
+    .menu-item:hover{color:${T.white};background:rgba(255,255,255,0.04);}
+    .menu-item.active{color:${T.olive};}
+    .menu-divider{height:1px;background:${T.border};margin:8px 0;}
     .btn-olive{display:inline-flex;align-items:center;gap:8px;background:${T.olive};color:${T.bg};border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:13px 22px;border-radius:8px;cursor:pointer;text-decoration:none;transition:all 0.2s;}
     .btn-olive:hover{background:#a8be6a;transform:translateY(-1px);}
     .btn-ghost{display:inline-flex;align-items:center;gap:8px;background:transparent;color:${T.white};border:1px solid ${T.border};font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:13px 22px;border-radius:8px;cursor:pointer;text-decoration:none;transition:all 0.2s;}
@@ -992,7 +1009,7 @@ export default function Home() {
       .stat-strip{flex-wrap:wrap !important;}
       .stat-strip>div{min-width:50% !important;}
       .hero-btns{flex-direction:column !important;align-items:stretch !important;}
-      .nav-links{display:none !important;}
+      /* nav-links replaced by hamburger menu */
       .username-input{width:120px !important;font-size:12px !important;}
       .feed-username{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;}
       .spotlight-scroll{overflow-x:auto;overflow-y:visible;scroll-snap-type:x mandatory;}
@@ -1010,22 +1027,19 @@ export default function Home() {
 
         {/* ── NAV ──────────────────────────────────────────────────────────── */}
         <nav style={{ position:"sticky", top:0, zIndex:200, display:"flex", alignItems:"center",
-          justifyContent:"space-between", padding:"0 clamp(14px,4vw,48px)", height:56,
+          justifyContent:"space-between", padding:"0 clamp(14px,4vw,48px)", height:56, gap:10,
           background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}` }}>
-          <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width:26, height:26, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
+
+          {/* Logo */}
+          <Link href="/" style={{ display:"flex", alignItems:"center", gap:9,
+            textDecoration:"none", flexShrink:0 }}>
+            <img src="/touchgrass-transparent.png" alt=""
+              style={{ width:26, height:26, objectFit:"contain" }} />
+            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+              fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
           </Link>
-          <div className="nav-links" style={{ display:"flex", gap:28, alignItems:"center" }}>
-            <a href="#upload" className="nav-link active">Dashboard</a>
-            <Link href="/leaderboard" className="nav-link">Leaderboard</Link>
-            <Link href="/spotlight"   className="nav-link">Spotlight</Link>
-            <Link href="/create"      className="nav-link">Create</Link>
-            <Link href="/map"         className="nav-link">Map</Link>
-            <Link href="/burns"       className="nav-link">🎒 Consumables</Link>
-            <Link href="/quests"      className="nav-link">Quests</Link>
-            <a href="https://touchgrass.today" className="nav-link" target="_blank" rel="noopener noreferrer">Website</a>
-          </div>
+
+          {/* Username + profile + hamburger */}
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
             <input className="username-input" type="text" placeholder="your username"
               value={rawUsername} onChange={e => setRawUsername(e.target.value)}
@@ -1037,8 +1051,99 @@ export default function Home() {
                 padding:"5px 9px", whiteSpace:"nowrap", flexShrink:0,
               }}>My Profile →</Link>
             )}
+            {/* Hamburger button */}
+            <button className="hbg-btn" onClick={() => setShowMenu(v => !v)}
+              aria-label="Menu" aria-expanded={showMenu}>
+              <div className="hbg-line" style={{
+                transform: showMenu ? "rotate(45deg) translate(4px,4px)" : "none" }} />
+              <div className="hbg-line" style={{
+                opacity: showMenu ? 0 : 1,
+                transform: showMenu ? "scaleX(0)" : "none" }} />
+              <div className="hbg-line" style={{
+                transform: showMenu ? "rotate(-45deg) translate(4px,-4px)" : "none" }} />
+            </button>
           </div>
         </nav>
+
+        {/* ── MENU PANEL ───────────────────────────────────────────────────── */}
+        {showMenu && (
+          <>
+            <div className="menu-overlay" onClick={() => setShowMenu(false)} />
+            <div className="menu-panel">
+              {/* Username display */}
+              {hasUser && (
+                <div style={{ padding:"12px 22px 10px",
+                  borderBottom:`1px solid ${T.border}`, marginBottom:4 }}>
+                  <div style={{ fontSize:10, color:T.dim, letterSpacing:"0.1em",
+                    textTransform:"uppercase", marginBottom:2 }}>Signed in as</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:T.olive }}>@{username}</div>
+                </div>
+              )}
+
+              {/* Nav items */}
+              {[
+                { href:"#upload",                    label:"Dashboard",    icon:"🏠", internal:true  },
+                { href:"/leaderboard",               label:"Leaderboard",  icon:"🏆", internal:false },
+                { href:"/spotlight",                 label:"Spotlight",    icon:"⭐", internal:false },
+                { href:"/create",                    label:"Create",       icon:"✨", internal:false },
+                { href:"/map",                       label:"Map",          icon:"🌍", internal:false },
+                { href:"/burns",                     label:"Consumables",  icon:"🎒", internal:false },
+                { href:"/quests",                    label:"Quests",       icon:"⚔️", internal:false },
+                { href:"/fight",                     label:"Grass Jab",    icon:"🥊", internal:false },
+              ].map(({ href, label, icon, internal }) =>
+                internal ? (
+                  <a key={label} href={href} className="menu-item active"
+                    onClick={() => setShowMenu(false)}>
+                    <span style={{ fontSize:16, width:22, textAlign:"center" }}>{icon}</span>
+                    {label}
+                  </a>
+                ) : (
+                  <Link key={label} href={href} className="menu-item"
+                    onClick={() => setShowMenu(false)}>
+                    <span style={{ fontSize:16, width:22, textAlign:"center" }}>{icon}</span>
+                    {label}
+                  </Link>
+                )
+              )}
+
+              <div className="menu-divider" />
+
+              {/* External */}
+              <a href="https://touchgrass.today" target="_blank" rel="noopener noreferrer"
+                className="menu-item" onClick={() => setShowMenu(false)}>
+                <span style={{ fontSize:16, width:22, textAlign:"center" }}>🌐</span>
+                Website
+              </a>
+
+              {/* Profile link if signed in */}
+              {hasUser && (
+                <>
+                  <div className="menu-divider" />
+                  <Link href={`/u/${username}`} className="menu-item"
+                    onClick={() => setShowMenu(false)}
+                    style={{ color:T.olive }}>
+                    <span style={{ fontSize:16, width:22, textAlign:"center" }}>👤</span>
+                    My Profile
+                  </Link>
+                </>
+              )}
+
+              {/* Pending challenge count badge */}
+              {pendingChallenges.length > 0 && (
+                <>
+                  <div className="menu-divider" />
+                  <div style={{ padding:"8px 22px", display:"flex",
+                    alignItems:"center", gap:10 }}>
+                    <span style={{ fontSize:16 }}>⚡</span>
+                    <span style={{ fontSize:12, color:T.gold, fontWeight:600 }}>
+                      {pendingChallenges.length} pending challenge{pendingChallenges.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
         <section style={{ position:"relative", minHeight:"clamp(460px,70vh,720px)", pointerEvents:"none" }}>
