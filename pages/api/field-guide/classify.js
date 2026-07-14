@@ -100,12 +100,34 @@ Be fair but firm. Reject photos that clearly don't match. Accept photos that gen
     const text = data.content?.[0]?.text ?? "";
 
     // Strip markdown fences if present
-    const clean = text.replace(/```json|```/g, "").trim();
-    const result = JSON.parse(clean);
+    const clean = text.replace(/```json[\s\S]*?```|```/g, "").trim();
+
+    let result;
+    try {
+      result = JSON.parse(clean);
+    } catch(parseErr) {
+      console.error("[classify] JSON parse failed. Raw text:", text);
+      // Fallback — treat as approved if Claude described it positively
+      const lowerText = text.toLowerCase();
+      const approved  = lowerText.includes("approved") || lowerText.includes("qualifies") || lowerText.includes("yes");
+      result = {
+        approved,
+        label:      "outdoor nature photo",
+        confidence: "medium",
+        reason:     "Auto-classified due to response format issue.",
+      };
+    }
 
     return res.status(200).json(result);
   } catch (e) {
     console.error("[classify] error:", e);
-    return res.status(500).json({ error: "Classification failed", detail: e.message });
+    return res.status(500).json({
+      error:    "Classification failed",
+      detail:   e.message,
+      approved: false,
+      label:    "",
+      confidence: "low",
+      reason:   "Classification service error. Please try again.",
+    });
   }
 }

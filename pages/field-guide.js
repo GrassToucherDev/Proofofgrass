@@ -239,19 +239,19 @@ function UploadModal({ collection, slotNumber, existingLabels, username, onClose
         return;
       }
 
-      // Upload to Supabase Storage
+      // ── Upload photo ────────────────────────────────────────────────
       setStatus("uploading");
       const ext  = file.name.split(".").pop() || "jpg";
-      const path = `${username}/${collection.slug}/${Date.now()}.${ext}`;
+      const storagePath = `${username}/${collection.slug}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("field-guide-photos")
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (upErr) throw upErr;
+        .upload(storagePath, file, { contentType: file.type, upsert: false });
+      if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
 
       const { data: urlData } = supabase.storage
-        .from("field-guide-photos").getPublicUrl(path);
+        .from("field-guide-photos").getPublicUrl(storagePath);
 
-      // Insert entry
+      // ── Insert entry ─────────────────────────────────────────────────
       const { error: entryErr } = await supabase
         .from("FieldGuideEntries")
         .insert({
@@ -259,73 +259,51 @@ function UploadModal({ collection, slotNumber, existingLabels, username, onClose
           collection_slug: collection.slug,
           slot_number:     slotNumber,
           photo_url:       urlData.publicUrl,
-          storage_path:    path,
-          ai_label:        classification.label,
-          ai_confidence:   classification.confidence,
+          storage_path:    storagePath,
+          ai_label:        classification.label || "entry",
+          ai_confidence:   classification.confidence || "medium",
           status:          "approved",
         });
-      if (entryErr) throw entryErr;
+      if (entryErr) throw new Error(`Entry save failed: ${entryErr.message}`);
 
-      // Upsert progress
-      const newFilled = existingLabels.length + 1;
+      // ── Upsert progress ──────────────────────────────────────────────
+      const newFilled  = existingLabels.length + 1;
       const isComplete = newFilled >= TOTAL_SLOTS;
-      await supabase.from("FieldGuideProgress").upsert({
-        username,
-        collection_slug: collection.slug,
-        slots_filled:    newFilled,
-        completed_at:    isComplete ? new Date().toISOString() : null,
-        badge_awarded:   isComplete,
-      }, { onConflict: "username,collection_slug" });
+      const { error: progErr } = await supabase
+        .from("FieldGuideProgress")
+        .upsert({
+          username,
+          collection_slug: collection.slug,
+          slots_filled:    newFilled,
+          completed_at:    isComplete ? new Date().toISOString() : null,
+          badge_awarded:   isComplete,
+        }, { onConflict: "username,collection_slug" });
+      if (progErr) console.warn("progress upsert:", progErr.message);
 
-      // Grant Grass Score
+      // ── Grass Score ──────────────────────────────────────────────────
       const pts = isComplete
         ? POINTS_PER_ENTRY + POINTS_PER_COLLECTION
         : POINTS_PER_ENTRY;
 
-      await supabase.from("Profiles").upsert({
-        username,
-        grass_score: supabase.rpc ? undefined : undefined,
-      }, { onConflict: "username" });
-
-      // Increment grass_score
       const { data: prof } = await supabase
-        .from("Profiles").select("grass_score,field_guide_collections_complete")
-        .eq("username", username).maybeSingle();
-      await supabase.from("Profiles").update({
-        grass_score: (prof?.grass_score || 0) + pts,
-      }).eq("username", username);
+        .from("Profiles")
+        .select("grass_score")
+        .eq("username", username)
+        .maybeSingle();
 
-      // Check mastery — fetch all active collections
-      if (isComplete) {
-        const { data: allCollections } = await supabase
-          .from("FieldGuideCollections")
-          .select("slug").eq("active", true);
-        const { data: allProgress } = await supabase
-          .from("FieldGuideProgress")
-          .select("collection_slug,slots_filled")
-          .eq("username", username);
-        const completeSet = new Set(
-          (allProgress || [])
-            .filter(p => p.slots_filled >= TOTAL_SLOTS)
-            .map(p => p.collection_slug)
-        );
-        // Include the one we just completed
-        completeSet.add(collection.slug);
-        const hasMastery = (allCollections || []).every(c => completeSet.has(c.slug));
-        const completedCount = completeSet.size;
-        await supabase.from("Profiles").update({
-          field_guide_mastery:             hasMastery,
-          field_guide_mastery_at:          hasMastery ? new Date().toISOString() : null,
-          field_guide_collections_complete: completedCount,
-        }).eq("username", username);
-      }
+      const { error: scoreErr } = await supabase
+        .from("Profiles")
+        .update({ grass_score: (prof?.grass_score || 0) + pts })
+        .eq("username", username);
+      if (scoreErr) console.warn("grass_score update:", scoreErr.message);
 
-      // Log ScoreEvent
+      // ── ScoreEvents (non-fatal) ──────────────────────────────────────
       try {
         await supabase.from("ScoreEvents").insert({
           username,
           event_type: "field_guide_entry",
           points:     pts,
+          source_id:  null,
           metadata: {
             collection: collection.slug,
             slot:       slotNumber,
@@ -333,7 +311,29 @@ function UploadModal({ collection, slotNumber, existingLabels, username, onClose
             complete:   isComplete,
           },
         });
-      } catch {}
+      } catch(e) { console.warn("ScoreEvents:", e.message); }
+
+      // ── Mastery check (non-fatal) ────────────────────────────────────
+      if (isComplete) {
+        try {
+          const { data: allCols }  = await supabase
+            .from("FieldGuideCollections").select("slug").eq("active", true);
+          const { data: allProg }  = await supabase
+            .from("FieldGuideProgress").select("collection_slug,slots_filled")
+            .eq("username", username);
+          const completeSet = new Set(
+            (allProg || []).filter(p => p.slots_filled >= TOTAL_SLOTS).map(p => p.collection_slug)
+          );
+          completeSet.add(collection.slug);
+          const hasMastery     = (allCols || []).every(c => completeSet.has(c.slug));
+          const completedCount = completeSet.size;
+          await supabase.from("Profiles").update({
+            field_guide_mastery:              hasMastery,
+            field_guide_mastery_at:           hasMastery ? new Date().toISOString() : null,
+            field_guide_collections_complete: completedCount,
+          }).eq("username", username);
+        } catch(e) { console.warn("mastery check:", e.message); }
+      }
 
       setStatus("success");
       setResult({ ...classification, points: pts, complete: isComplete });
