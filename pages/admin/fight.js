@@ -49,49 +49,48 @@ export default function AdminFight() {
     else { setError(msg); setSuccess(""); setTimeout(() => setError(""), 6000); }
   };
 
-  const load = async () => {
+  const loadPending = async () => {
     const { data: p } = await supabase
-      .from("FightClubSubmissions")
-      .select("*")
-      .eq("status","pending")
-      .order("created_at", { ascending: true });
+      .from("FightClubSubmissions").select("*")
+      .eq("status","pending").order("created_at", { ascending: true });
     setPending(p || []);
+  };
 
+  const loadReviewed = async () => {
     const { data: r } = await supabase
-      .from("FightClubSubmissions")
-      .select("*")
+      .from("FightClubSubmissions").select("*")
       .in("status",["approved","rejected"])
-      .order("reviewed_at", { ascending: false })
-      .limit(50);
+      .order("reviewed_at", { ascending: false }).limit(50);
     setReviewed(r || []);
   };
+
+  const load = async () => { await loadPending(); await loadReviewed(); };
 
   useEffect(() => { if (authed) load(); }, [authed]);
 
   const approve = async (sub) => {
     setProcessing(sub.id);
+    // Optimistic remove immediately
     setPending(prev => prev.filter(p => p.id !== sub.id));
     try {
       const pointsToGrant = getPoints(sub.punch_count);
 
       // 1. Mark submission approved
-      await supabase.from("FightClubSubmissions").update({
-        status:         "approved",
-        points_granted: pointsToGrant,
-        reviewed_at:    new Date().toISOString(),
-      }).eq("id", sub.id);
+      const { error: updateErr } = await supabase
+        .from("FightClubSubmissions").update({
+          status:         "approved",
+          points_granted: pointsToGrant,
+          reviewed_at:    new Date().toISOString(),
+        }).eq("id", sub.id);
+      if (updateErr) throw updateErr;
 
-      // 2. Upsert FightClubStats — add to running total
+      // 2. Upsert FightClubStats
       const { data: existing } = await supabase
-        .from("FightClubStats")
-        .select("*")
-        .eq("username", sub.username)
-        .maybeSingle();
-
+        .from("FightClubStats").select("*")
+        .eq("username", sub.username).maybeSingle();
       const newPunches = (existing?.total_punches || 0) + sub.punch_count;
       const newPoints  = (existing?.total_points  || 0) + pointsToGrant;
       const newTier    = getTier(newPunches);
-
       await supabase.from("FightClubStats").upsert({
         username:      sub.username,
         total_punches: newPunches,
@@ -100,47 +99,33 @@ export default function AdminFight() {
         updated_at:    new Date().toISOString(),
       }, { onConflict: "username" });
 
-      // 3. Update Profiles — punch_badge, total_punches, grass_score
-      await supabase.from("Profiles").upsert({
-        username:         sub.username,
-        punch_badge:      newTier?.slug || null,
+      // 3. Update Profiles — fetch first then update (no upsert with undefined values)
+      const { data: prof } = await supabase
+        .from("Profiles").select("grass_score")
+        .eq("username", sub.username).maybeSingle();
+      await supabase.from("Profiles").update({
+        grass_score:      (prof?.grass_score || 0) + pointsToGrant,
+        punch_badge:      newTier?.slug  || null,
         punch_badge_tier: newTier?.label || null,
         total_punches:    newPunches,
-        grass_score:      supabase.rpc ? undefined : undefined, // updated below
-      }, { onConflict: "username" });
+      }).eq("username", sub.username);
 
-      // Update grass_score separately (increment)
-      if (pointsToGrant > 0) {
-        const { data: prof } = await supabase
-          .from("Profiles")
-          .select("grass_score")
-          .eq("username", sub.username)
-          .maybeSingle();
-        await supabase.from("Profiles").update({
-          grass_score:      (prof?.grass_score || 0) + pointsToGrant,
-          punch_badge:      newTier?.slug  || null,
-          punch_badge_tier: newTier?.label || null,
-          total_punches:    newPunches,
-        }).eq("username", sub.username);
-
-        // Log to ScoreEvents
-        try {
-          await supabase.from("ScoreEvents").insert({
-            username:   sub.username,
-            event_type: "fight_club_punches",
-            points:     pointsToGrant,
-            metadata:   {
-              punch_count:    sub.punch_count,
-              submission_id:  sub.id,
-              tier:           newTier?.slug,
-            },
-          });
-        } catch {}
-      }
+      // 4. Log ScoreEvents (non-fatal)
+      try {
+        await supabase.from("ScoreEvents").insert({
+          username:   sub.username,
+          event_type: "fight_club_punches",
+          points:     pointsToGrant,
+          source_id:  null,
+          metadata:   { punch_count: sub.punch_count, submission_id: sub.id, tier: newTier?.slug },
+        });
+      } catch {}
 
       flash("success", `✓ Approved @${sub.username} — ${sub.punch_count} punches, +${pointsToGrant} pts, tier: ${newTier?.label || "none yet"}`);
-      load();
+      // Reload reviewed tab after a short delay so DB is consistent
+      setTimeout(() => loadReviewed(), 800);
     } catch(e) {
+      // Restore on failure
       setPending(prev => [...prev, sub]);
       flash("error", `Failed: ${e.message}`);
     }
@@ -151,12 +136,14 @@ export default function AdminFight() {
     setProcessing(sub.id);
     setPending(prev => prev.filter(p => p.id !== sub.id));
     try {
-      await supabase.from("FightClubSubmissions").update({
-        status:      "rejected",
-        reviewed_at: new Date().toISOString(),
-      }).eq("id", sub.id);
+      const { error: rejErr } = await supabase
+        .from("FightClubSubmissions").update({
+          status:      "rejected",
+          reviewed_at: new Date().toISOString(),
+        }).eq("id", sub.id);
+      if (rejErr) throw rejErr;
       flash("success", `Rejected submission from @${sub.username}`);
-      load();
+      setTimeout(() => loadReviewed(), 800);
     } catch(e) {
       setPending(prev => [...prev, sub]);
       flash("error", `Failed: ${e.message}`);
