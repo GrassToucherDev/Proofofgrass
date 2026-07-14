@@ -949,111 +949,217 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       const dy = (H - dh) / 2;
       ctx.drawImage(img, dx, dy, dw, dh);
 
-      const vTop = ctx.createLinearGradient(0, 0, 0, H * 0.28);
-      vTop.addColorStop(0, "rgba(0,0,0,0.52)"); vTop.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = vTop; ctx.fillRect(0, 0, W, H * 0.28);
-      const vBot = ctx.createLinearGradient(0, H * 0.72, 0, H);
-      vBot.addColorStop(0, "rgba(0,0,0,0)"); vBot.addColorStop(1, "rgba(0,0,0,0.58)");
-      ctx.fillStyle = vBot; ctx.fillRect(0, H * 0.72, W, H * 0.28);
-      const vLeft = ctx.createLinearGradient(0, 0, W * 0.18, 0);
-      vLeft.addColorStop(0, "rgba(0,0,0,0.28)"); vLeft.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = vLeft; ctx.fillRect(0, 0, W * 0.18, H);
-      const vRight = ctx.createLinearGradient(W * 0.82, 0, W, 0);
-      vRight.addColorStop(0, "rgba(0,0,0,0)"); vRight.addColorStop(1, "rgba(0,0,0,0.32)");
-      ctx.fillStyle = vRight; ctx.fillRect(W * 0.82, 0, W * 0.18, H);
+      // ── Theme ────────────────────────────────────────────────────────────
+      const theme         = THEMES[selectedTheme] || THEMES.classic;
+      const defaultAccent = currentStreak >= 50 ? "rgba(212,175,55,1.0)"  : "rgba(147,208,120,1.0)";
+      const defaultMuted  = currentStreak >= 50 ? "rgba(212,175,55,0.75)" : "rgba(255,255,255,0.62)";
+      const accentText    = theme.accent || defaultAccent;
+      const mutedText     = theme.muted  || defaultMuted;
 
-      // ── Theme (must be declared before any theme.* usage) ───────────────
-      const theme          = THEMES[selectedTheme] || THEMES.classic;
-      const defaultAccent  = currentStreak >= 50 ? "rgba(212,175,55,1.0)"  : "rgba(160,230,160,1.0)";
-      const defaultMuted   = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.70)";
-      const accentText     = theme.accent || defaultAccent;
-      const mutedText      = theme.muted  || defaultMuted;
+      // ── Cinematic vignette ───────────────────────────────────────────────
+      // Corners — deep radial darken
+      const corners = [
+        [0,   0,   W*0.55, H*0.55],
+        [W,   0,   W*0.55, H*0.55],
+        [0,   H,   W*0.55, H*0.55],
+        [W,   H,   W*0.55, H*0.55],
+      ];
+      corners.forEach(([cx,cy,rx,ry]) => {
+        const g = ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(rx,ry));
+        g.addColorStop(0,"rgba(0,0,0,0.50)"); g.addColorStop(1,"rgba(0,0,0,0)");
+        ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      });
+      // Bottom band — strong
+      const vBot = ctx.createLinearGradient(0, H*0.58, 0, H);
+      vBot.addColorStop(0,"rgba(0,0,0,0)"); vBot.addColorStop(0.6,"rgba(0,0,0,0.55)"); vBot.addColorStop(1,"rgba(0,0,0,0.82)");
+      ctx.fillStyle=vBot; ctx.fillRect(0, H*0.58, W, H*0.42);
+      // Top band — lighter
+      const vTop = ctx.createLinearGradient(0, 0, 0, H*0.30);
+      vTop.addColorStop(0,"rgba(0,0,0,0.58)"); vTop.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=vTop; ctx.fillRect(0, 0, W, H*0.30);
+      // Left + right thin strips
+      const vL = ctx.createLinearGradient(0,0,W*0.12,0);
+      vL.addColorStop(0,"rgba(0,0,0,0.38)"); vL.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=vL; ctx.fillRect(0,0,W*0.12,H);
+      const vR = ctx.createLinearGradient(W*0.88,0,W,0);
+      vR.addColorStop(0,"rgba(0,0,0,0)"); vR.addColorStop(1,"rgba(0,0,0,0.38)");
+      ctx.fillStyle=vR; ctx.fillRect(W*0.88,0,W*0.12,H);
 
-      // Theme overlay tint (applied over photo, under text)
+      // ── Theme tint — gradient not flat, so photo still breathes ─────────
       if (theme.bgOverlay) {
-        ctx.fillStyle = theme.bgOverlay;
-        ctx.fillRect(0, 0, W, H);
+        const tintG = ctx.createLinearGradient(0, 0, 0, H);
+        tintG.addColorStop(0, theme.bgOverlay);
+        tintG.addColorStop(0.5, theme.bgOverlay.replace(/[\d.]+\)$/, "0.12)"));
+        tintG.addColorStop(1, theme.bgOverlay);
+        ctx.fillStyle = tintG; ctx.fillRect(0,0,W,H);
       }
 
-      const INSET = 22;
-      const defaultBorder  = currentStreak >= 50 ? "rgba(212,175,55,0.55)" : "rgba(255,255,255,0.22)";
-      const defaultBracket = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.55)";
-      ctx.strokeStyle = theme.border  || defaultBorder;
-      ctx.lineWidth = 0.8; ctx.strokeRect(INSET, INSET, W - INSET * 2, H - INSET * 2);
-      const bracketLen = 28, bGap = INSET;
-      ctx.strokeStyle = theme.bracket || defaultBracket;
-      ctx.lineWidth = 1.2;
-      [[bGap,bGap,1,1],[W-bGap,bGap,-1,1],[bGap,H-bGap,1,-1],[W-bGap,H-bGap,-1,-1]].forEach(([cx,cy,sx,sy]) => {
-        ctx.beginPath(); ctx.moveTo(cx+sx*bracketLen,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+sy*bracketLen); ctx.stroke();
-      });
+      // ── Film grain (subtle noise texture) ───────────────────────────────
+      const grainCanvas = document.createElement("canvas");
+      grainCanvas.width = 256; grainCanvas.height = 256;
+      const gc = grainCanvas.getContext("2d");
+      const gd = gc.createImageData(256, 256);
+      for (let i = 0; i < gd.data.length; i += 4) {
+        const v = Math.random() * 255;
+        gd.data[i]=gd.data[i+1]=gd.data[i+2]=v; gd.data[i+3]=18;
+      }
+      gc.putImageData(gd, 0, 0);
+      const grainPattern = ctx.createPattern(grainCanvas, "repeat");
+      ctx.fillStyle = grainPattern; ctx.fillRect(0,0,W,H);
 
-      const ghost = (text, x, y, size, align="left", col="rgba(255,255,255,0.90)", font="400") => {
-        ctx.save(); ctx.font=`${font} ${size}px 'Helvetica Neue',Helvetica,Arial,sans-serif`; ctx.fillStyle=col; ctx.textAlign=align;
-        ctx.letterSpacing="0.10em"; ctx.shadowColor="rgba(0,0,0,0.80)"; ctx.shadowBlur=8; ctx.shadowOffsetX=0; ctx.shadowOffsetY=1;
+      // ── Border — outer rule + inner glow ────────────────────────────────
+      const INSET = 28;
+      // Outer hairline
+      const borderCol  = theme.border  || (currentStreak>=50 ? "rgba(212,175,55,0.50)" : "rgba(255,255,255,0.18)");
+      const bracketCol = theme.bracket || (currentStreak>=50 ? "rgba(212,175,55,0.85)" : "rgba(255,255,255,0.60)");
+      ctx.strokeStyle = borderCol;
+      ctx.lineWidth = 1; ctx.strokeRect(INSET, INSET, W-INSET*2, H-INSET*2);
+      // Inner glow line (2px inside)
+      ctx.save(); ctx.globalAlpha=0.25;
+      ctx.strokeStyle = bracketCol; ctx.lineWidth=0.5;
+      ctx.strokeRect(INSET+3, INSET+3, W-INSET*2-6, H-INSET*2-6);
+      ctx.restore();
+
+      // ── Corner brackets — double-arm, longer ────────────────────────────
+      const bLen = 44, bGap = INSET;
+      ctx.strokeStyle = bracketCol; ctx.lineWidth = 1.8;
+      ctx.shadowColor="rgba(0,0,0,0.6)"; ctx.shadowBlur=6;
+      [[bGap,bGap,1,1],[W-bGap,bGap,-1,1],[bGap,H-bGap,1,-1],[W-bGap,H-bGap,-1,-1]].forEach(([cx,cy,sx,sy]) => {
+        ctx.beginPath(); ctx.moveTo(cx+sx*bLen,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+sy*bLen); ctx.stroke();
+      });
+      // Inner corner accent (short, lighter)
+      ctx.lineWidth=0.7; ctx.globalAlpha=0.45;
+      const bLen2 = 18, bGap2 = INSET+8;
+      [[bGap2,bGap2,1,1],[W-bGap2,bGap2,-1,1],[bGap2,H-bGap2,1,-1],[W-bGap2,H-bGap2,-1,-1]].forEach(([cx,cy,sx,sy]) => {
+        ctx.beginPath(); ctx.moveTo(cx+sx*bLen2,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+sy*bLen2); ctx.stroke();
+      });
+      ctx.globalAlpha=1; ctx.shadowBlur=0;
+
+      // ── Ghost text helper ────────────────────────────────────────────────
+      const ghost = (text, x, y, size, align="left", col="rgba(255,255,255,0.92)", weight="400", tracking="0.12em") => {
+        ctx.save();
+        ctx.font=`${weight} ${size}px 'Helvetica Neue',Helvetica,Arial,sans-serif`;
+        ctx.fillStyle=col; ctx.textAlign=align;
+        ctx.letterSpacing=tracking;
+        ctx.shadowColor="rgba(0,0,0,0.90)"; ctx.shadowBlur=12; ctx.shadowOffsetY=1;
         ctx.fillText(text, x, y); ctx.restore();
       };
 
-      const TL_X = INSET+22, TL_Y = INSET+44;
-      ghost("PROOF OF GRASS", TL_X, TL_Y, 16, "left", "rgba(255,255,255,0.95)", "600");
-      ghost("verified outdoors", TL_X, TL_Y+22, 20, "left", "rgba(255,255,255,0.88)", "700");
-      ctx.strokeStyle = "rgba(255,255,255,0.25)"; ctx.lineWidth = 0.6;
-      ctx.beginPath(); ctx.moveTo(TL_X, TL_Y+32); ctx.lineTo(TL_X+160, TL_Y+32); ctx.stroke();
+      // ── TOP LEFT — brand ─────────────────────────────────────────────────
+      const TL_X = INSET+28, TL_Y = INSET+52;
+      ghost("PROOF OF GRASS", TL_X, TL_Y, 13, "left", "rgba(255,255,255,0.55)", "600", "0.28em");
+      ghost("verified outdoors", TL_X, TL_Y+28, 26, "left", "rgba(255,255,255,0.96)", "700", "0.04em");
+      // Accent rule under brand
+      ctx.save();
+      ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=4;
+      const ruleGrad = ctx.createLinearGradient(TL_X, 0, TL_X+220, 0);
+      ruleGrad.addColorStop(0, accentText); ruleGrad.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.strokeStyle=ruleGrad; ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.moveTo(TL_X, TL_Y+40); ctx.lineTo(TL_X+220, TL_Y+40); ctx.stroke();
+      ctx.restore();
 
-      const TR_X = W-INSET-28, TR_Y = INSET+44;
-      ghost("STREAK", TR_X, TR_Y, 13, "right", mutedText, "500");
-      ctx.save(); ctx.shadowColor="rgba(0,0,0,0.90)"; ctx.shadowBlur=14; ctx.textAlign="right"; ctx.letterSpacing="-0.01em";
-      const dayStr = "DAY", numStr = ` ${currentStreak}`;
-      ctx.font=`300 88px 'Helvetica Neue',Helvetica,Arial,sans-serif`; ctx.fillStyle="rgba(255,255,255,0.95)";
-      ctx.fillText(dayStr, TR_X-ctx.measureText(numStr).width, TR_Y+92);
-      ctx.fillStyle=accentText; ctx.font=`400 88px 'Helvetica Neue',Helvetica,Arial,sans-serif`;
-      ctx.fillText(numStr, TR_X, TR_Y+92); ctx.restore();
+      // ── TOP RIGHT — streak ───────────────────────────────────────────────
+      const TR_X = W-INSET-32, TR_Y = INSET+52;
+      ghost("CURRENT STREAK", TR_X, TR_Y, 11, "right", mutedText, "600", "0.24em");
+      ctx.save();
+      ctx.shadowColor="rgba(0,0,0,0.95)"; ctx.shadowBlur=20; ctx.textAlign="right";
+      // DAY label small
+      ctx.font=`300 22px 'Helvetica Neue',Helvetica,Arial,sans-serif`;
+      ctx.fillStyle="rgba(255,255,255,0.55)"; ctx.letterSpacing="0.18em";
+      ctx.fillText("DAY", TR_X, TR_Y+60);
+      // Streak number large
+      ctx.font=`400 110px 'Helvetica Neue',Helvetica,Arial,sans-serif`;
+      ctx.fillStyle=accentText; ctx.letterSpacing="-0.03em";
+      ctx.fillText(String(currentStreak), TR_X, TR_Y+158);
+      ctx.restore();
 
+      // Tier label
       if (currentStreak >= 7) {
-        const tierLabel = currentStreak>=180?"MYTHIC":currentStreak>=100?"IMMORTAL":currentStreak>=50?"LEGENDARY":currentStreak>=30?"ELITE":currentStreak>=14?"LOCKED IN":"ROOTED";
-        ghost(`· ${tierLabel} ·`, TR_X, TR_Y+118, 14, "right", accentText, "400");
+        const tierLabel = currentStreak>=1000?"TRANSCENDENT":currentStreak>=500?"ASCENDED":currentStreak>=365?"ETERNAL":currentStreak>=180?"MYTHIC":currentStreak>=100?"IMMORTAL":currentStreak>=50?"LEGENDARY":currentStreak>=30?"ELITE":currentStreak>=14?"LOCKED IN":"ROOTED";
+        // Pill background
+        const tierW = tierLabel.length * 8 + 32;
+        ctx.save();
+        ctx.shadowBlur=0;
+        ctx.fillStyle="rgba(0,0,0,0.35)";
+        roundRect(ctx, TR_X - tierW, TR_Y+168, tierW, 24, 4);
+        ctx.fill();
+        ctx.restore();
+        ghost(`✦ ${tierLabel} ✦`, TR_X - tierW/2, TR_Y+184, 11, "center", accentText, "600", "0.18em");
       }
 
-      ctx.save(); ctx.translate(INSET+16, H*0.72); ctx.rotate(-Math.PI/2);
-      ctx.font="300 12px 'Helvetica Neue',Helvetica,Arial,sans-serif"; ctx.fillStyle="rgba(255,255,255,0.40)";
-      ctx.shadowColor="rgba(0,0,0,0.70)"; ctx.shadowBlur=5; ctx.letterSpacing="0.18em"; ctx.textAlign="center";
-      ctx.fillText("KEEP GOING.  LIVE BETTER.  TOUCH MORE.", 0, 0); ctx.restore();
+      // ── ROTATED SIDE TEXT ─────────────────────────────────────────────────
+      ctx.save(); ctx.translate(INSET+20, H*0.68); ctx.rotate(-Math.PI/2);
+      ctx.font="300 11px 'Helvetica Neue',Helvetica,Arial,sans-serif";
+      ctx.fillStyle="rgba(255,255,255,0.30)"; ctx.letterSpacing="0.22em";
+      ctx.shadowColor="rgba(0,0,0,0.80)"; ctx.shadowBlur=6; ctx.textAlign="center";
+      ctx.fillText("KEEP GOING  ·  LIVE BETTER  ·  TOUCH MORE", 0, 0);
+      ctx.restore();
 
-      ctx.save(); ctx.translate(W-INSET-16, H*0.42); ctx.rotate(Math.PI/2);
-      ctx.font="300 12px 'Helvetica Neue',Helvetica,Arial,sans-serif"; ctx.fillStyle="rgba(255,255,255,0.35)";
-      ctx.shadowColor="rgba(0,0,0,0.70)"; ctx.shadowBlur=5; ctx.letterSpacing="0.18em"; ctx.textAlign="center";
-      ctx.fillText("REAL MOMENTS.  REAL LIFE.", 0, 0); ctx.restore();
+      ctx.save(); ctx.translate(W-INSET-20, H*0.38); ctx.rotate(Math.PI/2);
+      ctx.font="300 11px 'Helvetica Neue',Helvetica,Arial,sans-serif";
+      ctx.fillStyle="rgba(255,255,255,0.25)"; ctx.letterSpacing="0.22em";
+      ctx.shadowColor="rgba(0,0,0,0.80)"; ctx.shadowBlur=6; ctx.textAlign="center";
+      ctx.fillText("REAL MOMENTS  ·  REAL LIFE", 0, 0);
+      ctx.restore();
 
-      const BL_X = INSET+22, BL_BASE = H-INSET-28;
-      ghost("DATE OF CERTIFICATION", BL_X, BL_BASE-22, 12, "left", mutedText, "500");
-      ghost(dateStr, BL_X, BL_BASE, 20, "left", "rgba(255,255,255,0.95)", "300");
-      const BR_X = W-INSET-28, BR_BASE = H-INSET-28;
-      ghost("CERTIFIED BY", BR_X, BR_BASE-24, 12, "right", mutedText, "400");
-      ghost("touch grass", BR_X, BR_BASE, 19, "right", "rgba(255,255,255,0.95)", "300");
+      // ── BOTTOM LEFT — date ────────────────────────────────────────────────
+      const BL_X = INSET+28, BL_BASE = H-INSET-32;
+      ghost("DATE OF CERTIFICATION", BL_X, BL_BASE-28, 10, "left", mutedText, "600", "0.26em");
+      ghost(dateStr, BL_X, BL_BASE, 22, "left", "rgba(255,255,255,0.96)", "300", "0.08em");
 
+      // ── BOTTOM RIGHT — certified by ───────────────────────────────────────
+      const BR_X = W-INSET-32, BR_BASE = H-INSET-32;
+      ghost("CERTIFIED BY", BR_X, BR_BASE-28, 10, "right", mutedText, "600", "0.26em");
+      ghost("touch grass", BR_X, BR_BASE, 22, "right", "rgba(255,255,255,0.96)", "300", "0.08em");
+
+      // ── SEAL ─────────────────────────────────────────────────────────────
       const topPct = getTopPercent(currentStreak);
       if (topPct !== null) {
-        const SEAL_CX = BR_X-55, SEAL_Y = BR_BASE-108;
-        ctx.save(); ctx.strokeStyle=accentText; ctx.lineWidth=1.4; ctx.shadowColor="rgba(0,0,0,0.70)"; ctx.shadowBlur=8; ctx.globalAlpha=0.90;
-        ctx.beginPath(); ctx.arc(SEAL_CX, SEAL_Y, 46, 0, Math.PI*2); ctx.stroke(); ctx.restore();
-        ghost(`TOP ${topPct}%`, SEAL_CX, SEAL_Y-4, 16, "center", accentText, "600");
-        ghost("grass touchers", SEAL_CX, SEAL_Y+18, 15, "center", "rgba(255,255,255,0.92)", "700");
-        ctx.save(); ctx.strokeStyle=accentText; ctx.lineWidth=0.8; ctx.globalAlpha=0.55;
-        [[-40,-5],[40,-5]].forEach(([ox,oy]) => { ctx.beginPath(); ctx.moveTo(SEAL_CX+ox,SEAL_Y+oy-10); ctx.lineTo(SEAL_CX+ox,SEAL_Y+oy+10); ctx.stroke(); });
+        const SEAL_CX = BR_X - 72, SEAL_Y = BR_BASE - 130;
+        const R1 = 52, R2 = 44, R3 = 38;
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.75)"; ctx.shadowBlur=16;
+        // Outer ring
+        ctx.strokeStyle=accentText; ctx.lineWidth=1.2; ctx.globalAlpha=0.75;
+        ctx.beginPath(); ctx.arc(SEAL_CX, SEAL_Y, R1, 0, Math.PI*2); ctx.stroke();
+        // Inner ring
+        ctx.lineWidth=0.6; ctx.globalAlpha=0.40;
+        ctx.beginPath(); ctx.arc(SEAL_CX, SEAL_Y, R2, 0, Math.PI*2); ctx.stroke();
+        // Tiny inner dot
+        ctx.globalAlpha=0.30;
+        ctx.beginPath(); ctx.arc(SEAL_CX, SEAL_Y, R3, 0, Math.PI*2); ctx.stroke();
+        // Tick marks at 12 equidistant points
+        ctx.lineWidth=0.8; ctx.globalAlpha=0.45;
+        for (let t=0;t<12;t++) {
+          const angle = (t/12)*Math.PI*2;
+          const outer = R1+2, inner = t%3===0 ? R1-6 : R1-3;
+          ctx.beginPath();
+          ctx.moveTo(SEAL_CX+Math.cos(angle)*outer, SEAL_Y+Math.sin(angle)*outer);
+          ctx.lineTo(SEAL_CX+Math.cos(angle)*inner, SEAL_Y+Math.sin(angle)*inner);
+          ctx.stroke();
+        }
         ctx.restore();
+        // Text
+        ghost(`TOP ${topPct}%`, SEAL_CX, SEAL_Y, 17, "center", accentText, "700", "0.06em");
+        ghost("GRASS TOUCHERS", SEAL_CX, SEAL_Y+20, 9, "center", "rgba(255,255,255,0.80)", "600", "0.14em");
       }
 
+      // ── LOGO ─────────────────────────────────────────────────────────────
       const logo = new Image();
       const cacheForPreview = (dataUrl) => {
         setDownloadUrl(dataUrl);
         try { fetch(dataUrl).then(r=>r.blob()).then(blob => { sharableFileRef.current = new File([blob],"proof-of-grass.png",{type:"image/png"}); }); }
         catch(e) { console.warn("[photo] preview cache failed:", e?.message); }
       };
-      logo.onload = () => { ctx.save(); ctx.globalAlpha=0.60; ctx.drawImage(logo, BR_X-36, BR_BASE-72, 36, 36); ctx.restore(); cacheForPreview(canvas.toDataURL("image/png")); };
+      logo.onload = () => {
+        ctx.save(); ctx.globalAlpha=0.55;
+        ctx.drawImage(logo, BL_X-4, BL_BASE-72, 36, 36);
+        ctx.restore(); cacheForPreview(canvas.toDataURL("image/png"));
+      };
       logo.onerror = () => cacheForPreview(canvas.toDataURL("image/png"));
       logo.src = "/touchgrass-transparent.png";
     } catch(canvasErr) {
       console.error("[canvas] render error:", canvasErr?.message, canvasErr);
-      // Still try to produce a preview even if something failed
       try { setDownloadUrl(canvas.toDataURL("image/png")); } catch {}
     }};
     img.src = imageSrc;
