@@ -633,195 +633,6 @@ async function checkAndAwardReferralBadge(referrerUsername) {
 
 // ─── Share card rendering pipeline ───────────────────────────────────────────
 
-function loadImgEl(src) {
-  return new Promise((res, rej) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => res(img);
-    img.onerror = rej;
-    img.src = src;
-  });
-}
-
-function coverFill(ctx, img, x, y, w, h) {
-  const scale = Math.max(w / img.width, h / img.height);
-  const dw = img.width * scale, dh = img.height * scale;
-  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
-}
-
-function cardGhost(ctx, text, x, y, size, align, col, weight) {
-  ctx.save();
-  ctx.font = `${weight || 400} ${size}px 'Helvetica Neue',Helvetica,Arial,sans-serif`;
-  ctx.fillStyle = col || "rgba(255,255,255,0.92)";
-  ctx.textAlign = align || "left";
-  ctx.letterSpacing = "0.08em";
-  ctx.shadowColor = "rgba(0,0,0,0.85)";
-  ctx.shadowBlur = 10;
-  ctx.shadowOffsetY = 1;
-  ctx.fillText(text, x, y);
-  ctx.restore();
-}
-
-function cardTierLabel(streak) {
-  if (streak >= 180) return "MYTHIC";
-  if (streak >= 100) return "IMMORTAL";
-  if (streak >= 50)  return "LEGENDARY";
-  if (streak >= 30)  return "ELITE";
-  if (streak >= 14)  return "LOCKED IN";
-  if (streak >= 7)   return "ROOTED";
-  return null;
-}
-
-function cardAccent(streak) { return streak >= 50 ? "rgba(212,175,55,1)" : "rgba(160,230,160,1)"; }
-function cardMuted(streak)  { return streak >= 50 ? "rgba(212,175,55,0.8)" : "rgba(255,255,255,0.7)"; }
-
-// FORMAT 1: Landscape 1600x900 — X, Discord, Telegram
-async function renderLandscape(img, { streak, dateStr }) {
-  const W = 1600, H = 900;
-  const canvas = document.createElement("canvas");
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext("2d");
-  const scale = Math.max(W/img.width, H/img.height);
-  const dw = img.width*scale, dh = img.height*scale, overflow = dw-W;
-  ctx.drawImage(img, overflow>0?-overflow*0.65:(W-dw)/2, (H-dh)/2, dw, dh);
-  const vTop=ctx.createLinearGradient(0,0,0,H*0.28); vTop.addColorStop(0,"rgba(0,0,0,0.52)"); vTop.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=vTop; ctx.fillRect(0,0,W,H*0.28);
-  const vBot=ctx.createLinearGradient(0,H*0.72,0,H); vBot.addColorStop(0,"rgba(0,0,0,0)"); vBot.addColorStop(1,"rgba(0,0,0,0.58)"); ctx.fillStyle=vBot; ctx.fillRect(0,H*0.72,W,H*0.28);
-  const vLeft=ctx.createLinearGradient(0,0,W*0.18,0); vLeft.addColorStop(0,"rgba(0,0,0,0.28)"); vLeft.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=vLeft; ctx.fillRect(0,0,W*0.18,H);
-  const vRight=ctx.createLinearGradient(W*0.82,0,W,0); vRight.addColorStop(0,"rgba(0,0,0,0)"); vRight.addColorStop(1,"rgba(0,0,0,0.32)"); ctx.fillStyle=vRight; ctx.fillRect(W*0.82,0,W*0.18,H);
-  const INSET=22, accent=cardAccent(streak), muted=cardMuted(streak);
-  ctx.strokeStyle=streak>=50?"rgba(212,175,55,0.55)":"rgba(255,255,255,0.22)"; ctx.lineWidth=0.8; ctx.strokeRect(INSET,INSET,W-INSET*2,H-INSET*2);
-  ctx.strokeStyle=streak>=50?"rgba(212,175,55,0.80)":"rgba(255,255,255,0.55)"; ctx.lineWidth=1.2;
-  [[INSET,INSET,1,1],[W-INSET,INSET,-1,1],[INSET,H-INSET,1,-1],[W-INSET,H-INSET,-1,-1]].forEach(([cx,cy,sx,sy])=>{ctx.beginPath();ctx.moveTo(cx+sx*28,cy);ctx.lineTo(cx,cy);ctx.lineTo(cx,cy+sy*28);ctx.stroke();});
-  const TL_X=INSET+22,TL_Y=INSET+44; cardGhost(ctx,"PROOF OF GRASS",TL_X,TL_Y,16,"left","rgba(255,255,255,0.95)",600); cardGhost(ctx,"verified outdoors",TL_X,TL_Y+22,20,"left","rgba(255,255,255,0.88)",700);
-  ctx.strokeStyle="rgba(255,255,255,0.25)"; ctx.lineWidth=0.6; ctx.beginPath(); ctx.moveTo(TL_X,TL_Y+32); ctx.lineTo(TL_X+160,TL_Y+32); ctx.stroke();
-  const TR_X=W-INSET-28,TR_Y=INSET+44; cardGhost(ctx,"STREAK",TR_X,TR_Y,13,"right",muted,500);
-  ctx.save(); ctx.shadowColor="rgba(0,0,0,0.9)"; ctx.shadowBlur=14; ctx.textAlign="right";
-  const numStr=` ${streak}`; ctx.font=`300 88px 'Helvetica Neue',Helvetica,Arial,sans-serif`; ctx.fillStyle="rgba(255,255,255,0.95)"; ctx.fillText("DAY",TR_X-ctx.measureText(numStr).width,TR_Y+92);
-  ctx.fillStyle=accent; ctx.font=`400 88px 'Helvetica Neue',Helvetica,Arial,sans-serif`; ctx.fillText(numStr,TR_X,TR_Y+92); ctx.restore();
-  const tl=cardTierLabel(streak); if(tl) cardGhost(ctx,`· ${tl} ·`,TR_X,TR_Y+118,14,"right",accent,400);
-  ctx.save(); ctx.translate(INSET+16,H*0.72); ctx.rotate(-Math.PI/2); ctx.font="300 12px 'Helvetica Neue',Helvetica,Arial,sans-serif"; ctx.fillStyle="rgba(255,255,255,0.40)"; ctx.shadowColor="rgba(0,0,0,0.70)"; ctx.shadowBlur=5; ctx.letterSpacing="0.18em"; ctx.textAlign="center"; ctx.fillText("KEEP GOING.  LIVE BETTER.  TOUCH MORE.",0,0); ctx.restore();
-  ctx.save(); ctx.translate(W-INSET-16,H*0.42); ctx.rotate(Math.PI/2); ctx.font="300 12px 'Helvetica Neue',Helvetica,Arial,sans-serif"; ctx.fillStyle="rgba(255,255,255,0.35)"; ctx.shadowColor="rgba(0,0,0,0.70)"; ctx.shadowBlur=5; ctx.letterSpacing="0.18em"; ctx.textAlign="center"; ctx.fillText("REAL MOMENTS.  REAL LIFE.",0,0); ctx.restore();
-  const BL_X=INSET+22,BL_BASE=H-INSET-28; cardGhost(ctx,"DATE OF CERTIFICATION",BL_X,BL_BASE-22,12,"left",muted,500); cardGhost(ctx,dateStr,BL_X,BL_BASE,20,"left","rgba(255,255,255,0.95)",300);
-  const BR_X=W-INSET-28,BR_BASE=H-INSET-28; cardGhost(ctx,"CERTIFIED BY",BR_X,BR_BASE-24,12,"right",muted,400); cardGhost(ctx,"touch grass",BR_X,BR_BASE,19,"right","rgba(255,255,255,0.95)",300);
-  const topPct=getTopPercent(streak);
-  if(topPct){const SCX=BR_X-55,SCY=BR_BASE-108; ctx.save(); ctx.strokeStyle=accent; ctx.lineWidth=1.4; ctx.shadowColor="rgba(0,0,0,0.70)"; ctx.shadowBlur=8; ctx.globalAlpha=0.90; ctx.beginPath(); ctx.arc(SCX,SCY,46,0,Math.PI*2); ctx.stroke(); ctx.restore(); cardGhost(ctx,`TOP ${topPct}%`,SCX,SCY-4,16,"center",accent,600); cardGhost(ctx,"grass touchers",SCX,SCY+18,15,"center","rgba(255,255,255,0.92)",700); ctx.save(); ctx.strokeStyle=accent; ctx.lineWidth=0.8; ctx.globalAlpha=0.55; [[-40,-5],[40,-5]].forEach(([ox,oy])=>{ctx.beginPath();ctx.moveTo(SCX+ox,SCY+oy-10);ctx.lineTo(SCX+ox,SCY+oy+10);ctx.stroke();}); ctx.restore();}
-  try{const logo=await loadImgEl("/touchgrass-transparent.png"); ctx.save(); ctx.globalAlpha=0.60; ctx.drawImage(logo,BR_X-36,BR_BASE-72,36,36); ctx.restore();}catch{}
-  return canvas.toDataURL("image/png");
-}
-
-// FORMAT 2: Instagram Story 1080x1920
-async function renderStory(img, { streak, dateStr }) {
-  const W=1080,H=1920; const canvas=document.createElement("canvas"); canvas.width=W; canvas.height=H; const ctx=canvas.getContext("2d");
-  coverFill(ctx,img,0,0,W,H);
-  const topG=ctx.createLinearGradient(0,0,0,H*0.35); topG.addColorStop(0,"rgba(0,0,0,0.72)"); topG.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=topG; ctx.fillRect(0,0,W,H*0.35);
-  const botG=ctx.createLinearGradient(0,H*0.68,0,H); botG.addColorStop(0,"rgba(0,0,0,0)"); botG.addColorStop(1,"rgba(0,0,0,0.75)"); ctx.fillStyle=botG; ctx.fillRect(0,H*0.68,W,H*0.32);
-  const accent=cardAccent(streak),muted=cardMuted(streak),PAD=56;
-  cardGhost(ctx,"PROOF OF GRASS",PAD,PAD+48,22,"left","rgba(255,255,255,0.95)",700); cardGhost(ctx,"Verified Outdoors",PAD,PAD+82,28,"left","rgba(255,255,255,0.88)",300);
-  const TR_X=W-PAD; cardGhost(ctx,"DAY",TR_X,PAD+52,20,"right",muted,400);
-  ctx.save(); ctx.textAlign="right"; ctx.font=`700 120px 'Helvetica Neue',Helvetica,Arial,sans-serif`; ctx.fillStyle=accent; ctx.shadowColor="rgba(0,0,0,0.9)"; ctx.shadowBlur=20; ctx.fillText(`${streak}`,TR_X,PAD+168); ctx.restore();
-  const tl=cardTierLabel(streak); if(tl) cardGhost(ctx,`· ${tl} ·`,TR_X,PAD+198,18,"right",accent,400);
-  ctx.strokeStyle="rgba(255,255,255,0.18)"; ctx.lineWidth=1; ctx.strokeRect(20,20,W-40,H-40);
-  ctx.strokeStyle=streak>=50?"rgba(212,175,55,0.7)":"rgba(255,255,255,0.45)"; ctx.lineWidth=1.5;
-  [[20,20,1,1],[W-20,20,-1,1],[20,H-20,1,-1],[W-20,H-20,-1,-1]].forEach(([cx,cy,sx,sy])=>{ctx.beginPath();ctx.moveTo(cx+sx*36,cy);ctx.lineTo(cx,cy);ctx.lineTo(cx,cy+sy*36);ctx.stroke();});
-  cardGhost(ctx,"DATE OF CERTIFICATION",PAD,H-PAD-52,16,"left",muted,500); cardGhost(ctx,dateStr,PAD,H-PAD-20,22,"left","rgba(255,255,255,0.95)",300);
-  cardGhost(ctx,"CERTIFIED BY",W-PAD,H-PAD-52,16,"right",muted,400); cardGhost(ctx,"touch grass",W-PAD,H-PAD-20,22,"right","rgba(255,255,255,0.95)",300);
-  try{const logo=await loadImgEl("/touchgrass-transparent.png"); ctx.save(); ctx.globalAlpha=0.65; ctx.drawImage(logo,PAD-4,H-PAD-100,44,44); ctx.restore();}catch{}
-  return canvas.toDataURL("image/png");
-}
-
-// FORMAT 3: Instagram Feed 1080x1350
-async function renderFeed(img, { streak, dateStr }) {
-  const W=1080,H=1350; const canvas=document.createElement("canvas"); canvas.width=W; canvas.height=H; const ctx=canvas.getContext("2d");
-  const photoH=Math.round(H*0.72); coverFill(ctx,img,0,0,W,photoH);
-  const fadeG=ctx.createLinearGradient(0,photoH*0.6,0,photoH); fadeG.addColorStop(0,"rgba(6,8,5,0)"); fadeG.addColorStop(1,"rgba(6,8,5,1)"); ctx.fillStyle=fadeG; ctx.fillRect(0,photoH*0.6,W,photoH*0.4);
-  ctx.fillStyle="#060805"; ctx.fillRect(0,photoH,W,H-photoH);
-  const topG=ctx.createLinearGradient(0,0,0,photoH*0.28); topG.addColorStop(0,"rgba(0,0,0,0.55)"); topG.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=topG; ctx.fillRect(0,0,W,photoH*0.28);
-  const accent=cardAccent(streak),muted=cardMuted(streak),PAD=52;
-  cardGhost(ctx,"PROOF OF GRASS",PAD,PAD+40,18,"left","rgba(255,255,255,0.95)",700); cardGhost(ctx,"verified outdoors",PAD,PAD+68,22,"left","rgba(255,255,255,0.85)",300);
-  const TR_X=W-PAD; cardGhost(ctx,"STREAK",TR_X,PAD+40,13,"right",muted,500);
-  ctx.save(); ctx.textAlign="right"; ctx.font=`300 96px 'Helvetica Neue',Helvetica,Arial,sans-serif`; ctx.fillStyle="rgba(255,255,255,0.95)"; ctx.shadowColor="rgba(0,0,0,0.9)"; ctx.shadowBlur=16; ctx.fillText("DAY",TR_X-ctx.measureText(` ${streak}`).width,PAD+136); ctx.fillStyle=accent; ctx.font=`400 96px 'Helvetica Neue',Helvetica,Arial,sans-serif`; ctx.fillText(` ${streak}`,TR_X,PAD+136); ctx.restore();
-  const tl=cardTierLabel(streak); if(tl) cardGhost(ctx,`· ${tl} ·`,TR_X,PAD+164,14,"right",accent,400);
-  const LOWER_TOP=photoH+40;
-  const divG=ctx.createLinearGradient(PAD,0,W-PAD,0); divG.addColorStop(0,"transparent"); divG.addColorStop(0.5,streak>=50?"rgba(212,175,55,0.4)":"rgba(147,168,90,0.35)"); divG.addColorStop(1,"transparent"); ctx.strokeStyle=divG; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(PAD,LOWER_TOP-10); ctx.lineTo(W-PAD,LOWER_TOP-10); ctx.stroke();
-  cardGhost(ctx,"DATE OF CERTIFICATION",PAD,LOWER_TOP+32,13,"left",muted,500); cardGhost(ctx,dateStr,PAD,LOWER_TOP+62,22,"left","rgba(255,255,255,0.95)",300);
-  cardGhost(ctx,"CERTIFIED BY",W-PAD,LOWER_TOP+32,13,"right",muted,400); cardGhost(ctx,"touch grass",W-PAD,LOWER_TOP+62,22,"right","rgba(255,255,255,0.95)",300);
-  const topPct=getTopPercent(streak); if(topPct){const SCX=W/2,SCY=LOWER_TOP+130; ctx.save(); ctx.strokeStyle=accent; ctx.lineWidth=1.2; ctx.shadowColor="rgba(0,0,0,0.6)"; ctx.shadowBlur=8; ctx.globalAlpha=0.85; ctx.beginPath(); ctx.arc(SCX,SCY,42,0,Math.PI*2); ctx.stroke(); ctx.restore(); cardGhost(ctx,`TOP ${topPct}%`,SCX,SCY-2,15,"center",accent,600); cardGhost(ctx,"grass touchers",SCX,SCY+18,14,"center","rgba(255,255,255,0.9)",700);}
-  try{const logo=await loadImgEl("/touchgrass-transparent.png"); ctx.save(); ctx.globalAlpha=0.55; ctx.drawImage(logo,PAD-4,LOWER_TOP+16,38,38); ctx.restore();}catch{}
-  ctx.strokeStyle="rgba(255,255,255,0.12)"; ctx.lineWidth=1; ctx.strokeRect(16,16,W-32,H-32);
-  return canvas.toDataURL("image/png");
-}
-
-// FORMAT 4: Square 1080x1080 — Telegram, Discord, Facebook
-async function renderSquare(img, { streak, dateStr }) {
-  const W=1080,H=1080; const canvas=document.createElement("canvas"); canvas.width=W; canvas.height=H; const ctx=canvas.getContext("2d");
-  coverFill(ctx,img,0,0,W,H);
-  const topG=ctx.createLinearGradient(0,0,0,H*0.32); topG.addColorStop(0,"rgba(0,0,0,0.6)"); topG.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=topG; ctx.fillRect(0,0,W,H*0.32);
-  const botG=ctx.createLinearGradient(0,H*0.65,0,H); botG.addColorStop(0,"rgba(0,0,0,0)"); botG.addColorStop(1,"rgba(0,0,0,0.72)"); ctx.fillStyle=botG; ctx.fillRect(0,H*0.65,W,H*0.35);
-  const accent=cardAccent(streak),muted=cardMuted(streak),PAD=48;
-  cardGhost(ctx,"PROOF OF GRASS",PAD,PAD+42,18,"left","rgba(255,255,255,0.95)",700); cardGhost(ctx,"verified outdoors",PAD,PAD+68,21,"left","rgba(255,255,255,0.85)",300);
-  const TR_X=W-PAD; cardGhost(ctx,"STREAK",TR_X,PAD+42,13,"right",muted,500);
-  ctx.save(); ctx.textAlign="right"; ctx.font=`300 86px 'Helvetica Neue',Helvetica,Arial,sans-serif`; ctx.fillStyle="rgba(255,255,255,0.95)"; ctx.shadowColor="rgba(0,0,0,0.9)"; ctx.shadowBlur=14; ctx.fillText("DAY",TR_X-ctx.measureText(` ${streak}`).width,PAD+130); ctx.fillStyle=accent; ctx.font=`400 86px 'Helvetica Neue',Helvetica,Arial,sans-serif`; ctx.fillText(` ${streak}`,TR_X,PAD+130); ctx.restore();
-  const tl=cardTierLabel(streak); if(tl) cardGhost(ctx,`· ${tl} ·`,TR_X,PAD+156,14,"right",accent,400);
-  ctx.strokeStyle="rgba(255,255,255,0.18)"; ctx.lineWidth=0.8; ctx.strokeRect(18,18,W-36,H-36);
-  ctx.strokeStyle=streak>=50?"rgba(212,175,55,0.75)":"rgba(255,255,255,0.5)"; ctx.lineWidth=1.2;
-  [[18,18,1,1],[W-18,18,-1,1],[18,H-18,1,-1],[W-18,H-18,-1,-1]].forEach(([cx,cy,sx,sy])=>{ctx.beginPath();ctx.moveTo(cx+sx*28,cy);ctx.lineTo(cx,cy);ctx.lineTo(cx,cy+sy*28);ctx.stroke();});
-  const BL_X=PAD,BR_X=W-PAD,BASE=H-PAD-24;
-  cardGhost(ctx,"DATE OF CERTIFICATION",BL_X,BASE-22,12,"left",muted,500); cardGhost(ctx,dateStr,BL_X,BASE,19,"left","rgba(255,255,255,0.95)",300);
-  cardGhost(ctx,"CERTIFIED BY",BR_X,BASE-22,12,"right",muted,400); cardGhost(ctx,"touch grass",BR_X,BASE,19,"right","rgba(255,255,255,0.95)",300);
-  const topPct=getTopPercent(streak); if(topPct){const SCX=BR_X-50,SCY=BASE-108; ctx.save(); ctx.strokeStyle=accent; ctx.lineWidth=1.3; ctx.shadowColor="rgba(0,0,0,0.7)"; ctx.shadowBlur=8; ctx.globalAlpha=0.88; ctx.beginPath(); ctx.arc(SCX,SCY,42,0,Math.PI*2); ctx.stroke(); ctx.restore(); cardGhost(ctx,`TOP ${topPct}%`,SCX,SCY-2,14,"center",accent,600); cardGhost(ctx,"grass touchers",SCX,SCY+16,13,"center","rgba(255,255,255,0.9)",700);}
-  try{const logo=await loadImgEl("/touchgrass-transparent.png"); ctx.save(); ctx.globalAlpha=0.6; ctx.drawImage(logo,BR_X-36,BASE-68,34,34); ctx.restore();}catch{}
-  return canvas.toDataURL("image/png");
-}
-
-async function generateAllCards(imageSrc, { streak, dateStr }) {
-  const img = await loadImgEl(imageSrc);
-  const [landscape, story, feed, square] = await Promise.all([
-    renderLandscape(img, { streak, dateStr }),
-    renderStory(img, { streak, dateStr }),
-    renderFeed(img, { streak, dateStr }),
-    renderSquare(img, { streak, dateStr }),
-  ]);
-  return { landscape, story, feed, square };
-}
-
-// ─── Supabase Storage helpers ─────────────────────────────────────────────────
-
-async function dataUrlToBlob(dataUrl) {
-  const res = await fetch(dataUrl);
-  return res.blob();
-}
-
-async function uploadCard(dataUrl, username, submissionId, format) {
-  const blob = await dataUrlToBlob(dataUrl);
-  const path = `${username}/${submissionId}/${format}.png`;
-  const { error } = await supabase.storage.from("proof-cards").upload(path, blob, { contentType:"image/png", upsert:true });
-  if (error) throw error;
-  const { data } = supabase.storage.from("proof-cards").getPublicUrl(path);
-  return data.publicUrl;
-}
-
-async function uploadAllCards(cards, username, submissionId) {
-  const [landscapeUrl, storyUrl, feedUrl, squareUrl] = await Promise.all([
-    uploadCard(cards.landscape, username, submissionId, "landscape"),
-    uploadCard(cards.story,     username, submissionId, "story"),
-    uploadCard(cards.feed,      username, submissionId, "feed"),
-    uploadCard(cards.square,    username, submissionId, "square"),
-  ]);
-  return { landscapeUrl, storyUrl, feedUrl, squareUrl };
-}
-
-async function saveUrlsToSubmission(submissionId, urls) {
-  const { error } = await supabase.from("Submissions").update({
-    proof_landscape_url: urls.landscapeUrl,
-    proof_story_url:     urls.storyUrl,
-    proof_feed_url:      urls.feedUrl,
-    proof_square_url:    urls.squareUrl,
-  }).eq("id", submissionId);
-  if (error) console.error("[proof-cards] failed to save URLs:", error.message);
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
-
 export default function ResultCard({ imageSrc, username, initialStreak = 1, onStreakUpdate, hasPremiumProofs = false }) {
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
@@ -831,10 +642,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [currentStreak, setCurrentStreak] = useState(initialStreak);
 
   // ── NEW: 4-format card state ──────────────────────────────────────────────
-  const [cards, setCards] = useState(null);
-  const [cardUrls, setCardUrls] = useState(null);
-  const [cardsGenerating, setCardsGenerating] = useState(false);
-  const [cardsReady, setCardsReady] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [shareStatus, setShareStatus] = useState({});
 
@@ -934,25 +741,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const buildShareText = useCallback(() =>
     `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE} · proofofgrass.app`,
   [caption, currentStreak]);
-
-  // ── NEW: generate + upload all 4 cards after successful submission ────────
-  const generateAndUploadCards = useCallback(async (submissionId, streak, dStr) => {
-    if (!imageSrc || !submissionId) return;
-    setCardsGenerating(true);
-    try {
-      const generated = await generateAllCards(imageSrc, { streak, dateStr: dStr });
-      setCards(generated);
-      setDownloadUrl(generated.landscape);
-      const urls = await uploadAllCards(generated, username, submissionId);
-      setCardUrls(urls);
-      await saveUrlsToSubmission(submissionId, urls);
-      setCardsReady(true);
-    } catch(e) {
-      console.error("[proof-cards] pipeline error:", e?.message);
-      setCardsReady(true); // still allow sharing from data URLs
-    }
-    setCardsGenerating(false);
-  }, [imageSrc, username]);
 
   const lockInStreak = useCallback(async () => {
     if (!username) return;
@@ -1080,9 +868,8 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     if (result?.lucky_touch?.triggered) setLuckyTouch(result.lucky_touch);
   }, [username, tweetUrl, currentStreak, onStreakUpdate]);
 
-  // ── NEW: Instagram share — uses feed format, no streak lock ──────────────
   const shareToInstagram = useCallback(async () => {
-    const dataUrl = cards?.feed || downloadUrl;
+    const dataUrl = downloadUrl;
     if (!dataUrl) return;
     const igCaption = `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE} · proofofgrass.app`;
     const isMob = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -1098,7 +885,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       const link = document.createElement("a"); link.download = "proof-of-grass-feed.png"; link.href = dataUrl; link.click();
       setIgDesktop(true); setTimeout(() => setIgDesktop(false), 6000);
     }
-  }, [cards, downloadUrl, caption, currentStreak]);
+  }, [downloadUrl, caption, currentStreak]);
 
   // ── NEW: platform share for drawer — no streak lock ───────────────────────
   const handlePlatformShare = useCallback(async (platform) => {
@@ -1106,10 +893,10 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     const text = buildShareText();
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
     const formatMap = {
-      "ig-story": { dataUrl:cards?.story,  filename:"proof-story.png"  },
-      "ig-feed":  { dataUrl:cards?.feed,   filename:"proof-feed.png"   },
-      "telegram": { dataUrl:cards?.square, filename:"proof-square.png" },
-      "discord":  { dataUrl:cards?.square, filename:"proof-square.png" },
+      "ig-story": { dataUrl:downloadUrl,  filename:"proof-story.png"  },
+      "ig-feed":  { dataUrl:downloadUrl,   filename:"proof-feed.png"   },
+      "telegram": { dataUrl:downloadUrl, filename:"proof-square.png" },
+      "discord":  { dataUrl:downloadUrl, filename:"proof-square.png" },
     };
     const { dataUrl, filename } = formatMap[platform] ?? {};
     if (!dataUrl) { setShareStatus(s => ({ ...s, [platform]:null })); return; }
@@ -1129,15 +916,15 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     }
     setShareStatus(s => ({ ...s, [platform]:"done" }));
     setTimeout(() => setShareStatus(s => ({ ...s, [platform]:null })), 3000);
-  }, [cards, buildShareText]);
+  }, [downloadUrl, buildShareText]);
 
   // ── NEW: download all 4 ───────────────────────────────────────────────────
   const handleDownloadAll = useCallback(() => {
-    if (!cards) return;
+    if (!downloadUrl) return;
     [["landscape","proof-landscape.png"],["story","proof-story.png"],["feed","proof-feed.png"],["square","proof-square.png"]].forEach(([key,name]) => {
-      if (!cards[key]) return; const a=document.createElement("a"); a.href=cards[key]; a.download=name; a.click();
+      if (!downloadUrl) return; const a=document.createElement("a"); a.href=downloadUrl; a.download=name; a.click();
     });
-  }, [cards]);
+  }, [downloadUrl]);
 
   const [dateStr, setDateStr] = useState("");
   useEffect(() => {
@@ -1272,14 +1059,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     img.src = imageSrc;
   }, [imageSrc, dateStr, currentStreak, selectedTheme]);
 
-  const SHARE_OPTIONS = [
-    { id:"x",        label:"X",               icon:"𝕏",  sub:"Landscape 16:9 · best for feeds", locksStreak:true  },
-    { id:"ig-story", label:"Instagram Story", icon:"📸", sub:"Story 9:16 · full screen",         locksStreak:false },
-    { id:"ig-feed",  label:"Instagram Feed",  icon:"📷", sub:"Feed 4:5 · optimized",             locksStreak:false },
-    { id:"telegram", label:"Telegram",        icon:"💬", sub:"Square 1:1 · clean format",        locksStreak:false },
-    { id:"discord",  label:"Discord",         icon:"🎮", sub:"Square 1:1 · server ready",        locksStreak:false },
-  ];
-
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:24,width:"100%"}}>
 
@@ -1295,16 +1074,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             </div>
           )}
         </div>
-        {cardsGenerating && (
-          <div style={{display:"flex",alignItems:"center",gap:7,marginTop:8,fontFamily:"monospace",fontSize:11,color:"rgba(147,168,90,0.55)",letterSpacing:"0.08em"}}>
-            <span style={{animation:"spin 1.2s linear infinite",display:"inline-block"}}>◌</span>
-            generating share cards for all platforms…
-            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-          </div>
-        )}
-        {cardsReady && !cardsGenerating && submitStatus==="success" && (
-          <div style={{fontSize:11,fontFamily:"monospace",color:"rgba(147,168,90,0.55)",letterSpacing:"0.08em",marginTop:8}}>✓ all 4 share cards ready</div>
-        )}
       </div>
 
       {downloadUrl && (
@@ -1429,7 +1198,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       {/* More platforms — opens drawer, shown after streak locked */}
       {downloadUrl && !inAppBrowserMode && submitStatus === "success" && (
         <button onClick={()=>setDrawerOpen(true)} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,padding:"11px 24px",width:"100%",fontFamily:"monospace",fontSize:11,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",borderRadius:3,cursor:"pointer",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"rgba(240,239,234,0.5)"}}>
-          ··· more platforms {cardsGenerating&&<span style={{fontSize:10,opacity:0.6}}>(generating…)</span>}
+          ··· more platforms
         </button>
       )}
 
@@ -1468,7 +1237,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
               {SHARE_OPTIONS.map(opt => {
                 const isX = opt.id === "x";
                 const status = shareStatus[opt.id];
-                const disabled = !isX && !cardsReady;
+                const disabled = false;
                 return (
                   <button key={opt.id}
                     onClick={()=>{ if(isX){handleShareAndSubmit();setDrawerOpen(false);}else handlePlatformShare(opt.id); }}
@@ -1485,12 +1254,11 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                   </button>
                 );
               })}
-              <button onClick={handleDownloadAll} disabled={!cardsReady}
-                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"13px 16px",borderRadius:12,cursor:cardsReady?"pointer":"default",border:"1px solid rgba(147,168,90,0.18)",background:"rgba(147,168,90,0.05)",opacity:cardsReady?1:0.38,marginTop:4,width:"100%"}}>
+              <button onClick={handleDownloadAll} disabled={!downloadUrl}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"13px 16px",borderRadius:12,cursor:downloadUrl?"pointer":"default",border:"1px solid rgba(147,168,90,0.18)",background:"rgba(147,168,90,0.05)",opacity:downloadUrl?1:0.38,marginTop:4,width:"100%"}}>
                 <span style={{fontFamily:"monospace",fontSize:12,color:"#93a85a",letterSpacing:"0.1em",fontWeight:600}}>⬇ Download All 4 Formats</span>
               </button>
             </div>
-            {!cardsReady && <p style={{fontFamily:"monospace",fontSize:10,color:"rgba(147,168,90,0.38)",textAlign:"center",marginTop:14,letterSpacing:"0.06em"}}>{cardsGenerating?"⟳ generating cards…":"lock in your streak to generate share cards"}</p>}
           </div>
         </>
       )}
