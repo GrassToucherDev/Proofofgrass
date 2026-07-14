@@ -672,6 +672,7 @@ export default function Home() {
   // Sunset Pass activation state
   const [sunsetActivating, setSunsetActivating] = useState(false);
   const [sunsetMsg,        setSunsetMsg]        = useState("");
+  const [hasPremiumProofs, setHasPremiumProofs] = useState(false);
 
   // ── Pending challenges ────────────────────────────────────────────────────
   const [pendingChallenges, setPendingChallenges] = useState([]);
@@ -716,6 +717,7 @@ export default function Home() {
       setMissedOneDayNoShield(false); setHasPostedToday(null);
       setUserStats(null); setLatestPurchase(null);
       setPurchaseStatus(null); setPurchaseError("");
+      setHasPremiumProofs(false);
       setLoadingUser(false);
       return;
     }
@@ -795,6 +797,12 @@ export default function Home() {
           .eq("username", username)
           .order("created_at", { ascending:false }).limit(1).maybeSingle()
           .then(({ data }) => setLatestPurchase(data ?? null));
+
+        // Check Premium+ unlock
+        supabase.from("UserPremiumUnlocks")
+          .select("premium_type").eq("username", username)
+          .eq("premium_type", "premium_proofs").maybeSingle()
+          .then(({ data }) => setHasPremiumProofs(!!data));
 
         // Fetch pending challenges where this user is the one being challenged
         supabase.from("Challenges")
@@ -1311,6 +1319,7 @@ export default function Home() {
                 username={username}
                 initialStreak={displayStreak ?? currentStreak ?? 1}
                 onStreakUpdate={(n) => { setCurrentStreak(n); setHasPostedToday(true); }}
+                hasPremiumProofs={hasPremiumProofs}
               />
             ) : (
               <>

@@ -1,6 +1,66 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { supabase } from "../utils/supabase";
 
+// ── Premium+ Themes ──────────────────────────────────────────────────────────
+const THEMES = {
+  classic: {
+    name:        "Classic",
+    bgOverlay:   null, // uses default gradients
+    accent:      null, // uses streak-based logic
+    border:      null,
+    bracket:     null,
+    muted:       null,
+  },
+  golden_hour: {
+    name:        "Golden Hour",
+    bgOverlay:   "rgba(30,15,0,0.35)",
+    accent:      "rgba(245,158,11,1.0)",
+    border:      "rgba(245,158,11,0.55)",
+    bracket:     "rgba(245,158,11,0.85)",
+    muted:       "rgba(245,158,11,0.75)",
+  },
+  emerald_forest: {
+    name:        "Emerald Forest",
+    bgOverlay:   "rgba(0,20,8,0.35)",
+    accent:      "rgba(16,185,129,1.0)",
+    border:      "rgba(16,185,129,0.55)",
+    bracket:     "rgba(16,185,129,0.85)",
+    muted:       "rgba(16,185,129,0.75)",
+  },
+  midnight_meadow: {
+    name:        "Midnight Meadow",
+    bgOverlay:   "rgba(4,8,16,0.45)",
+    accent:      "rgba(103,232,249,1.0)",
+    border:      "rgba(103,232,249,0.45)",
+    bracket:     "rgba(103,232,249,0.75)",
+    muted:       "rgba(103,232,249,0.65)",
+  },
+  summit: {
+    name:        "Summit",
+    bgOverlay:   "rgba(10,12,18,0.38)",
+    accent:      "rgba(203,213,225,1.0)",
+    border:      "rgba(203,213,225,0.45)",
+    bracket:     "rgba(203,213,225,0.75)",
+    muted:       "rgba(203,213,225,0.65)",
+  },
+  aurora: {
+    name:        "Aurora",
+    bgOverlay:   "rgba(4,6,22,0.42)",
+    accent:      "rgba(167,139,250,1.0)",
+    border:      "rgba(167,139,250,0.50)",
+    bracket:     "rgba(167,139,250,0.80)",
+    muted:       "rgba(167,139,250,0.70)",
+  },
+  sunset_glow: {
+    name:        "Sunset Glow",
+    bgOverlay:   "rgba(26,8,0,0.38)",
+    accent:      "rgba(249,115,22,1.0)",
+    border:      "rgba(249,115,22,0.50)",
+    bracket:     "rgba(249,115,22,0.80)",
+    muted:       "rgba(249,115,22,0.70)",
+  },
+};
+
 const CAPTION_POOLS = {
   beginner: [
     "just touched grass. strong start. 🌿",
@@ -762,7 +822,7 @@ async function saveUrlsToSubmission(submissionId, urls) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ResultCard({ imageSrc, username, initialStreak = 1, onStreakUpdate }) {
+export default function ResultCard({ imageSrc, username, initialStreak = 1, onStreakUpdate, hasPremiumProofs = false }) {
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const sharableFileRef = useRef(null);
@@ -787,6 +847,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [submitStatus, setSubmitStatus] = useState(null);
   const [submitError, setSubmitError] = useState("");
   const [luckyTouch, setLuckyTouch] = useState(null);
+  const [selectedTheme, setSelectedTheme] = useState("classic");
   const [inAppBrowserMode, setInAppBrowserMode] = useState(false);
   const [clipboardDetected, setClipboardDetected] = useState(false);
   const [clipboardFeedback, setClipboardFeedback] = useState(null);
@@ -1115,10 +1176,12 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       ctx.fillStyle = vRight; ctx.fillRect(W * 0.82, 0, W * 0.18, H);
 
       const INSET = 22;
-      ctx.strokeStyle = currentStreak >= 50 ? "rgba(212,175,55,0.55)" : "rgba(255,255,255,0.22)";
+      const defaultBorder  = currentStreak >= 50 ? "rgba(212,175,55,0.55)" : "rgba(255,255,255,0.22)";
+      const defaultBracket = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.55)";
+      ctx.strokeStyle = theme.border  || defaultBorder;
       ctx.lineWidth = 0.8; ctx.strokeRect(INSET, INSET, W - INSET * 2, H - INSET * 2);
       const bracketLen = 28, bGap = INSET;
-      ctx.strokeStyle = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.55)";
+      ctx.strokeStyle = theme.bracket || defaultBracket;
       ctx.lineWidth = 1.2;
       [[bGap,bGap,1,1],[W-bGap,bGap,-1,1],[bGap,H-bGap,1,-1],[W-bGap,H-bGap,-1,-1]].forEach(([cx,cy,sx,sy]) => {
         ctx.beginPath(); ctx.moveTo(cx+sx*bracketLen,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+sy*bracketLen); ctx.stroke();
@@ -1130,8 +1193,18 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         ctx.fillText(text, x, y); ctx.restore();
       };
 
-      const accentText = currentStreak >= 50 ? "rgba(212,175,55,1.0)" : "rgba(160,230,160,1.0)";
-      const mutedText  = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.70)";
+      // Theme colors
+      const theme = THEMES[selectedTheme] || THEMES.classic;
+      const defaultAccent = currentStreak >= 50 ? "rgba(212,175,55,1.0)" : "rgba(160,230,160,1.0)";
+      const defaultMuted  = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.70)";
+      const accentText = theme.accent  || defaultAccent;
+      const mutedText  = theme.muted   || defaultMuted;
+
+      // Theme overlay tint on top of the photo
+      if (theme.bgOverlay) {
+        ctx.fillStyle = theme.bgOverlay;
+        ctx.fillRect(0, 0, W, H);
+      }
 
       const TL_X = INSET+22, TL_Y = INSET+44;
       ghost("PROOF OF GRASS", TL_X, TL_Y, 16, "left", "rgba(255,255,255,0.95)", "600");
@@ -1193,7 +1266,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       logo.src = "/touchgrass-transparent.png";
     };
     img.src = imageSrc;
-  }, [imageSrc, dateStr, currentStreak]);
+  }, [imageSrc, dateStr, currentStreak, selectedTheme]);
 
   const SHARE_OPTIONS = [
     { id:"x",        label:"X",               icon:"𝕏",  sub:"Landscape 16:9 · best for feeds", locksStreak:true  },
@@ -1288,6 +1361,36 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
               <button onClick={()=>setLocationMode(null)} style={{fontSize:10,color:"#93a85a",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Add location</button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Theme Selector — only shown if user has Premium Proofs */}
+      {downloadUrl && !inAppBrowserMode && submitStatus !== "success" && hasPremiumProofs && (
+        <div style={{ width:"100%", marginBottom:4 }}>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.14em",
+            textTransform:"uppercase", color:"rgba(167,139,250,0.7)",
+            marginBottom:8 }}>✨ Premium+ Theme</div>
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+            {Object.entries(THEMES).map(([key, theme]) => (
+              <button key={key} onClick={() => setSelectedTheme(key)}
+                style={{
+                  padding:"6px 12px", borderRadius:20, fontSize:11,
+                  fontWeight:600, cursor:"pointer",
+                  background: selectedTheme===key
+                    ? key==="classic" ? "#93a85a" : "rgba(167,139,250,0.25)"
+                    : "rgba(255,255,255,0.05)",
+                  color: selectedTheme===key
+                    ? key==="classic" ? "#0e1108" : "#a78bfa"
+                    : "rgba(240,239,234,0.45)",
+                  border: selectedTheme===key
+                    ? `1px solid ${key==="classic" ? "#93a85a" : "rgba(167,139,250,0.6)"}`
+                    : "1px solid rgba(255,255,255,0.1)",
+                  transition:"all 0.15s",
+                }}>
+                {theme.name}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
