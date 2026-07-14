@@ -1154,7 +1154,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
     const img = new Image();
     img.onerror = () => { console.error("[canvas] failed to load imageSrc:", imageSrc); };
-    img.onload = () => {
+    img.onload = () => { try {
       const scale = Math.max(W / img.width, H / img.height);
       const dw = img.width * scale, dh = img.height * scale;
       const overflow = dw - W;
@@ -1175,6 +1175,19 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       vRight.addColorStop(0, "rgba(0,0,0,0)"); vRight.addColorStop(1, "rgba(0,0,0,0.32)");
       ctx.fillStyle = vRight; ctx.fillRect(W * 0.82, 0, W * 0.18, H);
 
+      // ── Theme (must be declared before any theme.* usage) ───────────────
+      const theme          = THEMES[selectedTheme] || THEMES.classic;
+      const defaultAccent  = currentStreak >= 50 ? "rgba(212,175,55,1.0)"  : "rgba(160,230,160,1.0)";
+      const defaultMuted   = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.70)";
+      const accentText     = theme.accent || defaultAccent;
+      const mutedText      = theme.muted  || defaultMuted;
+
+      // Theme overlay tint (applied over photo, under text)
+      if (theme.bgOverlay) {
+        ctx.fillStyle = theme.bgOverlay;
+        ctx.fillRect(0, 0, W, H);
+      }
+
       const INSET = 22;
       const defaultBorder  = currentStreak >= 50 ? "rgba(212,175,55,0.55)" : "rgba(255,255,255,0.22)";
       const defaultBracket = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.55)";
@@ -1192,19 +1205,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         ctx.letterSpacing="0.10em"; ctx.shadowColor="rgba(0,0,0,0.80)"; ctx.shadowBlur=8; ctx.shadowOffsetX=0; ctx.shadowOffsetY=1;
         ctx.fillText(text, x, y); ctx.restore();
       };
-
-      // Theme colors
-      const theme = THEMES[selectedTheme] || THEMES.classic;
-      const defaultAccent = currentStreak >= 50 ? "rgba(212,175,55,1.0)" : "rgba(160,230,160,1.0)";
-      const defaultMuted  = currentStreak >= 50 ? "rgba(212,175,55,0.80)" : "rgba(255,255,255,0.70)";
-      const accentText = theme.accent  || defaultAccent;
-      const mutedText  = theme.muted   || defaultMuted;
-
-      // Theme overlay tint on top of the photo
-      if (theme.bgOverlay) {
-        ctx.fillStyle = theme.bgOverlay;
-        ctx.fillRect(0, 0, W, H);
-      }
 
       const TL_X = INSET+22, TL_Y = INSET+44;
       ghost("PROOF OF GRASS", TL_X, TL_Y, 16, "left", "rgba(255,255,255,0.95)", "600");
@@ -1264,7 +1264,11 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       logo.onload = () => { ctx.save(); ctx.globalAlpha=0.60; ctx.drawImage(logo, BR_X-36, BR_BASE-72, 36, 36); ctx.restore(); cacheForPreview(canvas.toDataURL("image/png")); };
       logo.onerror = () => cacheForPreview(canvas.toDataURL("image/png"));
       logo.src = "/touchgrass-transparent.png";
-    };
+    } catch(canvasErr) {
+      console.error("[canvas] render error:", canvasErr?.message, canvasErr);
+      // Still try to produce a preview even if something failed
+      try { setDownloadUrl(canvas.toDataURL("image/png")); } catch {}
+    }};
     img.src = imageSrc;
   }, [imageSrc, dateStr, currentStreak, selectedTheme]);
 
