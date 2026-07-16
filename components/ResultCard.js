@@ -823,34 +823,76 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     /FBAN|FBAV/i.test(navigator.userAgent) || /MicroMessenger/i.test(navigator.userAgent)
   );
 
+  // ── Share to X ────────────────────────────────────────────────────────────
+  // Mobile: native OS share sheet with image + caption pre-loaded (single tap).
+  // Desktop: opens X compose with caption. Image must be attached manually
+  //          (browsers cannot inject files into X web compose).
   const handleShareAndSubmit = useCallback(async () => {
     if (!downloadUrl) return;
     const text = buildShareText();
-    const isMobile = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const canShareFiles = !isInAppBrowser && isMobile && typeof navigator.share === "function" && typeof navigator.canShare === "function";
-    let cancelled = false;
 
     if (isInAppBrowser) { await lockInStreak(); setInAppBrowserMode(true); return; }
 
-    if (canShareFiles) {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
+    const canShare  = isMobile
+      && typeof navigator.share    === "function"
+      && typeof navigator.canShare === "function";
+
+    if (canShare) {
+      // ── Mobile: OS share sheet with image ──────────────────────────────
+      // Ensure the file is ready — use cached ref, or rebuild from canvas blob
       let file = sharableFileRef.current;
-      if (!file && downloadUrl.startsWith("data:")) {
-        try { const res = await fetch(downloadUrl); const blob = await res.blob(); file = new File([blob], "proof-of-grass.png", { type:"image/png" }); sharableFileRef.current = file; } catch(e) { file = null; }
+
+      if (!file) {
+        // Rebuild from canvas ref if sharableFileRef was somehow cleared
+        try {
+          file = await new Promise((resolve, reject) => {
+            const c = canvasRef.current;
+            if (!c) return reject(new Error("no canvas ref"));
+            c.toBlob(blob => {
+              blob
+                ? resolve(new File([blob], "proof-of-grass.png", { type:"image/png" }))
+                : reject(new Error("toBlob returned null"));
+            }, "image/png");
+          });
+          sharableFileRef.current = file;
+        } catch(e) {
+          console.warn("[share] could not build file:", e?.message);
+        }
       }
+
       if (file && navigator.canShare({ files:[file] })) {
         setShareHint(true);
         try {
           await navigator.share({ files:[file], text });
-          setShared(true); setTimeout(() => { setShared(false); setShareHint(false); }, 4000);
+          setShared(true);
+          setShareHint(false);
+          setTimeout(() => setShared(false), 3500);
+          await lockInStreak();
         } catch(err) {
           setShareHint(false);
-          if (err?.name === "AbortError") { cancelled = true; }
-          else { navigator.clipboard.writeText(text).catch(()=>{}); window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank"); setShared(true); setTimeout(() => setShared(false), 2500); }
+          if (err?.name !== "AbortError") {
+            // Share sheet opened but something failed — fall through to clipboard+X
+            try { await navigator.clipboard.writeText(text); } catch {}
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+            setShared(true);
+            setTimeout(() => setShared(false), 3000);
+            await lockInStreak();
+          }
+          // AbortError = user cancelled — do nothing
         }
-      } else { navigator.clipboard.writeText(text).catch(()=>{}); window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank"); setShared(true); setTimeout(() => setShared(false), 2500); }
-    } else { navigator.clipboard.writeText(text).catch(()=>{}); window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank"); setShared(true); setTimeout(() => setShared(false), 2500); }
+        return;
+      }
+      // canShare returned false (e.g. file too large, unsupported format)
+      // Fall through to desktop flow below
+    }
 
-    if (!cancelled) await lockInStreak();
+    // ── Desktop / fallback: clipboard + X compose ─────────────────────────
+    try { await navigator.clipboard.writeText(text); } catch {}
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+    setShared(true);
+    setTimeout(() => setShared(false), 3000);
+    await lockInStreak();
   }, [downloadUrl, buildShareText, lockInStreak, isInAppBrowser]);
 
   const handleShareAndPost = handleShareAndSubmit;
@@ -1148,8 +1190,22 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       const logo = new Image();
       const cacheForPreview = (dataUrl) => {
         setDownloadUrl(dataUrl);
-        try { fetch(dataUrl).then(r=>r.blob()).then(blob => { sharableFileRef.current = new File([blob],"proof-of-grass.png",{type:"image/png"}); }); }
-        catch(e) { console.warn("[photo] preview cache failed:", e?.message); }
+        // Build the shareable File synchronously from the canvas blob API
+        // so it is always ready when the share button is tapped.
+        try {
+          canvas.toBlob((blob) => {
+            if (blob) {
+              sharableFileRef.current = new File([blob], "proof-of-grass.png", { type:"image/png" });
+            }
+          }, "image/png");
+        } catch(e) {
+          // Fallback: derive from dataUrl
+          try {
+            fetch(dataUrl).then(r => r.blob()).then(blob => {
+              sharableFileRef.current = new File([blob], "proof-of-grass.png", { type:"image/png" });
+            });
+          } catch(e2) { console.warn("[photo] file cache failed:", e2?.message); }
+        }
       };
       logo.onload = () => {
         ctx.save(); ctx.globalAlpha=0.55;
@@ -1276,17 +1332,49 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       {/* Share to X + lock in streak */}
       {downloadUrl && !inAppBrowserMode && (
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,width:"100%"}}>
-          <button onClick={handleShareAndSubmit} disabled={submitStatus==="loading"||submitStatus==="success"}
-            style={{display:"inline-flex",alignItems:"center",gap:10,padding:"13px 32px",width:"100%",justifyContent:"center",fontFamily:"monospace",fontSize:13,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",borderRadius:3,cursor:"pointer",border:"1px solid #93a85a",background:submitStatus==="success"?"#2a3018":submitStatus==="loading"?"#1e2410":"transparent",color:"#93a85a",opacity:submitStatus==="loading"||submitStatus==="success"?0.7:1}}>
-            {submitStatus==="loading"?"posting…":submitStatus==="success"?"✓ streak locked in":"📤 share to x + lock in streak"}
+          <button
+            onClick={handleShareAndSubmit}
+            disabled={submitStatus==="loading" || submitStatus==="success"}
+            style={{
+              display:"inline-flex", alignItems:"center", gap:10,
+              padding:"13px 32px", width:"100%", justifyContent:"center",
+              fontFamily:"monospace", fontSize:13, fontWeight:700,
+              letterSpacing:"0.15em", textTransform:"uppercase",
+              borderRadius:3, cursor:"pointer",
+              border:"1px solid #93a85a",
+              background: submitStatus==="success" ? "#2a3018"
+                : shared ? "#1a2e10"
+                : "transparent",
+              color:"#93a85a",
+              opacity: submitStatus==="loading" || submitStatus==="success" ? 0.7 : 1,
+              transition:"all 0.2s",
+            }}>
+            {submitStatus==="loading" ? "posting…"
+              : submitStatus==="success" ? "✓ streak locked in"
+              : shared ? "✓ shared!"
+              : "📤 share to x + lock in streak"}
           </button>
-          {shareHint && <p style={{fontFamily:"monospace",fontSize:11,color:"#93a85a",letterSpacing:"0.08em",margin:0}}>select x, then tap post</p>}
-          {!shareHint && submitStatus!=="success" && (
-            <p style={{fontFamily:"monospace",fontSize:11,color:"rgba(147,168,90,0.45)",textAlign:"center",letterSpacing:"0.06em",margin:0,lineHeight:1.6}}>
-              {isInAppBrowser?"tap ··· → open in browser to share with image":"opens X with your caption · save & attach your certificate image"}
+
+          {shareHint && (
+            <p style={{fontFamily:"monospace",fontSize:11,color:"#93a85a",
+              letterSpacing:"0.08em",margin:0,textAlign:"center"}}>
+              select x from the share sheet
             </p>
           )}
-          {submitStatus==="error" && submitError && <p style={{fontFamily:"monospace",fontSize:10,color:"#ef4444",textAlign:"center",margin:0}}>{submitError}</p>}
+
+          {!shareHint && submitStatus !== "success" && (
+            <p style={{fontFamily:"monospace",fontSize:10,color:"rgba(147,168,90,0.40)",
+              textAlign:"center",letterSpacing:"0.06em",margin:0,lineHeight:1.7}}>
+              {isInAppBrowser
+                ? "tap ··· → open in browser to share with image"
+                : "opens share sheet with your card + caption ready"}
+            </p>
+          )}
+
+          {submitStatus==="error" && submitError && (
+            <p style={{fontFamily:"monospace",fontSize:10,color:"#ef4444",
+              textAlign:"center",margin:0}}>{submitError}</p>
+          )}
         </div>
       )}
 
