@@ -637,6 +637,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const sharableFileRef = useRef(null);
+  const [fileReady, setFileReady] = useState(false);
   const [caption, setCaption] = useState(() => pickCaption(initialStreak, null));
   const [copied, setCopied] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(initialStreak);
@@ -744,24 +745,50 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
   const lockInStreak = useCallback(async () => {
     if (!username) return;
+    // Don't re-run if already succeeded
+    if (submitStatus === "success") return;
     setSubmitStatus("loading");
     setSubmitError("");
+
+    // Retry wrapper — network hiccups during share flow are common
+    const rpcWithRetry = async (retries = 2) => {
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const locationPayload = locationMode === "gps"
+            ? { p_location_lat_rounded:gpsLat, p_location_lng_rounded:gpsLng, p_location_label:"Nearby Region", p_location_source:"gps" }
+            : locationMode === "manual" && locationCity.trim()
+            ? { p_location_city:locationCity.trim()||null, p_location_region:locationRegion.trim()||null,
+                p_location_country:locationCountry.trim()||null,
+                p_location_label:[locationCity.trim(),locationRegion.trim()].filter(Boolean).join(", ")||null,
+                p_location_source:"manual" }
+            : { p_location_source:"none" };
+          const res = await supabase.rpc("lock_in_streak", {
+            p_username: username, p_tweet_url: null, p_verification: "self_attested",
+            ...locationPayload,
+          });
+          return res;
+        } catch(e) {
+          if (attempt === retries) throw e;
+          await new Promise(r => setTimeout(r, 1200 * (attempt + 1)));
+        }
+      }
+    };
+
     try {
-      const locationPayload = locationMode === "gps"
-        ? { p_location_lat_rounded:gpsLat, p_location_lng_rounded:gpsLng, p_location_label:"Nearby Region", p_location_source:"gps" }
-        : locationMode === "manual" && locationCity.trim()
-        ? { p_location_city:locationCity.trim()||null, p_location_region:locationRegion.trim()||null,
-            p_location_country:locationCountry.trim()||null,
-            p_location_label:[locationCity.trim(),locationRegion.trim()].filter(Boolean).join(", ")||null,
-            p_location_source:"manual" }
-        : { p_location_source:"none" };
+      const { data: result, error: rpcError } = await rpcWithRetry();
 
-      const { data: result, error: rpcError } = await supabase.rpc("lock_in_streak", {
-        p_username: username, p_tweet_url: null, p_verification: "self_attested",
-        ...locationPayload,
-      });
+      if (rpcError) {
+        console.error("lock_in_streak RPC error", rpcError);
+        setSubmitError("Streak log failed — tap again.");
+        setSubmitStatus("error");
+        return;
+      }
 
-      if (rpcError) { console.error("lock_in_streak RPC error", rpcError); setSubmitError("Streak log failed — tap again."); setSubmitStatus("error"); return; }
+      // already_submitted is a SUCCESS state — user posted, streak is safe
+      if (result?.status === "already_submitted") {
+        setSubmitStatus("success");
+        return;
+      }
 
       const newStreak = result?.current_streak ?? currentStreak;
       setCurrentStreak(newStreak);
@@ -877,9 +904,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
             setShared(true);
             setTimeout(() => setShared(false), 3000);
-            await lockInStreak();
+            if (submitStatus !== "success") await lockInStreak();
           }
-          // AbortError = user cancelled — do nothing
+          // AbortError = user cancelled — streak NOT locked, they didn't share
         }
         return;
       }
@@ -903,7 +930,8 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     setSubmitStatus("loading"); setSubmitError("");
     const { data: result, error: rpcError } = await supabase.rpc("lock_in_streak", { p_username:username, p_tweet_url:tweetUrl.trim()||null, p_verification:"self_attested" });
     if (rpcError) { console.error("lock_in_streak RPC failed", rpcError); setSubmitError("Something went wrong. Try again."); setSubmitStatus("error"); return; }
-    if (result?.status === "already_submitted") { setSubmitError("You've already submitted today. Come back tomorrow. 🌿"); setSubmitStatus("error"); return; }
+    // already_submitted = streak already safe today, treat as success
+    if (result?.status === "already_submitted") { setSubmitStatus("success"); return; }
     if (result?.status !== "success") { setSubmitError("Unexpected response. Try again."); setSubmitStatus("error"); return; }
     const newStreak = result.current_streak ?? currentStreak;
     setCurrentStreak(newStreak); onStreakUpdate?.(newStreak); setSubmitStatus("success"); setTweetUrl("");
@@ -1178,21 +1206,29 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       const logo = new Image();
       const cacheForPreview = (dataUrl) => {
         setDownloadUrl(dataUrl);
-        // Build the shareable File synchronously from the canvas blob API
-        // so it is always ready when the share button is tapped.
+        setFileReady(false);
+        // Build the shareable File from canvas.toBlob — most reliable method.
+        // setFileReady(true) only fires once the File is confirmed built,
+        // which gates the share button so the image is never missing.
         try {
           canvas.toBlob((blob) => {
             if (blob) {
               sharableFileRef.current = new File([blob], "proof-of-grass.png", { type:"image/png" });
+              setFileReady(true);
             }
           }, "image/png");
         } catch(e) {
-          // Fallback: derive from dataUrl
+          // Fallback: base64 → blob
           try {
             fetch(dataUrl).then(r => r.blob()).then(blob => {
               sharableFileRef.current = new File([blob], "proof-of-grass.png", { type:"image/png" });
+              setFileReady(true);
             });
-          } catch(e2) { console.warn("[photo] file cache failed:", e2?.message); }
+          } catch(e2) {
+            // Last resort — allow share anyway (text only)
+            console.warn("[photo] file build failed:", e2?.message);
+            setFileReady(true);
+          }
         }
       };
       logo.onload = () => {
@@ -1208,6 +1244,9 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     }};
     img.src = imageSrc;
   }, [imageSrc, dateStr, currentStreak, selectedTheme]);
+
+  // Reset file ready state when image changes
+  useEffect(() => { setFileReady(false); }, [imageSrc]);
 
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:24,width:"100%"}}>
@@ -1322,24 +1361,28 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,width:"100%"}}>
           <button
             onClick={handleShareAndSubmit}
-            disabled={submitStatus==="loading" || submitStatus==="success"}
+            disabled={submitStatus==="loading" || submitStatus==="success" || !fileReady}
             style={{
               display:"inline-flex", alignItems:"center", gap:10,
               padding:"13px 32px", width:"100%", justifyContent:"center",
               fontFamily:"monospace", fontSize:13, fontWeight:700,
               letterSpacing:"0.15em", textTransform:"uppercase",
-              borderRadius:3, cursor:"pointer",
+              borderRadius:3,
+              cursor: fileReady && submitStatus!=="loading" && submitStatus!=="success"
+                ? "pointer" : "default",
               border:"1px solid #93a85a",
               background: submitStatus==="success" ? "#2a3018"
                 : shared ? "#1a2e10"
                 : "transparent",
               color:"#93a85a",
-              opacity: submitStatus==="loading" || submitStatus==="success" ? 0.7 : 1,
+              opacity: !fileReady || submitStatus==="loading" || submitStatus==="success"
+                ? 0.5 : 1,
               transition:"all 0.2s",
             }}>
             {submitStatus==="loading" ? "posting…"
               : submitStatus==="success" ? "✓ streak locked in"
               : shared ? "✓ shared!"
+              : !fileReady ? "⟳ preparing card…"
               : "📤 share to x + lock in streak"}
           </button>
 
@@ -1353,9 +1396,11 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
           {!shareHint && submitStatus !== "success" && (
             <p style={{fontFamily:"monospace",fontSize:10,color:"rgba(147,168,90,0.40)",
               textAlign:"center",letterSpacing:"0.06em",margin:0,lineHeight:1.7}}>
-              {isInAppBrowser
-                ? "tap ··· → open in browser to share with image"
-                : "opens share sheet with your card + caption ready"}
+              {!fileReady
+                ? "building your card…"
+                : isInAppBrowser
+                  ? "tap ··· → open in browser to share with image"
+                  : "opens share sheet with your card + caption ready"}
             </p>
           )}
 
