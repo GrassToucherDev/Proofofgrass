@@ -1266,6 +1266,20 @@ export default function Home() {
           </div>
         )}
 
+        {/* ── PROMO BANNER — Screen Touchers ──────────────────────────────────── */}
+        <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
+          <PromoBanner
+            image="screen_touchers.png"
+            title="🖥️ Screen Touchers — Mint Now"
+            description="Grab your Screen Toucher. Proceeds go to support youth athletics."
+            buttonText="🎨 Mint Now"
+            href="https://gravemint.io/mint/nrdou0?x=none"
+            secondaryText="🖼️ View Collection"
+            secondaryHref="https://gravemarket.io/collection/screen-touchers"
+            steps={[]}
+          />
+        </div>
+
         {/* ── ENTER USERNAME BANNER ─────────────────────────────────────────── */}
         {mounted && !hasUser && (
           <div style={{ background:`${T.olive}08`, borderBottom:`1px solid ${T.borderG}`,
