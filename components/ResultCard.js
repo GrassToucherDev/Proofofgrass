@@ -998,34 +998,22 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       const accentText    = theme.accent || defaultAccent;
       const mutedText     = theme.muted  || defaultMuted;
 
-      // ── Cinematic vignette ───────────────────────────────────────────────
-      // Corners — deep radial darken
-      const corners = [
-        [0,   0,   W*0.55, H*0.55],
-        [W,   0,   W*0.55, H*0.55],
-        [0,   H,   W*0.55, H*0.55],
-        [W,   H,   W*0.55, H*0.55],
-      ];
-      corners.forEach(([cx,cy,rx,ry]) => {
-        const g = ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(rx,ry));
-        g.addColorStop(0,"rgba(0,0,0,0.50)"); g.addColorStop(1,"rgba(0,0,0,0)");
-        ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      });
-      // Bottom band — strong
-      const vBot = ctx.createLinearGradient(0, H*0.58, 0, H);
-      vBot.addColorStop(0,"rgba(0,0,0,0)"); vBot.addColorStop(0.6,"rgba(0,0,0,0.55)"); vBot.addColorStop(1,"rgba(0,0,0,0.82)");
-      ctx.fillStyle=vBot; ctx.fillRect(0, H*0.58, W, H*0.42);
-      // Top band — lighter
-      const vTop = ctx.createLinearGradient(0, 0, 0, H*0.30);
-      vTop.addColorStop(0,"rgba(0,0,0,0.58)"); vTop.addColorStop(1,"rgba(0,0,0,0)");
-      ctx.fillStyle=vTop; ctx.fillRect(0, 0, W, H*0.30);
-      // Left + right thin strips
-      const vL = ctx.createLinearGradient(0,0,W*0.12,0);
-      vL.addColorStop(0,"rgba(0,0,0,0.38)"); vL.addColorStop(1,"rgba(0,0,0,0)");
-      ctx.fillStyle=vL; ctx.fillRect(0,0,W*0.12,H);
-      const vR = ctx.createLinearGradient(W*0.88,0,W,0);
-      vR.addColorStop(0,"rgba(0,0,0,0)"); vR.addColorStop(1,"rgba(0,0,0,0.38)");
-      ctx.fillStyle=vR; ctx.fillRect(W*0.88,0,W*0.12,H);
+      // ── Vignette — edge darkening only, center stays clear ─────────────
+      // Bottom band — text legibility
+      const vBot = ctx.createLinearGradient(0, H*0.62, 0, H);
+      vBot.addColorStop(0,"rgba(0,0,0,0)"); vBot.addColorStop(1,"rgba(0,0,0,0.72)");
+      ctx.fillStyle=vBot; ctx.fillRect(0, H*0.62, W, H*0.38);
+      // Top band — brand text legibility
+      const vTop = ctx.createLinearGradient(0, 0, 0, H*0.22);
+      vTop.addColorStop(0,"rgba(0,0,0,0.52)"); vTop.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=vTop; ctx.fillRect(0, 0, W, H*0.22);
+      // Left + right — very subtle
+      const vL = ctx.createLinearGradient(0,0,W*0.08,0);
+      vL.addColorStop(0,"rgba(0,0,0,0.28)"); vL.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=vL; ctx.fillRect(0,0,W*0.08,H);
+      const vR = ctx.createLinearGradient(W*0.92,0,W,0);
+      vR.addColorStop(0,"rgba(0,0,0,0)"); vR.addColorStop(1,"rgba(0,0,0,0.28)");
+      ctx.fillStyle=vR; ctx.fillRect(W*0.92,0,W*0.08,H);
 
       // ── Theme tint — gradient not flat, so photo still breathes ─────────
       if (theme.bgOverlay) {
@@ -1038,12 +1026,12 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
       // ── Film grain (subtle noise texture) ───────────────────────────────
       const grainCanvas = document.createElement("canvas");
-      grainCanvas.width = 256; grainCanvas.height = 256;
+      grainCanvas.width = 200; grainCanvas.height = 200;
       const gc = grainCanvas.getContext("2d");
-      const gd = gc.createImageData(256, 256);
+      const gd = gc.createImageData(200, 200);
       for (let i = 0; i < gd.data.length; i += 4) {
         const v = Math.random() * 255;
-        gd.data[i]=gd.data[i+1]=gd.data[i+2]=v; gd.data[i+3]=18;
+        gd.data[i]=gd.data[i+1]=gd.data[i+2]=v; gd.data[i+3]=7;
       }
       gc.putImageData(gd, 0, 0);
       const grainPattern = ctx.createPattern(grainCanvas, "repeat");
