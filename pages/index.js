@@ -22,14 +22,27 @@ const T = {
 function normalizeUsername(val) {
   return String(val ?? "").replace(/@/g, "").toLowerCase().trim();
 }
+function toLocalDateStr(date) {
+  // Use local date string to avoid UTC midnight boundary issues
+  const d = date instanceof Date ? date : new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
 function computePreviewStreak(row) {
-  if (!row?.last_submission_date) return 1;
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const last = new Date(row.last_submission_date).toISOString().slice(0, 10);
-  if (last === today)     return row.current_streak;
-  if (last === yesterday) return row.current_streak + 1;
-  return 1;
+  if (!row?.last_submission_date) return row?.current_streak ?? 1;
+  const today     = toLocalDateStr(new Date());
+  const yesterday = toLocalDateStr(new Date(Date.now() - 86400000));
+  // last_submission_date may be a date string or timestamp — normalize both ways
+  const lastRaw = row.last_submission_date;
+  const lastLocal = toLocalDateStr(new Date(lastRaw));
+  const lastUTC   = new Date(lastRaw).toISOString().slice(0, 10);
+  // Match against either local or UTC interpretation — whichever keeps the streak alive
+  const isToday     = lastLocal === today     || lastUTC === today;
+  const isYesterday = lastLocal === yesterday || lastUTC === yesterday;
+  if (isToday)     return row.current_streak;
+  if (isYesterday) return row.current_streak + 1;
+  // Don't return 1 — return actual streak from DB so user can see their real count
+  // even if the preview logic can't confirm continuity
+  return row.current_streak;
 }
 function getStreakTier(n) {
   if (n >= 1000) return "TRANSCENDENT";
@@ -630,8 +643,8 @@ export default function Home() {
   const username = normalizeUsername(rawUsername);
   const hasUser  = username.length > 0;
 
-  const [currentStreak,        setCurrentStreak]        = useState(1);
-  const [displayStreak,        setDisplayStreak]         = useState(1);
+  const [currentStreak,        setCurrentStreak]        = useState(null);
+  const [displayStreak,        setDisplayStreak]         = useState(null);
   const [streakStatus,         setStreakStatus]          = useState("");
   const [streakTone,           setStreakTone]            = useState("neutral");
   const [shieldEligible,       setShieldEligible]        = useState(false);
@@ -712,7 +725,7 @@ export default function Home() {
   // ── Debounced user data load ──────────────────────────────────────────────
   useEffect(() => {
     if (!username) {
-      setCurrentStreak(1); setDisplayStreak(1); setStreakStatus("");
+      setCurrentStreak(null); setDisplayStreak(null); setStreakStatus("");
       setStreakTone("neutral"); setShieldEligible(false);
       setMissedOneDayNoShield(false); setHasPostedToday(null);
       setUserStats(null); setLatestPurchase(null);
@@ -727,7 +740,7 @@ export default function Home() {
       const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       const twoDaysAgo   = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
       try {
-        const [{ data: streakRow }, { count: postCount }] = await Promise.all([
+        const [{ data: streakRowExact }, { count: postCount }] = await Promise.all([
           supabase.from("Streaks")
             .select("current_streak, best_streak, last_submission_date, shield_count")
             .eq("username", username).maybeSingle(),
@@ -735,6 +748,22 @@ export default function Home() {
             .select("id", { count:"exact", head:true })
             .eq("username", username),
         ]);
+
+        // If exact match fails, try case-insensitive lookup — covers usernames
+        // stored with different casing (e.g. "JohnDoe" vs "johndoe")
+        let streakRow = streakRowExact;
+        if (!streakRow) {
+          const { data: ilike } = await supabase
+            .from("Streaks")
+            .select("current_streak, best_streak, last_submission_date, shield_count, username")
+            .ilike("username", username)
+            .maybeSingle();
+          if (ilike) {
+            streakRow = ilike;
+            // Persist the correct casing so future exact lookups work
+            console.info("[streak] found via ilike, stored as:", ilike.username, "typed as:", username);
+          }
+        }
 
         const { data: allStreaksForRank } = await supabase
           .from("Streaks").select("username,current_streak")
@@ -766,20 +795,30 @@ export default function Home() {
           .maybeSingle();
         const sunsetPassCount = sunsetRow?.quantity ?? 0;
 
-        const actual    = streakRow?.current_streak ?? 1;
+        const actual    = streakRow?.current_streak ?? 0;
         const projected = actual + 1;
         const displayVal = computePreviewStreak(streakRow);
         const missedOne  = lastDate === twoDaysAgo;
 
-        if (!lastDate)                    setStreakStatus("start your streak today"),        setStreakTone("neutral");
-        else if (lastDate===todayStr)     setStreakStatus("streak locked in for today"),     setStreakTone("success");
-        else if (lastDate===yesterdayStr) setStreakStatus(`submit today to reach day ${projected}`), setStreakTone("warning");
+        // Use local date comparison too for status messages
+        const todayLocal     = toLocalDateStr(new Date());
+        const yesterdayLocal = toLocalDateStr(new Date(Date.now() - 86400000));
+        const lastLocal      = lastDate ? toLocalDateStr(new Date(lastDate)) : null;
+        const postedToday    = lastDate === todayStr || lastLocal === todayLocal;
+        const postedYesterday = lastDate === yesterdayStr || lastLocal === yesterdayLocal;
+
+        if (!lastDate)           setStreakStatus("start your streak today"),                    setStreakTone("neutral");
+        else if (postedToday)    setStreakStatus("streak locked in for today ✓"),               setStreakTone("success");
+        else if (postedYesterday)setStreakStatus(`submit today to reach day ${projected}`),      setStreakTone("warning");
         else if (missedOne && shieldCount > 0) setStreakStatus(`day ${actual} — shield available`), setStreakTone("reset");
-        else                              setStreakStatus("streak lost — start again today"), setStreakTone("reset");
+        else                     setStreakStatus("streak lost — start again today"),             setStreakTone("reset");
+
+        // Override hasPostedToday with local-date-aware check
+        const postedTodayFinal = postedToday;
 
         setShieldEligible(missedOne && shieldCount > 0);
         setMissedOneDayNoShield(missedOne && shieldCount === 0);
-        setHasPostedToday(lastDate === todayStr);
+        setHasPostedToday(postedTodayFinal);
         setCurrentStreak(actual);
         setDisplayStreak(displayVal);
 
@@ -942,10 +981,18 @@ export default function Home() {
 
   // ── Derived display values ────────────────────────────────────────────────
   const toneColor = { success:"#4ade80", warning:T.gold, reset:T.red, neutral:T.dim }[streakTone] || T.dim;
-  const heroDay   = (hasUser && currentStreak > 0 ? currentStreak : null) ?? topStreaker?.streak ?? 67;
+  const heroDay   = (hasUser && currentStreak != null && currentStreak > 0 ? currentStreak : null) ?? topStreaker?.streak ?? 67;
+  // resolvedStreak: the definitive value to show on the card.
+  // Uses displayStreak (preview = actual+1 if submitted yesterday) when loaded,
+  // falls back to currentStreak, never falls back to 1 unless truly day 1.
+  const resolvedStreak = (displayStreak != null && displayStreak > 0)
+    ? displayStreak
+    : (currentStreak != null && currentStreak > 0)
+      ? currentStreak
+      : (loadingUser ? null : 1);
   const heroTier  = getStreakTier(heroDay);
   const heroColor = getTierColor(heroTier);
-  const tier      = getStreakTier(currentStreak);
+  const tier      = getStreakTier(currentStreak ?? 0);
   const tierColor = getTierColor(tier);
 
   // ── CSS ───────────────────────────────────────────────────────────────────
@@ -1327,20 +1374,25 @@ export default function Home() {
                 <div style={{ fontSize:13, fontWeight:600, color:"#4ade80", marginBottom:6 }}>Streak locked in for today</div>
                 <div style={{ fontSize:11, color:T.dim }}>Come back tomorrow to keep your streak alive.</div>
               </div>
-            ) : showResult && imageSrc ? (
+            ) : showResult && imageSrc && resolvedStreak !== null ? (
               <ResultCard
                 imageSrc={imageSrc}
                 username={username}
-                initialStreak={displayStreak ?? currentStreak ?? 1}
+                initialStreak={resolvedStreak}
                 onStreakUpdate={(n) => { setCurrentStreak(n); setHasPostedToday(true); }}
                 hasPremiumProofs={hasPremiumProofs}
               />
+            ) : showResult && imageSrc ? (
+              <div style={{ padding:"32px 0", textAlign:"center" }}>
+                <div style={{ fontSize:13, color:T.dim, letterSpacing:"0.08em",
+                  fontFamily:"monospace" }}>⟳ loading streak…</div>
+              </div>
             ) : (
               <>
                 <UploadBox onUpload={handleImageUpload} />
                 <div style={{ marginTop:12, padding:"10px 13px", borderRadius:8,
                   background:T.bg3, border:`1px solid ${T.border}`, fontSize:11, color:T.dim }}>
-                  {`Upload your outdoor photo to generate your Day ${displayStreak ?? currentStreak ?? 1} certificate.`}
+                  {`Upload your outdoor photo to generate your Day ${resolvedStreak} certificate.`}
                 </div>
               </>
             )}
