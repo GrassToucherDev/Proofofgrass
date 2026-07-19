@@ -637,7 +637,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const sharableFileRef = useRef(null);
-  const [fileReady, setFileReady] = useState(false);
   const [caption, setCaption] = useState(() => pickCaption(initialStreak, null));
   const [copied, setCopied] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(initialStreak);
@@ -850,58 +849,63 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     /FBAN|FBAV/i.test(navigator.userAgent) || /MicroMessenger/i.test(navigator.userAgent)
   );
 
-  // ── Share to X ────────────────────────────────────────────────────────────
-  // CRITICAL: On Android, navigator.share() MUST be called synchronously within
-  // the user gesture handler — any await before it breaks the gesture chain and
-  // the file is silently dropped. So we call share() first, then lockInStreak().
-  // The file is guaranteed ready via fileReady state gating the button.
   const handleShareAndSubmit = useCallback(async () => {
     if (!downloadUrl) return;
     const text = buildShareText();
-
-    if (isInAppBrowser) { await lockInStreak(); setInAppBrowserMode(true); return; }
-
-    const isAndroid = /Android/i.test(navigator.userAgent ?? "");
-    const isIOS     = /iPhone|iPad|iPod/i.test(navigator.userAgent ?? "");
-    const isMobile  = isAndroid || isIOS;
-    const canShare  = isMobile
-      && typeof navigator.share    === "function"
-      && typeof navigator.canShare === "function";
-
-    const file = sharableFileRef.current;
-
-    if (canShare && file && navigator.canShare({ files:[file] })) {
-      // ── Mobile path: call share() IMMEDIATELY — no await before this ───
-      // This preserves the user gesture on Android. lockInStreak() runs after.
-      setShareHint(true);
-      navigator.share({ files:[file], text })
-        .then(() => {
-          setShared(true);
-          setShareHint(false);
-          setTimeout(() => setShared(false), 3500);
-          return lockInStreak();
-        })
-        .catch(err => {
-          setShareHint(false);
-          if (err?.name !== "AbortError") {
-            // Share failed after opening — fall back to clipboard + X
-            navigator.clipboard.writeText(text).catch(()=>{});
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-            setShared(true);
-            setTimeout(() => setShared(false), 3000);
-            lockInStreak();
-          }
-          // AbortError = user cancelled — do not lock streak
-        });
+    const isMobile = typeof navigator !== "undefined" &&
+      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const canShareFiles = !isInAppBrowser &&
+      isMobile &&
+      typeof navigator.share === "function" &&
+      typeof navigator.canShare === "function";
+    let cancelled = false;
+    if (isInAppBrowser) {
+      await lockInStreak();
+      setInAppBrowserMode(true);
       return;
     }
-
-    // ── Desktop / fallback: clipboard + X compose ─────────────────────────
-    try { await navigator.clipboard.writeText(text); } catch {}
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-    setShared(true);
-    setTimeout(() => setShared(false), 3000);
-    await lockInStreak();
+    if (canShareFiles) {
+      let file = sharableFileRef.current;
+      if (!file && downloadUrl.startsWith("data:")) {
+        try {
+          const res = await fetch(downloadUrl);
+          const blob = await res.blob();
+          file = new File([blob], "proof-of-grass.png", { type: "image/png" });
+          sharableFileRef.current = file;
+        } catch(e) { file = null; }
+      }
+      if (file && navigator.canShare({ files: [file] })) {
+        setShareHint(true);
+        try {
+          await navigator.share({ files: [file], text });
+          setShared(true);
+          setTimeout(() => { setShared(false); setShareHint(false); }, 4000);
+        } catch (err) {
+          setShareHint(false);
+          if (err?.name === "AbortError") {
+            cancelled = true;
+          } else {
+            navigator.clipboard.writeText(text).catch(() => {});
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+            setShared(true);
+            setTimeout(() => setShared(false), 2500);
+          }
+        }
+      } else {
+        navigator.clipboard.writeText(text).catch(() => {});
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+        setShared(true);
+        setTimeout(() => setShared(false), 2500);
+      }
+    } else {
+      navigator.clipboard.writeText(text).catch(() => {});
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+      setShared(true);
+      setTimeout(() => setShared(false), 2500);
+    }
+    if (!cancelled) {
+      await lockInStreak();
+    }
   }, [downloadUrl, buildShareText, lockInStreak, isInAppBrowser]);
 
   const handleShareAndPost = handleShareAndSubmit;
@@ -926,16 +930,29 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     const igCaption = `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE} · proofofgrass.app`;
     const isMob = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     try { await navigator.clipboard.writeText(igCaption); setIgCopied(true); setTimeout(() => setIgCopied(false), 4000); } catch {}
-    const igFile = sharableFileRef.current;
-    if (isMob && typeof navigator.share === "function" && typeof navigator.canShare === "function" && igFile && navigator.canShare({ files:[igFile] })) {
-      // No await before share() — preserves Android gesture chain
-      navigator.share({ files:[igFile] }).catch(e => {
-        if (e?.name !== "AbortError") {
-          const link = document.createElement("a"); link.download = "proof-of-grass.png"; link.href = dataUrl; link.click();
+    if (isMob && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
+      let file = sharableFileRef.current;
+      if (!file && downloadUrl.startsWith("data:")) {
+        try {
+          const res = await fetch(downloadUrl);
+          const blob = await res.blob();
+          file = new File([blob], "proof-of-grass.png", { type: "image/png" });
+          sharableFileRef.current = file;
+        } catch(e) { file = null; }
+      }
+      if (file && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          return;
+        } catch(e) {
+          if (e?.name === "AbortError") return;
         }
-      });
+      }
+      const link = document.createElement("a");
+      link.download = "proof-of-grass.png"; link.href = downloadUrl; link.click();
     } else {
-      const link = document.createElement("a"); link.download = "proof-of-grass.png"; link.href = dataUrl; link.click();
+      const link = document.createElement("a");
+      link.download = "proof-of-grass.png"; link.href = downloadUrl; link.click();
       setIgDesktop(true); setTimeout(() => setIgDesktop(false), 6000);
     }
   }, [downloadUrl, caption, currentStreak]);
@@ -954,14 +971,19 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     const { dataUrl, filename } = formatMap[platform] ?? {};
     if (!dataUrl) { setShareStatus(s => ({ ...s, [platform]:null })); return; }
     try { await navigator.clipboard.writeText(text); } catch {}
-    const platFile = sharableFileRef.current;
-    if (isMobile && typeof navigator.share === "function" && typeof navigator.canShare === "function" && platFile && navigator.canShare({ files:[platFile] })) {
-      // No await before share() — preserves Android gesture chain
-      navigator.share({ files:[platFile] }).then(() => {
-        if (platform.startsWith("ig")) { setIgCopied(true); setTimeout(() => setIgCopied(false), 4000); }
-      }).catch(e => {
-        if (e?.name !== "AbortError") { const a=document.createElement("a"); a.href=dataUrl; a.download=filename; a.click(); }
-      });
+    if (isMobile && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
+      try {
+        let file = sharableFileRef.current;
+        if (!file && dataUrl.startsWith("data:")) {
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          file = new File([blob], filename, { type:"image/png" });
+        }
+        if (file && navigator.canShare({ files:[file] })) {
+          await navigator.share({ files:[file] });
+          if (platform.startsWith("ig")) { setIgCopied(true); setTimeout(() => setIgCopied(false), 4000); }
+        } else { const a=document.createElement("a"); a.href=dataUrl; a.download=filename; a.click(); }
+      } catch(e) { if (e?.name !== "AbortError") { const a=document.createElement("a"); a.href=dataUrl; a.download=filename; a.click(); } }
     } else {
       const a=document.createElement("a"); a.href=dataUrl; a.download=filename; a.click();
       if (platform.startsWith("ig")) { setIgDesktop(true); setTimeout(() => setIgDesktop(false), 6000); }
@@ -1188,29 +1210,14 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       const logo = new Image();
       const cacheForPreview = (dataUrl) => {
         setDownloadUrl(dataUrl);
-        setFileReady(false);
-        // Build the shareable File from canvas.toBlob — most reliable method.
-        // setFileReady(true) only fires once the File is confirmed built,
-        // which gates the share button so the image is never missing.
         try {
-          canvas.toBlob((blob) => {
-            if (blob) {
-              sharableFileRef.current = new File([blob], "proof-of-grass.png", { type:"image/png" });
-              setFileReady(true);
-            }
-          }, "image/png");
-        } catch(e) {
-          // Fallback: base64 → blob
-          try {
-            fetch(dataUrl).then(r => r.blob()).then(blob => {
-              sharableFileRef.current = new File([blob], "proof-of-grass.png", { type:"image/png" });
-              setFileReady(true);
+          fetch(dataUrl)
+            .then(res => res.blob())
+            .then(blob => {
+              sharableFileRef.current = new File([blob], "proof-of-grass.png", { type: "image/png" });
             });
-          } catch(e2) {
-            // Last resort — allow share anyway (text only)
-            console.warn("[photo] file build failed:", e2?.message);
-            setFileReady(true);
-          }
+        } catch (e) {
+          console.warn("[photo] preview cache failed:", e?.message);
         }
       };
       logo.onload = () => {
@@ -1226,9 +1233,6 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     }};
     img.src = imageSrc;
   }, [imageSrc, dateStr, currentStreak, selectedTheme]);
-
-  // Reset file ready state when image changes
-  useEffect(() => { setFileReady(false); }, [imageSrc]);
 
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:24,width:"100%"}}>
@@ -1341,48 +1345,38 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
       {/* Share to X + lock in streak */}
       {downloadUrl && !inAppBrowserMode && (
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,width:"100%"}}>
-          <button
-            onClick={handleShareAndSubmit}
-            disabled={submitStatus==="loading" || submitStatus==="success" || !fileReady}
+          <button onClick={handleShareAndSubmit}
+            disabled={submitStatus==="loading"||submitStatus==="success"}
             style={{
-              display:"inline-flex", alignItems:"center", gap:10,
-              padding:"13px 32px", width:"100%", justifyContent:"center",
-              fontFamily:"monospace", fontSize:13, fontWeight:700,
-              letterSpacing:"0.15em", textTransform:"uppercase",
-              borderRadius:3,
-              cursor: fileReady && submitStatus!=="loading" && submitStatus!=="success"
-                ? "pointer" : "default",
-              border:"1px solid #93a85a",
-              background: submitStatus==="success" ? "#2a3018"
-                : shared ? "#1a2e10"
-                : "transparent",
+              display:"inline-flex",alignItems:"center",gap:10,
+              padding:"13px 32px",width:"100%",justifyContent:"center",
+              fontFamily:"monospace",fontSize:13,fontWeight:700,
+              letterSpacing:"0.15em",textTransform:"uppercase",
+              borderRadius:3,cursor:"pointer",border:"1px solid #93a85a",
+              background: submitStatus==="success"?"#2a3018"
+                        : submitStatus==="loading"?"#1e2410"
+                        : "transparent",
               color:"#93a85a",
-              opacity: !fileReady || submitStatus==="loading" || submitStatus==="success"
-                ? 0.5 : 1,
-              transition:"all 0.2s",
+              opacity: submitStatus==="loading"||submitStatus==="success" ? 0.7 : 1,
             }}>
             {submitStatus==="loading" ? "posting…"
               : submitStatus==="success" ? "✓ streak locked in"
-              : shared ? "✓ shared!"
-              : !fileReady ? "⟳ preparing card…"
               : "📤 share to x + lock in streak"}
           </button>
-
           {shareHint && (
             <p style={{fontFamily:"monospace",fontSize:11,color:"#93a85a",
-              letterSpacing:"0.08em",margin:0,textAlign:"center"}}>
-              select x from the share sheet
+              letterSpacing:"0.08em",margin:0}}>
+              select x, then tap post
             </p>
           )}
-
-          {!shareHint && submitStatus !== "success" && (
-            <p style={{fontFamily:"monospace",fontSize:10,color:"rgba(147,168,90,0.40)",
-              textAlign:"center",letterSpacing:"0.06em",margin:0,lineHeight:1.7}}>
-              {!fileReady
-                ? "building your card…"
-                : isInAppBrowser
-                  ? "tap ··· → open in browser to share with image"
-                  : "opens share sheet with your card + caption ready"}
+          {!shareHint && submitStatus!=="success" && (
+            <p style={{fontFamily:"monospace",fontSize:11,
+              color:"rgba(147,168,90,0.45)",textAlign:"center",
+              letterSpacing:"0.06em",margin:0,lineHeight:1.6}}>
+              {isInAppBrowser
+                ? "tap ··· → open in browser to share with image"
+                : "opens X with your caption · save & attach your certificate image"
+              }
             </p>
           )}
 
