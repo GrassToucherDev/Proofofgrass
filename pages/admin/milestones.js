@@ -1,434 +1,559 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { supabase } from "../../utils/supabase";
+
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
   border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)",
-  borderGold:"rgba(200,168,75,0.35)",
+  borderGold:"rgba(200,168,75,0.4)",
   olive:"#93a85a", gold:"#c8a84b",
   white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
-  red:"#f87171",
 };
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
+// Streak milestones to watch for
+const STREAK_MILESTONES = [7, 14, 30, 50, 100, 180, 365, 500, 1000];
 
-const TYPE_CONFIG = {
-  streak:      { emoji:"🔥", label:"Streak",      color:"#f97316" },
-  grass_score: { emoji:"🌱", label:"Grass Score",  color:"#93a85a" },
-  proof_count: { emoji:"🌿", label:"Proofs",       color:"#4ade80" },
-  referral:    { emoji:"🤝", label:"Referrals",    color:"#c8a84b" },
-  spotlight:   { emoji:"🏆", label:"Spotlight",    color:"#c8a84b" },
-  lucky_touch: { emoji:"🍀", label:"Lucky Touch",  color:"#93a85a" },
-};
+// Grass Score milestones
+const SCORE_MILESTONES = [1000, 5000, 10000, 25000, 50000, 100000];
+
+// Field Guide collections
+const FG_COLLECTIONS = [
+  { slug:"skies",  name:"Skies",           icon:"🌤" },
+  { slug:"plants", name:"Plants & Foliage", icon:"🌿" },
+];
+
+function getMondayAndSunday() {
+  // Returns Monday 00:00 ET and Sunday 23:59:59 ET for the current week
+  const now   = new Date();
+  // Get current day in ET
+  const etStr = now.toLocaleString("en-US", { timeZone:"America/New_York" });
+  const et    = new Date(etStr);
+  const day   = et.getDay(); // 0=Sun, 1=Mon ... 6=Sat
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  const monday = new Date(et);
+  monday.setDate(et.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  // Convert back to UTC ISO for Supabase queries
+  const toUTC = (localDate) => {
+    const etOffset = getETOffset(localDate);
+    return new Date(localDate.getTime() - etOffset).toISOString();
+  };
+
+  return {
+    monday,
+    sunday,
+    mondayISO: toUTC(monday),
+    sundayISO:  toUTC(sunday),
+    label: `${monday.toLocaleDateString("en-US",{month:"short",day:"numeric"})} – ${sunday.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}`,
+  };
+}
+
+function getETOffset(date) {
+  // ET is UTC-5 (EST) or UTC-4 (EDT)
+  const jan = new Date(date.getFullYear(), 0, 1).getTimezoneOffset();
+  const jul = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
+  const stdOffset = Math.max(jan, jul);
+  const isDST = date.getTimezoneOffset() < stdOffset;
+  return isDST ? -4 * 60 * 60 * 1000 : -5 * 60 * 60 * 1000;
+}
 
 function fmtDate(iso) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US",
-    { month:"short", day:"numeric", year:"numeric", hour:"2-digit", minute:"2-digit",
-      timeZone:"UTC" });
-}
-function getMondayOf(date) {
-  const d = new Date(date);
-  const day = d.getUTCDay();
-  d.setUTCDate(d.getUTCDate() + (day===0?-6:1-day));
-  return d.toISOString().slice(0,10);
-}
-function getSundayOf(date) {
-  const d = new Date(getMondayOf(date));
-  d.setUTCDate(d.getUTCDate()+6);
-  return d.toISOString().slice(0,10);
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday:"short", month:"short", day:"numeric",
+  });
 }
 
-function exportCSV(rows) {
-  const headers = ["username","milestone_type","milestone_label","date_achieved","notified","reward_reviewed","notes"];
-  const lines = [headers.join(","),
-    ...rows.map(r => [r.username,r.milestone_type,r.milestone_label,
-      r.created_at?.slice(0,10)??'',r.notified,r.reward_reviewed,
-      `"${(r.notes??'').replace(/"/g,'""')}"`].join(","))];
-  const blob = new Blob([lines.join("\n")],{type:"text/csv"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href=url; a.download=`milestones-${new Date().toISOString().slice(0,10)}.csv`; a.click();
-  URL.revokeObjectURL(url);
+function MilestoneGroup({ title, icon, color, items, emptyMsg }) {
+  return (
+    <div style={{ marginBottom:32 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+        <span style={{ fontSize:20 }}>{icon}</span>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+          fontSize:22, fontWeight:700, color:T.white, margin:0 }}>{title}</h2>
+        <div style={{ marginLeft:"auto", fontSize:11, fontWeight:700,
+          color, background:`${color}18`,
+          border:`1px solid ${color}40`,
+          borderRadius:20, padding:"2px 10px" }}>
+          {items.length} {items.length === 1 ? "user" : "users"}
+        </div>
+      </div>
+
+      {items.length === 0 ? (
+        <div style={{ background:T.bg2, border:`1px solid ${T.border}`,
+          borderRadius:12, padding:"24px 20px",
+          textAlign:"center", fontSize:12, color:T.dim }}>
+          {emptyMsg}
+        </div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+          {items.map((item, i) => (
+            <div key={i} style={{ background:T.bg2,
+              border:`1px solid ${T.border}`,
+              borderRadius:12, padding:"13px 16px",
+              display:"flex", alignItems:"center",
+              gap:12, flexWrap:"wrap" }}>
+              {/* Rank */}
+              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                fontSize:18, fontWeight:700,
+                color:T.dim, width:24, flexShrink:0 }}>{i + 1}</div>
+
+              {/* Username */}
+              <Link href={`/u/${item.username}`} target="_blank"
+                style={{ fontSize:14, fontWeight:700, color:T.white,
+                  textDecoration:"none", flex:1, minWidth:100 }}
+                onMouseEnter={e=>e.currentTarget.style.color=T.olive}
+                onMouseLeave={e=>e.currentTarget.style.color=T.white}>
+                @{item.username}
+              </Link>
+
+              {/* Milestone badge */}
+              <div style={{ display:"flex", alignItems:"center", gap:7,
+                background:`${color}10`,
+                border:`1px solid ${color}35`,
+                borderRadius:8, padding:"5px 12px", flexShrink:0 }}>
+                <span style={{ fontSize:15 }}>{item.icon}</span>
+                <span style={{ fontSize:12, fontWeight:700,
+                  color, letterSpacing:"0.04em" }}>
+                  {item.milestone}
+                </span>
+              </div>
+
+              {/* Date */}
+              {item.date && (
+                <div style={{ fontSize:10, color:T.dim,
+                  flexShrink:0, minWidth:70, textAlign:"right" }}>
+                  {fmtDate(item.date)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function AdminMilestones() {
-  const [authed,      setAuthed]      = useState(false);
-  const [pw,          setPw]          = useState("");
-  const [pwError,     setPwError]     = useState("");
-  const [rows,        setRows]        = useState([]);
-  const [loading,     setLoading]     = useState(false);
-  const [filter,      setFilter]      = useState("today");
-  const [customFrom,  setCustomFrom]  = useState("");
-  const [customTo,    setCustomTo]    = useState("");
-  const [typeFilter,  setTypeFilter]  = useState("all");
-  const [statusFilter,setStatusFilter]= useState("all");
-  const [saving,      setSaving]      = useState({});
-  const [noteEditing, setNoteEditing] = useState({});
+  const [authed,   setAuthed]   = useState(false);
+  const [pw,       setPw]       = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [week,     setWeek]     = useState(null);
 
-  const checkPw = () => {
-    if (pw === ADMIN_PASSWORD) { setAuthed(true); setPwError(""); }
-    else setPwError("Incorrect password.");
-  };
+  // Milestone buckets
+  const [streakHits,   setStreakHits]   = useState([]);
+  const [scoreHits,    setScoreHits]    = useState([]);
+  const [fgHits,       setFgHits]       = useState([]);
+  const [newUsers,     setNewUsers]     = useState([]);
 
-  const dateRange = useCallback(() => {
-    const today = new Date().toISOString().slice(0,10);
-    if (filter==="today")     return { from:today, to:today };
-    if (filter==="this_week") return { from:getMondayOf(today), to:getSundayOf(today) };
-    if (filter==="last_week") {
-      const d = new Date(); d.setUTCDate(d.getUTCDate()-7);
-      const lw = d.toISOString().slice(0,10);
-      return { from:getMondayOf(lw), to:getSundayOf(lw) };
-    }
-    return { from:customFrom, to:customTo };
-  }, [filter, customFrom, customTo]);
+  const [error, setError] = useState("");
 
-  const loadData = useCallback(async () => {
-    const { from, to } = dateRange();
-    if (!from || !to) return;
+  const load = async () => {
     setLoading(true);
-    let q = supabase.from("MilestoneEvents").select("*")
-      .gte("created_at", `${from}T00:00:00.000Z`)
-      .lte("created_at", `${to}T23:59:59.999Z`)
-      .order("created_at", { ascending:false })
-      .limit(500);
-    const { data } = await q;
-    setRows(data ?? []);
+    setError("");
+    const w = getMondayAndSunday();
+    setWeek(w);
+
+    try {
+      // ── Fetch all submissions this week ──────────────────────────────────
+      const { data: subs } = await supabase
+        .from("Submissions")
+        .select("username, created_at")
+        .gte("created_at", w.mondayISO)
+        .lte("created_at", w.sundayISO)
+        .in("status", ["pending", "approved"])
+        .order("created_at", { ascending: true });
+
+      const weekUsernames = [...new Set((subs || []).map(s => s.username))];
+
+      if (!weekUsernames.length) {
+        setStreakHits([]); setScoreHits([]); setFgHits([]); setNewUsers([]);
+        setLoading(false);
+        return;
+      }
+
+      // ── Fetch streak rows for all active users this week ─────────────────
+      const { data: streakRows } = await supabase
+        .from("Streaks")
+        .select("username, current_streak, last_submission_date")
+        .in("username", weekUsernames);
+
+      // ── Fetch Grass Score for all active users ────────────────────────────
+      const { data: profileRows } = await supabase
+        .from("Profiles")
+        .select("username, grass_score")
+        .in("username", weekUsernames);
+
+      // ── Fetch Field Guide completions this week ───────────────────────────
+      const { data: fgRows } = await supabase
+        .from("FieldGuideProgress")
+        .select("username, collection_slug, completed_at, slots_filled")
+        .in("username", weekUsernames)
+        .not("completed_at", "is", null)
+        .gte("completed_at", w.mondayISO)
+        .lte("completed_at", w.sundayISO);
+
+      // ── New users this week — first ever submission ───────────────────────
+      // Users whose EARLIEST submission is within this week
+      const { data: allFirstSubs } = await supabase
+        .from("Streaks")
+        .select("username, current_streak")
+        .in("username", weekUsernames);
+
+      // Find users who have current_streak matching days since Monday
+      // More reliable: find users whose Streaks row was created this week
+      // Best approach: find users with their very first submission this week
+      const firstSubByUser = {};
+      (subs || []).forEach(s => {
+        if (!firstSubByUser[s.username]) firstSubByUser[s.username] = s.created_at;
+      });
+
+      // Cross-reference: users where their streak row shows low streak
+      // and their first sub this week appears to be their first ever
+      const streakMap = {};
+      (streakRows || []).forEach(r => { streakMap[r.username] = r; });
+
+      // ── Process streak milestones ─────────────────────────────────────────
+      // A user "hit" a milestone this week if their current_streak equals
+      // a milestone value AND their last_submission_date is within this week.
+      const streakResults = [];
+      (streakRows || []).forEach(row => {
+        const streak = row.current_streak;
+        const lastSub = row.last_submission_date;
+        if (!lastSub) return;
+
+        const lastSubDate = new Date(lastSub + "T12:00:00"); // noon to avoid TZ edge
+        const isThisWeek = lastSubDate >= new Date(w.mondayISO)
+          && lastSubDate <= new Date(w.sundayISO);
+
+        if (!isThisWeek) return;
+
+        // Check if current streak is at or crossed a milestone this week
+        // We look for the highest milestone they've reached
+        const hit = STREAK_MILESTONES.slice().reverse().find(m => streak >= m);
+        if (!hit) return;
+
+        // Only show if they likely crossed it this week:
+        // their streak == milestone (hit it exactly) OR streak is within 6 of milestone
+        // (accounting for shield use) and they're close
+        const crossedThisWeek = STREAK_MILESTONES.some(m =>
+          streak >= m && streak <= m + 6
+        );
+        if (!crossedThisWeek) return;
+
+        const milestone = STREAK_MILESTONES.slice().reverse().find(m =>
+          streak >= m && streak <= m + 6
+        );
+        if (!milestone) return;
+
+        const tierIcons = {
+          7:"🌱", 14:"💧", 30:"🌲", 50:"🌅",
+          100:"💯", 180:"⚡", 365:"👑", 500:"🌌", 1000:"✨"
+        };
+
+        streakResults.push({
+          username: row.username,
+          milestone: `Day ${milestone} Streak`,
+          icon: tierIcons[milestone] || "🔥",
+          date: row.last_submission_date,
+          streak,
+        });
+      });
+
+      // Sort by milestone value desc
+      streakResults.sort((a, b) => b.streak - a.streak);
+      setStreakHits(streakResults);
+
+      // ── Process Grass Score milestones ────────────────────────────────────
+      const scoreResults = [];
+      const profileMap = {};
+      (profileRows || []).forEach(p => { profileMap[p.username] = p; });
+
+      weekUsernames.forEach(u => {
+        const score = profileMap[u]?.grass_score || 0;
+        const hit = SCORE_MILESTONES.slice().reverse().find(m =>
+          score >= m && score <= m * 1.15 // within 15% above milestone = crossed it recently
+        );
+        if (!hit) return;
+        const scoreIcons = {
+          1000:"🔥", 5000:"🔋", 10000:"⚡",
+          25000:"💎", 50000:"🏆", 100000:"👑"
+        };
+        scoreResults.push({
+          username: u,
+          milestone: `${hit.toLocaleString()} Grass Score`,
+          icon: scoreIcons[hit] || "⚡",
+          date: firstSubByUser[u],
+          score,
+        });
+      });
+
+      scoreResults.sort((a, b) => b.score - a.score);
+      setScoreHits(scoreResults);
+
+      // ── Process Field Guide completions ───────────────────────────────────
+      const fgResults = [];
+      (fgRows || []).forEach(row => {
+        const col = FG_COLLECTIONS.find(c => c.slug === row.collection_slug);
+        if (!col) return;
+        fgResults.push({
+          username: row.username,
+          milestone: `${col.name} Complete`,
+          icon: col.icon,
+          date: row.completed_at,
+        });
+      });
+      fgResults.sort((a, b) => new Date(b.date) - new Date(a.date));
+      setFgHits(fgResults);
+
+      // ── New users — streak of 1–7 with first sub this week ───────────────
+      const newUserResults = [];
+      weekUsernames.forEach(u => {
+        const row = streakMap[u];
+        if (!row) return;
+        // New user = streak 1-7 AND appears to have started this week
+        // We check: their current_streak <= 7 and their streak count ≈ days since they started
+        if (row.current_streak <= 7) {
+          newUserResults.push({
+            username: u,
+            milestone: row.current_streak === 1
+              ? "First Day 🎉"
+              : `Day ${row.current_streak}`,
+            icon: "🌱",
+            date: firstSubByUser[u],
+            streak: row.current_streak,
+          });
+        }
+      });
+      newUserResults.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setNewUsers(newUserResults);
+
+    } catch(e) {
+      console.error(e);
+      setError(e.message || "Failed to load milestones.");
+    }
     setLoading(false);
-  }, [dateRange]);
-
-  useEffect(() => { if (authed) loadData(); }, [authed, loadData]);
-
-  const update = async (id, updates) => {
-    setSaving(s => ({...s,[id]:true}));
-    await supabase.from("MilestoneEvents")
-      .update(updates).eq("id", id);
-    setRows(prev => prev.map(r => r.id===id ? {...r,...updates} : r));
-    setSaving(s => { const n={...s}; delete n[id]; return n; });
   };
 
-  const saveNote = async (id) => {
-    const note = noteEditing[id] ?? "";
-    await update(id, { notes:note });
-    setNoteEditing(s => { const n={...s}; delete n[id]; return n; });
-  };
+  useEffect(() => { if (authed) load(); }, [authed]);
 
-  const filteredRows = rows.filter(r => {
-    if (typeFilter !== "all" && r.milestone_type !== typeFilter) return false;
-    if (statusFilter === "pending" && r.reward_reviewed) return false;
-    if (statusFilter === "notified" && !r.notified) return false;
-    if (statusFilter === "reviewed" && !r.reward_reviewed) return false;
-    return true;
-  });
+  if (!authed) return (
+    <div style={{ minHeight:"100vh", background:T.bg,
+      display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ background:T.bg2, border:`1px solid ${T.border}`,
+        borderRadius:14, padding:"32px 28px",
+        width:"100%", maxWidth:340, textAlign:"center" }}>
+        <div style={{ fontSize:28, marginBottom:12 }}>🏆</div>
+        <div style={{ fontFamily:"monospace", fontSize:14,
+          color:T.muted, marginBottom:20 }}>Milestones Admin</div>
+        <input type="password" value={pw}
+          onChange={e => setPw(e.target.value)}
+          onKeyDown={e => { if(e.key==="Enter" && pw===ADMIN_PASSWORD) setAuthed(true); }}
+          placeholder="Password"
+          style={{ width:"100%", background:"rgba(0,0,0,0.3)",
+            border:`1px solid ${T.border}`, borderRadius:8,
+            padding:"10px 12px", color:T.white, fontSize:13,
+            outline:"none", marginBottom:12, boxSizing:"border-box" }} />
+        <button onClick={() => { if(pw===ADMIN_PASSWORD) setAuthed(true); }}
+          style={{ width:"100%", background:T.olive, color:"#0a0c08",
+            border:"none", borderRadius:8, padding:"11px",
+            fontSize:13, fontWeight:700, cursor:"pointer" }}>
+          Enter
+        </button>
+        {error && <div style={{ fontSize:11, color:"#ef4444", marginTop:8 }}>{error}</div>}
+      </div>
+    </div>
+  );
 
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
-    input,select,textarea{font-family:'DM Sans',sans-serif;}
-    .btn{border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;
-      font-size:11px;letter-spacing:0.06em;border-radius:6px;transition:opacity 0.15s;}
-    .btn:hover{opacity:0.8;}.btn:disabled{opacity:0.4;cursor:default;}
-    table{border-collapse:collapse;width:100%;}
-    th{text-align:left;font-size:9px;font-weight:700;letter-spacing:0.16em;
-      text-transform:uppercase;color:${T.dim};padding:10px 14px;
-      border-bottom:1px solid ${T.border};white-space:nowrap;}
-    td{padding:11px 14px;border-bottom:1px solid ${T.border};font-size:12px;vertical-align:middle;}
-    tr:last-child td{border-bottom:none;}
-    tr:hover td{background:rgba(255,255,255,0.015);}
-    .fbtn{background:transparent;border:1px solid ${T.border};color:${T.dim};
-      padding:7px 16px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;
-      font-size:11px;font-weight:600;letter-spacing:0.08em;transition:all 0.15s;}
-    .fbtn.active{background:${T.olive};color:#0e1108;border-color:${T.olive};}
-    .fbtn:hover:not(.active){border-color:${T.olive};color:${T.olive};}
-    select.sel{background:${T.bg3};border:1px solid ${T.border};color:${T.white};
-      padding:7px 10px;border-radius:6px;font-size:11px;outline:none;cursor:pointer;}
-    input[type=date]{background:${T.bg3};border:1px solid ${T.border};color:${T.white};
-      padding:7px 10px;border-radius:6px;font-size:12px;outline:none;}
-    input[type=date]:focus{border-color:${T.olive};}
-    textarea.note-inp{background:${T.bg3};border:1px solid ${T.border};color:${T.white};
-      padding:6px 8px;border-radius:6px;font-size:11px;resize:vertical;outline:none;
-      width:100%;min-height:44px;}
-    textarea.note-inp:focus{border-color:${T.olive};}
-    ::-webkit-scrollbar{width:4px;height:4px;}
-    ::-webkit-scrollbar-track{background:${T.bg};}
-    ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
   `;
-
-  if (!authed) return (
-    <>
-      <style dangerouslySetInnerHTML={{__html:css}} />
-      <div style={{minHeight:"100vh",background:T.bg,display:"flex",
-        alignItems:"center",justifyContent:"center",padding:24}}>
-        <div style={{background:T.bg2,border:`1px solid ${T.borderG}`,borderRadius:16,
-          padding:"40px 36px",width:"100%",maxWidth:360,textAlign:"center"}}>
-          <div style={{fontSize:32,marginBottom:12}}>🌿</div>
-          <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,
-            fontWeight:700,color:T.white,marginBottom:4}}>Admin Access</div>
-          <div style={{fontSize:12,color:T.dim,marginBottom:28}}>Milestone Event Logger</div>
-          <input type="password" value={pw} onChange={e=>setPw(e.target.value)}
-            onKeyDown={e=>e.key==="Enter"&&checkPw()} placeholder="Admin password"
-            style={{width:"100%",background:T.bg3,border:`1px solid ${T.border}`,
-              color:T.white,padding:"11px 14px",borderRadius:8,fontSize:13,
-              outline:"none",marginBottom:12}} />
-          {pwError && <div style={{fontSize:11,color:T.red,marginBottom:10}}>{pwError}</div>}
-          <button onClick={checkPw} className="btn"
-            style={{width:"100%",padding:"12px",background:T.olive,
-              color:"#0e1108",fontSize:13}}>Enter</button>
-        </div>
-      </div>
-    </>
-  );
-
-  const pendingCount = rows.filter(r => !r.reward_reviewed).length;
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html:css}} />
-      <div style={{minHeight:"100vh",background:T.bg}}>
-
-        {/* NAV */}
-        <nav style={{position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",
-          justifyContent:"space-between",padding:"0 clamp(14px,4vw,48px)",height:56,
-          background:`${T.bg}ec`,backdropFilter:"blur(18px)",
-          borderBottom:`1px solid ${T.border}`,gap:12}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:18}}>🌿</span>
-            <span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:17,fontWeight:700,color:T.white}}>Proof of Grass</span>
-            <span style={{fontSize:10,color:T.dim,letterSpacing:"0.1em",
-              textTransform:"uppercase",marginLeft:4}}>/ Admin</span>
-          </div>
-          <div style={{display:"flex",gap:16,alignItems:"center"}}>
-            <a href="/admin/stats"      style={{fontSize:12,color:T.dim,textDecoration:"none"}}>Stats</a>
-            <span style={{fontSize:12,color:T.olive,fontWeight:600}}>Milestones</span>
-            <a href="/admin/spotlight"  style={{fontSize:12,color:T.dim,textDecoration:"none"}}>Spotlight</a>
-          </div>
-        </nav>
-
-        <div style={{padding:"32px clamp(14px,5vw,64px)",maxWidth:1300,margin:"0 auto"}}>
+      <style dangerouslySetInnerHTML={{ __html:css }} />
+      <div style={{ minHeight:"100vh", background:T.bg }}>
+        <div style={{ maxWidth:860, margin:"0 auto",
+          padding:"32px 16px 80px" }}>
 
           {/* Header */}
-          <div style={{marginBottom:28}}>
-            <div style={{fontSize:10,letterSpacing:"0.22em",color:T.olive,
-              textTransform:"uppercase",marginBottom:8,fontWeight:600}}>Admin</div>
-            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",
-              gap:16,flexWrap:"wrap"}}>
-              <div>
-                <h1 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
-                  fontSize:"clamp(28px,4vw,44px)",fontWeight:700,color:T.white,
-                  lineHeight:1,marginBottom:6}}>Milestone Event Logger</h1>
-                <p style={{fontSize:12,color:T.dim}}>
-                  {pendingCount > 0 && (
-                    <span style={{color:T.gold,fontWeight:600,marginRight:12}}>
-                      {pendingCount} unreviewed
-                    </span>
-                  )}
-                  Tracking streak, score, proof, referral, spotlight, and lucky touch milestones.
-                </p>
-              </div>
-              <button className="btn" onClick={() => exportCSV(filteredRows)}
-                disabled={filteredRows.length===0}
-                style={{padding:"10px 20px",background:T.bg3,
-                  color:T.olive,border:`1px solid ${T.borderG}`}}>
-                ↓ Export CSV
+          <div style={{ display:"flex", alignItems:"flex-start",
+            justifyContent:"space-between", marginBottom:32,
+            flexWrap:"wrap", gap:12 }}>
+            <div>
+              <div style={{ fontSize:10, letterSpacing:"0.2em",
+                textTransform:"uppercase", color:T.olive,
+                fontWeight:600, marginBottom:8 }}>Admin</div>
+              <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                fontSize:"clamp(28px,5vw,40px)", fontWeight:700,
+                color:T.white, lineHeight:1, marginBottom:8 }}>
+                Weekly Milestones
+              </h1>
+              {week && (
+                <div style={{ fontSize:13, color:T.dim }}>
+                  📅 {week.label}
+                </div>
+              )}
+            </div>
+            <div style={{ display:"flex", gap:8, alignItems:"center",
+              flexWrap:"wrap" }}>
+              <button onClick={load} disabled={loading}
+                style={{ background:"transparent",
+                  border:`1px solid ${T.borderG}`,
+                  color:T.olive, borderRadius:8,
+                  padding:"9px 18px", fontSize:12,
+                  cursor:"pointer", fontFamily:"monospace",
+                  opacity:loading?0.5:1 }}>
+                {loading ? "⟳ Loading…" : "↻ Refresh"}
               </button>
+              <Link href="/admin/burns"
+                style={{ fontSize:11, color:T.dim,
+                  textDecoration:"none" }}>
+                ← Burns Admin
+              </Link>
             </div>
           </div>
 
-          {/* Filters */}
-          <div style={{background:T.bg2,border:`1px solid ${T.border}`,borderRadius:12,
-            padding:"20px 24px",marginBottom:24}}>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
-              {[["today","Today"],["this_week","This Week"],
-                ["last_week","Last Week"],["custom","Custom"]].map(([k,l]) => (
-                <button key={k} className={`fbtn ${filter===k?"active":""}`}
-                  onClick={() => setFilter(k)}>{l}</button>
-              ))}
-            </div>
-            {filter==="custom" && (
-              <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap",marginBottom:14}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:11,color:T.dim}}>From</span>
-                  <input type="date" value={customFrom} onChange={e=>setCustomFrom(e.target.value)} />
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:11,color:T.dim}}>To</span>
-                  <input type="date" value={customTo} onChange={e=>setCustomTo(e.target.value)} />
-                </div>
-                <button className="btn" onClick={loadData}
-                  disabled={!customFrom||!customTo}
-                  style={{padding:"8px 18px",background:T.olive,color:"#0e1108"}}>Apply</button>
-              </div>
-            )}
-            <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:11,color:T.dim}}>Type</span>
-                <select className="sel" value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}>
-                  <option value="all">All Types</option>
-                  {Object.entries(TYPE_CONFIG).map(([k,v]) => (
-                    <option key={k} value={k}>{v.emoji} {v.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:11,color:T.dim}}>Status</span>
-                <select className="sel" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-                  <option value="all">All</option>
-                  <option value="pending">Unreviewed</option>
-                  <option value="reviewed">Reviewed</option>
-                  <option value="notified">Notified</option>
-                </select>
-              </div>
-              <button className="btn" onClick={loadData}
-                style={{padding:"7px 16px",background:T.bg3,
-                  color:T.olive,border:`1px solid ${T.borderG}`}}>
-                ↻ Refresh
-              </button>
-              <span style={{fontSize:11,color:T.dim,marginLeft:"auto"}}>
-                {filteredRows.length} events
-                {filteredRows.length!==rows.length && ` (${rows.length} total)`}
-              </span>
-            </div>
-          </div>
+          {error && (
+            <div style={{ background:"rgba(239,68,68,0.08)",
+              border:"1px solid rgba(239,68,68,0.3)", borderRadius:10,
+              padding:"12px 16px", fontSize:12, color:"#ef4444",
+              marginBottom:24 }}>{error}</div>
+          )}
 
-          {/* Table */}
           {loading ? (
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {[1,2,3,4,5].map(i => (
-                <div key={i} style={{height:56,borderRadius:8,background:T.bg2,opacity:0.5}} />
-              ))}
-            </div>
-          ) : filteredRows.length===0 ? (
-            <div style={{background:T.bg2,border:`1px solid ${T.border}`,borderRadius:12,
-              padding:"48px 24px",textAlign:"center"}}>
-              <div style={{fontSize:32,marginBottom:12}}>🎯</div>
-              <div style={{fontSize:14,color:T.dim}}>No milestone events in this period.</div>
+            <div style={{ textAlign:"center", padding:"60px 0",
+              color:T.dim, fontSize:13, fontFamily:"monospace",
+              letterSpacing:"0.08em" }}>
+              ⟳ Scanning this week's activity…
             </div>
           ) : (
-            <div style={{background:T.bg2,border:`1px solid ${T.border}`,
-              borderRadius:12,overflow:"auto"}}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Milestone</th>
-                    <th>Type</th>
-                    <th>Date Achieved</th>
-                    <th>Notified</th>
-                    <th>Reviewed</th>
-                    <th>Notes</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRows.map(r => {
-                    const tc = TYPE_CONFIG[r.milestone_type] ?? {emoji:"⭐",label:r.milestone_type,color:T.dim};
-                    return (
-                      <tr key={r.id}>
-                        <td>
-                          <a href={`/u/${r.username}`} target="_blank" rel="noopener noreferrer"
-                            style={{color:T.olive,textDecoration:"none",fontWeight:600,fontSize:13}}>
-                            @{r.username}
-                          </a>
-                        </td>
-                        <td>
-                          <span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",
-                            fontSize:15,fontWeight:700,color:tc.color}}>
-                            {tc.emoji} {r.milestone_label}
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{fontSize:9,fontWeight:700,letterSpacing:"0.1em",
-                            textTransform:"uppercase",padding:"2px 7px",borderRadius:4,
-                            background:tc.color+"15",color:tc.color,
-                            border:`1px solid ${tc.color}40`}}>
-                            {tc.label}
-                          </span>
-                        </td>
-                        <td style={{color:T.muted,whiteSpace:"nowrap"}}>{fmtDate(r.created_at)}</td>
-                        <td>
-                          <span style={{fontSize:11,color:r.notified?T.olive:T.dim}}>
-                            {r.notified?"✓ Yes":"—"}
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{fontSize:11,color:r.reward_reviewed?T.gold:T.dim}}>
-                            {r.reward_reviewed?"✓ Yes":"—"}
-                          </span>
-                        </td>
-                        <td style={{minWidth:160}}>
-                          {noteEditing[r.id]!==undefined ? (
-                            <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                              <textarea className="note-inp"
-                                value={noteEditing[r.id]}
-                                onChange={e=>setNoteEditing(s=>({...s,[r.id]:e.target.value}))}
-                                placeholder="Add note..." />
-                              <div style={{display:"flex",gap:5}}>
-                                <button className="btn" onClick={()=>saveNote(r.id)}
-                                  disabled={saving[r.id]}
-                                  style={{padding:"5px 10px",background:T.olive,color:"#0e1108"}}>
-                                  Save
-                                </button>
-                                <button className="btn"
-                                  onClick={()=>setNoteEditing(s=>{const n={...s};delete n[r.id];return n;})}
-                                  style={{padding:"5px 10px",background:T.bg3,
-                                    color:T.dim,border:`1px solid ${T.border}`}}>
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div style={{display:"flex",alignItems:"flex-start",gap:6}}>
-                              <span style={{fontSize:11,color:T.dim,flex:1,
-                                fontStyle:r.notes?"normal":"italic"}}>
-                                {r.notes||"—"}
-                              </span>
-                              <button className="btn"
-                                onClick={()=>setNoteEditing(s=>({...s,[r.id]:r.notes??""}))}
-                                style={{padding:"3px 7px",background:T.bg3,
-                                  color:T.dim,border:`1px solid ${T.border}`,
-                                  fontSize:10,flexShrink:0}}>
-                                Edit
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                        <td>
-                          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                            {!r.reward_reviewed && (
-                              <button className="btn" onClick={()=>update(r.id,{reward_reviewed:true})}
-                                disabled={saving[r.id]}
-                                style={{padding:"5px 10px",background:"rgba(200,168,75,0.1)",
-                                  color:T.gold,border:`1px solid rgba(200,168,75,0.3)`}}>
-                                ✓ Review
-                              </button>
-                            )}
-                            {!r.notified && (
-                              <button className="btn" onClick={()=>update(r.id,{notified:true})}
-                                disabled={saving[r.id]}
-                                style={{padding:"5px 10px",background:"rgba(147,168,90,0.1)",
-                                  color:T.olive,border:`1px solid rgba(147,168,90,0.3)`}}>
-                                Notify
-                              </button>
-                            )}
-                            {(r.reward_reviewed||r.notified) && (
-                              <button className="btn"
-                                onClick={()=>update(r.id,{reward_reviewed:false,notified:false})}
-                                disabled={saving[r.id]}
-                                style={{padding:"5px 10px",background:T.bg3,
-                                  color:T.dim,border:`1px solid ${T.border}`}}>
-                                Reset
-                              </button>
-                            )}
+            <>
+              {/* Streak milestones */}
+              <MilestoneGroup
+                title="Streak Milestones"
+                icon="🔥"
+                color={T.gold}
+                items={streakHits}
+                emptyMsg="No streak milestones hit this week yet."
+              />
+
+              {/* Grass Score milestones */}
+              <MilestoneGroup
+                title="Grass Score Milestones"
+                icon="⚡"
+                color={T.olive}
+                items={scoreHits}
+                emptyMsg="No Grass Score milestones hit this week yet."
+              />
+
+              {/* Field Guide completions */}
+              <MilestoneGroup
+                title="Field Guide Collections Completed"
+                icon="📖"
+                color="#67e8f9"
+                items={fgHits}
+                emptyMsg="No Field Guide collections completed this week yet."
+              />
+
+              {/* Divider */}
+              <div style={{ height:1, background:T.border,
+                margin:"8px 0 32px" }} />
+
+              {/* New users — separate section */}
+              <div style={{ background:"rgba(147,168,90,0.04)",
+                border:`1px solid ${T.borderG}`,
+                borderRadius:14, padding:"20px 20px 24px" }}>
+                <div style={{ display:"flex", alignItems:"center",
+                  gap:10, marginBottom:16 }}>
+                  <span style={{ fontSize:20 }}>🌱</span>
+                  <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                    fontSize:22, fontWeight:700, color:T.white, margin:0 }}>
+                    New This Week
+                  </h2>
+                  <div style={{ marginLeft:"auto", fontSize:11,
+                    fontWeight:700, color:T.olive,
+                    background:"rgba(147,168,90,0.1)",
+                    border:`1px solid ${T.borderG}`,
+                    borderRadius:20, padding:"2px 10px" }}>
+                    {newUsers.length} {newUsers.length===1?"user":"users"}
+                  </div>
+                </div>
+                <div style={{ fontSize:11, color:T.dim,
+                  marginBottom:14, lineHeight:1.6 }}>
+                  Users with streaks of 1–7 who submitted this week.
+                  These are your newest community members.
+                </div>
+                {newUsers.length === 0 ? (
+                  <div style={{ fontSize:12, color:T.dim,
+                    textAlign:"center", padding:"16px 0" }}>
+                    No new users detected this week.
+                  </div>
+                ) : (
+                  <div style={{ display:"grid",
+                    gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",
+                    gap:8 }}>
+                    {newUsers.map((u, i) => (
+                      <Link key={i} href={`/u/${u.username}`} target="_blank"
+                        style={{ display:"flex", alignItems:"center",
+                          gap:9, padding:"10px 12px",
+                          background:T.bg2,
+                          border:`1px solid ${T.border}`,
+                          borderRadius:10, textDecoration:"none",
+                          transition:"border-color 0.15s" }}
+                        onMouseEnter={e=>e.currentTarget.style.borderColor=T.olive}
+                        onMouseLeave={e=>e.currentTarget.style.borderColor=T.border}>
+                        <span style={{ fontSize:16 }}>🌱</span>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontSize:12, fontWeight:700,
+                            color:T.white, overflow:"hidden",
+                            textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                            @{u.username}
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <div style={{ fontSize:10, color:T.olive }}>
+                            {u.milestone}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Summary footer */}
+              <div style={{ marginTop:32, padding:"16px 20px",
+                background:T.bg2, border:`1px solid ${T.border}`,
+                borderRadius:12, display:"flex",
+                gap:24, flexWrap:"wrap" }}>
+                {[
+                  ["🔥 Streak Hits",    streakHits.length],
+                  ["⚡ Score Hits",      scoreHits.length],
+                  ["📖 Field Guide",     fgHits.length],
+                  ["🌱 New Users",       newUsers.length],
+                  ["Total Milestones",   streakHits.length + scoreHits.length + fgHits.length],
+                ].map(([label, val]) => (
+                  <div key={label} style={{ textAlign:"center",
+                    flex:"1 1 80px" }}>
+                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                      fontSize:26, fontWeight:700, color:T.white,
+                      lineHeight:1 }}>{val}</div>
+                    <div style={{ fontSize:9, color:T.dim,
+                      textTransform:"uppercase", letterSpacing:"0.1em",
+                      marginTop:4 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -1134,6 +1134,7 @@ export default function Home() {
                 { href:"/quests",                    label:"Quests",       icon:"⚔️", internal:false },
                 { href:"/fight",                     label:"Grass Jab",    icon:"🥊", internal:false },
                 { href:"/field-guide",               label:"Field Guide",  icon:"📖", internal:false },
+                { href:"/admin/milestones",           label:"Milestones",   icon:"🏆", internal:false },
               ].map(({ href, label, icon, internal }) =>
                 internal ? (
                   <a key={label} href={href} className="menu-item active"
