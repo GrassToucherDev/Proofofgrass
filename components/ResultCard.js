@@ -763,7 +763,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
                 p_location_source:"manual" }
             : { p_location_source:"none" };
           const res = await supabase.rpc("lock_in_streak", {
-            p_username: username, p_tweet_url: null, p_verification: "self_attested",
+            p_username: username?.toLowerCase().trim(), p_tweet_url: null, p_verification: "self_attested",
             ...locationPayload,
           });
           return res;
@@ -851,67 +851,49 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   );
 
   // ── Share to X ────────────────────────────────────────────────────────────
-  // Mobile: native OS share sheet with image + caption pre-loaded (single tap).
-  // Desktop: opens X compose with caption. Image must be attached manually
-  //          (browsers cannot inject files into X web compose).
+  // CRITICAL: On Android, navigator.share() MUST be called synchronously within
+  // the user gesture handler — any await before it breaks the gesture chain and
+  // the file is silently dropped. So we call share() first, then lockInStreak().
+  // The file is guaranteed ready via fileReady state gating the button.
   const handleShareAndSubmit = useCallback(async () => {
     if (!downloadUrl) return;
     const text = buildShareText();
 
     if (isInAppBrowser) { await lockInStreak(); setInAppBrowserMode(true); return; }
 
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
+    const isAndroid = /Android/i.test(navigator.userAgent ?? "");
+    const isIOS     = /iPhone|iPad|iPod/i.test(navigator.userAgent ?? "");
+    const isMobile  = isAndroid || isIOS;
     const canShare  = isMobile
       && typeof navigator.share    === "function"
       && typeof navigator.canShare === "function";
 
-    if (canShare) {
-      // ── Mobile: OS share sheet with image ──────────────────────────────
-      // Ensure the file is ready — use cached ref, or rebuild from canvas blob
-      let file = sharableFileRef.current;
+    const file = sharableFileRef.current;
 
-      if (!file) {
-        // Rebuild from canvas ref if sharableFileRef was somehow cleared
-        try {
-          file = await new Promise((resolve, reject) => {
-            const c = canvasRef.current;
-            if (!c) return reject(new Error("no canvas ref"));
-            c.toBlob(blob => {
-              blob
-                ? resolve(new File([blob], "proof-of-grass.png", { type:"image/png" }))
-                : reject(new Error("toBlob returned null"));
-            }, "image/png");
-          });
-          sharableFileRef.current = file;
-        } catch(e) {
-          console.warn("[share] could not build file:", e?.message);
-        }
-      }
-
-      if (file && navigator.canShare({ files:[file] })) {
-        setShareHint(true);
-        try {
-          await navigator.share({ files:[file], text });
+    if (canShare && file && navigator.canShare({ files:[file] })) {
+      // ── Mobile path: call share() IMMEDIATELY — no await before this ───
+      // This preserves the user gesture on Android. lockInStreak() runs after.
+      setShareHint(true);
+      navigator.share({ files:[file], text })
+        .then(() => {
           setShared(true);
           setShareHint(false);
           setTimeout(() => setShared(false), 3500);
-          await lockInStreak();
-        } catch(err) {
+          return lockInStreak();
+        })
+        .catch(err => {
           setShareHint(false);
           if (err?.name !== "AbortError") {
-            // Share sheet opened but something failed — fall through to clipboard+X
-            try { await navigator.clipboard.writeText(text); } catch {}
+            // Share failed after opening — fall back to clipboard + X
+            navigator.clipboard.writeText(text).catch(()=>{});
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
             setShared(true);
             setTimeout(() => setShared(false), 3000);
-            if (submitStatus !== "success") await lockInStreak();
+            lockInStreak();
           }
-          // AbortError = user cancelled — streak NOT locked, they didn't share
-        }
-        return;
-      }
-      // canShare returned false (e.g. file too large, unsupported format)
-      // Fall through to desktop flow below
+          // AbortError = user cancelled — do not lock streak
+        });
+      return;
     }
 
     // ── Desktop / fallback: clipboard + X compose ─────────────────────────
@@ -944,15 +926,16 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     const igCaption = `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE} · proofofgrass.app`;
     const isMob = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     try { await navigator.clipboard.writeText(igCaption); setIgCopied(true); setTimeout(() => setIgCopied(false), 4000); } catch {}
-    if (isMob && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
-      try {
-        const blob = await dataUrlToBlob(dataUrl);
-        const file = new File([blob], "proof-of-grass-feed.png", { type:"image/png" });
-        if (navigator.canShare({ files:[file] })) { await navigator.share({ files:[file] }); return; }
-      } catch(e) { if (e?.name === "AbortError") return; }
-      const link = document.createElement("a"); link.download = "proof-of-grass-feed.png"; link.href = dataUrl; link.click();
+    const igFile = sharableFileRef.current;
+    if (isMob && typeof navigator.share === "function" && typeof navigator.canShare === "function" && igFile && navigator.canShare({ files:[igFile] })) {
+      // No await before share() — preserves Android gesture chain
+      navigator.share({ files:[igFile] }).catch(e => {
+        if (e?.name !== "AbortError") {
+          const link = document.createElement("a"); link.download = "proof-of-grass.png"; link.href = dataUrl; link.click();
+        }
+      });
     } else {
-      const link = document.createElement("a"); link.download = "proof-of-grass-feed.png"; link.href = dataUrl; link.click();
+      const link = document.createElement("a"); link.download = "proof-of-grass.png"; link.href = dataUrl; link.click();
       setIgDesktop(true); setTimeout(() => setIgDesktop(false), 6000);
     }
   }, [downloadUrl, caption, currentStreak]);
@@ -971,15 +954,14 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     const { dataUrl, filename } = formatMap[platform] ?? {};
     if (!dataUrl) { setShareStatus(s => ({ ...s, [platform]:null })); return; }
     try { await navigator.clipboard.writeText(text); } catch {}
-    if (isMobile && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
-      try {
-        const blob = await dataUrlToBlob(dataUrl);
-        const file = new File([blob], filename, { type:"image/png" });
-        if (navigator.canShare({ files:[file] })) {
-          await navigator.share({ files:[file] });
-          if (platform.startsWith("ig")) { setIgCopied(true); setTimeout(() => setIgCopied(false), 4000); }
-        } else { const a=document.createElement("a"); a.href=dataUrl; a.download=filename; a.click(); }
-      } catch(e) { if (e?.name !== "AbortError") { const a=document.createElement("a"); a.href=dataUrl; a.download=filename; a.click(); } }
+    const platFile = sharableFileRef.current;
+    if (isMobile && typeof navigator.share === "function" && typeof navigator.canShare === "function" && platFile && navigator.canShare({ files:[platFile] })) {
+      // No await before share() — preserves Android gesture chain
+      navigator.share({ files:[platFile] }).then(() => {
+        if (platform.startsWith("ig")) { setIgCopied(true); setTimeout(() => setIgCopied(false), 4000); }
+      }).catch(e => {
+        if (e?.name !== "AbortError") { const a=document.createElement("a"); a.href=dataUrl; a.download=filename; a.click(); }
+      });
     } else {
       const a=document.createElement("a"); a.href=dataUrl; a.download=filename; a.click();
       if (platform.startsWith("ig")) { setIgDesktop(true); setTimeout(() => setIgDesktop(false), 6000); }
