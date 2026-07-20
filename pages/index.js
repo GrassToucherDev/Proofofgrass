@@ -31,17 +31,17 @@ function computePreviewStreak(row) {
   if (!row?.last_submission_date) return row?.current_streak ?? 1;
   const today     = toLocalDateStr(new Date());
   const yesterday = toLocalDateStr(new Date(Date.now() - 86400000));
-  // last_submission_date may be a date string or timestamp — normalize both ways
+  // last_submission_date is a date-only string from Supabase e.g. "2026-07-19".
+  // NEVER pass it through new Date() — that parses as UTC midnight which shifts
+  // the date back one day for users in negative UTC offsets (US timezones).
+  // Instead slice the date part directly from the raw string.
   const lastRaw = row.last_submission_date;
-  const lastLocal = toLocalDateStr(new Date(lastRaw));
-  const lastUTC   = new Date(lastRaw).toISOString().slice(0, 10);
-  // Match against either local or UTC interpretation — whichever keeps the streak alive
-  const isToday     = lastLocal === today     || lastUTC === today;
-  const isYesterday = lastLocal === yesterday || lastUTC === yesterday;
+  // Handle both "2026-07-19" and "2026-07-19T..." formats
+  const lastDateStr = String(lastRaw).slice(0, 10);
+  const isToday     = lastDateStr === today;
+  const isYesterday = lastDateStr === yesterday;
   if (isToday)     return row.current_streak;
   if (isYesterday) return row.current_streak + 1;
-  // Don't return 1 — return actual streak from DB so user can see their real count
-  // even if the preview logic can't confirm continuity
   return row.current_streak;
 }
 function getStreakTier(n) {
@@ -800,12 +800,13 @@ export default function Home() {
         const displayVal = computePreviewStreak(streakRow);
         const missedOne  = lastDate === twoDaysAgo;
 
-        // Use local date comparison too for status messages
+        // Use direct string slice — never pass date-only strings through new Date()
+        // as that parses as UTC midnight and shifts date back for negative UTC offsets.
         const todayLocal     = toLocalDateStr(new Date());
         const yesterdayLocal = toLocalDateStr(new Date(Date.now() - 86400000));
-        const lastLocal      = lastDate ? toLocalDateStr(new Date(lastDate)) : null;
-        const postedToday    = lastDate === todayStr || lastLocal === todayLocal;
-        const postedYesterday = lastDate === yesterdayStr || lastLocal === yesterdayLocal;
+        const lastDateStr    = lastDate ? String(lastDate).slice(0, 10) : null;
+        const postedToday    = lastDateStr === todayLocal;
+        const postedYesterday = lastDateStr === yesterdayLocal;
 
         if (!lastDate)           setStreakStatus("start your streak today"),                    setStreakTone("neutral");
         else if (postedToday)    setStreakStatus("streak locked in for today ✓"),               setStreakTone("success");
