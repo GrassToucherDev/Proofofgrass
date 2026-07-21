@@ -1086,6 +1086,11 @@ export default function Home() {
     input[type=text].field,textarea.field{width:100%;background:${T.bg3};border:1px solid ${T.border};border-radius:8px;padding:10px 13px;color:${T.white};font-size:13px;outline:none;transition:border-color 0.2s;resize:none;}
     input[type=text].field:focus,textarea.field:focus{border-color:${T.olive}50;}
     input[type=text].field::placeholder,textarea.field::placeholder{color:${T.dim};}
+    @media(min-width:769px){
+      .hero-desktop{display:flex !important;}
+      .hero-mobile{display:none !important;}
+      .hero-section{min-height:clamp(460px,70vh,720px) !important;}
+    }
     @media(max-width:960px){.main-grid{grid-template-columns:1fr !important;}.prog-grid{grid-template-columns:1fr !important;}}
     @media(max-width:768px){
       .main-grid,.prog-grid{grid-template-columns:1fr !important;width:100% !important;max-width:100% !important;}
@@ -1095,6 +1100,9 @@ export default function Home() {
       .hero-btns{flex-direction:column !important;align-items:stretch !important;}
       .hero-streak-hud{display:none !important;}
       .hero-left{max-width:100% !important;}
+      .hero-desktop{display:none !important;}
+      .hero-mobile{display:flex !important;}
+      .hero-section{min-height:auto !important;}
       /* nav-links replaced by hamburger menu */
       .username-input{width:120px !important;font-size:12px !important;}
       .feed-username{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;}
@@ -1234,73 +1242,125 @@ export default function Home() {
         )}
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
-        <section style={{ position:"relative", minHeight:"clamp(460px,70vh,720px)", pointerEvents:"none" }}>
+        <section className="hero-section" style={{ position:"relative", overflow:"hidden" }}>
+          {/* Background */}
           <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"linear-gradient(155deg,#1a2d0e,#2d4a18 22%,#1e3410 52%,#0e1a08)" }}>
-            <div style={{ position:"absolute", inset:0, opacity:0.2, pointerEvents:"none", backgroundImage:"radial-gradient(ellipse at 65% 35%,#4a7a28,transparent 55%),radial-gradient(ellipse at 30% 70%,#2d5a18,transparent 45%)" }} />
+            <div style={{ position:"absolute", inset:0, opacity:0.25, backgroundImage:"radial-gradient(ellipse at 65% 35%,#4a7a28,transparent 55%),radial-gradient(ellipse at 30% 70%,#2d5a18,transparent 45%)" }} />
           </div>
-          <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"linear-gradient(90deg,rgba(14,15,11,0.92) 0%,rgba(14,15,11,0.16) 52%,rgba(14,15,11,0.80) 100%)" }} />
-          <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"36%", pointerEvents:"none", background:"linear-gradient(180deg,transparent,rgba(14,15,11,0.97))" }} />
-          <div className="hero-left" style={{ position:"absolute", left:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", maxWidth:480, pointerEvents:"auto" }}>
-            <div className="fade-1" style={{ fontSize:10, letterSpacing:"0.22em", color:T.olive, textTransform:"uppercase", marginBottom:12, fontWeight:600 }}>Verified Outdoors</div>
-            <h1 className="fade-2" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(44px,6.5vw,88px)", fontWeight:700, color:T.white, lineHeight:0.94, letterSpacing:"-0.02em", marginBottom:18 }}>
-              Proof<br />of Grass
+          <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"linear-gradient(90deg,rgba(8,10,6,0.85) 0%,rgba(8,10,6,0.10) 55%,rgba(8,10,6,0.75) 100%)" }} />
+          <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"40%", pointerEvents:"none", background:"linear-gradient(180deg,transparent,rgba(8,10,6,0.98))" }} />
+
+          {/* ── DESKTOP layout — two-column absolute ── */}
+          <div className="hero-desktop" style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 clamp(18px,5.5vw,76px)" }}>
+            {/* Left */}
+            <div style={{ maxWidth:480 }}>
+              <div className="fade-1" style={{ fontSize:10, letterSpacing:"0.22em", color:T.olive, textTransform:"uppercase", marginBottom:12, fontWeight:600 }}>Verified Outdoors</div>
+              <h1 className="fade-2" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(44px,6.5vw,88px)", fontWeight:700, color:T.white, lineHeight:0.94, letterSpacing:"-0.02em", marginBottom:18 }}>
+                Proof<br />of Grass
+              </h1>
+              <p className="fade-2" style={{ fontSize:15, lineHeight:1.72, marginBottom:28, maxWidth:340, fontWeight:300, color:T.muted }}>
+                Log your time outside. Build your streak.<br />Earn rewards. Make a difference.
+              </p>
+              <div className="fade-3" style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                <a href="#upload" className="btn-olive">Log Your Proof ↑</a>
+                <Link href="/leaderboard" className="btn-ghost">View Leaderboard</Link>
+              </div>
+              {hasUser && userStats && (
+                <div className="fade-3" style={{ marginTop:24, display:"flex", gap:18, flexWrap:"wrap" }}>
+                  {[["Posts",userStats.posts],["Best",`${userStats.bestStreak}d`],["Rank",`#${userStats.rank}`],["Shields",userStats.shields],["Passes",userStats.sunsetPasses??0]].map(([label,val]) => (
+                    <div key={label} style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:15, fontWeight:700, color:T.white, fontFamily:"'Cormorant Garamond',Georgia,serif" }}>{val}</div>
+                      <div style={{ fontSize:8, color:T.dim, letterSpacing:"0.12em", textTransform:"uppercase" }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Right — streak HUD */}
+            {hasUser && resolvedStreak != null && (
+              <div style={{ textAlign:"right", flexShrink:0 }}>
+                {resolvedStreak === 1 && currentStreak > 1 ? (
+                  <>
+                    <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.red, textTransform:"uppercase", marginBottom:8 }}>Streak Reset</div>
+                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.red, lineHeight:0.9, letterSpacing:"-0.03em" }}>
+                      <span style={{ fontSize:"0.42em", color:T.red, opacity:0.6, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>1
+                    </div>
+                    <div style={{ fontSize:9, color:"rgba(239,68,68,0.6)", marginTop:10 }}>was day {currentStreak}</div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.dim, textTransform:"uppercase", marginBottom:8 }}>Your Streak</div>
+                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.white, lineHeight:0.9, letterSpacing:"-0.03em" }}>
+                      <span style={{ fontSize:"0.42em", color:T.muted, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>{resolvedStreak}
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:7, marginTop:10 }}>
+                      <div style={{ width:30, height:1, background:`linear-gradient(90deg,transparent,${tierColor})` }} />
+                      <span style={{ fontSize:9, letterSpacing:"0.16em", color:tierColor, textTransform:"uppercase", fontWeight:600 }}>✦ {tier}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── MOBILE layout — stacked, flow ── */}
+          <div className="hero-mobile" style={{ position:"relative", padding:"52px 24px 40px", display:"flex", flexDirection:"column" }}>
+            <div className="fade-1" style={{ fontSize:9, letterSpacing:"0.26em", color:T.olive, textTransform:"uppercase", marginBottom:10, fontWeight:700 }}>Verified Outdoors</div>
+            <h1 className="fade-2" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:52, fontWeight:700, color:T.white, lineHeight:0.92, letterSpacing:"-0.02em", marginBottom:16 }}>
+              Proof<br/>of Grass
             </h1>
-            <p className="fade-2" style={{ fontSize:15, lineHeight:1.72, marginBottom:28, maxWidth:340, fontWeight:300, color:T.muted }}>
-              Log your time outside. Build your streak.<br />Earn rewards. Make a difference.
+
+            {/* Streak pill — inline on mobile when signed in */}
+            {hasUser && resolvedStreak != null && (
+              <div className="fade-2" style={{ marginBottom:16 }}>
+                {resolvedStreak === 1 && currentStreak > 1 ? (
+                  <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(239,68,68,0.10)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:10, padding:"8px 14px" }}>
+                    <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:700, color:T.red, lineHeight:1 }}>Day 1</span>
+                    <div>
+                      <div style={{ fontSize:9, color:T.red, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase" }}>Streak Reset</div>
+                      <div style={{ fontSize:9, color:"rgba(239,68,68,0.55)" }}>was day {currentStreak}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display:"inline-flex", alignItems:"center", gap:10, background:"rgba(147,168,90,0.08)", border:`1px solid rgba(147,168,90,0.2)`, borderRadius:10, padding:"8px 14px" }}>
+                    <div>
+                      <div style={{ fontSize:9, color:T.olive, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", marginBottom:1 }}>Current Streak</div>
+                      <div style={{ display:"flex", alignItems:"baseline", gap:4 }}>
+                        <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:32, fontWeight:700, color:T.white, lineHeight:1 }}>{resolvedStreak}</span>
+                        <span style={{ fontSize:11, color:T.muted, fontWeight:300 }}>days</span>
+                      </div>
+                    </div>
+                    <div style={{ width:1, height:32, background:"rgba(147,168,90,0.2)" }} />
+                    <div>
+                      <div style={{ fontSize:9, color:T.dim, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:1 }}>Tier</div>
+                      <div style={{ fontSize:11, color:tierColor, fontWeight:700, letterSpacing:"0.06em" }}>✦ {tier}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <p className="fade-2" style={{ fontSize:14, lineHeight:1.7, marginBottom:24, fontWeight:300, color:T.muted, maxWidth:320 }}>
+              Log your time outside. Build your streak. Earn rewards.
             </p>
-            <div className="fade-3 hero-btns" style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-              <a href="#upload" className="btn-olive">Log Your Proof ↑</a>
-              <Link href="/leaderboard" className="btn-ghost">View Leaderboard</Link>
+
+            <div className="fade-3" style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              <a href="#upload" className="btn-olive" style={{ justifyContent:"center", textAlign:"center" }}>Log Your Proof ↑</a>
+              <Link href="/leaderboard" className="btn-ghost" style={{ justifyContent:"center", textAlign:"center" }}>View Leaderboard</Link>
             </div>
 
-            {/* ── CHANGE 4: Stats strip with Shields + Passes ──────────────── */}
+            {/* Mini stats row */}
             {hasUser && userStats && (
-              <div className="fade-3" style={{ marginTop:24, display:"flex", gap:18, flexWrap:"wrap" }}>
-                {[
-                  ["Posts",   userStats.posts],
-                  ["Best",    `${userStats.bestStreak}d`],
-                  ["Rank",    `#${userStats.rank}`],
-                  ["Shields", userStats.shields],
-                  ["Passes",  userStats.sunsetPasses ?? 0],
-                ].map(([label, val]) => (
-                  <div key={label} style={{ textAlign:"center" }}>
-                    <div style={{ fontSize:15, fontWeight:700, color:T.white, fontFamily:"'Cormorant Garamond',Georgia,serif" }}>{val}</div>
-                    <div style={{ fontSize:8, color:T.dim, letterSpacing:"0.12em", textTransform:"uppercase" }}>{label}</div>
+              <div className="fade-3" style={{ marginTop:20, display:"flex", gap:0, background:"rgba(255,255,255,0.03)", borderRadius:10, border:`1px solid ${T.border}`, overflow:"hidden" }}>
+                {[["Posts",userStats.posts],["Best",`${userStats.bestStreak}d`],["Rank",`#${userStats.rank}`],["Shields",userStats.shields]].map(([label,val],i,arr) => (
+                  <div key={label} style={{ flex:1, textAlign:"center", padding:"10px 0", borderRight:i<arr.length-1?`1px solid ${T.border}`:"none" }}>
+                    <div style={{ fontSize:16, fontWeight:700, color:T.white, fontFamily:"'Cormorant Garamond',Georgia,serif", lineHeight:1 }}>{val}</div>
+                    <div style={{ fontSize:8, color:T.dim, letterSpacing:"0.1em", textTransform:"uppercase", marginTop:3 }}>{label}</div>
                   </div>
                 ))}
               </div>
             )}
           </div>
-
-          {hasUser && resolvedStreak != null && (
-            <div className="hero-streak-hud" style={{ position:"absolute", right:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", textAlign:"right", pointerEvents:"auto" }}>
-              {/* Show reset warning when streak is broken */}
-              {resolvedStreak === 1 && currentStreak > 1 ? (
-                <>
-                  <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.red, textTransform:"uppercase", marginBottom:8 }}>Streak Reset</div>
-                  <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.red, lineHeight:0.9, letterSpacing:"-0.03em" }}>
-                    <span style={{ fontSize:"0.42em", color:T.red, opacity:0.6, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>
-                    1
-                  </div>
-                  <div style={{ fontSize:9, letterSpacing:"0.1em", color:"rgba(239,68,68,0.6)", marginTop:10 }}>
-                    was day {currentStreak}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.dim, textTransform:"uppercase", marginBottom:8 }}>Your Streak</div>
-                  <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.white, lineHeight:0.9, letterSpacing:"-0.03em" }}>
-                    <span style={{ fontSize:"0.42em", color:T.muted, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>
-                    {resolvedStreak}
-                  </div>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:7, marginTop:10 }}>
-                    <div style={{ width:30, height:1, background:`linear-gradient(90deg,transparent,${tierColor})` }} />
-                    <span style={{ fontSize:9, letterSpacing:"0.16em", color:tierColor, textTransform:"uppercase", fontWeight:600 }}>✦ {tier}</span>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
         </section>
 
         {/* ── PENDING CHALLENGE ALERTS ─────────────────────────────────────── */}
