@@ -633,7 +633,7 @@ async function checkAndAwardReferralBadge(referrerUsername) {
 
 // ─── Share card rendering pipeline ───────────────────────────────────────────
 
-export default function ResultCard({ imageSrc, username, initialStreak = 1, onStreakUpdate, hasPremiumProofs = false }) {
+export default function ResultCard({ imageSrc, proofFile = null, username, initialStreak = 1, onStreakUpdate, hasPremiumProofs = false }) {
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const sharableFileRef = useRef(null);
@@ -652,6 +652,19 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
   const [tweetUrl, setTweetUrl] = useState("");
   const [submitStatus, setSubmitStatus] = useState(null);
+  // ── Style picker modal ────────────────────────────────────────────────────
+  const [showStylePicker, setShowStylePicker]     = useState(false);
+  const [shareStyle, setShareStyle]               = useState(() => {
+    if (typeof localStorage !== "undefined") {
+      return localStorage.getItem("pog_preferred_share_style") || "outdoor_photo";
+    }
+    return "outdoor_photo";
+  });
+  // ── Desktop post-share instructions modal ─────────────────────────────────
+  const [showDesktopModal, setShowDesktopModal]   = useState(false);
+  const [desktopCaption,   setDesktopCaption]     = useState("");
+  const [desktopImgHref,   setDesktopImgHref]     = useState("");
+  const [desktopImgName,   setDesktopImgName]     = useState("");
   const [submitError, setSubmitError] = useState("");
   const [luckyTouch, setLuckyTouch] = useState(null);
   const [selectedTheme, setSelectedTheme] = useState("classic");
@@ -727,10 +740,13 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
   const HANDLE = "@XTouchGrass";
   const TAGS = "$TOUCHGRASS #TouchGrass #ProofOfGrass";
+  const referralLink = username
+    ? `https://proofofgrass.app/?ref=${encodeURIComponent(username.toLowerCase().replace(/@/g,"").trim())}`
+    : null;
   const buildTags = () => `${TAGS}\n${HANDLE} · proofofgrass.app`;
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(`${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE} · proofofgrass.app`).then(() => {
+    navigator.clipboard.writeText(buildShareText()).then(() => {
       setCopied(true); setTimeout(() => setCopied(false), 2000);
     });
   }, [caption, currentStreak]);
@@ -738,9 +754,12 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const [shared, setShared] = useState(false);
   const [shareHint, setShareHint] = useState(false);
 
-  const buildShareText = useCallback(() =>
-    `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE} · proofofgrass.app`,
-  [caption, currentStreak]);
+  const buildShareText = useCallback(() => {
+    const refLine = referralLink
+      ? `\nJoin me:\n${referralLink}`
+      : "\nproofofgrass.app";
+    return `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE}${refLine}`;
+  }, [caption, currentStreak, referralLink]);
 
   const lockInStreak = useCallback(async () => {
     if (!username) return;
@@ -849,66 +868,123 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
     /FBAN|FBAV/i.test(navigator.userAgent) || /MicroMessenger/i.test(navigator.userAgent)
   );
 
-  const handleShareAndSubmit = useCallback(async () => {
-    if (!downloadUrl) return;
+  // ── Build File object for a given style ──────────────────────────────────
+  const buildShareFile = useCallback(async (style) => {
+    if (style === "outdoor_photo") {
+      // Use the original uploaded file directly
+      if (proofFile instanceof File) {
+        return new File([proofFile], "proof-of-grass-outdoor.png", { type: proofFile.type || "image/png" });
+      }
+      // Fallback: blob from imageSrc object URL
+      if (imageSrc && imageSrc.startsWith("blob:")) {
+        try {
+          const res = await fetch(imageSrc);
+          const blob = await res.blob();
+          return new File([blob], "proof-of-grass-outdoor.png", { type: "image/png" });
+        } catch { return null; }
+      }
+      return null;
+    }
+    // result_card — use canvas data URL
+    if (!downloadUrl) return null;
+    let file = sharableFileRef.current;
+    if (!file && downloadUrl.startsWith("data:")) {
+      try {
+        const res = await fetch(downloadUrl);
+        const blob = await res.blob();
+        file = new File([blob], "proof-of-grass-result-card.png", { type: "image/png" });
+        sharableFileRef.current = file;
+      } catch { file = null; }
+    }
+    return file;
+  }, [proofFile, imageSrc, downloadUrl]);
+
+  // ── Persist share style choice ─────────────────────────────────────────────
+  const selectShareStyle = (style) => {
+    setShareStyle(style);
+    try { localStorage.setItem("pog_preferred_share_style", style); } catch {}
+  };
+
+  // ── Open style picker (called from Share to X button) ─────────────────────
+  const openStylePicker = () => {
+    if (isInAppBrowser) { setInAppBrowserMode(true); lockInStreak(); return; }
+    setShowStylePicker(true);
+  };
+
+  // ── Execute the actual share after style is confirmed ─────────────────────
+  const executeShare = useCallback(async (style) => {
+    setShowStylePicker(false);
     const text = buildShareText();
-    const isMobile = typeof navigator !== "undefined" &&
-      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const canShareFiles = !isInAppBrowser &&
-      isMobile &&
-      typeof navigator.share === "function" &&
-      typeof navigator.canShare === "function";
-    let cancelled = false;
-    if (isInAppBrowser) {
-      await lockInStreak();
-      setInAppBrowserMode(true);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
+    const canShareAPI = isMobile
+      && typeof navigator.share === "function"
+      && typeof navigator.canShare === "function";
+
+    const file = await buildShareFile(style);
+    if (!file) {
+      setSubmitError("Could not prepare the image. Please try again.");
       return;
     }
-    if (canShareFiles) {
-      let file = sharableFileRef.current;
-      if (!file && downloadUrl.startsWith("data:")) {
-        try {
-          const res = await fetch(downloadUrl);
-          const blob = await res.blob();
-          file = new File([blob], "proof-of-grass.png", { type: "image/png" });
-          sharableFileRef.current = file;
-        } catch(e) { file = null; }
-      }
-      if (file && navigator.canShare({ files: [file] })) {
-        setShareHint(true);
-        try {
-          await navigator.share({ files: [file], text });
-          setShared(true);
-          setTimeout(() => { setShared(false); setShareHint(false); }, 4000);
-        } catch (err) {
-          setShareHint(false);
-          if (err?.name === "AbortError") {
-            cancelled = true;
-          } else {
-            navigator.clipboard.writeText(text).catch(() => {});
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-            setShared(true);
-            setTimeout(() => setShared(false), 2500);
-          }
-        }
-      } else {
-        navigator.clipboard.writeText(text).catch(() => {});
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-        setShared(true);
-        setTimeout(() => setShared(false), 2500);
-      }
-    } else {
-      navigator.clipboard.writeText(text).catch(() => {});
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-      setShared(true);
-      setTimeout(() => setShared(false), 2500);
-    }
-    if (!cancelled) {
-      await lockInStreak();
-    }
-  }, [downloadUrl, buildShareText, lockInStreak, isInAppBrowser]);
 
-  const handleShareAndPost = handleShareAndSubmit;
+    // ── Mobile: native OS share sheet ───────────────────────────────────────
+    if (canShareAPI && navigator.canShare({ files: [file] })) {
+      setShareHint(true);
+      try {
+        await navigator.share({ files: [file], text, title: "Proof of Grass" });
+        setShareHint(false);
+        setShared(true); // shows "I Posted It" confirmation bar
+      } catch (err) {
+        setShareHint(false);
+        if (err?.name === "AbortError") return; // user cancelled — no error
+        // Share API failed — fall through to mobile fallback
+        await mobileShareFallback(file, text, style);
+      }
+      return;
+    }
+
+    // ── Mobile fallback (share API missing or file sharing unsupported) ──────
+    if (isMobile) {
+      await mobileShareFallback(file, text, style);
+      return;
+    }
+
+    // ── Desktop: download + clipboard + X compose ────────────────────────────
+    await desktopShare(file, text, style);
+  }, [buildShareText, buildShareFile]);
+
+  // ── Mobile fallback: save image, copy caption, open X ─────────────────────
+  const mobileShareFallback = async (file, text, style) => {
+    // Download image
+    try {
+      const url = URL.createObjectURL(file);
+      const a = document.createElement("a");
+      a.href = url; a.download = file.name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch {}
+    // Copy caption
+    try { await navigator.clipboard.writeText(text); } catch {}
+    window.open("https://x.com/compose/post", "_blank");
+    setShared(true); // shows "I Posted It" confirmation bar
+  };
+
+  // ── Desktop: download + clipboard + instructions modal ────────────────────
+  const desktopShare = async (file, text, style) => {
+    // Download image
+    let href = "";
+    try {
+      href = URL.createObjectURL(file);
+      const a = document.createElement("a");
+      a.href = href; a.download = file.name; a.click();
+    } catch {}
+    // Copy caption
+    try { await navigator.clipboard.writeText(text); } catch {}
+    setDesktopCaption(text);
+    setDesktopImgHref(href);
+    setDesktopImgName(file.name);
+    setShowDesktopModal(true);
+  };
+
+  const handleShareAndPost = openStylePicker;
 
   const handleSubmit = useCallback(async () => {
     if (!username) { setSubmitError("No username found. Please refresh and try again."); setSubmitStatus("error"); return; }
@@ -927,7 +1003,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
   const shareToInstagram = useCallback(async () => {
     const dataUrl = downloadUrl;
     if (!dataUrl) return;
-    const igCaption = `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE} · proofofgrass.app`;
+    const igCaption = buildShareText();
     const isMob = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     try { await navigator.clipboard.writeText(igCaption); setIgCopied(true); setTimeout(() => setIgCopied(false), 4000); } catch {}
     if (isMob && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
@@ -1253,7 +1329,7 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
 
       {downloadUrl && (
         <a href={downloadUrl} download="proof-of-grass.png"
-          onClick={()=>{ if (submitStatus!=="success") lockInStreak(); }}
+          
           style={{display:"inline-flex",alignItems:"center",gap:10,padding:"12px 32px",fontFamily:"monospace",fontSize:13,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",color:"#0e1108",background:"#93a85a",borderRadius:3,textDecoration:"none",boxShadow:"0 0 20px rgba(147,168,90,0.3)"}}>
           ↓ Download Certificate
         </a>
@@ -1342,49 +1418,244 @@ export default function ResultCard({ imageSrc, username, initialStreak = 1, onSt
         </div>
       )}
 
-      {/* Share to X + lock in streak */}
-      {downloadUrl && !inAppBrowserMode && (
+      {/* ── SHARE TO X ──────────────────────────────────────────────────── */}
+      {downloadUrl && !inAppBrowserMode && submitStatus !== "success" && (
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,width:"100%"}}>
-          <button onClick={handleShareAndSubmit}
-            disabled={submitStatus==="loading"||submitStatus==="success"}
+          <button
+            onClick={openStylePicker}
+            aria-label="Share to X"
             style={{
               display:"inline-flex",alignItems:"center",gap:10,
               padding:"13px 32px",width:"100%",justifyContent:"center",
               fontFamily:"monospace",fontSize:13,fontWeight:700,
               letterSpacing:"0.15em",textTransform:"uppercase",
               borderRadius:3,cursor:"pointer",border:"1px solid #93a85a",
-              background: submitStatus==="success"?"#2a3018"
-                        : submitStatus==="loading"?"#1e2410"
-                        : "transparent",
-              color:"#93a85a",
-              opacity: submitStatus==="loading"||submitStatus==="success" ? 0.7 : 1,
+              background:"transparent",color:"#93a85a",
             }}>
-            {submitStatus==="loading" ? "posting…"
-              : submitStatus==="success" ? "✓ streak locked in"
-              : "📤 share to x + lock in streak"}
+            📤 Share to X
           </button>
           {shareHint && (
-            <p style={{fontFamily:"monospace",fontSize:11,color:"#93a85a",
-              letterSpacing:"0.08em",margin:0}}>
-              select x, then tap post
+            <p style={{fontFamily:"monospace",fontSize:11,color:"#93a85a",letterSpacing:"0.08em",margin:0}}>
+              select x from the share sheet, then post
             </p>
           )}
-          {!shareHint && submitStatus!=="success" && (
-            <p style={{fontFamily:"monospace",fontSize:11,
-              color:"rgba(147,168,90,0.45)",textAlign:"center",
-              letterSpacing:"0.06em",margin:0,lineHeight:1.6}}>
-              {isInAppBrowser
-                ? "tap ··· → open in browser to share with image"
-                : "opens X with your caption · save & attach your certificate image"
-              }
-            </p>
-          )}
-
           {submitStatus==="error" && submitError && (
-            <p style={{fontFamily:"monospace",fontSize:10,color:"#ef4444",
-              textAlign:"center",margin:0}}>{submitError}</p>
+            <p style={{fontFamily:"monospace",fontSize:10,color:"#ef4444",textAlign:"center",margin:0}}>{submitError}</p>
           )}
         </div>
+      )}
+
+      {/* ── I POSTED IT — shown after share sheet closes ───────────────── */}
+      {downloadUrl && !inAppBrowserMode && submitStatus !== "success" && shared && (
+        <div style={{width:"100%",background:"rgba(147,168,90,0.06)",border:"1px solid rgba(147,168,90,0.25)",borderRadius:12,padding:"16px",display:"flex",flexDirection:"column",gap:10,animation:"fadeUp 0.3s ease both"}}>
+          <div style={{fontSize:12,color:"rgba(240,239,234,0.55)",lineHeight:1.6,textAlign:"center"}}>
+            Did you post it to X?
+          </div>
+          <button
+            onClick={lockInStreak}
+            disabled={submitStatus==="loading"}
+            aria-label="I posted it — lock in my streak"
+            style={{
+              background:"#93a85a",color:"#0e1108",border:"none",borderRadius:8,
+              padding:"13px",fontSize:13,fontWeight:700,cursor:"pointer",
+              letterSpacing:"0.08em",opacity:submitStatus==="loading"?0.6:1,
+              width:"100%",
+            }}>
+            {submitStatus==="loading" ? "Locking in…" : "✓ I Posted It — Lock In Streak"}
+          </button>
+          <button
+            onClick={() => setShared(false)}
+            style={{background:"none",border:"none",color:"rgba(240,239,234,0.3)",fontSize:11,cursor:"pointer",padding:"4px"}}>
+            I haven't posted yet
+          </button>
+          {submitStatus==="error" && submitError && (
+            <p style={{fontSize:10,color:"#ef4444",margin:0,textAlign:"center"}}>{submitError}</p>
+          )}
+        </div>
+      )}
+
+      {/* ── SUCCESS ──────────────────────────────────────────────────── */}
+      {submitStatus === "success" && (
+        <div style={{width:"100%",background:"#2a3018",border:"1px solid rgba(147,168,90,0.4)",borderRadius:12,padding:"20px",textAlign:"center"}}>
+          <div style={{fontSize:22,marginBottom:8}}>✓</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#93a85a",letterSpacing:"0.06em"}}>Streak Locked In</div>
+        </div>
+      )}
+
+      {/* ── STYLE PICKER MODAL ───────────────────────────────────────── */}
+      {showStylePicker && (() => {
+        const cardStyle = (style) => ({
+          flex:"1 1 0",minWidth:0,
+          border:`2px solid ${shareStyle===style ? "#93a85a" : "rgba(255,255,255,0.1)"}`,
+          borderRadius:12,padding:"14px 12px",cursor:"pointer",
+          background:shareStyle===style ? "rgba(147,168,90,0.08)" : "rgba(255,255,255,0.02)",
+          display:"flex",flexDirection:"column",gap:8,
+          transition:"all 0.15s",
+          outline:"none",
+        });
+        return (
+          <>
+            {/* Backdrop */}
+            <div
+              onClick={() => setShowStylePicker(false)}
+              role="button"
+              aria-label="Close style picker"
+              style={{position:"fixed",inset:0,zIndex:997,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(3px)"}}
+            />
+            {/* Sheet */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Choose Your Proof Style"
+              onKeyDown={e => { if(e.key==="Escape") setShowStylePicker(false); }}
+              tabIndex={-1}
+              style={{
+                position:"fixed",left:0,right:0,bottom:0,zIndex:998,
+                background:"#0e100b",borderTop:"1px solid rgba(255,255,255,0.1)",
+                borderRadius:"20px 20px 0 0",
+                padding:"24px 20px clamp(24px,env(safe-area-inset-bottom,24px)+24px,48px)",
+                maxHeight:"90vh",overflowY:"auto",
+              }}>
+              {/* Handle */}
+              <div style={{width:40,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"0 auto 20px"}} />
+              <div style={{fontSize:15,fontWeight:700,color:"#f0efea",textAlign:"center",marginBottom:18,letterSpacing:"0.04em"}}>
+                Choose Your Proof Style
+              </div>
+
+              <div style={{display:"flex",gap:12,marginBottom:20}}>
+                {/* Outdoor Photo */}
+                <button
+                  style={cardStyle("outdoor_photo")}
+                  onClick={() => selectShareStyle("outdoor_photo")}
+                  aria-pressed={shareStyle==="outdoor_photo"}
+                  aria-label="Outdoor Photo — Recommended">
+                  {/* Preview */}
+                  <div style={{width:"100%",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",background:"#0a140b",flexShrink:0}}>
+                    {imageSrc && (
+                      <img src={imageSrc} alt="Your outdoor proof photo" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                    )}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#f0efea"}}>Outdoor Photo</div>
+                      <div style={{fontSize:10,color:"rgba(240,239,234,0.5)"}}>Authentic and simple</div>
+                    </div>
+                    {shareStyle==="outdoor_photo" && <span style={{fontSize:16}}>✓</span>}
+                  </div>
+                  <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:"#93a85a",background:"rgba(147,168,90,0.12)",borderRadius:20,padding:"2px 10px",alignSelf:"flex-start"}}>
+                    Recommended
+                  </div>
+                </button>
+
+                {/* Result Card */}
+                <button
+                  style={cardStyle("result_card")}
+                  onClick={() => selectShareStyle("result_card")}
+                  aria-pressed={shareStyle==="result_card"}
+                  aria-label="Result Card — Branded">
+                  {/* Preview */}
+                  <div style={{width:"100%",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",background:"#0a140b",flexShrink:0}}>
+                    {downloadUrl && (
+                      <img src={downloadUrl} alt="Proof of Grass branded result card" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                    )}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#f0efea"}}>Result Card</div>
+                      <div style={{fontSize:10,color:"rgba(240,239,234,0.5)"}}>Branded and streak-focused</div>
+                    </div>
+                    {shareStyle==="result_card" && <span style={{fontSize:16}}>✓</span>}
+                  </div>
+                </button>
+              </div>
+
+              {/* Caption preview */}
+              <div style={{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:"rgba(240,239,234,0.6)",lineHeight:1.7,fontFamily:"monospace",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>
+                {buildShareText()}
+              </div>
+
+              <div style={{display:"flex",gap:8}}>
+                <button
+                  onClick={() => setShowStylePicker(false)}
+                  aria-label="Cancel"
+                  style={{flex:"0 0 auto",padding:"12px 18px",borderRadius:8,border:"1px solid rgba(255,255,255,0.12)",background:"transparent",color:"rgba(240,239,234,0.5)",fontSize:13,cursor:"pointer"}}>
+                  Cancel
+                </button>
+                <button
+                  onClick={() => executeShare(shareStyle)}
+                  aria-label="Continue to X"
+                  style={{flex:1,padding:"13px",borderRadius:8,border:"none",background:"#93a85a",color:"#0e1108",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:"0.08em"}}>
+                  Continue to X →
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ── DESKTOP INSTRUCTIONS MODAL ───────────────────────────────── */}
+      {showDesktopModal && (
+        <>
+          <div
+            onClick={() => setShowDesktopModal(false)}
+            style={{position:"fixed",inset:0,zIndex:997,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(3px)"}}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Share instructions"
+            onKeyDown={e => { if(e.key==="Escape") setShowDesktopModal(false); }}
+            tabIndex={-1}
+            style={{
+              position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",
+              zIndex:998,width:"min(480px,92vw)",
+              background:"#0e100b",border:"1px solid rgba(255,255,255,0.12)",
+              borderRadius:16,padding:"28px 24px",
+              boxShadow:"0 20px 60px rgba(0,0,0,0.7)",
+            }}>
+            <div style={{fontSize:15,fontWeight:700,color:"#f0efea",marginBottom:6}}>Your image has been downloaded</div>
+            <div style={{fontSize:12,color:"rgba(240,239,234,0.55)",marginBottom:20,lineHeight:1.7}}>
+              Your caption has been copied to the clipboard. On X:
+            </div>
+            {[
+              "Paste the caption",
+              "Click the image icon and attach the downloaded image",
+              "Publish your post",
+              "Return here to lock in your streak",
+            ].map((step, i) => (
+              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:10}}>
+                <div style={{width:22,height:22,borderRadius:"50%",flexShrink:0,background:"rgba(147,168,90,0.15)",border:"1px solid rgba(147,168,90,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#93a85a"}}>
+                  {i+1}
+                </div>
+                <div style={{fontSize:12,color:"rgba(240,239,234,0.7)",paddingTop:3,lineHeight:1.5}}>{step}</div>
+              </div>
+            ))}
+            <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:20}}>
+              <a href="https://x.com/compose/post" target="_blank" rel="noopener noreferrer"
+                onClick={() => setShared(true)}
+                style={{display:"block",textAlign:"center",padding:"12px",borderRadius:8,background:"#93a85a",color:"#0e1108",fontSize:13,fontWeight:700,textDecoration:"none",letterSpacing:"0.06em"}}>
+                Open X →
+              </a>
+              <div style={{display:"flex",gap:8}}>
+                <button
+                  onClick={() => { try { navigator.clipboard.writeText(desktopCaption); } catch {} }}
+                  style={{flex:1,padding:"10px",borderRadius:8,border:"1px solid rgba(255,255,255,0.12)",background:"transparent",color:"rgba(240,239,234,0.6)",fontSize:11,cursor:"pointer"}}>
+                  Copy Caption Again
+                </button>
+                <a href={desktopImgHref} download={desktopImgName}
+                  style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"10px",borderRadius:8,border:"1px solid rgba(255,255,255,0.12)",background:"transparent",color:"rgba(240,239,234,0.6)",fontSize:11,textDecoration:"none"}}>
+                  Download Again
+                </a>
+              </div>
+              <button
+                onClick={() => { setShowDesktopModal(false); setShared(true); lockInStreak(); }}
+                disabled={submitStatus==="loading"}
+                style={{padding:"10px",borderRadius:8,border:"1px solid rgba(147,168,90,0.3)",background:"transparent",color:"#93a85a",fontSize:12,cursor:"pointer",fontWeight:600,opacity:submitStatus==="loading"?0.6:1}}>
+                {submitStatus==="loading" ? "Locking in…" : "✓ I Posted It — Lock In My Streak"}
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Share to Instagram — uses feed format, no streak lock */}

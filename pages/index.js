@@ -664,6 +664,7 @@ export default function Home() {
 
   // Image / result card
   const [imageSrc,   setImageSrc]   = useState(null);
+  const [proofFile,  setProofFile]  = useState(null);  // original File object for outdoor photo share
   const [showResult, setShowResult] = useState(false);
 
   // Community stats
@@ -965,6 +966,7 @@ export default function Home() {
   // ── Image upload ──────────────────────────────────────────────────────────
   const handleImageUpload = useCallback(async (file) => {
     if (!file || !(file instanceof Blob)) return;
+    setProofFile(file);
     setImageSrc(URL.createObjectURL(file));
     setShowResult(false);
     setTimeout(() => setShowResult(true), 80);
@@ -1379,6 +1381,7 @@ export default function Home() {
             ) : showResult && imageSrc && resolvedStreak !== null ? (
               <ResultCard
                 imageSrc={imageSrc}
+                proofFile={proofFile}
                 username={username}
                 initialStreak={resolvedStreak}
                 onStreakUpdate={(n) => { setCurrentStreak(n); setHasPostedToday(true); }}
