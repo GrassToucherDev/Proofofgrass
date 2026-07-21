@@ -27,22 +27,29 @@ function toLocalDateStr(date) {
   const d = date instanceof Date ? date : new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
-function computePreviewStreak(row) {
-  if (!row?.last_submission_date) return row?.current_streak ?? 1;
+function computePreviewStreak(row, shieldCount = 0) {
+  // No submission date = brand new user, starts at day 1
+  if (!row?.last_submission_date) return 1;
+
   const today     = toLocalDateStr(new Date());
   const yesterday = toLocalDateStr(new Date(Date.now() - 86400000));
-  // last_submission_date is a date-only string from Supabase e.g. "2026-07-19".
-  // NEVER pass it through new Date() — that parses as UTC midnight which shifts
-  // the date back one day for users in negative UTC offsets (US timezones).
-  // Instead slice the date part directly from the raw string.
-  const lastRaw = row.last_submission_date;
-  // Handle both "2026-07-19" and "2026-07-19T..." formats
-  const lastDateStr = String(lastRaw).slice(0, 10);
-  const isToday     = lastDateStr === today;
-  const isYesterday = lastDateStr === yesterday;
-  if (isToday)     return row.current_streak;
-  if (isYesterday) return row.current_streak + 1;
-  return row.current_streak;
+  const twoDaysAgo = toLocalDateStr(new Date(Date.now() - 2 * 86400000));
+
+  // Slice directly — never pass date-only strings through new Date() (UTC shift bug)
+  const lastDateStr = String(row.last_submission_date).slice(0, 10);
+
+  // Already submitted today — show current streak as-is
+  if (lastDateStr === today)      return row.current_streak;
+
+  // Submitted yesterday — streak continues, show incremented value
+  if (lastDateStr === yesterday)  return row.current_streak + 1;
+
+  // Missed exactly one day — shield will auto-apply, show continued streak
+  if (lastDateStr === twoDaysAgo && shieldCount > 0) return row.current_streak + 1;
+
+  // Missed one day with no shield, or missed 2+ days — streak is broken
+  // Show 1 so the card reflects what the backend will actually set
+  return 1;
 }
 function getStreakTier(n) {
   if (n >= 1000) return "TRANSCENDENT";
@@ -798,7 +805,7 @@ export default function Home() {
 
         const actual    = streakRow?.current_streak ?? 0;
         const projected = actual + 1;
-        const displayVal = computePreviewStreak(streakRow);
+        const displayVal = computePreviewStreak(streakRow, shieldCount);
         const missedOne  = lastDate === twoDaysAgo;
 
         // Use direct string slice — never pass date-only strings through new Date()
@@ -986,13 +993,15 @@ export default function Home() {
   const toneColor = { success:"#4ade80", warning:T.gold, reset:T.red, neutral:T.dim }[streakTone] || T.dim;
   const heroDay   = (hasUser && currentStreak != null && currentStreak > 0 ? currentStreak : null) ?? topStreaker?.streak ?? 67;
   // resolvedStreak: the definitive value to show on the card.
-  // Uses displayStreak (preview = actual+1 if submitted yesterday) when loaded,
-  // falls back to currentStreak, never falls back to 1 unless truly day 1.
-  const resolvedStreak = (displayStreak != null && displayStreak > 0)
-    ? displayStreak
-    : (currentStreak != null && currentStreak > 0)
-      ? currentStreak
-      : (loadingUser ? null : 1);
+  // displayStreak is authoritative — it already accounts for broken streaks
+  // (returns 1 when missed 2+ days, or missed 1 day with no shield).
+  // Never fall back to currentStreak (the raw DB value) because that would
+  // show the old streak number even when the backend is about to reset to 1.
+  const resolvedStreak = loadingUser
+    ? null
+    : displayStreak != null
+      ? displayStreak
+      : null;
   const heroTier  = getStreakTier(heroDay);
   const heroColor = getTierColor(heroTier);
   const tier      = getStreakTier(currentStreak ?? 0);
@@ -1397,7 +1406,9 @@ export default function Home() {
                 <UploadBox onUpload={handleImageUpload} />
                 <div style={{ marginTop:12, padding:"10px 13px", borderRadius:8,
                   background:T.bg3, border:`1px solid ${T.border}`, fontSize:11, color:T.dim }}>
-                  {`Upload your outdoor photo to generate your Day ${resolvedStreak} certificate.`}
+                  {resolvedStreak === 1 && currentStreak > 1
+                    ? `Your streak has reset. Upload your photo to start again at Day 1.`
+                    : `Upload your outdoor photo to generate your Day ${resolvedStreak} certificate.`}
                 </div>
               </>
             )}
