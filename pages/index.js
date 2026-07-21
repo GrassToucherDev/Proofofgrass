@@ -991,7 +991,9 @@ export default function Home() {
 
   // ── Derived display values ────────────────────────────────────────────────
   const toneColor = { success:"#4ade80", warning:T.gold, reset:T.red, neutral:T.dim }[streakTone] || T.dim;
-  const heroDay   = (hasUser && currentStreak != null && currentStreak > 0 ? currentStreak : null) ?? topStreaker?.streak ?? 67;
+  // Use resolvedStreak for the hero — it reflects what the card will actually show.
+  // If the streak is broken resolvedStreak is 1, so the hero shows 1 too.
+  const heroDay   = (hasUser && resolvedStreak != null ? resolvedStreak : null) ?? topStreaker?.streak ?? 67;
   // resolvedStreak: the definitive value to show on the card.
   // displayStreak is authoritative — it already accounts for broken streaks
   // (returns 1 when missed 2+ days, or missed 1 day with no shield).
@@ -1004,7 +1006,7 @@ export default function Home() {
       : null;
   const heroTier  = getStreakTier(heroDay);
   const heroColor = getTierColor(heroTier);
-  const tier      = getStreakTier(currentStreak ?? 0);
+  const tier      = getStreakTier(resolvedStreak ?? currentStreak ?? 0);
   const tierColor = getTierColor(tier);
 
   // ── CSS ───────────────────────────────────────────────────────────────────
@@ -1241,17 +1243,33 @@ export default function Home() {
             )}
           </div>
 
-          {hasUser && currentStreak > 0 && (
+          {hasUser && resolvedStreak != null && (
             <div style={{ position:"absolute", right:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", textAlign:"right", pointerEvents:"auto" }}>
-              <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.dim, textTransform:"uppercase", marginBottom:8 }}>Your Streak</div>
-              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.white, lineHeight:0.9, letterSpacing:"-0.03em" }}>
-                <span style={{ fontSize:"0.42em", color:T.muted, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>
-                {currentStreak}
-              </div>
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:7, marginTop:10 }}>
-                <div style={{ width:30, height:1, background:`linear-gradient(90deg,transparent,${tierColor})` }} />
-                <span style={{ fontSize:9, letterSpacing:"0.16em", color:tierColor, textTransform:"uppercase", fontWeight:600 }}>✦ {tier}</span>
-              </div>
+              {/* Show reset warning when streak is broken */}
+              {resolvedStreak === 1 && currentStreak > 1 ? (
+                <>
+                  <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.red, textTransform:"uppercase", marginBottom:8 }}>Streak Reset</div>
+                  <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.red, lineHeight:0.9, letterSpacing:"-0.03em" }}>
+                    <span style={{ fontSize:"0.42em", color:T.red, opacity:0.6, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>
+                    1
+                  </div>
+                  <div style={{ fontSize:9, letterSpacing:"0.1em", color:"rgba(239,68,68,0.6)", marginTop:10 }}>
+                    was day {currentStreak}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.dim, textTransform:"uppercase", marginBottom:8 }}>Your Streak</div>
+                  <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.white, lineHeight:0.9, letterSpacing:"-0.03em" }}>
+                    <span style={{ fontSize:"0.42em", color:T.muted, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>
+                    {resolvedStreak}
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:7, marginTop:10 }}>
+                    <div style={{ width:30, height:1, background:`linear-gradient(90deg,transparent,${tierColor})` }} />
+                    <span style={{ fontSize:9, letterSpacing:"0.16em", color:tierColor, textTransform:"uppercase", fontWeight:600 }}>✦ {tier}</span>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </section>
