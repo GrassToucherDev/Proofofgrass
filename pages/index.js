@@ -991,9 +991,6 @@ export default function Home() {
 
   // ── Derived display values ────────────────────────────────────────────────
   const toneColor = { success:"#4ade80", warning:T.gold, reset:T.red, neutral:T.dim }[streakTone] || T.dim;
-  // Use resolvedStreak for the hero — it reflects what the card will actually show.
-  // If the streak is broken resolvedStreak is 1, so the hero shows 1 too.
-  const heroDay   = (hasUser && resolvedStreak != null ? resolvedStreak : null) ?? topStreaker?.streak ?? 67;
   // resolvedStreak: the definitive value to show on the card.
   // displayStreak is authoritative — it already accounts for broken streaks
   // (returns 1 when missed 2+ days, or missed 1 day with no shield).
@@ -1004,6 +1001,8 @@ export default function Home() {
     : displayStreak != null
       ? displayStreak
       : null;
+  // heroDay must come AFTER resolvedStreak (TDZ — const can't be hoisted)
+  const heroDay   = (hasUser && resolvedStreak != null ? resolvedStreak : null) ?? topStreaker?.streak ?? 67;
   const heroTier  = getStreakTier(heroDay);
   const heroColor = getTierColor(heroTier);
   const tier      = getStreakTier(resolvedStreak ?? currentStreak ?? 0);
