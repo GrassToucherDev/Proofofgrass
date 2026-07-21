@@ -152,19 +152,47 @@ function ProofRow({ username, streak, created_at }) {
     </div>
   );
 }
+const TIER_ICONS = {
+  Rooted:"🌱", Elite:"💧", Legendary:"🌲", Immortal:"💯",
+  Mythic:"⚡", Eternal:"👑", Ascended:"✨",
+};
 function TierBadge({ name, day, completed, active }) {
-  const col = completed ? T.olive : active ? T.gold : "rgba(255,255,255,0.14)";
+  const col  = completed ? T.olive : active ? T.gold : "rgba(255,255,255,0.12)";
+  const icon = TIER_ICONS[name] ?? "○";
   return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
-      <div style={{ width:52, height:52, borderRadius:"50%", border:`1.5px solid ${col}`,
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, flex:"1 1 0", minWidth:0 }}>
+      <div style={{
+        width:44, height:44, borderRadius:12,
+        border:`1.5px solid ${col}`,
         display:"flex", alignItems:"center", justifyContent:"center",
-        background: active ? `${T.gold}18` : completed ? `${T.olive}12` : "transparent",
-        boxShadow: active ? `0 0 16px ${T.gold}25` : "none" }}>
-        <span style={{ fontSize:20 }}>{completed ? "✦" : active ? "◎" : "○"}</span>
+        background: active
+          ? `linear-gradient(135deg,${T.gold}22,${T.gold}08)`
+          : completed
+          ? `linear-gradient(135deg,${T.olive}20,${T.olive}08)`
+          : "rgba(255,255,255,0.03)",
+        boxShadow: active ? `0 0 18px ${T.gold}30,inset 0 0 8px ${T.gold}10` : "none",
+        position:"relative", transition:"all 0.2s", flexShrink:0,
+      }}>
+        <span style={{ fontSize:18, filter: completed||active ? "none" : "grayscale(1) opacity(0.3)" }}>
+          {icon}
+        </span>
+        {completed && (
+          <div style={{
+            position:"absolute", top:-4, right:-4,
+            width:14, height:14, borderRadius:"50%",
+            background:T.olive, display:"flex", alignItems:"center",
+            justifyContent:"center", fontSize:8, color:"#0a0c08", fontWeight:900,
+            boxShadow:`0 0 0 2px ${T.bg2}`,
+          }}>✓</div>
+        )}
       </div>
-      <div style={{ textAlign:"center" }}>
-        <div style={{ fontSize:9, fontWeight:700, color:col, letterSpacing:"0.1em", textTransform:"uppercase" }}>{name}</div>
-        <div style={{ fontSize:9, color:T.dim }}>Day {day}</div>
+      <div style={{ textAlign:"center", minWidth:0, width:"100%" }}>
+        <div style={{
+          fontSize:8, fontWeight:700, color:col,
+          letterSpacing:"0.06em", textTransform:"uppercase",
+          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+        }}>{name}</div>
+        <div style={{ fontSize:8, color:T.dim }}>Day {day}</div>
       </div>
     </div>
   );
@@ -1065,6 +1093,8 @@ export default function Home() {
       .stat-strip{flex-wrap:wrap !important;}
       .stat-strip>div{min-width:50% !important;}
       .hero-btns{flex-direction:column !important;align-items:stretch !important;}
+      .hero-streak-hud{display:none !important;}
+      .hero-left{max-width:100% !important;}
       /* nav-links replaced by hamburger menu */
       .username-input{width:120px !important;font-size:12px !important;}
       .feed-username{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;}
@@ -1210,7 +1240,7 @@ export default function Home() {
           </div>
           <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"linear-gradient(90deg,rgba(14,15,11,0.92) 0%,rgba(14,15,11,0.16) 52%,rgba(14,15,11,0.80) 100%)" }} />
           <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"36%", pointerEvents:"none", background:"linear-gradient(180deg,transparent,rgba(14,15,11,0.97))" }} />
-          <div style={{ position:"absolute", left:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", maxWidth:480, pointerEvents:"auto" }}>
+          <div className="hero-left" style={{ position:"absolute", left:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", maxWidth:480, pointerEvents:"auto" }}>
             <div className="fade-1" style={{ fontSize:10, letterSpacing:"0.22em", color:T.olive, textTransform:"uppercase", marginBottom:12, fontWeight:600 }}>Verified Outdoors</div>
             <h1 className="fade-2" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(44px,6.5vw,88px)", fontWeight:700, color:T.white, lineHeight:0.94, letterSpacing:"-0.02em", marginBottom:18 }}>
               Proof<br />of Grass
@@ -1243,7 +1273,7 @@ export default function Home() {
           </div>
 
           {hasUser && resolvedStreak != null && (
-            <div style={{ position:"absolute", right:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", textAlign:"right", pointerEvents:"auto" }}>
+            <div className="hero-streak-hud" style={{ position:"absolute", right:"clamp(18px,5.5vw,76px)", top:"50%", transform:"translateY(-50%)", textAlign:"right", pointerEvents:"auto" }}>
               {/* Show reset warning when streak is broken */}
               {resolvedStreak === 1 && currentStreak > 1 ? (
                 <>
@@ -1497,7 +1527,7 @@ export default function Home() {
             <div className="card-title">Your Progression</div>
             {hasUser && currentStreak > 0 ? (
               <>
-                <div style={{ display:"flex", justifyContent:"space-around", marginBottom:28 }}>
+                <div style={{ display:"flex", gap:6, marginBottom:20, overflowX:"auto", paddingBottom:4, scrollbarWidth:"none" }}>
                   <TierBadge name="Rooted"    day={14}  completed={currentStreak>=14}  active={currentStreak>=7   && currentStreak<14} />
                   <TierBadge name="Elite"     day={30}  completed={currentStreak>=30}  active={currentStreak>=14  && currentStreak<30} />
                   <TierBadge name="Legendary" day={50}  completed={currentStreak>=50}  active={currentStreak>=30  && currentStreak<50} />
@@ -1514,13 +1544,19 @@ export default function Home() {
                   const left = next ? next - currentStreak : 0;
                   return (
                     <>
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                        <span style={{ fontSize:11, color:T.muted }}>Next Milestone</span>
-                        <span style={{ fontSize:11, color:T.dim }}>{currentStreak} / {next ?? 100}</span>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:8 }}>
+                        <div>
+                          <div style={{ fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:T.dim, marginBottom:2 }}>Next Milestone</div>
+                          {left > 0 && (
+                            <div style={{ fontSize:13, color:T.olive, fontWeight:700 }}>
+                              {left} day{left!==1?"s":""} to <span style={{ color:T.gold }}>{next ? getStreakTier(next) : "Immortal"}</span>
+                            </div>
+                          )}
+                        </div>
+                        <span style={{ fontSize:11, color:T.dim, fontFamily:"monospace" }}>{currentStreak} / {next ?? "∞"}</span>
                       </div>
-                      {left > 0 && <div style={{ fontSize:11, color:T.olive, marginBottom:10, fontWeight:600 }}>{left} day{left!==1?"s":""} to {next ? getStreakTier(next) : "Immortal"}</div>}
-                      <div style={{ height:3, background:T.bg3, borderRadius:2, overflow:"hidden" }}>
-                        <div style={{ height:"100%", width:`${fill}%`, background:`linear-gradient(90deg,${T.olive},${T.gold})`, borderRadius:2, transition:"width 1.2s ease" }} />
+                      <div style={{ height:5, background:T.bg3, borderRadius:3, overflow:"hidden" }}>
+                        <div style={{ height:"100%", width:`${fill}%`, background:`linear-gradient(90deg,${T.olive},${T.gold})`, borderRadius:3, transition:"width 1.2s ease", boxShadow:`0 0 8px ${T.olive}40` }} />
                       </div>
                     </>
                   );
