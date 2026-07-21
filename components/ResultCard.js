@@ -932,7 +932,7 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
       try {
         await navigator.share({ files: [file], text, title: "Proof of Grass" });
         setShareHint(false);
-        setShared(true); // shows "I Posted It" confirmation bar
+        setShared(true); // show big confirmation button
       } catch (err) {
         setShareHint(false);
         if (err?.name === "AbortError") return; // user cancelled — no error
@@ -964,7 +964,7 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
     // Copy caption
     try { await navigator.clipboard.writeText(text); } catch {}
     window.open("https://x.com/compose/post", "_blank");
-    setShared(true); // shows "I Posted It" confirmation bar
+    setShared(true); // show big confirmation button
   };
 
   // ── Desktop: download + clipboard + instructions modal ────────────────────
@@ -1494,32 +1494,59 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
         </div>
       )}
 
-      {/* ── I POSTED IT — shown after share sheet closes ───────────────── */}
-      {downloadUrl && !inAppBrowserMode && submitStatus !== "success" && shared && (
-        <div style={{width:"100%",background:"rgba(147,168,90,0.06)",border:"1px solid rgba(147,168,90,0.25)",borderRadius:12,padding:"16px",display:"flex",flexDirection:"column",gap:10,animation:"fadeUp 0.3s ease both"}}>
-          <div style={{fontSize:12,color:"rgba(240,239,234,0.55)",lineHeight:1.6,textAlign:"center"}}>
-            Did you post it to X?
-          </div>
+      {/* ── BIG CONFIRMATION BUTTON ──────────────────────────────────── */}
+      {shared && submitStatus !== "success" && (
+        <div style={{width:"100%",display:"flex",flexDirection:"column",gap:10}}>
           <button
             onClick={lockInStreak}
             disabled={submitStatus==="loading"}
             aria-label="I posted it — lock in my streak"
             style={{
-              background:"#93a85a",color:"#0e1108",border:"none",borderRadius:8,
-              padding:"13px",fontSize:13,fontWeight:700,cursor:"pointer",
-              letterSpacing:"0.08em",opacity:submitStatus==="loading"?0.6:1,
               width:"100%",
-            }}>
-            {submitStatus==="loading" ? "Locking in…" : "✓ I Posted It — Lock In Streak"}
+              padding:"22px 16px",
+              borderRadius:16,
+              border:"none",
+              background:"linear-gradient(135deg,#93a85a,#7a9148)",
+              color:"#080a06",
+              fontSize:22,
+              fontWeight:900,
+              letterSpacing:"0.02em",
+              cursor: submitStatus==="loading" ? "default" : "pointer",
+              opacity: submitStatus==="loading" ? 0.7 : 1,
+              boxShadow:"0 8px 32px rgba(147,168,90,0.45)",
+              display:"flex",
+              alignItems:"center",
+              justifyContent:"center",
+              gap:12,
+              transition:"transform 0.1s, box-shadow 0.1s",
+            }}
+            onMouseDown={e => e.currentTarget.style.transform="scale(0.98)"}
+            onMouseUp={e => e.currentTarget.style.transform="scale(1)"}
+            onTouchStart={e => e.currentTarget.style.transform="scale(0.98)"}
+            onTouchEnd={e => e.currentTarget.style.transform="scale(1)"}
+          >
+            {submitStatus==="loading" ? (
+              <>⟳ Locking in…</>
+            ) : (
+              <>✓ I Posted It</>
+            )}
           </button>
+
+          {submitStatus==="error" && submitError && (
+            <div style={{padding:"10px 14px",borderRadius:10,background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.25)",display:"flex",flexDirection:"column",gap:8}}>
+              <p style={{fontSize:11,color:"#ef4444",margin:0,textAlign:"center"}}>{submitError}</p>
+              <button onClick={lockInStreak}
+                style={{background:"transparent",border:"1px solid rgba(239,68,68,0.4)",color:"#ef4444",borderRadius:8,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",width:"100%"}}>
+                Try Again
+              </button>
+            </div>
+          )}
+
           <button
             onClick={() => setShared(false)}
-            style={{background:"none",border:"none",color:"rgba(240,239,234,0.3)",fontSize:11,cursor:"pointer",padding:"4px"}}>
+            style={{background:"none",border:"none",color:"rgba(240,239,234,0.22)",fontSize:11,cursor:"pointer",padding:"2px",textAlign:"center"}}>
             I haven't posted yet
           </button>
-          {submitStatus==="error" && submitError && (
-            <p style={{fontSize:10,color:"#ef4444",margin:0,textAlign:"center"}}>{submitError}</p>
-          )}
         </div>
       )}
 
@@ -1733,7 +1760,7 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
             ))}
             <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:20}}>
               <a href="https://x.com/compose/post" target="_blank" rel="noopener noreferrer"
-                onClick={() => setShared(true)}
+                onClick={() => { setShared(true); }}
                 style={{display:"block",textAlign:"center",padding:"12px",borderRadius:8,background:"#93a85a",color:"#0e1108",fontSize:13,fontWeight:700,textDecoration:"none",letterSpacing:"0.06em"}}>
                 Open X →
               </a>
@@ -1749,7 +1776,7 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
                 </a>
               </div>
               <button
-                onClick={() => { setShowDesktopModal(false); setShared(true); lockInStreak(); }}
+                onClick={() => { setShowDesktopModal(false); lockInStreak(); }}
                 disabled={submitStatus==="loading"}
                 style={{padding:"10px",borderRadius:8,border:"1px solid rgba(147,168,90,0.3)",background:"transparent",color:"#93a85a",fontSize:12,cursor:"pointer",fontWeight:600,opacity:submitStatus==="loading"?0.6:1}}>
                 {submitStatus==="loading" ? "Locking in…" : "✓ I Posted It — Lock In My Streak"}
