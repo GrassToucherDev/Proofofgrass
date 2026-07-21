@@ -1182,7 +1182,7 @@ export default function Home() {
             <img src="/touchgrass-transparent.png" alt=""
               style={{ width:26, height:26, objectFit:"contain" }} />
             <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:17, fontWeight:700, color:T.white, letterSpacing:"0.04em", textTransform:"uppercase" }}>Touch Grass</span>
+              fontSize:17, fontWeight:700, color:T.white, fontFamily:"'Cormorant Garamond',Georgia,serif", letterSpacing:"0.02em" }}>Touch Grass</span>
           </Link>
 
           {/* Username + profile + hamburger */}
@@ -1393,7 +1393,7 @@ export default function Home() {
             )}
 
             {/* Logo watermark — fills the right blank space on mobile */}
-            <div style={{ position:"absolute", right:16, top:40, opacity:0.08, pointerEvents:"none" }}>
+            <div style={{ position:"absolute", right:16, top:36, opacity:0.18, pointerEvents:"none" }}>
               <img src="/touchgrass-transparent.png" alt="" style={{ width:130, height:130, objectFit:"contain" }} />
             </div>
 
@@ -1523,6 +1523,34 @@ export default function Home() {
 
 
 
+        {/* ── QUESTS BANNER ─────────────────────────────────────────────────── */}
+        <div style={{ margin:"0", padding:"20px clamp(14px,4vw,48px)", background:T.bg2,
+          borderBottom:`1px solid ${T.border}`,
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          gap:16, flexWrap:"wrap", width:"100%", maxWidth:"100%" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:14, minWidth:0 }}>
+            <div style={{ width:44, height:44, borderRadius:11, flexShrink:0,
+              background:`${T.olive}14`, border:`1px solid ${T.borderG}`,
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>⭐</div>
+            <div style={{ minWidth:0 }}>
+              <div style={{ fontSize:14, fontWeight:600, color:T.white, marginBottom:2 }}>Community Quests</div>
+              <div style={{ fontSize:11, color:T.dim }}>Complete quests, earn XP, unlock badges, vote on DexScreener.</div>
+            </div>
+          </div>
+          <Link href="/quests" style={{ display:"inline-flex", alignItems:"center", gap:6,
+            background:T.olive, color:"#0e1108", fontFamily:"'DM Sans',sans-serif",
+            fontSize:12, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
+            padding:"10px 20px", borderRadius:8, textDecoration:"none", flexShrink:0,
+            transition:"background 0.2s", whiteSpace:"nowrap" }}>
+            View Quests →
+          </Link>
+        </div>
+
+        {/* ── MAP PREVIEW ──────────────────────────────────────────────────── */}
+        <div style={{ padding:"18px clamp(14px,4vw,32px)", background:T.bg, borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
+          <MapPreviewCard />
+        </div>
+
         {/* ── MAIN TWO-COLUMN GRID ─────────────────────────────────────────── */}
         <div className="main-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr",
           gap:0, background:T.border, borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`,
@@ -1571,16 +1599,45 @@ export default function Home() {
 
             {/* Shield alert */}
             {mounted && hasUser && missedOneDayNoShield && !hasPostedToday && (
-              <div style={{ marginTop:14, padding:"12px 14px", borderRadius:10,
-                border:`1px solid #7f1d1d`, background:"#100404" }}>
-                <div style={{ fontSize:11, color:T.red, fontWeight:600, marginBottom:4 }}>⚠️ No shields available</div>
-                <div style={{ fontSize:10, color:"rgba(239,68,68,0.6)", marginBottom:6 }}>Your streak resets if you miss today</div>
-                <button onClick={() => setShowShieldBuy(true)}
-                  style={{ background:"transparent", border:`1px solid ${T.red}`, color:T.red,
-                    borderRadius:6, padding:"6px 12px", fontSize:10, cursor:"pointer",
-                    fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase" }}>
-                  🛡 Buy Shield
-                </button>
+              <div style={{
+                marginTop:14, borderRadius:12, overflow:"hidden",
+                border:"1px solid rgba(239,68,68,0.25)",
+              }}>
+                {/* Top bar */}
+                <div style={{
+                  background:"linear-gradient(135deg,rgba(239,68,68,0.18),rgba(239,68,68,0.08))",
+                  padding:"12px 14px",
+                  display:"flex", alignItems:"center", gap:10,
+                }}>
+                  <div style={{
+                    width:32, height:32, borderRadius:8, flexShrink:0,
+                    background:"rgba(239,68,68,0.15)",
+                    border:"1px solid rgba(239,68,68,0.3)",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:16,
+                  }}>🛡</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#f87171", marginBottom:1 }}>No shields available</div>
+                    <div style={{ fontSize:10, color:"rgba(239,68,68,0.55)", lineHeight:1.4 }}>
+                      Your streak will reset if you miss today
+                    </div>
+                  </div>
+                </div>
+                {/* CTA */}
+                <div style={{ padding:"10px 14px", background:"rgba(239,68,68,0.05)" }}>
+                  <button
+                    onClick={() => { setShowShieldBuy(true); document.getElementById("shield-section")?.scrollIntoView({ behavior:"smooth", block:"center" }); }}
+                    style={{
+                      width:"100%", background:"rgba(239,68,68,0.12)",
+                      border:"1px solid rgba(239,68,68,0.35)",
+                      color:"#f87171", borderRadius:8,
+                      padding:"9px 14px", fontSize:12, cursor:"pointer",
+                      fontWeight:700, letterSpacing:"0.04em",
+                      display:"flex", alignItems:"center", justifyContent:"center", gap:7,
+                    }}>
+                    Get a Streak Shield →
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1818,33 +1875,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── QUESTS BANNER ─────────────────────────────────────────────────── */}
-        <div style={{ margin:"0", padding:"24px clamp(14px,4vw,48px)", background:T.bg2,
-          borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`,
-          display:"flex", alignItems:"center", justifyContent:"space-between",
-          gap:16, flexWrap:"wrap", width:"100%", maxWidth:"100%" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
-            <div style={{ width:48, height:48, borderRadius:12, flexShrink:0,
-              background:`${T.olive}14`, border:`1px solid ${T.borderG}`,
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>⭐</div>
-            <div style={{ minWidth:0 }}>
-              <div style={{ fontSize:14, fontWeight:600, color:T.white, marginBottom:2 }}>Community Quests</div>
-              <div style={{ fontSize:11, color:T.dim }}>Complete quests, earn XP, unlock badges, vote on DexScreener.</div>
-            </div>
-          </div>
-          <Link href="/quests" style={{ display:"inline-flex", alignItems:"center", gap:6,
-            background:T.olive, color:"#0e1108", fontFamily:"'DM Sans',sans-serif",
-            fontSize:12, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
-            padding:"10px 20px", borderRadius:8, textDecoration:"none", flexShrink:0,
-            transition:"background 0.2s", whiteSpace:"nowrap" }}>
-            View Quests →
-          </Link>
-        </div>
 
-        {/* ── MAP PREVIEW ──────────────────────────────────────────────────── */}
-        <div style={{ padding:"20px clamp(14px,4vw,32px)", background:T.bg, borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
-          <MapPreviewCard />
-        </div>
 
         {/* ── FOOTER CTA ────────────────────────────────────────────────────── */}
         <section style={{ position:"relative", padding:"88px clamp(18px,5vw,72px)",
