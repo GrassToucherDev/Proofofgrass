@@ -589,66 +589,118 @@ function RecentMilestones() {
     </div>
   );
 }
-function ActivityFeed() {
+// ── Recent Proofs feed (submissions only) ──────────────────────────────────
+function RecentProofsFeed() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [globalLuckyCount, setGlobalLuckyCount] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: subs } = await supabase
+          .from("Submissions").select("username, created_at")
+          .in("status", ["pending","approved"])
+          .order("created_at", { ascending: false }).limit(10);
+        const names = [...new Set((subs||[]).map(s=>s.username))];
+        const { data: streakRows } = names.length
+          ? await supabase.from("Streaks").select("username,current_streak").in("username", names)
+          : { data: [] };
+        const sMap = Object.fromEntries((streakRows||[]).map(r=>[r.username,r.current_streak]));
+        setItems((subs||[]).map(s=>({ username:s.username, streak:sMap[s.username]??null, time:s.created_at })));
+      } catch(e) { console.warn("recent proofs error", e); }
+      setLoading(false);
+    })();
+  }, []);
+  const T2 = { olive:"#93a85a", gold:"#c8a84b", white:"#f0efea", dim:"rgba(240,239,234,0.22)", bg3:"#0e100b", bg4:"#141710", border:"rgba(255,255,255,0.06)" };
+  const timeAgo = (t) => { const diff=Date.now()-new Date(t); const m=Math.floor(diff/60000),h=Math.floor(diff/3600000),d=Math.floor(diff/86400000); return d>0?`${d}d`:h>0?`${h}h`:m>0?`${m}m`:"now"; };
+  if (loading) return <div style={{display:"flex",flexDirection:"column",gap:6}}>{[1,2,3,4,5].map(i=><div key={i} style={{height:40,borderRadius:8,background:T2.bg4,opacity:0.5}}/>)}</div>;
+  if (!items.length) return <p style={{fontSize:12,color:T2.dim,textAlign:"center",padding:"16px 0"}}>No proofs yet today.</p>;
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:5}}>
+      {items.map((item,i) => (
+        <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,background:T2.bg4,border:`1px solid ${T2.border}`}}>
+          <div style={{width:32,height:32,borderRadius:8,flexShrink:0,background:"linear-gradient(135deg,#1e3410,#2d4a18)",border:`1px solid rgba(147,168,90,0.2)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🌿</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:12,fontWeight:600,color:T2.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>@{item.username}</div>
+            {item.streak && <div style={{fontSize:9,color:T2.dim}}>Day {item.streak} · {getStreakTier(item.streak)}</div>}
+          </div>
+          <div style={{fontSize:9,color:T2.dim,flexShrink:0}}>{timeAgo(item.time)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Recent Actions feed (everything except proofs) ──────────────────────────
+function RecentActionsFeed() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     (async () => {
       try {
         const [
-          { data: recentSubs },
-          { data: recentChals },
-          { data: topStreaks },
-          { data: recentReferrals },
-          { data: luckyTouchFeed },
-          { count: globalLuckyCount },
-          { data: recentSpotlights },
+          { data: chals },
+          { data: referrals },
+          { data: spotlights },
         ] = await Promise.all([
-          supabase.from("Submissions").select("username, created_at").in("status", ["pending","approved"]).order("created_at", { ascending: false }).limit(8),
-          supabase.from("Challenges").select("challenger, challenged, duration_days, status, created_at, slug").order("created_at", { ascending: false }).limit(5),
-          supabase.from("Streaks").select("username, current_streak, best_streak").order("current_streak", { ascending: false }).limit(5),
-          supabase.from("Referrals").select("referrer_username, referred_username, status, converted_at, created_at").order("created_at", { ascending: false }).limit(6),
-          Promise.resolve({ data: [] }),
-          Promise.resolve({ count: 0 }),
-          supabase.from("CommunitySpotlights").select("username, category, display_name, week_start, created_at").eq("status", "active").order("created_at", { ascending: false }).limit(8),
+          supabase.from("Challenges").select("challenger,challenged,duration_days,status,created_at,slug").order("created_at",{ascending:false}).limit(8),
+          supabase.from("Referrals").select("referrer_username,referred_username,status,converted_at,created_at").order("created_at",{ascending:false}).limit(6),
+          supabase.from("CommunitySpotlights").select("username,category,display_name,week_start,created_at").eq("status","active").order("created_at",{ascending:false}).limit(6),
         ]);
         const feed = [];
-        (recentSubs ?? []).forEach(s => { feed.push({ type:"proof", username:s.username, text:"logged outdoor proof", emoji:"🌿", time:s.created_at }); });
-        (recentChals ?? []).forEach(c => {
-          if (c.status === "pending" || c.status === "active") feed.push({ type:"challenge", username:c.challenger, text:`challenged @${c.challenged} to a ${c.duration_days}-day streak`, emoji:"⚡", time:c.created_at, link:`/challenge/${c.slug}` });
-          if (c.status === "completed") feed.push({ type:"challenge_complete", username:c.challenger, text:`completed a ${c.duration_days}-day challenge with @${c.challenged}`, emoji:"🏆", time:c.created_at, link:`/challenge/${c.slug}` });
+        (chals||[]).forEach(c => {
+          if (c.status==="pending"||c.status==="active") feed.push({username:c.challenger,text:`challenged @${c.challenged} · ${c.duration_days}d`,emoji:"⚡",time:c.created_at,link:`/challenge/${c.slug}`});
+          if (c.status==="completed") feed.push({username:c.challenger,text:`completed a ${c.duration_days}d challenge with @${c.challenged}`,emoji:"🏆",time:c.created_at,link:`/challenge/${c.slug}`});
         });
-        (topStreaks ?? []).forEach(s => {
-          const milestones = [7,14,30,50,100,180,200,250,365,500,750,1000];
-          const hit = milestones.find(m => s.current_streak === m);
-          if (hit) {
-            const tierName = hit>=1000?"TRANSCENDENT":hit>=500?"ASCENDED":hit>=365?"ETERNAL":hit>=180?"MYTHIC":hit>=100?"IMMORTAL":hit>=50?"LEGENDARY":hit>=30?"ELITE":hit>=14?"LOCKED IN":"ROOTED";
-            feed.push({ type:"milestone", username:s.username, text:`reached Day ${hit} — ${tierName} unlocked`, emoji:hit>=100?"👑":hit>=50?"🌟":hit>=30?"🌳":"🌱", time:null });
-          }
+        (referrals||[]).forEach(r => {
+          if (r.status==="converted") feed.push({username:r.referrer_username,text:`brought @${r.referred_username} to Day 10`,emoji:"🤝",time:r.converted_at||r.created_at});
+          else feed.push({username:r.referrer_username,text:"invited someone to the movement",emoji:"🌱",time:r.created_at});
         });
-        (recentReferrals ?? []).forEach(r => {
-          if (r.status === "converted") feed.push({ type:"referral_converted", username:r.referrer_username, text:`helped @${r.referred_username} reach Day 10`, emoji:"🤝", time:r.converted_at||r.created_at });
-          else feed.push({ type:"referral_pending", username:r.referrer_username, text:"invited a new Toucher to the movement", emoji:"🌱", time:r.created_at });
+        (spotlights||[]).forEach(s => {
+          const badge = getSpotlightBadge(s.category);
+          feed.push({username:s.display_name||s.username,text:getSpotlightFeedText(s.category),emoji:"🏆",badgeImg:badge?.image??null,time:s.created_at,link:"/spotlight"});
         });
-        // Lucky Touch feed removed — feature exists, not surfaced on dashboard
-        (recentSpotlights ?? []).forEach(s => {
-          feed.push({ type:"spotlight", username:s.display_name||s.username, text:getSpotlightFeedText(s.category), emoji:"🏆", badgeImg:getSpotlightBadge(s.category)?.image??null, time:s.created_at, link:"/spotlight" });
-        });
-        feed.sort((a, b) => { if (!a.time && !b.time) return 0; if (!a.time) return 1; if (!b.time) return -1; return new Date(b.time) - new Date(a.time); });
-        setItems(feed.slice(0, 10));
-        // globalLuckyCount removed from feed
-      } catch(e) { console.warn("activity feed error", e); }
+        feed.sort((a,b)=>new Date(b.time)-new Date(a.time));
+        setItems(feed.slice(0,10));
+      } catch(e) { console.warn("actions feed error", e); }
       setLoading(false);
     })();
   }, []);
-  const T2 = { olive:"#93a85a", gold:"#c8a84b", white:"#f0efea", dim:"rgba(240,239,234,0.22)", bg3:"#181a12", border:"rgba(255,255,255,0.06)" };
-  if (loading) return (
-    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-      {[1,2,3,4].map(i => <div key={i} style={{ height:44, borderRadius:8, background:T2.bg3 }} />)}
+  const T2 = { gold:"#c8a84b", white:"#f0efea", dim:"rgba(240,239,234,0.22)", bg4:"#141710", border:"rgba(255,255,255,0.06)" };
+  const timeAgo = (t) => { const diff=Date.now()-new Date(t); const m=Math.floor(diff/60000),h=Math.floor(diff/3600000),d=Math.floor(diff/86400000); return d>0?`${d}d`:h>0?`${h}h`:m>0?`${m}m`:"now"; };
+  if (loading) return <div style={{display:"flex",flexDirection:"column",gap:6}}>{[1,2,3,4].map(i=><div key={i} style={{height:40,borderRadius:8,background:T2.bg4,opacity:0.5}}/>)}</div>;
+  if (!items.length) return <p style={{fontSize:12,color:T2.dim,textAlign:"center",padding:"16px 0"}}>No recent activity.</p>;
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:5}}>
+      {items.map((item,i) => {
+        const inner = (
+          <div style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,background:T2.bg4,border:`1px solid ${T2.border}`}}>
+            {item.badgeImg
+              ? <img src={item.badgeImg} alt="" style={{width:28,height:28,objectFit:"contain",flexShrink:0}}/>
+              : <span style={{fontSize:16,flexShrink:0}}>{item.emoji}</span>}
+            <div style={{flex:1,minWidth:0}}>
+              <span style={{fontSize:12,fontWeight:600,color:T2.white}}>@{item.username}</span>
+              <span style={{fontSize:11,color:T2.dim}}> {item.text}</span>
+            </div>
+            <div style={{fontSize:9,color:T2.dim,flexShrink:0}}>{timeAgo(item.time)}</div>
+          </div>
+        );
+        return item.link
+          ? <Link key={i} href={item.link} style={{textDecoration:"none"}}>{inner}</Link>
+          : <div key={i}>{inner}</div>;
+      })}
     </div>
   );
-  if (items.length === 0) return <p style={{ fontSize:12, color:T2.dim, textAlign:"center", padding:"16px 0" }}>No recent activity yet.</p>;
+}
+
+function ActivityFeed() {
+  // kept for any remaining references — renders nothing now
+  return null;
+}
+// (old ActivityFeed internals removed — replaced by RecentProofsFeed + RecentActionsFeed)
+// Placeholder to satisfy linter:
+function _oldActivityFeedUnused() {
+  const T2 = { olive:"#93a85a", gold:"#c8a84b", white:"#f0efea", dim:"rgba(240,239,234,0.22)", bg3:"#181a12", border:"rgba(255,255,255,0.06)" };
+  const items = [];
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
 
@@ -1130,7 +1182,7 @@ export default function Home() {
             <img src="/touchgrass-transparent.png" alt=""
               style={{ width:26, height:26, objectFit:"contain" }} />
             <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
+              fontSize:17, fontWeight:700, color:T.white, letterSpacing:"0.04em", textTransform:"uppercase" }}>Touch Grass</span>
           </Link>
 
           {/* Username + profile + hamburger */}
@@ -1340,6 +1392,11 @@ export default function Home() {
               </div>
             )}
 
+            {/* Logo watermark — fills the right blank space on mobile */}
+            <div style={{ position:"absolute", right:16, top:40, opacity:0.08, pointerEvents:"none" }}>
+              <img src="/touchgrass-transparent.png" alt="" style={{ width:130, height:130, objectFit:"contain" }} />
+            </div>
+
             <p className="fade-2" style={{ fontSize:14, lineHeight:1.7, marginBottom:24, fontWeight:300, color:T.muted, maxWidth:320 }}>
               Log your time outside. Build your streak. Earn rewards.
             </p>
@@ -1464,15 +1521,7 @@ export default function Home() {
           <StatCard icon="◉" value={totalProofs !== null ? totalProofs.toLocaleString() : "…"} label="Proofs Logged" last />
         </div>
 
-        {/* ── COMMUNITY SPOTLIGHT ───────────────────────────────────────────── */}
-        <div style={{ padding:"20px clamp(14px,4vw,32px)", background:T.bg2, borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
-          <SpotlightSection />
-        </div>
 
-        {/* ── MAP PREVIEW ──────────────────────────────────────────────────── */}
-        <div style={{ padding:"20px clamp(14px,4vw,32px)", background:T.bg, borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
-          <MapPreviewCard />
-        </div>
 
         {/* ── MAIN TWO-COLUMN GRID ─────────────────────────────────────────── */}
         <div className="main-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr",
@@ -1630,77 +1679,142 @@ export default function Home() {
               </div>
             )}
 
-            {/* Shield section */}
-            <div id="shield-section" style={{ marginTop:20, padding:"14px 16px", borderRadius:10, background:T.bg3, border:`1px solid ${T.border}` }}>
-              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: showShieldBuy ? 14 : 0 }}>
-                <span style={{ fontSize:18 }}>🛡</span>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:600, color:T.white }}>Shield Protection</div>
-                  <div style={{ fontSize:10, color:T.dim }}>50,000 $TOUCHGRASS · Protect your streak</div>
+            {/* ── SHIELD SECTION — redesigned ─────────────────────────────── */}
+            <div id="shield-section" style={{ marginTop:24 }}>
+              {/* Header card — always visible */}
+              <div style={{
+                background:"linear-gradient(135deg,rgba(200,168,75,0.08),rgba(200,168,75,0.03))",
+                border:`1px solid rgba(200,168,75,0.25)`,
+                borderRadius:14, padding:"18px 18px",
+                display:"flex", alignItems:"center", gap:14,
+              }}>
+                <div style={{
+                  width:44, height:44, borderRadius:12, flexShrink:0,
+                  background:"linear-gradient(135deg,rgba(200,168,75,0.25),rgba(200,168,75,0.08))",
+                  border:"1px solid rgba(200,168,75,0.35)",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:22, boxShadow:"0 0 20px rgba(200,168,75,0.15)",
+                }}>🛡</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:14, fontWeight:700, color:T.white, marginBottom:2 }}>Streak Shield</div>
+                  <div style={{ fontSize:11, color:"rgba(200,168,75,0.7)" }}>50,000 $TOUCHGRASS · Protects a missed day</div>
                 </div>
                 <button onClick={() => setShowShieldBuy(v => !v)}
-                  style={{ background:"transparent", border:`1px solid ${T.borderG}`, color:T.olive,
-                    borderRadius:6, padding:"5px 10px", fontSize:11, cursor:"pointer", fontWeight:600 }}>
-                  {showShieldBuy ? "Close" : "Buy →"}
+                  style={{
+                    background: showShieldBuy ? "rgba(200,168,75,0.15)" : "transparent",
+                    border:"1px solid rgba(200,168,75,0.35)",
+                    color:T.gold, borderRadius:8,
+                    padding:"8px 14px", fontSize:12, cursor:"pointer",
+                    fontWeight:700, letterSpacing:"0.04em", flexShrink:0,
+                    transition:"all 0.15s",
+                  }}>
+                  {showShieldBuy ? "✕ Close" : "Buy →"}
                 </button>
               </div>
+
               {showShieldBuy && (
-                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  <a href={buildSolanaPayUrl()}
-                    style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-                      background:"linear-gradient(135deg,#93a85a,#7a9148)", color:"#0e1108",
-                      borderRadius:8, padding:"11px 14px", fontSize:12, fontWeight:700,
-                      textDecoration:"none", letterSpacing:"0.02em" }}>
-                    ⚡ Open in Wallet — Pay 50,000 $TOUCHGRASS
-                  </a>
-                  <div style={{ fontSize:9.5, color:T.dim, textAlign:"center" }}>
-                    Opens your wallet app with the payment pre-filled. You review and approve it there.
-                  </div>
-                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6,
-                    padding:"14px 0", borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`, margin:"4px 0" }}>
-                    <img src={buildQrCodeUrl(buildSolanaPayUrl())} alt="Scan to pay with Solana wallet"
-                      style={{ width:140, height:140, borderRadius:8, border:`1px solid ${T.border}` }} />
-                    <div style={{ fontSize:9.5, color:T.dim }}>Scan with your wallet app</div>
-                  </div>
-                  <div style={{ fontSize:10, color:T.dim, marginBottom:2 }}>
-                    Or send manually to <span style={{ color:T.olive }}>{SOL_DOMAIN}</span>
-                    {" "}(<span style={{ fontSize:9 }}>{BURN_ADDR.slice(0,8)}…</span>), then submit below.
-                  </div>
-                  <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={() => { navigator.clipboard.writeText(SOL_DOMAIN).catch(()=>{}); setCopiedDomain(true); setShowPasteTip(true); setTimeout(()=>setCopiedDomain(false),1500); }}
-                      style={{ flex:1, background:"transparent", border:`1px solid ${T.borderG}`, color: copiedDomain ? "#4ade80" : T.olive, borderRadius:6, padding:"7px 10px", fontSize:10, cursor:"pointer", fontWeight:600 }}>
-                      {copiedDomain ? "✓ copied" : "Copy Domain"}
-                    </button>
-                    <button onClick={() => { navigator.clipboard.writeText(BURN_ADDR).catch(()=>{}); setCopiedAddr(true); setShowPasteTip(true); setTimeout(()=>setCopiedAddr(false),1500); }}
-                      style={{ flex:1, background:"transparent", border:`1px solid ${T.borderG}`, color: copiedAddr ? "#4ade80" : T.olive, borderRadius:6, padding:"7px 10px", fontSize:10, cursor:"pointer", fontWeight:600 }}>
-                      {copiedAddr ? "✓ copied" : "Copy Address"}
-                    </button>
-                  </div>
-                  {showPasteTip && <div style={{ fontSize:10, color:T.dim }}>Submit your wallet address below once sent — we'll verify on-chain.</div>}
-                  <input type="text" className="field" placeholder="Your wallet address" value={purchaseWallet} onChange={e => setPurchaseWallet(e.target.value)} />
-                  {purchaseError && <div style={{ fontSize:10, color:T.red }}>{purchaseError}</div>}
-                  {latestPurchase && purchaseStatus !== "success" && (
-                    <div style={{ fontSize:10, color: latestPurchase.status==="approved" ? "#4ade80" : latestPurchase.status==="rejected" ? T.red : T.gold }}>
-                      {latestPurchase.status==="approved" ? "✅ Shield credited" : latestPurchase.status==="rejected" ? "❌ Rejected — wallet not verified" : "⏳ Pending review"}
+                <div style={{
+                  marginTop:8, background:T.bg2,
+                  border:`1px solid ${T.border}`,
+                  borderRadius:14, overflow:"hidden",
+                }}>
+                  {/* Primary CTA */}
+                  <div style={{ padding:"18px 18px 14px" }}>
+                    <a href={buildSolanaPayUrl()}
+                      style={{
+                        display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+                        background:"linear-gradient(135deg,#93a85a,#7a9148)",
+                        color:"#0a0c08", borderRadius:10,
+                        padding:"13px 18px", fontSize:13, fontWeight:700,
+                        textDecoration:"none", letterSpacing:"0.04em",
+                        boxShadow:"0 4px 20px rgba(147,168,90,0.3)",
+                      }}>
+                      ⚡ Open Wallet — Pay 50,000 $TOUCHGRASS
+                    </a>
+                    <div style={{ fontSize:10, color:T.dim, textAlign:"center", marginTop:8 }}>
+                      Opens your wallet with the payment pre-filled · you review and sign
                     </div>
-                  )}
-                  <button className="btn-olive" style={{ justifyContent:"center" }}
-                    onClick={handleBuyShield} disabled={purchaseStatus==="loading"}>
-                    {purchaseStatus==="loading" ? "Submitting…" : purchaseStatus==="success" ? "✓ Submitted!" : "🛡 Submit Shield Purchase"}
-                  </button>
+                  </div>
+
+                  {/* Divider with OR */}
+                  <div style={{ display:"flex", alignItems:"center", gap:10, padding:"0 18px", marginBottom:14 }}>
+                    <div style={{ flex:1, height:1, background:T.border }} />
+                    <span style={{ fontSize:10, color:T.dim, letterSpacing:"0.1em" }}>OR SEND MANUALLY</span>
+                    <div style={{ flex:1, height:1, background:T.border }} />
+                  </div>
+
+                  {/* Manual send + QR */}
+                  <div style={{ padding:"0 18px 18px", display:"flex", flexDirection:"column", gap:10 }}>
+                    {/* Address row */}
+                    <div style={{ background:T.bg3, borderRadius:10, padding:"12px 14px" }}>
+                      <div style={{ fontSize:9, color:T.dim, letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:6 }}>Burn Address</div>
+                      <div style={{ fontFamily:"monospace", fontSize:11, color:T.olive, wordBreak:"break-all", marginBottom:10 }}>
+                        {SOL_DOMAIN}
+                      </div>
+                      <div style={{ display:"flex", gap:6 }}>
+                        <button onClick={() => { navigator.clipboard.writeText(SOL_DOMAIN).catch(()=>{}); setCopiedDomain(true); setTimeout(()=>setCopiedDomain(false),1500); }}
+                          style={{ flex:1, background:"transparent", border:`1px solid ${T.borderG}`,
+                            color: copiedDomain ? "#4ade80" : T.olive,
+                            borderRadius:7, padding:"7px 0", fontSize:10, cursor:"pointer", fontWeight:600 }}>
+                          {copiedDomain ? "✓ Copied" : "Copy Domain"}
+                        </button>
+                        <button onClick={() => { navigator.clipboard.writeText(BURN_ADDR).catch(()=>{}); setCopiedAddr(true); setTimeout(()=>setCopiedAddr(false),1500); }}
+                          style={{ flex:1, background:"transparent", border:`1px solid ${T.borderG}`,
+                            color: copiedAddr ? "#4ade80" : T.olive,
+                            borderRadius:7, padding:"7px 0", fontSize:10, cursor:"pointer", fontWeight:600 }}>
+                          {copiedAddr ? "✓ Copied" : "Copy Address"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* QR code */}
+                    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, padding:"10px 0" }}>
+                      <img src={buildQrCodeUrl(buildSolanaPayUrl())} alt="Scan to pay"
+                        style={{ width:120, height:120, borderRadius:10, border:`1px solid ${T.border}` }} />
+                      <div style={{ fontSize:9, color:T.dim }}>Scan with your wallet app</div>
+                    </div>
+
+                    {/* Submit confirmation */}
+                    <div style={{ borderTop:`1px solid ${T.border}`, paddingTop:12 }}>
+                      <div style={{ fontSize:10, color:T.dim, marginBottom:8 }}>
+                        After sending, paste your wallet address for verification:
+                      </div>
+                      <input type="text" className="field" placeholder="Your wallet address"
+                        value={purchaseWallet} onChange={e => setPurchaseWallet(e.target.value)}
+                        style={{ marginBottom:8 }} />
+                      {purchaseError && <div style={{ fontSize:10, color:T.red, marginBottom:8 }}>{purchaseError}</div>}
+                      {latestPurchase && purchaseStatus !== "success" && (
+                        <div style={{ fontSize:10, marginBottom:8,
+                          color: latestPurchase.status==="approved" ? "#4ade80"
+                               : latestPurchase.status==="rejected" ? T.red : T.gold }}>
+                          {latestPurchase.status==="approved" ? "✅ Shield credited"
+                           : latestPurchase.status==="rejected" ? "❌ Rejected — wallet not verified"
+                           : "⏳ Pending admin review"}
+                        </div>
+                      )}
+                      <button className="btn-olive" style={{ justifyContent:"center", width:"100%" }}
+                        onClick={handleBuyShield} disabled={purchaseStatus==="loading"}>
+                        {purchaseStatus==="loading" ? "Submitting…"
+                         : purchaseStatus==="success" ? "✓ Submitted!"
+                         : "Submit Purchase Request"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* RECENT MILESTONES */}
+          {/* RECENT PROOFS */}
           <div className="card" style={{ padding:28 }}>
-            <RecentMilestones />
+            <div className="card-title">Recent Proofs</div>
+            <RecentProofsFeed />
           </div>
 
-          {/* ACTIVITY FEED */}
+          {/* RECENT ACTIONS */}
           <div className="card" style={{ padding:28 }}>
-            <ActivityFeed />
+            <div className="card-title">Recent Activity</div>
+            <RecentActionsFeed />
           </div>
         </div>
 
@@ -1725,6 +1839,11 @@ export default function Home() {
             transition:"background 0.2s", whiteSpace:"nowrap" }}>
             View Quests →
           </Link>
+        </div>
+
+        {/* ── MAP PREVIEW ──────────────────────────────────────────────────── */}
+        <div style={{ padding:"20px clamp(14px,4vw,32px)", background:T.bg, borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
+          <MapPreviewCard />
         </div>
 
         {/* ── FOOTER CTA ────────────────────────────────────────────────────── */}
