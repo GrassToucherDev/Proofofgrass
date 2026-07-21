@@ -1335,10 +1335,59 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
         </a>
       )}
 
-      {isInAppBrowser && !inAppBrowserMode && downloadUrl && (
-        <div style={{background:"rgba(200,168,75,0.08)",border:"1px solid rgba(200,168,75,0.4)",borderRadius:10,padding:"14px 16px",fontSize:12,color:"#c8a84b",lineHeight:1.6,width:"100%"}}>
-          <div style={{fontWeight:700,marginBottom:4}}>⚠ You're in the X in-app browser</div>
-          <div style={{fontSize:11,color:"rgba(200,168,75,0.7)"}}>Tap <b>···</b> → <b>Open in browser</b> to share with your image.</div>
+      {isInAppBrowser && !inAppBrowserMode && (
+        <div style={{
+          width:"100%", borderRadius:14, overflow:"hidden",
+          border:"1px solid rgba(200,168,75,0.45)",
+          boxShadow:"0 4px 24px rgba(200,168,75,0.12)",
+        }}>
+          {/* Header */}
+          <div style={{
+            background:"linear-gradient(135deg,rgba(200,168,75,0.22),rgba(200,168,75,0.08))",
+            padding:"14px 16px",
+            display:"flex", alignItems:"center", gap:12,
+          }}>
+            <div style={{
+              width:38, height:38, borderRadius:10, flexShrink:0,
+              background:"rgba(200,168,75,0.2)", border:"1px solid rgba(200,168,75,0.4)",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:18,
+            }}>⚠️</div>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:"#f0efea",marginBottom:2}}>
+                Open in Safari or Chrome
+              </div>
+              <div style={{fontSize:11,color:"rgba(200,168,75,0.75)",lineHeight:1.5}}>
+                The X browser can't attach your result card image.
+              </div>
+            </div>
+          </div>
+          {/* Steps */}
+          <div style={{background:"rgba(14,16,11,0.9)",padding:"12px 16px",display:"flex",flexDirection:"column",gap:8}}>
+            {[
+              ["1","Tap  ···  in the top right corner of X"],
+              ["2",'Select "Open in Browser"'],
+              ["3","Return to Proof of Grass and share your card"],
+            ].map(([n,text]) => (
+              <div key={n} style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{
+                  width:20,height:20,borderRadius:"50%",flexShrink:0,
+                  background:"rgba(200,168,75,0.15)",border:"1px solid rgba(200,168,75,0.35)",
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:9,fontWeight:800,color:"#c8a84b",
+                }}>{n}</div>
+                <div style={{fontSize:11,color:"rgba(240,239,234,0.65)",lineHeight:1.4}}>{text}</div>
+              </div>
+            ))}
+          </div>
+          {/* Why this matters */}
+          <div style={{
+            background:"rgba(200,168,75,0.05)",
+            borderTop:"1px solid rgba(200,168,75,0.15)",
+            padding:"10px 16px",
+            fontSize:10, color:"rgba(200,168,75,0.5)", lineHeight:1.5,
+          }}>
+            Your result card and outdoor photo can only be attached in a real browser — not inside X.
+          </div>
         </div>
       )}
 
@@ -1474,11 +1523,63 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
         </div>
       )}
 
-      {/* ── SUCCESS ──────────────────────────────────────────────────── */}
+      {/* ── SUCCESS — card stays accessible ────────────────────────── */}
       {submitStatus === "success" && (
-        <div style={{width:"100%",background:"#2a3018",border:"1px solid rgba(147,168,90,0.4)",borderRadius:12,padding:"20px",textAlign:"center"}}>
-          <div style={{fontSize:22,marginBottom:8}}>✓</div>
-          <div style={{fontSize:13,fontWeight:700,color:"#93a85a",letterSpacing:"0.06em"}}>Streak Locked In</div>
+        <div style={{width:"100%",borderRadius:14,overflow:"hidden",border:"1px solid rgba(147,168,90,0.3)"}}>
+          {/* Confirmation bar */}
+          <div style={{
+            background:"linear-gradient(135deg,rgba(147,168,90,0.18),rgba(147,168,90,0.06))",
+            padding:"14px 16px",
+            display:"flex",alignItems:"center",gap:12,
+          }}>
+            <div style={{
+              width:38,height:38,borderRadius:10,flexShrink:0,
+              background:"rgba(147,168,90,0.2)",border:"1px solid rgba(147,168,90,0.4)",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,
+            }}>✓</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#93a85a",marginBottom:1}}>
+                Day {currentStreak} Locked In
+              </div>
+              <div style={{fontSize:10,color:"rgba(147,168,90,0.6)"}}>
+                Your streak is saved for today.
+              </div>
+            </div>
+          </div>
+          {/* Share again + download — card stays live */}
+          <div style={{
+            background:"rgba(14,16,11,0.9)",
+            borderTop:"1px solid rgba(147,168,90,0.12)",
+            padding:"12px 14px",
+            display:"flex",gap:8,
+          }}>
+            <button
+              onClick={openStylePicker}
+              aria-label="Share your card again"
+              style={{
+                flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,
+                padding:"10px 14px",borderRadius:9,cursor:"pointer",
+                background:"rgba(147,168,90,0.12)",
+                border:"1px solid rgba(147,168,90,0.3)",
+                color:"#93a85a",fontSize:12,fontWeight:700,letterSpacing:"0.04em",
+              }}>
+              📤 Share Again
+            </button>
+            <a
+              href={downloadUrl}
+              download={`proof-of-grass-day-${currentStreak}.png`}
+              aria-label="Download your result card"
+              style={{
+                flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,
+                padding:"10px 14px",borderRadius:9,cursor:"pointer",
+                background:"transparent",
+                border:"1px solid rgba(255,255,255,0.1)",
+                color:"rgba(240,239,234,0.55)",fontSize:12,fontWeight:600,
+                textDecoration:"none",letterSpacing:"0.04em",
+              }}>
+              ↓ Save Card
+            </a>
+          </div>
         </div>
       )}
 
