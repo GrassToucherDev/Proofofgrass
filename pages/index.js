@@ -84,18 +84,39 @@ function Skeleton({ w="100%", h=12 }) {
 }
 function StatCard({ icon, value, label, sub, accent, last }) {
   return (
-    <div style={{ flex:"1 1 0", minWidth:0, display:"flex", flexDirection:"column", alignItems:"center",
-      padding:"24px 12px", gap:4, borderRight: last ? "none" : `1px solid ${T.border}` }}>
-      <span style={{ fontSize:15, opacity:0.4, marginBottom:2 }}>{icon}</span>
-      <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-        fontSize:"clamp(22px,3vw,36px)", fontWeight:700,
-        color: accent ? T.gold : T.white, lineHeight:1, letterSpacing:"-0.02em" }}>
+    <div style={{
+      flex:"1 1 0", minWidth:0,
+      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+      padding:"28px 12px", gap:6,
+      borderRight: last ? "none" : `1px solid ${T.border}`,
+      position:"relative", overflow:"hidden",
+    }}>
+      {/* Subtle radial glow behind the number */}
+      <div style={{
+        position:"absolute", inset:0, pointerEvents:"none",
+        background: accent
+          ? "radial-gradient(ellipse at 50% 60%,rgba(200,168,75,0.07),transparent 70%)"
+          : "radial-gradient(ellipse at 50% 60%,rgba(147,168,90,0.05),transparent 70%)",
+      }} />
+      <span style={{
+        fontSize:10, letterSpacing:"0.18em", textTransform:"uppercase",
+        color: accent ? "rgba(200,168,75,0.5)" : T.dim,
+        fontWeight:600, textAlign:"center",
+      }}>{label}</span>
+      <span style={{
+        fontFamily:"'Cormorant Garamond',Georgia,serif",
+        fontSize:"clamp(32px,4vw,52px)", fontWeight:700,
+        color: accent ? T.gold : T.white,
+        lineHeight:1, letterSpacing:"-0.02em",
+      }}>
         {value ?? "—"}
       </span>
-      {sub && <span style={{ fontSize:10, color:T.olive, fontWeight:600 }}>{sub}</span>}
-      <span style={{ fontSize:9, color:T.dim, letterSpacing:"0.14em", textTransform:"uppercase", textAlign:"center", marginTop:2 }}>
-        {label}
-      </span>
+      {sub && (
+        <span style={{
+          fontSize:10, color: accent ? T.gold : T.olive,
+          fontWeight:600, letterSpacing:"0.04em",
+        }}>{sub}</span>
+      )}
     </div>
   );
 }
@@ -1513,37 +1534,92 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── STATS STRIP ──────────────────────────────────────────────────── */}
-        <div className="stat-strip" style={{ display:"flex", background:T.bg2, borderBottom:`1px solid ${T.border}` }}>
-          <StatCard icon="◎" value={dailyCount !== null ? dailyCount.toLocaleString() : "…"} label="Active Touchers Today" />
-          <StatCard icon="◈" value={fmtBurned(totalBurned)} label="$TOUCHGRASS Burned" />
-          <StatCard icon="↗" value={topStreaker ? `${topStreaker.streak}d` : "…"} sub={topStreaker ? `@${topStreaker.username}` : ""} label="Top Streak" accent />
-          <StatCard icon="◉" value={totalProofs !== null ? totalProofs.toLocaleString() : "…"} label="Proofs Logged" last />
-        </div>
+        {/* ── STATS + QUESTS ────────────────────────────────────────────────── */}
+        <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}` }}>
 
+          {/* Stats row */}
+          <div className="stat-strip" style={{ display:"flex", borderBottom:`1px solid ${T.border}` }}>
+            <StatCard value={dailyCount !== null ? dailyCount.toLocaleString() : "…"} label="Active Touchers Today" />
+            <StatCard value={fmtBurned(totalBurned)} label="$TOUCHGRASS Burned" />
+            <StatCard value={topStreaker ? `${topStreaker.streak}d` : "…"} sub={topStreaker ? `@${topStreaker.username}` : ""} label="Top Streak" accent />
+            <StatCard value={totalProofs !== null ? totalProofs.toLocaleString() : "…"} label="Proofs Logged" last />
+          </div>
 
+          {/* Quests — full-width immersive banner */}
+          <div style={{ position:"relative", overflow:"hidden", padding:"28px clamp(14px,4vw,48px)" }}>
+            {/* Background texture */}
+            <div style={{
+              position:"absolute", inset:0, pointerEvents:"none",
+              background:"linear-gradient(135deg,rgba(147,168,90,0.09) 0%,rgba(200,168,75,0.04) 50%,transparent 100%)",
+            }} />
+            <div style={{
+              position:"absolute", top:-40, right:-40, width:220, height:220,
+              borderRadius:"50%", pointerEvents:"none",
+              background:"radial-gradient(circle,rgba(200,168,75,0.08),transparent 70%)",
+            }} />
 
-        {/* ── QUESTS BANNER ─────────────────────────────────────────────────── */}
-        <div style={{ margin:"0", padding:"20px clamp(14px,4vw,48px)", background:T.bg2,
-          borderBottom:`1px solid ${T.border}`,
-          display:"flex", alignItems:"center", justifyContent:"space-between",
-          gap:16, flexWrap:"wrap", width:"100%", maxWidth:"100%" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:14, minWidth:0 }}>
-            <div style={{ width:44, height:44, borderRadius:11, flexShrink:0,
-              background:`${T.olive}14`, border:`1px solid ${T.borderG}`,
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>⭐</div>
-            <div style={{ minWidth:0 }}>
-              <div style={{ fontSize:14, fontWeight:600, color:T.white, marginBottom:2 }}>Community Quests</div>
-              <div style={{ fontSize:11, color:T.dim }}>Complete quests, earn XP, unlock badges, vote on DexScreener.</div>
+            <div style={{ position:"relative", display:"flex", alignItems:"center", justifyContent:"space-between", gap:20, flexWrap:"wrap" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:18, minWidth:0, flex:1 }}>
+                {/* Quest icon — larger, more dramatic */}
+                <div style={{
+                  width:60, height:60, borderRadius:16, flexShrink:0,
+                  background:"linear-gradient(135deg,rgba(200,168,75,0.25),rgba(200,168,75,0.08))",
+                  border:"1px solid rgba(200,168,75,0.4)",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:28,
+                  boxShadow:"0 0 24px rgba(200,168,75,0.2), inset 0 1px 0 rgba(255,255,255,0.05)",
+                }}>⭐</div>
+
+                <div style={{ minWidth:0 }}>
+                  {/* Eyebrow */}
+                  <div style={{
+                    fontSize:9, fontWeight:700, letterSpacing:"0.2em",
+                    textTransform:"uppercase", color:"rgba(200,168,75,0.6)",
+                    marginBottom:4,
+                  }}>Limited Time</div>
+
+                  <div style={{
+                    fontFamily:"'Cormorant Garamond',Georgia,serif",
+                    fontSize:"clamp(20px,3vw,28px)", fontWeight:700,
+                    color:T.white, lineHeight:1.1, marginBottom:6,
+                  }}>Community Quests</div>
+
+                  <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                    {[
+                      "Earn XP",
+                      "Unlock Badges",
+                      "Vote on DexScreener",
+                    ].map(item => (
+                      <div key={item} style={{
+                        display:"flex", alignItems:"center", gap:5,
+                        fontSize:11, color:"rgba(240,239,234,0.55)",
+                      }}>
+                        <span style={{ color:T.olive, fontSize:9 }}>✦</span>
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <Link href="/quests" style={{
+                display:"inline-flex", alignItems:"center", gap:8,
+                background:"linear-gradient(135deg,#c8a84b,#a88c38)",
+                color:"#0a0800",
+                fontFamily:"'DM Sans',sans-serif",
+                fontSize:13, fontWeight:800,
+                letterSpacing:"0.06em", textTransform:"uppercase",
+                padding:"13px 24px", borderRadius:10,
+                textDecoration:"none", flexShrink:0,
+                boxShadow:"0 4px 20px rgba(200,168,75,0.35)",
+                whiteSpace:"nowrap",
+                transition:"all 0.2s",
+              }}>
+                View Quests →
+              </Link>
             </div>
           </div>
-          <Link href="/quests" style={{ display:"inline-flex", alignItems:"center", gap:6,
-            background:T.olive, color:"#0e1108", fontFamily:"'DM Sans',sans-serif",
-            fontSize:12, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
-            padding:"10px 20px", borderRadius:8, textDecoration:"none", flexShrink:0,
-            transition:"background 0.2s", whiteSpace:"nowrap" }}>
-            View Quests →
-          </Link>
         </div>
 
         {/* ── MAP PREVIEW ──────────────────────────────────────────────────── */}
