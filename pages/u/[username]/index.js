@@ -691,12 +691,51 @@ export default function ProfilePage() {
               <div>
                 <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.16em",textTransform:"uppercase",color:T.muted,marginBottom:10}}>Recent Score Activity</div>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {scoreEvents.map((e,i)=>(
-                    <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"8px 12px",borderRadius:8,background:T.bg3,border:`1px solid ${T.border}`}}>
-                      <span style={{fontSize:11,color:T.muted}}>{e.description}</span>
-                      <span style={{fontSize:12,fontWeight:700,color:T.olive,fontFamily:"'Cormorant Garamond',Georgia,serif",whiteSpace:"nowrap"}}>+{e.points}</span>
-                    </div>
-                  ))}
+                  {scoreEvents.map((e,i)=>{
+                    // Map event_type to a readable label + icon
+                    // Falls back to description if set, then event_type itself
+                    const EVENT_LABELS = {
+                      daily_proof:           { label:"Daily Proof",              icon:"🌿" },
+                      streak_milestone:      { label:"Streak Milestone",         icon:"🏆" },
+                      badge:                 { label:"Badge Earned",             icon:"🎖" },
+                      referral:              { label:"Referral Bonus",           icon:"🤝" },
+                      referral_converted:    { label:"Referral Converted",       icon:"🤝" },
+                      ecosystem:             { label:"Ecosystem Bonus",          icon:"🪙" },
+                      lucky_touch_common:    { label:"Lucky Touch — Common",     icon:"🍀" },
+                      lucky_touch_rare:      { label:"Lucky Touch — Rare",       icon:"✨" },
+                      lucky_touch_legendary: { label:"Lucky Touch — Legendary",  icon:"👑" },
+                      challenge_win:         { label:"Challenge Win",            icon:"⚡" },
+                      challenge_complete:    { label:"Challenge Complete",       icon:"🏅" },
+                      spotlight_win:         { label:"Community Spotlight",      icon:"🔦" },
+                      field_guide_entry:     { label:"Field Guide Entry",        icon:"📖" },
+                      field_guide_complete:  { label:"Field Guide Collection",   icon:"📖" },
+                      quest_complete:        { label:"Quest Complete",           icon:"⭐" },
+                      fight_club:            { label:"Grass Jab Submission",     icon:"🥊" },
+                      milestone_7:           { label:"Day 7 — Rooted",           icon:"🌱" },
+                      milestone_14:          { label:"Day 14 — Locked In",       icon:"💧" },
+                      milestone_30:          { label:"Day 30 — Elite",           icon:"🌲" },
+                      milestone_50:          { label:"Day 50 — Legendary",       icon:"🌅" },
+                      milestone_100:         { label:"Day 100 — Immortal",       icon:"💯" },
+                      milestone_180:         { label:"Day 180 — Mythic",         icon:"⚡" },
+                      milestone_365:         { label:"Day 365 — Eternal",        icon:"👑" },
+                    };
+                    const meta = EVENT_LABELS[e.event_type] ?? { label: e.description || e.event_type?.replace(/_/g," ") || "Bonus", icon:"⚡" };
+                    const timeAgo = e.created_at ? (() => {
+                      const diff = Date.now() - new Date(e.created_at);
+                      const d = Math.floor(diff/86400000), h = Math.floor(diff/3600000), m = Math.floor(diff/60000);
+                      return d>0?`${d}d ago`:h>0?`${h}h ago`:m>0?`${m}m ago`:"just now";
+                    })() : "";
+                    return (
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:8,background:T.bg3,border:`1px solid ${T.border}`}}>
+                        <span style={{fontSize:16,flexShrink:0}}>{meta.icon}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:12,color:T.white,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{meta.label}</div>
+                          {timeAgo && <div style={{fontSize:9,color:T.muted,marginTop:1}}>{timeAgo}</div>}
+                        </div>
+                        <span style={{fontSize:13,fontWeight:700,color:T.olive,fontFamily:"'Cormorant Garamond',Georgia,serif",whiteSpace:"nowrap",flexShrink:0}}>+{e.points}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
