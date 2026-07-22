@@ -31,24 +31,25 @@ function computePreviewStreak(row, shieldCount = 0) {
   // No submission date = brand new user, starts at day 1
   if (!row?.last_submission_date) return 1;
 
-  const today     = toLocalDateStr(new Date());
-  const yesterday = toLocalDateStr(new Date(Date.now() - 86400000));
-  const twoDaysAgo = toLocalDateStr(new Date(Date.now() - 2 * 86400000));
+  // Use UTC dates to match the RPC which uses CURRENT_DATE (UTC).
+  // Day boundary is midnight UTC — same as the backend.
+  const todayUTC     = new Date().toISOString().slice(0, 10);
+  const yesterdayUTC = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const twoDaysAgoUTC = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
 
-  // Slice directly — never pass date-only strings through new Date() (UTC shift bug)
+  // Slice directly from the raw string — never construct via new Date(dateStr)
   const lastDateStr = String(row.last_submission_date).slice(0, 10);
 
-  // Already submitted today — show current streak as-is
-  if (lastDateStr === today)      return row.current_streak;
+  // Already submitted today (UTC) — show current streak as-is
+  if (lastDateStr === todayUTC)      return row.current_streak;
 
-  // Submitted yesterday — streak continues, show incremented value
-  if (lastDateStr === yesterday)  return row.current_streak + 1;
+  // Submitted yesterday (UTC) — streak continues, show incremented value
+  if (lastDateStr === yesterdayUTC)  return row.current_streak + 1;
 
   // Missed exactly one day — shield will auto-apply, show continued streak
-  if (lastDateStr === twoDaysAgo && shieldCount > 0) return row.current_streak + 1;
+  if (lastDateStr === twoDaysAgoUTC && shieldCount > 0) return row.current_streak + 1;
 
   // Missed one day with no shield, or missed 2+ days — streak is broken
-  // Show 1 so the card reflects what the backend will actually set
   return 1;
 }
 function getStreakTier(n) {
@@ -883,7 +884,7 @@ export default function Home() {
         const rankCount = rankIdx >= 0 ? rankIdx : (allStreaksForRank?.length ?? 1) - 1;
 
         const lastDate = streakRow?.last_submission_date
-          ? new Date(streakRow.last_submission_date).toISOString().slice(0, 10)
+          ? String(streakRow.last_submission_date).slice(0, 10)
           : null;
 
         // ── CHANGE 1: Read shield count from UserConsumables ─────────────
@@ -909,13 +910,12 @@ export default function Home() {
         const displayVal = computePreviewStreak(streakRow, shieldCount);
         const missedOne  = lastDate === twoDaysAgo;
 
-        // Use direct string slice — never pass date-only strings through new Date()
-        // as that parses as UTC midnight and shifts date back for negative UTC offsets.
-        const todayLocal     = toLocalDateStr(new Date());
-        const yesterdayLocal = toLocalDateStr(new Date(Date.now() - 86400000));
-        const lastDateStr    = lastDate ? String(lastDate).slice(0, 10) : null;
-        const postedToday    = lastDateStr === todayLocal;
-        const postedYesterday = lastDateStr === yesterdayLocal;
+        // Use UTC dates to match the RPC (CURRENT_DATE is UTC in Postgres)
+        const todayUTC     = new Date().toISOString().slice(0, 10);
+        const yesterdayUTC = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        const lastDateStr  = lastDate ? String(lastDate).slice(0, 10) : null;
+        const postedToday    = lastDateStr === todayUTC;
+        const postedYesterday = lastDateStr === yesterdayUTC;
 
         if (!lastDate)           setStreakStatus("start your streak today"),                    setStreakTone("neutral");
         else if (postedToday)    setStreakStatus("streak locked in for today ✓"),               setStreakTone("success");
