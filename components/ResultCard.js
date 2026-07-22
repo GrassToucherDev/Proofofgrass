@@ -675,8 +675,10 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
   const [tweetUrl, setTweetUrl] = useState("");
   const [submitStatus, setSubmitStatus] = useState(null);
   // ── Style picker modal ────────────────────────────────────────────────────
-  const [showStylePicker, setShowStylePicker] = useState(false);
-  const [shareStyle, setShareStyle]           = useState(() => {
+  const [showStylePicker,  setShowStylePicker]  = useState(false);
+  const [showAndroidFlow,  setShowAndroidFlow]  = useState(false);
+  const [androidCaption,   setAndroidCaption]   = useState("");
+  const [shareStyle, setShareStyle]             = useState(() => {
     if (typeof localStorage !== "undefined") {
       return localStorage.getItem("pog_preferred_share_style") || "outdoor_photo";
     }
@@ -1641,32 +1643,57 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
                 </button>
                 <button
                   onClick={() => {
-                    // CRITICAL: no await before navigator.share — Android drops
-                    // files if the gesture chain is broken by any async work.
-                    // Files are pre-built in refs so this is fully synchronous.
                     setShowStylePicker(false);
                     const text = buildShareText();
-                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
-                    const canShareFiles = !isInAppBrowser && isMobile
-                      && typeof navigator.share === "function"
-                      && typeof navigator.canShare === "function";
-                    // Grab pre-built file synchronously from ref
+                    const isAndroid = /Android/i.test(navigator.userAgent ?? "");
+                    const isIOS     = /iPhone|iPad|iPod/i.test(navigator.userAgent ?? "");
                     const file = shareStyle === "outdoor_photo"
                       ? outdoorFileRef.current
                       : sharableFileRef.current;
-                    if (canShareFiles && file && navigator.canShare({ files:[file] })) {
-                      setShareHint(true);
-                      navigator.share({ files:[file], text })
-                        .then(() => { setShared(true); setShareHint(false); })
-                        .catch(err => {
-                          setShareHint(false);
-                          if (err?.name !== "AbortError") {
-                            navigator.clipboard.writeText(text).catch(()=>{});
-                            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-                            setShared(true);
-                          }
-                        });
+
+                    if (isAndroid) {
+                      // ── Android: download-first flow ───────────────────────
+                      // Web Share API unreliable for files on Android.
+                      // Save image to camera roll, copy caption, show Open X button.
+                      try {
+                        if (file) {
+                          const url = URL.createObjectURL(file);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = file.name;
+                          a.click();
+                          setTimeout(() => URL.revokeObjectURL(url), 5000);
+                        }
+                      } catch(e) {}
+                      try { navigator.clipboard.writeText(text); } catch(e) {}
+                      setAndroidCaption(text);
+                      setShowAndroidFlow(true);
+
+                    } else if (isIOS) {
+                      // ── iOS: native share sheet works reliably ─────────────
+                      const canShare = !isInAppBrowser
+                        && typeof navigator.share === "function"
+                        && typeof navigator.canShare === "function";
+                      if (canShare && file && navigator.canShare({ files:[file] })) {
+                        setShareHint(true);
+                        navigator.share({ files:[file], text })
+                          .then(() => { setShared(true); setShareHint(false); })
+                          .catch(err => {
+                            setShareHint(false);
+                            if (err?.name !== "AbortError") {
+                              navigator.clipboard.writeText(text).catch(()=>{});
+                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                              setShared(true);
+                            }
+                          });
+                      } else {
+                        navigator.clipboard.writeText(text).catch(()=>{});
+                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                        setShared(true);
+                      }
+
                     } else {
+                      // ── Desktop: clipboard + X compose ────────────────────
                       navigator.clipboard.writeText(text).catch(()=>{});
                       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
                       setShared(true);
@@ -1683,6 +1710,70 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
       })()}
 
 
+
+      {/* ── ANDROID FLOW MODAL ──────────────────────────────────────── */}
+      {showAndroidFlow && (
+        <>
+          <div onClick={() => setShowAndroidFlow(false)}
+            style={{position:"fixed",inset:0,zIndex:997,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(3px)"}} />
+          <div style={{
+            position:"fixed",left:0,right:0,bottom:0,zIndex:998,
+            background:"#0e100b",borderTop:"1px solid rgba(255,255,255,0.1)",
+            borderRadius:"20px 20px 0 0",
+            padding:"24px 20px clamp(24px,env(safe-area-inset-bottom,24px)+24px,48px)",
+          }}>
+            {/* Handle */}
+            <div style={{width:40,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"0 auto 20px"}} />
+
+            {/* Header */}
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+              <div style={{width:42,height:42,borderRadius:12,flexShrink:0,background:"rgba(147,168,90,0.15)",border:"1px solid rgba(147,168,90,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
+                ✓
+              </div>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:"#f0efea",marginBottom:2}}>Image Saved · Caption Copied</div>
+                <div style={{fontSize:11,color:"rgba(240,239,234,0.5)"}}>Now open X and attach the image to your post.</div>
+              </div>
+            </div>
+
+            {/* Steps */}
+            {[
+              "Open X using the button below",
+              "Tap the image icon and attach the saved image",
+              "Paste the caption (already copied)",
+              "Post — then return here to lock in your streak",
+            ].map((step, i) => (
+              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:10}}>
+                <div style={{width:22,height:22,borderRadius:"50%",flexShrink:0,background:"rgba(147,168,90,0.12)",border:"1px solid rgba(147,168,90,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:"#93a85a"}}>
+                  {i+1}
+                </div>
+                <div style={{fontSize:12,color:"rgba(240,239,234,0.65)",paddingTop:3,lineHeight:1.5}}>{step}</div>
+              </div>
+            ))}
+
+            {/* Open X button */}
+            <a href="https://x.com/compose/post" target="_blank" rel="noopener noreferrer"
+              onClick={() => { setShowAndroidFlow(false); setShared(true); }}
+              style={{
+                display:"block",textAlign:"center",
+                padding:"15px",marginTop:16,borderRadius:10,
+                background:"linear-gradient(135deg,#93a85a,#7a9148)",
+                color:"#080a06",fontSize:15,fontWeight:800,
+                textDecoration:"none",letterSpacing:"0.06em",
+                boxShadow:"0 4px 20px rgba(147,168,90,0.35)",
+              }}>
+              Open X →
+            </a>
+
+            {/* Copy caption again */}
+            <button
+              onClick={() => { try { navigator.clipboard.writeText(androidCaption); } catch {} }}
+              style={{width:"100%",marginTop:8,padding:"10px",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"rgba(240,239,234,0.45)",fontSize:11,cursor:"pointer"}}>
+              Copy Caption Again
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Share to Instagram — uses feed format, no streak lock */}
       {downloadUrl && !inAppBrowserMode && (
