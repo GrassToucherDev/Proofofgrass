@@ -1,12 +1,24 @@
 import { Html, Head, Main, NextScript } from "next/document";
-
 export default function Document() {
   return (
     <Html lang="en">
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <title>Touch Grass | Proof of Grass</title>
+        <meta name="description" content="Official Touch Grass application for outdoor verification, streak tracking, wallet integration, and ecosystem rewards." />
+        <meta name="application-name" content="Proof of Grass" />
+        <meta name="generator" content="Touch Grass" />
+        <meta property="og:title" content="Touch Grass | Proof of Grass" />
+        <meta property="og:description" content="Official Touch Grass application for outdoor verification, streak tracking, wallet integration, and ecosystem rewards." />
+        <meta property="og:site_name" content="Proof of Grass" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Touch Grass | Proof of Grass" />
+        <meta name="twitter:description" content="Official Touch Grass application for outdoor verification, streak tracking, wallet integration, and ecosystem rewards." />
+        <meta name="twitter:site" content="@XTouchGrass" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#080a06" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Proof of Grass" />

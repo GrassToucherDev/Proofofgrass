@@ -900,6 +900,12 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
     try { localStorage.setItem("pog_preferred_share_style", style); } catch {}
   };
 
+  // ── handleShareAndSubmit — opens style picker, which executes share ─────────
+  const handleShareAndSubmit = useCallback(() => {
+    if (isInAppBrowser) { setInAppBrowserMode(true); lockInStreak(); return; }
+    setShowStylePicker(true);
+  }, [isInAppBrowser, lockInStreak]);
+
   const handleShareAndPost = handleShareAndSubmit;
 
   const handleSubmit = useCallback(async () => {
