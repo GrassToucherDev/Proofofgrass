@@ -636,7 +636,8 @@ async function checkAndAwardReferralBadge(referrerUsername) {
 export default function ResultCard({ imageSrc, proofFile = null, username, initialStreak = 1, onStreakUpdate, hasPremiumProofs = false }) {
   const canvasRef = useRef(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
-  const sharableFileRef = useRef(null);
+  const sharableFileRef   = useRef(null); // result card file
+  const outdoorFileRef    = useRef(null); // outdoor photo file
   const [caption, setCaption] = useState(() => pickCaption(initialStreak, null));
   const [copied, setCopied] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(initialStreak);
@@ -649,6 +650,27 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
     setCurrentStreak(initialStreak);
     setCaption((prev) => pickCaption(initialStreak, prev));
   }, [initialStreak]);
+
+  // ── Pre-build outdoor photo file so Android share is synchronous ──────────
+  useEffect(() => {
+    outdoorFileRef.current = null;
+    if (!proofFile) return;
+    if (proofFile instanceof File) {
+      outdoorFileRef.current = new File([proofFile], "proof-of-grass-outdoor.png", {
+        type: proofFile.type || "image/png",
+      });
+      return;
+    }
+    // proofFile is a blob URL — fetch and cache
+    if (typeof imageSrc === "string" && imageSrc.startsWith("blob:")) {
+      fetch(imageSrc)
+        .then(r => r.blob())
+        .then(blob => {
+          outdoorFileRef.current = new File([blob], "proof-of-grass-outdoor.png", { type: "image/png" });
+        })
+        .catch(() => {});
+    }
+  }, [proofFile, imageSrc]);
 
   const [tweetUrl, setTweetUrl] = useState("");
   const [submitStatus, setSubmitStatus] = useState(null);
@@ -929,22 +951,12 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
     const isMob = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     try { await navigator.clipboard.writeText(igCaption); setIgCopied(true); setTimeout(() => setIgCopied(false), 4000); } catch {}
     if (isMob && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
-      let file = sharableFileRef.current;
-      if (!file && downloadUrl.startsWith("data:")) {
-        try {
-          const res = await fetch(downloadUrl);
-          const blob = await res.blob();
-          file = new File([blob], "proof-of-grass.png", { type: "image/png" });
-          sharableFileRef.current = file;
-        } catch(e) { file = null; }
-      }
+      const file = sharableFileRef.current; // pre-built — no await needed
       if (file && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file] });
-          return;
-        } catch(e) {
-          if (e?.name === "AbortError") return;
-        }
+        navigator.share({ files: [file] })
+          .then(() => {})
+          .catch(e => { if (e?.name !== "AbortError") { const l=document.createElement("a"); l.href=downloadUrl; l.download="proof-of-grass.png"; l.click(); } });
+        return;
       }
       const link = document.createElement("a");
       link.download = "proof-of-grass.png"; link.href = downloadUrl; link.click();
@@ -971,15 +983,11 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
     try { await navigator.clipboard.writeText(text); } catch {}
     if (isMobile && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
       try {
-        let file = sharableFileRef.current;
-        if (!file && dataUrl.startsWith("data:")) {
-          const res = await fetch(dataUrl);
-          const blob = await res.blob();
-          file = new File([blob], filename, { type:"image/png" });
-        }
+        const file = sharableFileRef.current; // pre-built — no await needed
         if (file && navigator.canShare({ files:[file] })) {
-          await navigator.share({ files:[file] });
-          if (platform.startsWith("ig")) { setIgCopied(true); setTimeout(() => setIgCopied(false), 4000); }
+          navigator.share({ files:[file] })
+            .then(() => { if (platform.startsWith("ig")) { setIgCopied(true); setTimeout(() => setIgCopied(false), 4000); } })
+            .catch(e => { if (e?.name !== "AbortError") { const a=document.createElement("a"); a.href=dataUrl; a.download=filename; a.click(); } });
         } else { const a=document.createElement("a"); a.href=dataUrl; a.download=filename; a.click(); }
       } catch(e) { if (e?.name !== "AbortError") { const a=document.createElement("a"); a.href=dataUrl; a.download=filename; a.click(); } }
     } else {
@@ -1632,7 +1640,38 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
                   Cancel
                 </button>
                 <button
-                  onClick={async () => { setShowStylePicker(false); const text = buildShareText(); const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? ""); const canShareFiles = !isInAppBrowser && isMobile && typeof navigator.share === "function" && typeof navigator.canShare === "function"; const file = await buildShareFile(shareStyle); if (canShareFiles && file && navigator.canShare({ files:[file] })) { setShareHint(true); try { await navigator.share({ files:[file], text }); setShared(true); setShareHint(false); } catch(err) { setShareHint(false); if(err?.name !== "AbortError") { navigator.clipboard.writeText(text).catch(()=>{}); window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank"); setShared(true); } } } else { navigator.clipboard.writeText(text).catch(()=>{}); window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank"); setShared(true); } }}
+                  onClick={() => {
+                    // CRITICAL: no await before navigator.share — Android drops
+                    // files if the gesture chain is broken by any async work.
+                    // Files are pre-built in refs so this is fully synchronous.
+                    setShowStylePicker(false);
+                    const text = buildShareText();
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
+                    const canShareFiles = !isInAppBrowser && isMobile
+                      && typeof navigator.share === "function"
+                      && typeof navigator.canShare === "function";
+                    // Grab pre-built file synchronously from ref
+                    const file = shareStyle === "outdoor_photo"
+                      ? outdoorFileRef.current
+                      : sharableFileRef.current;
+                    if (canShareFiles && file && navigator.canShare({ files:[file] })) {
+                      setShareHint(true);
+                      navigator.share({ files:[file], text })
+                        .then(() => { setShared(true); setShareHint(false); })
+                        .catch(err => {
+                          setShareHint(false);
+                          if (err?.name !== "AbortError") {
+                            navigator.clipboard.writeText(text).catch(()=>{});
+                            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                            setShared(true);
+                          }
+                        });
+                    } else {
+                      navigator.clipboard.writeText(text).catch(()=>{});
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                      setShared(true);
+                    }
+                  }}
                   aria-label="Continue to X"
                   style={{flex:1,padding:"13px",borderRadius:8,border:"none",background:"#93a85a",color:"#0e1108",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:"0.08em"}}>
                   Continue to X →
