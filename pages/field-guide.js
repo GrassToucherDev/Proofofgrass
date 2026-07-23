@@ -220,8 +220,8 @@ function UploadModal({ collection, slotNumber, existingLabels, username, onClose
         .from("FieldGuideEntries")
         .select("id")
         .eq("username", username)
-        .gte("created_at", `${todayUTC}T00:00:00.000Z`)
-        .lt("created_at",  `${todayUTC}T23:59:59.999Z`)
+        .gte("submitted_at", `${todayUTC}T00:00:00.000Z`)
+        .lt("submitted_at",  `${todayUTC}T23:59:59.999Z`)
         .limit(1);
 
       if (todayEntries && todayEntries.length > 0) {
