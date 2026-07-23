@@ -1261,7 +1261,7 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
 
       {downloadUrl && (
         <a href={downloadUrl} download="proof-of-grass.png"
-          
+          onClick={() => { if (submitStatus !== "success") setShared(true); }}
           style={{display:"inline-flex",alignItems:"center",gap:10,padding:"12px 32px",fontFamily:"monospace",fontSize:13,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",color:"#0e1108",background:"#93a85a",borderRadius:3,textDecoration:"none",boxShadow:"0 0 20px rgba(147,168,90,0.3)"}}>
           ↓ Download Certificate
         </a>
@@ -1328,7 +1328,7 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
           <div style={{fontSize:22}}>✓</div>
           <div style={{fontWeight:700,color:"#93a85a",fontSize:13,letterSpacing:"0.06em"}}>STREAK LOCKED IN</div>
           <div style={{fontSize:11,color:"rgba(240,239,234,0.5)",lineHeight:1.7}}>Your streak is saved. Open in Safari to share with image.</div>
-          {downloadUrl && <a href={downloadUrl} download="proof-of-grass.png" style={{display:"inline-flex",alignItems:"center",gap:7,background:"#93a85a",color:"#080a06",borderRadius:8,padding:"10px 20px",fontSize:12,fontWeight:700,textDecoration:"none"}}>↓ Save Card to Photos</a>}
+          {downloadUrl && <a href={downloadUrl} download="proof-of-grass.png" onClick={() => { if (submitStatus !== "success") setShared(true); }} style={{display:"inline-flex",alignItems:"center",gap:7,background:"#93a85a",color:"#080a06",borderRadius:8,padding:"10px 20px",fontSize:12,fontWeight:700,textDecoration:"none"}}>↓ Save Card to Photos</a>}
         </div>
       )}
 
