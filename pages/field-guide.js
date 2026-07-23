@@ -214,6 +214,22 @@ function UploadModal({ collection, slotNumber, existingLabels, username, onClose
     setErrMsg("");
 
     try {
+      // ── One submission per day (UTC) ──────────────────────────────────────
+      const todayUTC = new Date().toISOString().slice(0, 10);
+      const { data: todayEntries } = await supabase
+        .from("FieldGuideEntries")
+        .select("id")
+        .eq("username", username)
+        .gte("created_at", `${todayUTC}T00:00:00.000Z`)
+        .lt("created_at",  `${todayUTC}T23:59:59.999Z`)
+        .limit(1);
+
+      if (todayEntries && todayEntries.length > 0) {
+        setStatus("error");
+        setErrMsg("You've already submitted a Field Guide entry today. Come back tomorrow.");
+        return;
+      }
+
       // Convert to base64 for Claude Vision
       const base64 = await fileToBase64(file);
 
