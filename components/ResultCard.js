@@ -813,6 +813,26 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
 
       if (rpcError) {
         console.error("lock_in_streak RPC error", rpcError);
+        // Before showing an error, check if the submission landed anyway
+        // (can happen when RPC times out but still executed)
+        try {
+          const todayUTC = new Date().toISOString().slice(0, 10);
+          const { data: streakCheck } = await supabase
+            .from("Streaks")
+            .select("current_streak, last_submission_date")
+            .ilike("username", username)
+            .maybeSingle();
+          if (streakCheck?.last_submission_date &&
+              String(streakCheck.last_submission_date).slice(0, 10) === todayUTC) {
+            // Submission went through despite the error
+            setCurrentStreak(streakCheck.current_streak ?? currentStreak);
+            onStreakUpdate?.(streakCheck.current_streak ?? currentStreak);
+            setSubmitStatus("success");
+            return;
+          }
+        } catch(checkErr) {
+          console.warn("streak check failed", checkErr);
+        }
         setSubmitError("Streak log failed — tap again.");
         setSubmitStatus("error");
         return;

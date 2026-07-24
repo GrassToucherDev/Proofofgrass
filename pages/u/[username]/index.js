@@ -316,6 +316,7 @@ export default function ProfilePage() {
   const [activeChallenges, setActiveChallenges] = useState([]);
   const [globalRank,     setGlobalRank]     = useState(null);
   const [scoreEvents,    setScoreEvents]    = useState([]);
+  const [inventory,      setInventory]      = useState([]);
   const [scoreBreakdown, setScoreBreakdown] = useState({ daily_proof:0, streak_milestone:0, badge:0, referral:0, ecosystem:0 });
   const [spotlightData,  setSpotlightData]  = useState({ count:0, latest:null, badgeCounts:{} });
   const [explorerData,   setExplorerData]   = useState({ locationsCount:0, citiesCount:0, countriesCount:0, latestLabel:null });
@@ -331,9 +332,10 @@ export default function ProfilePage() {
     if (!username) return;
     (async()=>{
       setLoading(true);
-      const [{data:sr},{data:pr},{count:subs}] = await Promise.all([
+      const [{data:sr},{data:pr},{data:invRaw},{count:subs}] = await Promise.all([
         supabase.from("Streaks").select("current_streak,best_streak,last_submission_date,shield_count").eq("username",username).maybeSingle(),
         supabase.from("Profiles").select("bio,location,avatar_emoji,avatar_url,avatar_frame,joined_at,wallet_verified,has_touchgrass_holder,has_grass_toucher,has_screen_toucher,referral_count_successful,referral_count_pending,referral_badge,grass_score,active_cover_id,unlocked_covers,lucky_touch_count").eq("username",username).maybeSingle(),
+        supabase.from("UserInventory").select("item_id,owned,equipped,purchased_at").eq("username",username).eq("owned",true),
         supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username).in("status",["pending","approved"]),
       ]);
       const { data: challengeRows } = await supabase
@@ -342,6 +344,7 @@ export default function ProfilePage() {
         .in("status", ["pending","active"])
         .order("created_at", { ascending: false }).limit(5);
       setActiveChallenges(challengeRows ?? []);
+      setInventory(invRaw ?? []);
 
       const [{data:allStreaks},{data:recentSubs},{data:impactRows},{data:chalRows},{data:referralRows},{data:scoreEventRows},{data:allScores},{data:spotlightWins},{data:locationRows},{data:fightStatsRow}] = await Promise.all([
         supabase.from("Streaks").select("username,current_streak").order("current_streak",{ascending:false}),
@@ -1224,6 +1227,47 @@ export default function ProfilePage() {
           }}
           onRemovePhoto={async()=>{ await supabase.from("Profiles").update({avatar_url:null,avatar_frame:null,avatar_emoji:"🌿"}).eq("username",username); window.location.reload(); }}
         />
+      )}
+
+      {/* ── MY COLLECTION ───────────────────────────────────────────────── */}
+      {inventory.length > 0 && (
+        <div style={{marginTop:20,padding:"16px",background:T.bg2,border:`1px solid ${T.border}`,borderRadius:14}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.16em",textTransform:"uppercase",color:T.muted}}>
+              My Collection
+            </div>
+            <Link href="/marketplace" style={{fontSize:10,color:T.olive,textDecoration:"none",letterSpacing:"0.08em"}}>
+              Marketplace →
+            </Link>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {inventory.map((inv,i) => {
+              const ITEM_META = {
+                retro_vibes_pack: { name:"Retro Vibes Pack", emoji:"🎮", desc:"4 premium proof styles" },
+              };
+              const meta = ITEM_META[inv.item_id] ?? { name:inv.item_id, emoji:"🎁", desc:"Marketplace item" };
+              return (
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
+                  background:T.bg3,border:`1px solid ${T.border}`,borderRadius:9}}>
+                  <div style={{width:34,height:34,borderRadius:8,flexShrink:0,
+                    background:"rgba(200,168,75,0.12)",border:"1px solid rgba(200,168,75,0.25)",
+                    display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>
+                    {meta.emoji}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:T.white}}>{meta.name}</div>
+                    <div style={{fontSize:9,color:T.dim}}>{meta.desc}</div>
+                  </div>
+                  <div style={{fontSize:9,fontWeight:700,color:T.olive,
+                    background:"rgba(147,168,90,0.12)",border:"1px solid rgba(147,168,90,0.2)",
+                    borderRadius:20,padding:"2px 9px"}}>
+                    Owned ✓
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* CHALLENGE MODAL */}
