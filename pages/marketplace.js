@@ -23,22 +23,6 @@ const SUPABASE_URL = "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object
 
 const CATALOGUE = [
   {
-    id:          "retro_vibes_pack",
-    name:        "Retro Vibes Pack",
-    category:    "premium_proofs",
-    status:      "live",
-    featured:    true,
-    usdPrice:    5.00,
-    description: "A collectible 8-bit inspired proof pack featuring four premium outdoor themes. Applies to your profile card and flex card.",
-    styles: [
-      { id:"enchanted_forest", name:"Enchanted Forest", emoji:"🌲", accent:"rgba(16,185,129,1.0)", bgOverlay:"rgba(0,20,8,0.45)", border:"rgba(16,185,129,0.55)", bracket:"rgba(16,185,129,0.85)", muted:"rgba(16,185,129,0.75)" },
-      { id:"tropical_beach",   name:"Tropical Beach",   emoji:"🏖", accent:"rgba(56,189,248,1.0)", bgOverlay:"rgba(0,15,30,0.40)", border:"rgba(56,189,248,0.55)", bracket:"rgba(56,189,248,0.85)", muted:"rgba(56,189,248,0.75)" },
-      { id:"snowy_summit",     name:"Snowy Summit",     emoji:"🏔", accent:"rgba(226,232,240,1.0)", bgOverlay:"rgba(8,12,20,0.42)", border:"rgba(226,232,240,0.45)", bracket:"rgba(226,232,240,0.75)", muted:"rgba(226,232,240,0.65)" },
-      { id:"camp_stars",       name:"Camp Under the Stars", emoji:"⛺", accent:"rgba(251,191,36,1.0)", bgOverlay:"rgba(8,6,0,0.48)", border:"rgba(251,191,36,0.50)", bracket:"rgba(251,191,36,0.80)", muted:"rgba(251,191,36,0.70)" },
-    ],
-    tags: ["Enchanted Forest","Tropical Beach","Snowy Summit","Camp Under the Stars"],
-  },
-  {
     id:          "retro_covers_pack",
     name:        "Retro Covers Pack",
     category:    "cosmetics",
@@ -59,7 +43,7 @@ const CATALOGUE = [
 
 const CATEGORIES = [
   { id:"featured",        label:"🏪 Featured",          comingSoon:false },
-  { id:"premium_proofs",  label:"🖼 Premium Proofs",     comingSoon:false },
+  { id:"premium_proofs",  label:"🖼 Premium Proofs",     comingSoon:true  },
   { id:"consumables",     label:"🛡 Consumables",        comingSoon:false },
   { id:"cosmetics",       label:"🎨 Profile Cosmetics",  comingSoon:false },
   { id:"limited",         label:"🎁 Limited Editions",   comingSoon:true  },
