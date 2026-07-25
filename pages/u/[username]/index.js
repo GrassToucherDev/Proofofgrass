@@ -1024,11 +1024,11 @@ export default function ProfilePage() {
                       {isUnlocked&&isCoverUrlReady(cov.imageUrl)?
                         <img src={cov.imageUrl} alt={cov.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",filter:isActive?"none":"brightness(0.85)"}} onError={e=>{e.currentTarget.style.display="none";e.currentTarget.parentElement.style.background=cov.fallback;}}/>
                         :isUnlocked?<div style={{width:"100%",height:"100%",background:cov.fallback,filter:isActive?"none":"brightness(0.85)"}}/>
-                        :<div style={{width:"100%",height:"100%",background:T.bg3,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4}}><span style={{fontSize:22,opacity:0.3}}>🔒</span><span style={{fontSize:7,color:T.dim,letterSpacing:"0.06em",textTransform:"uppercase"}}>Day {cov.unlockDay}</span></div>
+                        :<div style={{width:"100%",height:"100%",background:cov.marketplaceOnly?"rgba(200,168,75,0.04)":T.bg3,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,border:cov.marketplaceOnly?"1px solid rgba(200,168,75,0.15)":"none"}}><span style={{fontSize:22,opacity:0.3}}>{cov.marketplaceOnly?"🏪":"🔒"}</span><span style={{fontSize:7,color:cov.marketplaceOnly?"rgba(200,168,75,0.5)":T.dim,letterSpacing:"0.06em",textTransform:"uppercase"}}>{cov.marketplaceOnly?"Marketplace":"Day "+cov.unlockDay}</span></div>
                       }
                       <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,transparent 40%,rgba(8,10,6,0.9) 100%)",display:"flex",flexDirection:"column",justifyContent:"flex-end",padding:8}}>
                         <div style={{fontSize:11,fontWeight:700,color:T.white,fontFamily:"'Cormorant Garamond',Georgia,serif"}}>{cov.name}</div>
-                        <div style={{fontSize:8,color:isUnlocked?T.olive:T.dim,letterSpacing:"0.06em",textTransform:"uppercase",marginTop:2}}>{isActive?"✦ Equipped":isUnlocked?(isOwner?"Tap to equip":"Unlocked"):`Day ${cov.unlockDay} streak`}</div>
+                        <div style={{fontSize:8,color:isUnlocked?T.olive:cov.marketplaceOnly?"rgba(200,168,75,0.5)":T.dim,letterSpacing:"0.06em",textTransform:"uppercase",marginTop:2}}>{isActive?"✦ Equipped":isUnlocked?(isOwner?"Tap to equip":"Unlocked"):cov.marketplaceOnly?"Buy in Marketplace":`Day ${cov.unlockDay} streak`}</div>
                       </div>
                     </div>
                   );

@@ -19,6 +19,8 @@ const T = {
 
 // ── Marketplace Catalogue ─────────────────────────────────────────────────────
 // Add future items here — no UI changes needed
+const SUPABASE_URL = "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public";
+
 const CATALOGUE = [
   {
     id:          "retro_vibes_pack",
@@ -36,13 +38,30 @@ const CATALOGUE = [
     ],
     tags: ["Enchanted Forest","Tropical Beach","Snowy Summit","Camp Under the Stars"],
   },
+  {
+    id:          "retro_covers_pack",
+    name:        "Retro Covers Pack",
+    category:    "cosmetics",
+    status:      "live",
+    featured:    true,
+    usdPrice:    5.00,
+    description: "Five exclusive retro-themed profile covers for your Proof of Grass profile. Purchasable only — not available through streak milestones.",
+    covers: [
+      { slug:"marketplace_retro_beach",     name:"Retro Beach",     emoji:"🏄", imageUrl:`${SUPABASE_URL}/covers/retro_beach.png`,     fallback:"linear-gradient(135deg,#001a2e,#003d5c,#56bef840)" },
+      { slug:"marketplace_retro_mountain",  name:"Retro Mountain",  emoji:"⛰️",  imageUrl:`${SUPABASE_URL}/covers/retro_mountain.png`,  fallback:"linear-gradient(135deg,#0d0d14,#1a1a2e,#6a6aaa40)" },
+      { slug:"marketplace_retro_sunflower", name:"Retro Sunflower", emoji:"🌻", imageUrl:`${SUPABASE_URL}/covers/retro_sunflower.png`, fallback:"linear-gradient(135deg,#1a1200,#3d2e00,#f5b94240)" },
+      { slug:"marketplace_retro_waterfall", name:"Retro Waterfall", emoji:"💧", imageUrl:`${SUPABASE_URL}/covers/retro_waterfall.png`, fallback:"linear-gradient(135deg,#001a14,#00352a,#34d39940)" },
+      { slug:"marketplace_retro_night",     name:"Retro Night",     emoji:"🌙", imageUrl:`${SUPABASE_URL}/covers/retro_night.png`,     fallback:"linear-gradient(135deg,#04040e,#0a0a1e,#a78bfa40)" },
+    ],
+    tags: ["Retro Beach","Retro Mountain","Retro Sunflower","Retro Waterfall","Retro Night"],
+  },
 ];
 
 const CATEGORIES = [
   { id:"featured",        label:"🏪 Featured",          comingSoon:false },
   { id:"premium_proofs",  label:"🖼 Premium Proofs",     comingSoon:false },
   { id:"consumables",     label:"🛡 Consumables",        comingSoon:false },
-  { id:"cosmetics",       label:"🎨 Profile Cosmetics",  comingSoon:true  },
+  { id:"cosmetics",       label:"🎨 Profile Cosmetics",  comingSoon:false },
   { id:"limited",         label:"🎁 Limited Editions",   comingSoon:true  },
 ];
 
@@ -138,8 +157,42 @@ function ItemCard({ item, tokensFor, owned, onBuy, onPreview, username }) {
         )}
       </div>
 
-      {/* Style swatches as artwork */}
-      {item.styles && (
+      {/* Artwork — covers show images, proof styles show swatches */}
+      {item.covers ? (
+        <div style={{
+          display:"grid", gridTemplateColumns:"1fr 1fr",
+          gap:2, background:T.bg3, minHeight:160, position:"relative",
+          overflow:"hidden", borderRadius:"0",
+        }}>
+          {item.covers.slice(0,4).map((c,i) => (
+            <div key={c.slug} style={{
+              position:"relative", overflow:"hidden",
+              minHeight:80,
+              background:c.fallback,
+            }}>
+              <img src={c.imageUrl} alt={c.name}
+                style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}}
+                onError={e => { e.target.style.display="none"; }} />
+            </div>
+          ))}
+          <div style={{
+            position:"absolute", inset:0,
+            background:"linear-gradient(180deg,transparent 40%,rgba(8,10,6,0.92))",
+            pointerEvents:"none",
+          }} />
+          <div style={{
+            position:"absolute", bottom:12, left:0, right:0, textAlign:"center",
+            fontFamily:"'Cormorant Garamond',Georgia,serif",
+            fontSize:18, fontWeight:700, color:T.white, letterSpacing:"0.04em",
+          }}>{item.name}</div>
+          {item.covers.length > 4 && (
+            <div style={{
+              position:"absolute", bottom:12, right:14,
+              fontSize:10, color:T.muted,
+            }}>+{item.covers.length - 4} more</div>
+          )}
+        </div>
+      ) : item.styles && (
         <div style={{
           display:"grid", gridTemplateColumns:"1fr 1fr",
           gap:0, background:T.bg3, minHeight:160, position:"relative",
@@ -462,8 +515,9 @@ function PurchaseModal({ item, tokens, price, username, onClose, onSuccess }) {
 // ── Preview modal ─────────────────────────────────────────────────────────────
 function PreviewModal({ item, onClose, onBuy }) {
   const [idx, setIdx] = useState(0);
-  const styles = item.styles ?? [];
-  const s = styles[idx];
+  const isCovers = !!item.covers;
+  const items    = isCovers ? item.covers : (item.styles ?? []);
+  const current  = items[idx];
 
   return (
     <>
@@ -471,14 +525,14 @@ function PreviewModal({ item, onClose, onBuy }) {
         style={{position:"fixed",inset:0,zIndex:998,background:"rgba(0,0,0,0.80)",backdropFilter:"blur(4px)"}} />
       <div style={{
         position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",
-        zIndex:999,width:"min(480px,94vw)",
+        zIndex:999,width:"min(480px,94vw)",maxHeight:"90vh",overflowY:"auto",
         background:T.bg2,border:`1px solid ${T.border}`,
         borderRadius:20,padding:"24px",
         boxShadow:"0 24px 80px rgba(0,0,0,0.8)",
       }}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
           <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:20,fontWeight:700,color:T.white}}>
-            Preview Styles
+            {isCovers ? "Preview Covers" : "Preview Styles"}
           </div>
           <button onClick={onClose}
             style={{background:"none",border:`1px solid ${T.border}`,color:T.dim,
@@ -486,32 +540,75 @@ function PreviewModal({ item, onClose, onBuy }) {
         </div>
 
         {/* Big preview area */}
-        <div style={{
-          width:"100%", aspectRatio:"16/9", borderRadius:14, marginBottom:16,
-          background:`linear-gradient(135deg,${s?.bgOverlay ?? "rgba(0,0,0,0.5)"},rgba(0,0,0,0.7))`,
-          border:`2px solid ${s?.border ?? T.border}`,
-          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-          gap:12, position:"relative", overflow:"hidden",
-          boxShadow:`0 0 40px ${s?.accent ?? T.olive}20`,
-        }}>
-          <div style={{fontSize:64}}>{s?.emoji}</div>
+        {isCovers ? (
           <div style={{
-            fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize:22, fontWeight:700, color:s?.accent ?? T.white,
-            letterSpacing:"0.04em", textShadow:"0 2px 12px rgba(0,0,0,0.8)",
-          }}>{s?.name}</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Proof of Grass · Profile Style</div>
-        </div>
+            width:"100%",aspectRatio:"16/9",borderRadius:14,marginBottom:16,
+            position:"relative",overflow:"hidden",
+            background:current?.fallback ?? T.bg3,
+            border:`1px solid ${T.borderGold}`,
+            boxShadow:"0 0 32px rgba(200,168,75,0.15)",
+          }}>
+            <img src={current?.imageUrl} alt={current?.name}
+              style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}}
+              onError={e => { e.target.style.display="none"; }} />
+            <div style={{
+              position:"absolute",inset:0,
+              background:"linear-gradient(180deg,transparent 50%,rgba(8,10,6,0.85))",
+            }} />
+            <div style={{
+              position:"absolute",bottom:14,left:0,right:0,textAlign:"center",
+              fontFamily:"'Cormorant Garamond',Georgia,serif",
+              fontSize:20,fontWeight:700,color:T.white,letterSpacing:"0.04em",
+              textShadow:"0 2px 12px rgba(0,0,0,0.9)",
+            }}>{current?.name}</div>
+            <div style={{position:"absolute",bottom:0,left:0,right:0,textAlign:"center",
+              fontSize:10,color:"rgba(255,255,255,0.4)",paddingBottom:6}}>
+              Profile Cover Preview
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            width:"100%", aspectRatio:"16/9", borderRadius:14, marginBottom:16,
+            background:`linear-gradient(135deg,${current?.bgOverlay ?? "rgba(0,0,0,0.5)"},rgba(0,0,0,0.7))`,
+            border:`2px solid ${current?.border ?? T.border}`,
+            display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+            gap:12, position:"relative", overflow:"hidden",
+            boxShadow:`0 0 40px ${current?.accent ?? T.olive}20`,
+          }}>
+            <div style={{fontSize:64}}>{current?.emoji}</div>
+            <div style={{
+              fontFamily:"'Cormorant Garamond',Georgia,serif",
+              fontSize:22, fontWeight:700, color:current?.accent ?? T.white,
+              letterSpacing:"0.04em", textShadow:"0 2px 12px rgba(0,0,0,0.8)",
+            }}>{current?.name}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Proof of Grass · Profile Style</div>
+          </div>
+        )}
 
-        {/* Style selector */}
-        <div style={{display:"flex",gap:8,marginBottom:16}}>
-          {styles.map((st,i) => (
-            <StyleSwatch key={st.id} style={st} selected={i===idx} onClick={() => setIdx(i)} />
+        {/* Thumbnail selector */}
+        <div style={{display:"flex",gap:8,marginBottom:16,overflowX:"auto",scrollbarWidth:"none"}}>
+          {items.map((it,i) => (
+            isCovers ? (
+              <button key={it.slug ?? it.id} onClick={() => setIdx(i)}
+                style={{
+                  flexShrink:0,width:72,height:48,borderRadius:8,cursor:"pointer",
+                  border:`2px solid ${i===idx ? T.gold : "rgba(255,255,255,0.1)"}`,
+                  background:it.fallback,overflow:"hidden",position:"relative",padding:0,
+                  boxShadow:i===idx?`0 0 12px rgba(200,168,75,0.4)`:"none",
+                  transition:"all 0.15s",
+                }}>
+                <img src={it.imageUrl} alt={it.name}
+                  style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}}
+                  onError={e => { e.target.style.display="none"; }} />
+              </button>
+            ) : (
+              <StyleSwatch key={it.id} style={it} selected={i===idx} onClick={() => setIdx(i)} />
+            )
           ))}
         </div>
 
         <div style={{fontSize:10,color:T.dim,textAlign:"center",marginBottom:16}}>
-          Preview only · Purchase to apply to your profile
+          Preview only · Purchase to unlock for your profile
         </div>
 
         <button onClick={() => { onClose(); onBuy(item); }}

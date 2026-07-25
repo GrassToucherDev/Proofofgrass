@@ -32,9 +32,21 @@ export default function AdminMarketplace() {
 
   useEffect(() => { if (authed) loadData(); }, [authed]);
 
+  // Cover slugs to unlock per item_id
+  const COVER_UNLOCKS = {
+    retro_covers_pack: [
+      "marketplace_retro_beach",
+      "marketplace_retro_mountain",
+      "marketplace_retro_sunflower",
+      "marketplace_retro_waterfall",
+      "marketplace_retro_night",
+    ],
+  };
+
   const approve = async (row) => {
     // 1. Update purchase status
     await supabase.from("MarketplacePurchases").update({ status:"approved" }).eq("id",row.id);
+
     // 2. Add to UserInventory
     await supabase.from("UserInventory").upsert([{
       username: row.username,
@@ -43,6 +55,26 @@ export default function AdminMarketplace() {
       equipped: false,
       purchased_at: new Date().toISOString(),
     }], { onConflict:"username,item_id" });
+
+    // 3. If this item unlocks profile covers, append slugs to Profiles.unlocked_covers
+    const coverSlugs = COVER_UNLOCKS[row.item_id];
+    if (coverSlugs?.length) {
+      // Fetch current unlocked_covers first
+      const { data: prof } = await supabase
+        .from("Profiles")
+        .select("unlocked_covers")
+        .ilike("username", row.username)
+        .maybeSingle();
+
+      const existing = prof?.unlocked_covers ?? [];
+      const merged   = [...new Set([...existing, ...coverSlugs])];
+
+      await supabase
+        .from("Profiles")
+        .update({ unlocked_covers: merged })
+        .ilike("username", row.username);
+    }
+
     setMsg(`✓ Approved ${row.username} — ${row.item_name}`);
     setTimeout(() => setMsg(""), 3000);
     loadData();
