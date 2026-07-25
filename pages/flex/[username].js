@@ -206,7 +206,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       const scrim = ctx.createLinearGradient(0, 0, W, H);
       scrim.addColorStop(0, "rgba(8,10,6,0.55)"); scrim.addColorStop(0.5, "rgba(14,17,10,0.65)"); scrim.addColorStop(1, "rgba(8,10,6,0.8)");
       ctx.fillStyle = scrim; ctx.fillRect(0, 0, W, H);
-    } catch {}
+    } catch(e) { console.warn("[flex] cover image failed, skipping:", e?.message); }
   }
   const glow = ctx.createRadialGradient(W*0.75, H*0.2, 0, W*0.75, H*0.2, 480);
   glow.addColorStop(0, tier.glow + "30"); glow.addColorStop(1, "transparent");
@@ -222,6 +222,8 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.font="600 30px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.4)"; ctx.fillText("Touch Grass",126,101);
   if (avatarUrl) {
     try {
+      // Some avatar URLs (Twitter CDN, etc.) block cross-origin canvas reads.
+      // If it fails for any reason, skip the avatar — don't crash the card.
       const avatarImg = await loadImage(avatarUrl);
       const aSize=80,aX=72,aY=174;
       ctx.save(); ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.clip();
@@ -229,7 +231,17 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2+2,0,Math.PI*2);
       ctx.strokeStyle=avatarFrame==="crown"?"#c8a84b":avatarFrame==="glow"?"#93a85a":"rgba(147,168,90,0.5)";
       ctx.lineWidth=avatarFrame==="crown"?3:2; ctx.stroke();
-    } catch(e) {}
+    } catch(e) {
+      console.warn("[flex] avatar image failed, skipping:", e?.message);
+      // Draw initials fallback
+      const aSize=80,aX=72,aY=174;
+      ctx.save();
+      ctx.fillStyle="rgba(147,168,90,0.15)"; ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle="rgba(147,168,90,0.4)"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.stroke();
+      ctx.font="700 32px 'Georgia',serif"; ctx.fillStyle="#93a85a"; ctx.textAlign="center";
+      ctx.fillText((username[0]||"?").toUpperCase(), aX+aSize/2, aY+aSize/2+11);
+      ctx.textAlign="left"; ctx.restore();
+    }
   }
   const vbadgeW=210,vbadgeH=30,vbadgeX=72,vbadgeY=132;
   ctx.strokeStyle="rgba(147,168,90,0.45)"; ctx.lineWidth=1; roundRect(ctx,vbadgeX,vbadgeY,vbadgeW,vbadgeH,15); ctx.stroke();
@@ -343,7 +355,12 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.fillText("proofofgrass.app",W-72,H-110); ctx.textAlign="left";
   ctx.font="500 15px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.28)";
   ctx.fillText("BUILT ON ◎ SOLANA  ·  PROOF OF GRASS",72,H-82);
-  return canvas.toDataURL("image/png");
+  try {
+    return canvas.toDataURL("image/png");
+  } catch(e) {
+    // Canvas tainted by cross-origin image (usually the cover)
+    throw new Error("canvas_tainted: " + e.message);
+  }
 }
 
 function roundRect(ctx,x,y,w,h,r){
@@ -362,15 +379,24 @@ function hexPath(ctx,r){
 
 function loadImage(src){
   return new Promise((res,rej)=>{
+    // 8 second timeout — prevents hanging on slow/blocked resources
+    const timer = setTimeout(() => rej(new Error("loadImage timeout: " + src)), 8000);
+    const done = (val) => { clearTimeout(timer); res(val); };
+    const fail = (err) => { clearTimeout(timer); rej(err); };
     const img=new Image(); img.crossOrigin="anonymous";
-    img.onload=()=>res(img);
+    img.onload=()=>done(img);
     img.onerror=()=>{
-      fetch(src).then(r=>r.blob()).then(blob=>{
-        const url=URL.createObjectURL(blob);
-        const img2=new Image();
-        img2.onload=()=>{URL.revokeObjectURL(url);res(img2);};
-        img2.onerror=rej; img2.src=url;
-      }).catch(rej);
+      // Try via fetch blob URL to bypass some CORS restrictions
+      fetch(src,{mode:"cors"})
+        .then(r=>r.blob())
+        .then(blob=>{
+          const url=URL.createObjectURL(blob);
+          const img2=new Image();
+          img2.onload=()=>{URL.revokeObjectURL(url);done(img2);};
+          img2.onerror=()=>{URL.revokeObjectURL(url);fail(new Error("img load failed"));};
+          img2.src=url;
+        })
+        .catch(fail);
     };
     img.src=src;
   });
@@ -464,7 +490,15 @@ export default function FlexCardPage() {
     flexDataUrl.current  = null;
     (async () => {
       try {
-        const dataUrl = await generateShareImage(buildImageParams());
+        let params = buildImageParams();
+        let dataUrl;
+        try {
+          dataUrl = await generateShareImage(params);
+        } catch(e) {
+          // Canvas may be tainted by a cross-origin cover image — retry without cover
+          console.warn("[flex] card gen failed, retrying without cover:", e?.message);
+          dataUrl = await generateShareImage({ ...params, coverUrl: null });
+        }
         if (cancelled) return;
         flexDataUrl.current = dataUrl;
         const res  = await fetch(dataUrl);
@@ -477,7 +511,7 @@ export default function FlexCardPage() {
         );
         setCardReady(true);
       } catch(e) {
-        console.warn("pre-build failed", e);
+        console.warn("[flex] pre-build failed:", e?.message);
         setCardReady(false);
       }
     })();
