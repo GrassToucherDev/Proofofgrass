@@ -454,6 +454,36 @@ export default function FlexCardPage() {
     {label:"500 Day — Ascended",target:500,icon:"🌌",done:streak>=500,date:`${streak}/500` },
   ].filter((m,i)=>i<4||streak>=m.target-20||(i===4&&streak>=80));
 
+  // Pre-build the share file as soon as card data is loaded
+  // so the tap → navigator.share() call is fully synchronous
+  useEffect(() => {
+    if (loading || !username || streak === 0) return;
+    let cancelled = false;
+    setCardReady(false);
+    flexFileRef.current  = null;
+    flexDataUrl.current  = null;
+    (async () => {
+      try {
+        const dataUrl = await generateShareImage(buildImageParams());
+        if (cancelled) return;
+        flexDataUrl.current = dataUrl;
+        const res  = await fetch(dataUrl);
+        const blob = await res.blob();
+        if (cancelled) return;
+        flexFileRef.current = new File(
+          [blob],
+          `proof-of-grass-${username}-day${streak}.png`,
+          { type: "image/png" }
+        );
+        setCardReady(true);
+      } catch(e) {
+        console.warn("pre-build failed", e);
+        setCardReady(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [loading, username, streak]);
+
   const isOwner = !!(viewer && viewer === username);
   const shareUrl = typeof window !== "undefined" ? window.location.href : `https://proofofgrass.app/u/${username}/flex`;
   const copyLink = () => { navigator.clipboard.writeText(shareUrl).catch(()=>{}); setCopied(true); setTimeout(()=>setCopied(false),1800); };
@@ -483,80 +513,42 @@ export default function FlexCardPage() {
     setGeneratingImg(false);
   }, [buildImageParams, username, streak]);
 
-  const flexToX = useCallback(async () => {
-    if (generatingImg) return;
+  // flexToX — fully synchronous tap handler.
+  // Image is pre-built in useEffect above so there is ZERO async work
+  // between the button tap and navigator.share() — iOS requires this.
+  const flexToX = useCallback(() => {
     const text = `Day ${streak} — ${tier.label} 🌿\n\nBuilding my outdoor legacy daily on @XTouchGrass\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/flex/${username}`;
     const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
-    const canNativeShare = isMob && !!(navigator.share && navigator.canShare);
+    const canNativeShare = isMob
+      && typeof navigator.share === "function"
+      && typeof navigator.canShare === "function";
 
-    // CRITICAL: window.open() must be called synchronously before any await on desktop
-    let sharedWin = null;
-    if (!canNativeShare) {
-      sharedWin = window.open("", "_blank");
-      if (sharedWin) {
-        sharedWin.document.write(`<html><body style="margin:0;background:#0a0b08;display:flex;align-items:center;justify-content:center;height:100vh"><p style="color:#93a85a;font-family:sans-serif;font-size:16px;text-align:center">Generating your card…</p></body></html>`);
-      }
+    const file    = flexFileRef.current;
+    const dataUrl = flexDataUrl.current;
+
+    if (canNativeShare && file && navigator.canShare({ files:[file] })) {
+      // iOS / Android — synchronous call, no awaits before this
+      navigator.share({ files:[file], title:`Day ${streak} — ${tier.label} 🌿`, text })
+        .then(() => {
+          try { localStorage.setItem("pog_flexed_week", new Date().toISOString()); } catch(e) {}
+        })
+        .catch(e => {
+          if (e?.name === "AbortError") return;
+          // Share failed — download as fallback
+          if (dataUrl) { const a=document.createElement("a"); a.href=dataUrl; a.download=file.name; a.click(); }
+        });
+      return;
     }
 
-    setGeneratingImg(true);
-    try {
-      const dataUrl = await generateShareImage(buildImageParams());
-
-      if (canNativeShare) {
-        // Pre-build the File object — needed before calling navigator.share()
-        // We must still await fetch here, but then call share() without awaiting it
-        // so the gesture chain is preserved from the button tap perspective
-        let flexFile = null;
-        try {
-          const res  = await fetch(dataUrl);
-          const blob = await res.blob();
-          flexFile = new File([blob], `proof-of-grass-${username}-day${streak}.png`, { type:"image/png" });
-        } catch(e) { flexFile = null; }
-
-        if (flexFile && navigator.canShare({ files:[flexFile] })) {
-          setGeneratingImg(false);
-          // Call share() — do NOT await it (preserves iOS/Android gesture chain)
-          navigator.share({ files:[flexFile], title:`Day ${streak} — ${tier.label} 🌿`, text })
-            .then(() => {
-              try { localStorage.setItem("pog_flexed_week",new Date().toISOString()); } catch(e) {}
-            })
-            .catch(e => {
-              if (e?.name === "AbortError") return;
-              // Share failed — fall back to download
-              const link = document.createElement("a");
-              link.download = `proof-of-grass-${username}-day${streak}.png`;
-              link.href = dataUrl; link.click();
-            });
-          return;
-        }
-        // canShare returned false — just download
-        const link = document.createElement("a");
-        link.download = `proof-of-grass-${username}-day${streak}.png`;
-        link.href = dataUrl; link.click();
-
-      } else {
-        // Desktop — write into pre-opened window
-        if (sharedWin) {
-          sharedWin.document.open();
-          sharedWin.document.write(`<html><body style="margin:0;background:#0a0b08;font-family:sans-serif;padding:24px">
-            <img src="${dataUrl}" style="width:100%;max-width:540px;display:block;margin:0 auto;border-radius:12px"/>
-            <p style="color:#93a85a;text-align:center;padding:16px 0 8px;font-size:14px">Right-click the image to save it, then attach to your X post</p>
-            <p style="text-align:center;padding-bottom:24px">
-              <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}" target="_blank"
-                style="display:inline-block;background:#93a85a;color:#0a0b08;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">Flex to X →</a>
-            </p>
-          </body></html>`);
-          sharedWin.document.close();
-        }
-      }
-    } catch(e) {
-      console.error("flexToX error",e);
-      if (sharedWin) sharedWin.close();
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");
-    } finally {
-      setGeneratingImg(false);
+    // Desktop or no share API — open X compose + download image
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+    if (dataUrl) {
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `proof-of-grass-${username}-day${streak}.png`;
+      a.click();
     }
-  }, [username, streak, tier, buildImageParams, generatingImg]);
+  }, [username, streak, tier]);
 
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -604,12 +596,12 @@ export default function FlexCardPage() {
             <Link href={`/u/${username}`} className="nav-lk">Profile</Link>
           </div>
           <div style={{ display:"flex", gap:8, flexShrink:0 }}>
-            <button onClick={flexToX} disabled={generatingImg} className="btn-share"
-              style={{ fontSize:11, padding:"7px 14px", opacity:generatingImg?0.5:1 }}>
+            <button onClick={flexToX} disabled={!cardReady} className="btn-share"
+              style={{ fontSize:11, padding:"7px 14px", opacity:!cardReady?0.5:1 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
               </svg>
-              {generatingImg ? "…" : "Flex to X"}
+              {!cardReady ? "…" : "Flex to X"}
             </button>
           </div>
         </nav>
@@ -888,15 +880,13 @@ export default function FlexCardPage() {
 
           {/* SHARE ACTIONS */}
           <div className="fade3" style={{ display:"flex", gap:10, marginTop:20, justifyContent:"center", flexWrap:"wrap" }}>
-            <button onClick={flexToX} disabled={generatingImg} className="btn-share" style={{ opacity:generatingImg?0.7:1 }}>
-              {generatingImg ? "Generating…" : (
-                <span style={{display:"flex",alignItems:"center",gap:7}}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                  </svg>
-                  Flex to X
-                </span>
-              )}
+            <button onClick={flexToX} disabled={!cardReady} className="btn-share" style={{ opacity:!cardReady?0.5:1 }}>
+              <span style={{display:"flex",alignItems:"center",gap:7}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                {!cardReady ? "Preparing…" : "Flex to X"}
+              </span>
             </button>
             <button onClick={downloadCard} disabled={generatingImg} className="btn-ghost" style={{ opacity:generatingImg?0.7:1 }}>
               {downloaded ? "✓ Downloaded!" : "↓ Save Card"}
