@@ -1,4 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
+
+// WalletPurchaseModal uses wallet adapter hooks — must be client-side only
+const WalletPurchaseModal = dynamic(
+  () => import("../components/WalletPurchaseModal"),
+  { ssr: false }
+);
 import Link from "next/link";
 import Head from "next/head";
 import { supabase } from "../utils/supabase";
@@ -615,6 +622,7 @@ export default function Marketplace() {
   const [buyingItem,   setBuyingItem]   = useState(null);
   const [previewItem,  setPreviewItem]  = useState(null);
   const [purchased,    setPurchased]    = useState(false);
+  const [walletSuccess, setWalletSuccess] = useState(null); // { signature, unlockedCovers }
   const { price, loading: priceLoading, tokensFor } = useTouchgrassPrice();
 
   useEffect(() => {
@@ -806,14 +814,49 @@ export default function Marketplace() {
 
       {/* Modals */}
       {buyingItem && (
-        <PurchaseModal
+        <WalletPurchaseModal
           item={buyingItem}
           tokens={tokensFor(buyingItem.usdPrice)}
           price={price}
           username={username}
           onClose={() => setBuyingItem(null)}
-          onSuccess={() => { setPurchased(true); }}
+          onSuccess={(data) => {
+            setPurchased(true);
+            setWalletSuccess(data);
+            setBuyingItem(null);
+            // Refresh inventory so "Owned" badge shows immediately
+            if (username) {
+              supabase.from("UserInventory").select("item_id,owned").eq("username",username).eq("owned",true)
+                .then(({ data: inv }) => setInventory((inv??[]).map(r=>r.item_id)));
+            }
+          }}
         />
+      )}
+
+      {/* Success toast */}
+      {walletSuccess && (
+        <div style={{
+          position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",
+          zIndex:9999,background:"#0e100b",border:"1px solid rgba(147,168,90,0.4)",
+          borderRadius:14,padding:"14px 20px",
+          boxShadow:"0 8px 32px rgba(0,0,0,0.6)",
+          display:"flex",alignItems:"center",gap:12,
+          maxWidth:"min(420px,90vw)",
+          animation:"slideUp 0.3s ease",
+        }}>
+          <span style={{fontSize:22}}>🎉</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#f0efea",marginBottom:2}}>
+              Purchase complete — instantly unlocked!
+            </div>
+            <div style={{fontSize:11,color:"rgba(240,239,234,0.5)"}}>
+              Visit your profile to equip your new items.
+            </div>
+          </div>
+          <button onClick={() => setWalletSuccess(null)}
+            style={{background:"none",border:"none",color:"rgba(240,239,234,0.3)",
+              cursor:"pointer",fontSize:16,flexShrink:0}}>✕</button>
+        </div>
       )}
       {previewItem && (
         <PreviewModal

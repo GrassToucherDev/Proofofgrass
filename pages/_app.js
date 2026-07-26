@@ -1,19 +1,34 @@
-import { useEffect } from "react";
 import "../styles/globals.css";
+import { useMemo } from "react";
+import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import {
+  PhantomWalletAdapter,
+  SolflareWalletAdapter,
+  BackpackWalletAdapter,
+  CoinbaseWalletAdapter,
+} from "@solana/wallet-adapter-wallets";
+
+// Default styles for wallet modal
+import "@solana/wallet-adapter-react-ui/styles.css";
+
+const RPC_ENDPOINT = "https://api.mainnet-beta.solana.com";
 
 export default function App({ Component, pageProps }) {
-  // Register service worker
-  useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
-    navigator.serviceWorker
-      .register("/service-worker.js", { scope: "/" })
-      .then((reg) => {
-        console.log("[PWA] Service worker registered:", reg.scope);
-      })
-      .catch((err) => {
-        console.warn("[PWA] Service worker registration failed:", err);
-      });
-  }, []);
+  const wallets = useMemo(() => [
+    new PhantomWalletAdapter(),
+    new SolflareWalletAdapter(),
+    new BackpackWalletAdapter(),
+    new CoinbaseWalletAdapter(),
+  ], []);
 
-  return <Component {...pageProps} />;
+  return (
+    <ConnectionProvider endpoint={RPC_ENDPOINT}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>
+          <Component {...pageProps} />
+        </WalletModalProvider>
+      </WalletProvider>
+    </ConnectionProvider>
+  );
 }
