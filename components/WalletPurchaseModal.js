@@ -58,17 +58,32 @@ export default function WalletPurchaseModal({
   const [balance, setBalance] = useState(null);
 
   // Fetch token balance when wallet connects
+  // Uses getParsedTokenAccountsByOwner — works even if ATA doesn't exist yet
   useEffect(() => {
     if (!publicKey || !connection) return;
+    let cancelled = false;
     (async () => {
       try {
-        const ata = await getAssociatedTokenAddress(MINT_ADDRESS, publicKey);
-        const info = await connection.getTokenAccountBalance(ata);
-        setBalance(info.value.uiAmount ?? 0);
-      } catch {
-        setBalance(0);
+        const { TOKEN_PROGRAM_ID: TOKEN_PROG } = await import("@solana/spl-token");
+        const accounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+          mint: MINT_ADDRESS,
+        });
+        if (cancelled) return;
+        if (accounts.value.length === 0) {
+          setBalance(0);
+          return;
+        }
+        // Sum all accounts holding this mint (usually just one ATA)
+        const total = accounts.value.reduce((sum, acc) => {
+          return sum + (acc.account.data.parsed.info.tokenAmount.uiAmount ?? 0);
+        }, 0);
+        setBalance(total);
+      } catch(e) {
+        console.warn("[WalletPurchaseModal] balance fetch failed:", e?.message);
+        if (!cancelled) setBalance(null); // null = unknown, don't block purchase
       }
     })();
+    return () => { cancelled = true; };
   }, [publicKey, connection]);
 
   const handlePurchase = useCallback(async () => {
@@ -78,13 +93,19 @@ export default function WalletPurchaseModal({
 
     try {
       // ── Check balance ────────────────────────────────────────────────────
-      const ata = await getAssociatedTokenAddress(MINT_ADDRESS, publicKey);
       let bal = 0;
       try {
-        const info = await connection.getTokenAccountBalance(ata);
-        bal = info.value.uiAmount ?? 0;
+        const accounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+          mint: MINT_ADDRESS,
+        });
+        bal = accounts.value.reduce((sum, acc) => {
+          return sum + (acc.account.data.parsed.info.tokenAmount.uiAmount ?? 0);
+        }, 0);
         setBalance(bal);
-      } catch { bal = 0; }
+      } catch(e) {
+        console.warn("[balance check]", e?.message);
+        bal = 0;
+      }
 
       if (bal < tokens) {
         setError(`Insufficient balance. You have ${bal.toLocaleString()} $TOUCHGRASS — need ${tokens.toLocaleString()}.`);
@@ -244,9 +265,9 @@ export default function WalletPurchaseModal({
           {balance !== null && connected && (
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8}}>
               <span style={{fontSize:11,color:T.dim}}>Your Balance</span>
-              <span style={{fontSize:12,color:balance >= tokens ? T.olive : T.red,fontWeight:600}}>
-                {balance.toLocaleString()} $TOUCHGRASS
-                {balance < tokens && " ⚠️ Insufficient"}
+              <span style={{fontSize:12,color: balance === null ? T.dim : balance >= tokens ? T.olive : T.red,fontWeight:600}}>
+                {balance === null ? "Fetching…" : `${balance.toLocaleString()} $TOUCHGRASS`}
+                {balance !== null && balance < tokens && " ⚠️ Insufficient"}
               </span>
             </div>
           )}
@@ -349,14 +370,14 @@ export default function WalletPurchaseModal({
                 {/* Purchase button */}
                 <button
                   onClick={handlePurchase}
-                  disabled={!connected || balance < tokens}
+                  disabled={!connected || (balance !== null && balance < tokens)}
                   style={{
                     width:"100%",padding:"14px",borderRadius:10,cursor:"pointer",
                     background:`linear-gradient(135deg,${T.gold},#a88c38)`,
                     border:"none",color:"#0a0800",fontSize:14,fontWeight:900,
                     letterSpacing:"0.04em",
                     boxShadow:"0 4px 20px rgba(200,168,75,0.35)",
-                    opacity: balance < tokens ? 0.4 : 1,
+                    opacity: (balance !== null && balance < tokens) ? 0.4 : 1,
                     marginBottom:12,
                   }}>
                   Pay {tokens?.toLocaleString()} $TOUCHGRASS →
