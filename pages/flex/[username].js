@@ -419,9 +419,10 @@ export default function FlexCardPage() {
   const [copied,       setCopied]      = useState(false);
   const [generatingImg,setGeneratingImg]=useState(false);
   const [downloaded,   setDownloaded]  = useState(false);
-  const cardRef = useRef(null);
-  // Pre-built file ref for synchronous iOS share — no await before navigator.share
-  const flexFileRef = useRef(null);
+  const cardRef     = useRef(null);
+  const flexFileRef  = useRef(null); // pre-built File — built ahead of tap
+  const flexDataUrl  = useRef(null); // data URL for desktop fallback
+  const [cardReady,  setCardReady]  = useState(false); // true when file is pre-built
 
   const [viewer, setViewer] = useState("");
   useEffect(() => {
