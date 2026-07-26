@@ -135,13 +135,7 @@ export default function WalletPurchaseModal({
         )
       );
 
-      // Add memo for traceability
-      const { createMemoInstruction } = await import(
-        "@solana/spl-memo"
-      ).catch(() => ({ createMemoInstruction: null }));
-      if (createMemoInstruction) {
-        tx.add(createMemoInstruction(`pog:marketplace:${item.id}:${username}`));
-      }
+      // Memo skipped — @solana/spl-memo not installed
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
       tx.recentBlockhash = blockhash;

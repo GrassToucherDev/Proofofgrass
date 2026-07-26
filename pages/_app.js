@@ -5,8 +5,6 @@ import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
-  BackpackWalletAdapter,
-  CoinbaseWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 
 // Default styles for wallet modal
@@ -18,8 +16,6 @@ export default function App({ Component, pageProps }) {
   const wallets = useMemo(() => [
     new PhantomWalletAdapter(),
     new SolflareWalletAdapter(),
-    new BackpackWalletAdapter(),
-    new CoinbaseWalletAdapter(),
   ], []);
 
   return (
