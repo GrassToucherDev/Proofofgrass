@@ -4,7 +4,8 @@ import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-const RPC_ENDPOINT = "https://api.mainnet-beta.solana.com";
+const RPC_ENDPOINT = process.env.NEXT_PUBLIC_SOLANA_RPC_URL
+  || "https://solana-mainnet.rpc.extrnode.com";
 
 export default function App({ Component, pageProps }) {
   const [wallets, setWallets] = useState([]);

@@ -16,6 +16,7 @@ import {
 } from "@solana/spl-token";
 
 const MINT_ADDRESS  = new PublicKey("5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump");
+const MINT_STR      = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const BURN_ADDRESS  = new PublicKey("GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K");
 const TOKEN_DECIMALS = 6;
 
@@ -58,33 +59,58 @@ export default function WalletPurchaseModal({
   const [balance, setBalance] = useState(null);
 
   // Fetch token balance when wallet connects
-  // Uses getParsedTokenAccountsByOwner — works even if ATA doesn't exist yet
   useEffect(() => {
-    if (!publicKey || !connection) return;
+    if (!publicKey) return;
     let cancelled = false;
     (async () => {
       try {
-        const { TOKEN_PROGRAM_ID: TOKEN_PROG } = await import("@solana/spl-token");
-        const accounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-          mint: MINT_ADDRESS,
-        });
-        if (cancelled) return;
-        if (accounts.value.length === 0) {
-          setBalance(0);
-          return;
+        // Try multiple RPCs in sequence — public RPC is heavily rate limited
+        const RPCS = [
+          "https://solana-mainnet.rpc.extrnode.com",
+          "https://rpc.ankr.com/solana",
+          "https://api.mainnet-beta.solana.com",
+        ];
+
+        let found = false;
+        for (const rpc of RPCS) {
+          try {
+            const { Connection: Conn } = await import("@solana/web3.js");
+            const conn = new Conn(rpc, "confirmed");
+            const accounts = await conn.getParsedTokenAccountsByOwner(
+              publicKey,
+              { mint: MINT_ADDRESS }
+            );
+            if (cancelled) return;
+            if (accounts.value.length > 0) {
+              const total = accounts.value.reduce((sum, acc) => {
+                return sum + (acc.account.data.parsed?.info?.tokenAmount?.uiAmount ?? 0);
+              }, 0);
+              setBalance(total);
+              found = true;
+              break;
+            } else {
+              // Account exists but no tokens for this mint — try next RPC
+              // (empty result could be rate limit returning nothing)
+              continue;
+            }
+          } catch(e) {
+            console.warn("[balance] RPC failed:", rpc, e?.message);
+            continue;
+          }
         }
-        // Sum all accounts holding this mint (usually just one ATA)
-        const total = accounts.value.reduce((sum, acc) => {
-          return sum + (acc.account.data.parsed.info.tokenAmount.uiAmount ?? 0);
-        }, 0);
-        setBalance(total);
+
+        if (!found && !cancelled) {
+          // All RPCs returned empty — set null so button stays enabled
+          setBalance(null);
+        }
+
       } catch(e) {
-        console.warn("[WalletPurchaseModal] balance fetch failed:", e?.message);
-        if (!cancelled) setBalance(null); // null = unknown, don't block purchase
+        console.warn("[balance] all RPCs failed:", e?.message);
+        if (!cancelled) setBalance(null);
       }
     })();
     return () => { cancelled = true; };
-  }, [publicKey, connection]);
+  }, [publicKey]);
 
   const handlePurchase = useCallback(async () => {
     if (!publicKey || !tokens) return;
