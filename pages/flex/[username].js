@@ -533,6 +533,7 @@ export default function FlexCardPage() {
     avatarUrl:   profileRow?.avatar_url   || null,
     avatarFrame: profileRow?.avatar_frame || null,
     coverUrl:    activeCover?.imageUrl    || null,
+    coverName:   activeCover?.name        || null,
   }), [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow, activeCover]);
 
   const downloadCard = useCallback(async () => {
