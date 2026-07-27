@@ -33,7 +33,6 @@ const T = {
 const STEPS = {
   idle:       null,
   connecting: "Connecting wallet…",
-  checking:   "Checking your balance…",
   building:   "Building transaction…",
   signing:    "Waiting for your approval in wallet…",
   confirming: "Confirming on-chain…",
@@ -56,61 +55,8 @@ export default function WalletPurchaseModal({
   const [step,    setStep]    = useState("idle");
   const [error,   setError]   = useState("");
   const [txSig,   setTxSig]   = useState("");
-  const [balance, setBalance] = useState(null);
 
-  // Fetch token balance when wallet connects
-  useEffect(() => {
-    if (!publicKey) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        // Try multiple RPCs in sequence — public RPC is heavily rate limited
-        const RPCS = [
-          "https://solana-mainnet.rpc.extrnode.com",
-          "https://rpc.ankr.com/solana",
-          "https://api.mainnet-beta.solana.com",
-        ];
 
-        let found = false;
-        for (const rpc of RPCS) {
-          try {
-            const { Connection: Conn } = await import("@solana/web3.js");
-            const conn = new Conn(rpc, "confirmed");
-            const accounts = await conn.getParsedTokenAccountsByOwner(
-              publicKey,
-              { mint: MINT_ADDRESS }
-            );
-            if (cancelled) return;
-            if (accounts.value.length > 0) {
-              const total = accounts.value.reduce((sum, acc) => {
-                return sum + (acc.account.data.parsed?.info?.tokenAmount?.uiAmount ?? 0);
-              }, 0);
-              setBalance(total);
-              found = true;
-              break;
-            } else {
-              // Account exists but no tokens for this mint — try next RPC
-              // (empty result could be rate limit returning nothing)
-              continue;
-            }
-          } catch(e) {
-            console.warn("[balance] RPC failed:", rpc, e?.message);
-            continue;
-          }
-        }
-
-        if (!found && !cancelled) {
-          // All RPCs returned empty — set null so button stays enabled
-          setBalance(null);
-        }
-
-      } catch(e) {
-        console.warn("[balance] all RPCs failed:", e?.message);
-        if (!cancelled) setBalance(null);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [publicKey]);
 
   const handlePurchase = useCallback(async () => {
     if (!publicKey || !tokens) return;
@@ -118,26 +64,7 @@ export default function WalletPurchaseModal({
     setStep("checking");
 
     try {
-      // ── Check balance ────────────────────────────────────────────────────
-      let bal = 0;
-      try {
-        const accounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-          mint: MINT_ADDRESS,
-        });
-        bal = accounts.value.reduce((sum, acc) => {
-          return sum + (acc.account.data.parsed.info.tokenAmount.uiAmount ?? 0);
-        }, 0);
-        setBalance(bal);
-      } catch(e) {
-        console.warn("[balance check]", e?.message);
-        bal = 0;
-      }
-
-      if (bal < tokens) {
-        setError(`Insufficient balance. You have ${bal.toLocaleString()} $TOUCHGRASS — need ${tokens.toLocaleString()}.`);
-        setStep("error");
-        return;
-      }
+      // Balance check skipped — Phantom will reject if insufficient funds
 
       // ── Build transaction ─────────────────────────────────────────────────
       setStep("building");
@@ -288,15 +215,7 @@ export default function WalletPurchaseModal({
               {tokens?.toLocaleString()}
             </span>
           </div>
-          {balance !== null && connected && (
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8}}>
-              <span style={{fontSize:11,color:T.dim}}>Your Balance</span>
-              <span style={{fontSize:12,color: balance === null ? T.dim : balance >= tokens ? T.olive : T.red,fontWeight:600}}>
-                {balance === null ? "Fetching…" : `${balance.toLocaleString()} $TOUCHGRASS`}
-                {balance !== null && balance < tokens && " ⚠️ Insufficient"}
-              </span>
-            </div>
-          )}
+
         </div>
 
         {/* Success state */}
@@ -396,14 +315,14 @@ export default function WalletPurchaseModal({
                 {/* Purchase button */}
                 <button
                   onClick={handlePurchase}
-                  disabled={!connected || (balance !== null && balance < tokens)}
+                  disabled={!connected}
                   style={{
                     width:"100%",padding:"14px",borderRadius:10,cursor:"pointer",
                     background:`linear-gradient(135deg,${T.gold},#a88c38)`,
                     border:"none",color:"#0a0800",fontSize:14,fontWeight:900,
                     letterSpacing:"0.04em",
                     boxShadow:"0 4px 20px rgba(200,168,75,0.35)",
-                    opacity: (balance !== null && balance < tokens) ? 0.4 : 1,
+                    opacity: 1,
                     marginBottom:12,
                   }}>
                   Pay {tokens?.toLocaleString()} $TOUCHGRASS →
