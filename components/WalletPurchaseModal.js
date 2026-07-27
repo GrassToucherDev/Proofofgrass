@@ -69,6 +69,9 @@ export default function WalletPurchaseModal({
       // ── Build transaction ─────────────────────────────────────────────────
       setStep("building");
 
+      // Get source ATA (user's token account)
+      const ata = await getAssociatedTokenAddress(MINT_ADDRESS, publicKey);
+
       // Get destination ATA (burn address token account)
       const destAta = await getAssociatedTokenAddress(MINT_ADDRESS, BURN_ADDRESS);
 
