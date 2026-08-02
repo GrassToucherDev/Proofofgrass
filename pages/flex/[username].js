@@ -749,7 +749,7 @@ export default function FlexCardPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [loading, username, streak]);
+  }, [loading, username, streak, activeCover]);
 
   const isOwner = !!(viewer && viewer === username);
   const shareUrl = typeof window !== "undefined" ? window.location.href : `https://proofofgrass.app/u/${username}/flex`;
