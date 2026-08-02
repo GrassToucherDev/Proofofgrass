@@ -69,16 +69,42 @@ export default function WalletPurchaseModal({
       // ── Build transaction ─────────────────────────────────────────────────
       setStep("building");
 
-      // Get source ATA (user's token account)
-      const ata = await getAssociatedTokenAddress(MINT_ADDRESS, publicKey);
+      // ── Build reliable connection first ──────────────────────────────────
+      const { Connection: SolConn } = await import("@solana/web3.js");
+      const reliableRpcs = [
+        "https://solana-mainnet.rpc.extrnode.com",
+        "https://rpc.ankr.com/solana",
+        "https://api.mainnet-beta.solana.com",
+      ];
 
-      // Get destination ATA (burn address token account)
+      let reliableConn = null;
+      let blockhash, lastValidBlockHeight;
+      for (const rpc of reliableRpcs) {
+        try {
+          const testConn = new SolConn(rpc, "confirmed");
+          const result = await testConn.getLatestBlockhash("confirmed");
+          blockhash = result.blockhash;
+          lastValidBlockHeight = result.lastValidBlockHeight;
+          reliableConn = testConn;
+          break;
+        } catch(e) {
+          console.warn("[rpc] failed:", rpc, e?.message);
+          continue;
+        }
+      }
+
+      if (!reliableConn || !blockhash) {
+        throw new Error("Could not connect to Solana network. Please try again in a moment.");
+      }
+
+      // ── Get token accounts ────────────────────────────────────────────────
+      const ata     = await getAssociatedTokenAddress(MINT_ADDRESS, publicKey);
       const destAta = await getAssociatedTokenAddress(MINT_ADDRESS, BURN_ADDRESS);
 
-      // Check if dest ATA exists — if not, user's wallet will create it
+      // Check if dest ATA exists using our reliable connection
       let destExists = false;
       try {
-        await connection.getTokenAccountBalance(destAta);
+        await reliableConn.getTokenAccountBalance(destAta);
         destExists = true;
       } catch { destExists = false; }
 
@@ -89,43 +115,44 @@ export default function WalletPurchaseModal({
         const { createAssociatedTokenAccountInstruction } = await import("@solana/spl-token");
         tx.add(
           createAssociatedTokenAccountInstruction(
-            publicKey,    // payer
-            destAta,      // ATA to create
-            BURN_ADDRESS, // owner
-            MINT_ADDRESS, // mint
+            publicKey,
+            destAta,
+            BURN_ADDRESS,
+            MINT_ADDRESS,
           )
         );
       }
 
-      // Transfer instruction
+      // Transfer instruction — use transferChecked for safety
       const rawAmount = BigInt(Math.round(tokens * Math.pow(10, TOKEN_DECIMALS)));
       tx.add(
         createTransferCheckedInstruction(
-          ata,             // source
-          MINT_ADDRESS,    // mint
-          destAta,         // destination
-          publicKey,       // owner
-          rawAmount,       // amount (raw)
-          TOKEN_DECIMALS,  // decimals
-          [],              // signers
+          ata,
+          MINT_ADDRESS,
+          destAta,
+          publicKey,
+          rawAmount,
+          TOKEN_DECIMALS,
+          [],
           TOKEN_PROGRAM_ID,
         )
       );
 
-      // Memo skipped — @solana/spl-memo not installed
-
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
       tx.recentBlockhash = blockhash;
       tx.feePayer = publicKey;
 
       // ── Send to wallet for signing ────────────────────────────────────────
       setStep("signing");
-      const signature = await sendTransaction(tx, connection);
+      // Pass reliableConn so Phantom uses it for preflight simulation
+      const signature = await sendTransaction(tx, reliableConn, {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+      });
       setTxSig(signature);
 
       // ── Wait for confirmation ─────────────────────────────────────────────
       setStep("confirming");
-      await connection.confirmTransaction(
+      await reliableConn.confirmTransaction(
         { signature, blockhash, lastValidBlockHeight },
         "confirmed"
       );
