@@ -296,7 +296,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.65)"; ctx.textAlign="center";
   ctx.fillText("CURRENT STREAK",sbX+sbW/2,sbY+34);
   // Large streak number
-  const numSz=streak>=100?106:streak>=10?124:142;
+  const numSz=streak>=100?118:streak>=10?138:158;
   ctx.font=`700 ${numSz}px Georgia,serif`;
   ctx.fillStyle=theme.accentColor;
   ctx.shadowColor=theme.glowColor; ctx.shadowBlur=36;
@@ -323,13 +323,13 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   statsArr.forEach((s,i)=>{
     const sy=spY+10+i*spItemH;
     if(i>0){ctx.strokeStyle=theme.borderColor;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(spX+14,sy-2);ctx.lineTo(spX+spW-14,sy-2);ctx.stroke();}
-    ctx.font="24px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
-    ctx.fillText(s.e,spX+14,sy+28);
-    ctx.font=`700 ${s.v.length>4?30:38}px Georgia,serif`;
+    ctx.font="18px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
+    ctx.fillText(s.e,spX+14,sy+24);
+    ctx.font=`700 ${s.v.length>4?34:42}px Georgia,serif`;
     ctx.fillStyle=s.gold?theme.accentColor:"#f5f4ef";
-    ctx.fillText(s.v,spX+50,sy+32);
+    ctx.fillText(s.v,spX+44,sy+30);
     ctx.font="600 11px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.45)";
-    ctx.fillText(s.l,spX+14,sy+54);
+    ctx.fillText(s.l,spX+14,sy+52);
   });
 
   // ── 6. PROGRESS BAR — below stats, same width ────────────────────────────
@@ -364,7 +364,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     ctx.beginPath(); ctx.moveTo(bpX+12,bpY+26); ctx.lineTo(bpX+spW-12,bpY+26); ctx.stroke();
 
     // 3 × 2 grid
-    const bSz=58, bCols=3, bRows=Math.ceil(earned.length/bCols);
+    const bSz=52, bCols=3, bRows=Math.ceil(earned.length/bCols);
     const bColW=(spW-24)/bCols;
     earned.forEach((badge,i)=>{
       const col=i%bCols, row=Math.floor(i/bCols);
@@ -373,11 +373,11 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       ctx.save(); ctx.translate(bx,by); hexPath(ctx,bSz/2);
       ctx.fillStyle="rgba(6,8,6,0.88)"; ctx.fill();
       ctx.strokeStyle=theme.badgeStroke; ctx.lineWidth=2; ctx.stroke(); ctx.restore();
-      ctx.font="24px sans-serif"; ctx.textAlign="center"; ctx.fillStyle="#f0efea";
-      ctx.fillText(badge.emoji,bx,by+9);
-      ctx.font="600 10px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.7)";
-      const bName=badge.name.length>10?badge.name.slice(0,9)+"…":badge.name;
-      ctx.fillText(bName,bx,by+bSz/2-2);
+      ctx.font="20px sans-serif"; ctx.textAlign="center"; ctx.fillStyle="#f0efea";
+      ctx.fillText(badge.emoji,bx,by+8);
+      ctx.font="600 9px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.7)";
+      const bName=badge.name.length>11?badge.name.slice(0,10)+"…":badge.name;
+      ctx.fillText(bName,bx,by+bSz/2-1);
     });
   }
 
@@ -402,8 +402,8 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     ctx.fillStyle=theme.accentColor+"aa";
     ctx.fillText(theme.marketplaceOnly?"RETRO COVERS PACK":"STREAK COVER",rcX+rcW/2,cpY+96);
     // Cover name — large
-    ctx.font="700 24px 'DM Sans',sans-serif"; ctx.fillStyle="#f5f4ef";
-    ctx.fillText(theme.name.toUpperCase(),rcX+rcW/2,cpY+130);
+    ctx.font="700 28px 'DM Sans',sans-serif"; ctx.fillStyle="#f5f4ef";
+    ctx.fillText(theme.name.toUpperCase(),rcX+rcW/2,cpY+132);
     // Sub label
     ctx.font="600 12px 'DM Sans',sans-serif";
     ctx.fillStyle=theme.marketplaceOnly?theme.accentColor:"rgba(240,239,234,0.4)";
