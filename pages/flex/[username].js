@@ -187,6 +187,223 @@ function getQuote(streak, bio) {
 }
 
 async function generateShareImage({ username, streak, tier, tierTitle, grassScore, rank, subCount, badges, best, shields, bio, hasTG, hasGT, hasST, avatarUrl, avatarFrame, theme }) {
+  const W = 1080, H = 1080;
+  const canvas = document.createElement("canvas");
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d");
+
+  // ── 1. BACKGROUND ─────────────────────────────────────────────────────────
+  ctx.fillStyle = "#060807";
+  ctx.fillRect(0, 0, W, H);
+
+  // ── 2. COVER ART — full bleed, light scrim only at edges ──────────────────
+  if (theme.imageUrl && theme.imageUrl !== "PASTE_URL_HERE") {
+    try {
+      const coverImg = await loadImage(theme.imageUrl);
+      const ir = coverImg.width / coverImg.height, cr = W / H;
+      let dw, dh, dx, dy;
+      if (ir > cr) { dh=H; dw=H*ir; dx=(W-dw)/2; dy=0; }
+      else { dw=W; dh=W/ir; dx=0; dy=(H-dh)/2; }
+      ctx.drawImage(coverImg, dx, dy, dw, dh);
+      // Light vignette only — let art breathe
+      const vig = ctx.createRadialGradient(W/2,H/2,H*0.28,W/2,H/2,H*0.78);
+      vig.addColorStop(0,"rgba(0,0,0,0)"); vig.addColorStop(1,"rgba(0,0,0,0.55)");
+      ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
+    } catch(e) {
+      console.warn("[flex] cover failed:", e?.message);
+      ctx.fillStyle=theme.fallback; ctx.fillRect(0,0,W,H);
+    }
+  } else {
+    ctx.fillStyle=theme.fallback; ctx.fillRect(0,0,W,H);
+  }
+
+  // ── 3. OUTER BORDER ───────────────────────────────────────────────────────
+  ctx.strokeStyle=theme.borderColor; ctx.lineWidth=3;
+  roundRect(ctx,20,20,W-40,H-40,18); ctx.stroke();
+
+  // ── Helper: frosted panel ─────────────────────────────────────────────────
+  function frostPanel(x,y,w,h,r=12) {
+    ctx.fillStyle=theme.panelTint;
+    roundRect(ctx,x,y,w,h,r); ctx.fill();
+    ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
+    roundRect(ctx,x,y,w,h,r); ctx.stroke();
+  }
+
+  // ── 4. TOP LEFT — Avatar + Username + Tier ────────────────────────────────
+  const aSize=90, aX=44, aY=44;
+  // Avatar
+  try {
+    if(avatarUrl) {
+      const ai=await loadImage(avatarUrl);
+      ctx.save(); ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.clip();
+      ctx.drawImage(ai,aX,aY,aSize,aSize); ctx.restore();
+    } else throw new Error("no avatar");
+  } catch {
+    ctx.fillStyle=theme.accentColor+"40";
+    ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.fill();
+    ctx.font="700 34px Georgia,serif"; ctx.fillStyle=theme.accentColor;
+    ctx.textAlign="center"; ctx.fillText((username[0]||"?").toUpperCase(),aX+aSize/2,aY+aSize/2+12); ctx.textAlign="left";
+  }
+  // Avatar ring
+  ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2+3,0,Math.PI*2);
+  ctx.strokeStyle=avatarFrame==="crown"?"#c8a84b":theme.accentColor;
+  ctx.lineWidth=3; ctx.stroke();
+
+  // Username
+  const nX=aX+aSize+16;
+  const uSz=username.length>14?42:username.length>10?52:62;
+  ctx.font=`700 ${uSz}px Georgia,serif`; ctx.fillStyle="#f5f4ef";
+  ctx.shadowColor="rgba(0,0,0,0.95)"; ctx.shadowBlur=14;
+  ctx.fillText(`@${username}`,nX,aY+56); ctx.shadowBlur=0;
+
+  // Verified checkmark
+  const nameW=ctx.measureText(`@${username}`).width;
+  ctx.font="700 28px sans-serif"; ctx.fillText("✅",nX+nameW+8,aY+52);
+
+  // Tier pill
+  const pillTxt=`✦ ${tierTitle}`;
+  ctx.font="700 15px 'DM Sans',sans-serif";
+  const pW=ctx.measureText(pillTxt).width+28;
+  ctx.fillStyle="rgba(0,0,0,0.55)"; roundRect(ctx,nX,aY+66,pW,28,14); ctx.fill();
+  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5; roundRect(ctx,nX,aY+66,pW,28,14); ctx.stroke();
+  ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
+  ctx.fillText(pillTxt,nX+pW/2,aY+85); ctx.textAlign="left";
+
+  // ── 5. TOP RIGHT — Streak Box ─────────────────────────────────────────────
+  const sbW=280, sbH=200, sbX=W-sbW-36, sbY=30;
+  // Background panel
+  ctx.fillStyle="rgba(0,0,0,0.60)";
+  roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.fill();
+  // Decorative border with corner marks
+  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2;
+  roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.stroke();
+  // Corner + marks
+  const corners=[[sbX+18,sbY+14],[sbX+sbW-18,sbY+14],[sbX+18,sbY+sbH-14],[sbX+sbW-18,sbY+sbH-14]];
+  ctx.font="700 18px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
+  corners.forEach(([cx,cy])=>ctx.fillText("+",cx,cy+6));
+  // Label
+  ctx.font="600 14px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.7)";
+  ctx.fillText("CURRENT STREAK",sbX+sbW/2,sbY+32);
+  // Big number
+  const nSz=streak>=100?100:streak>=10?118:134;
+  ctx.font=`700 ${nSz}px Georgia,serif`;
+  ctx.fillStyle=theme.accentColor;
+  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=30;
+  ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-52); ctx.shadowBlur=0;
+  // DAYS pill
+  ctx.fillStyle="rgba(0,0,0,0.5)"; roundRect(ctx,sbX+sbW/2-44,sbY+sbH-44,88,28,14); ctx.fill();
+  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1; roundRect(ctx,sbX+sbW/2-44,sbY+sbH-44,88,28,14); ctx.stroke();
+  ctx.font="700 14px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor;
+  ctx.fillText("✦ DAYS ✦",sbX+sbW/2,sbY+sbH-24); ctx.textAlign="left";
+
+  // ── 6. LEFT STATS PANEL — stacked vertically ──────────────────────────────
+  const spX=36, spY=160, spW=220;
+  const statsData=[
+    {e:"⚡",v:grassScore>=1000?(grassScore/1000).toFixed(1)+"K":String(grassScore),l:"GRASS SCORE"},
+    {e:"🔥",v:`${best}d`,l:"BEST STREAK"},
+    {e:"🛡",v:String(shields),l:"SHIELDS EARNED",hide:shields===0},
+    {e:"👑",v:rank?`#${rank}`:"—",l:"GLOBAL RANK"},
+  ].filter(s=>!s.hide);
+
+  const spH=statsData.length*90+20;
+  frostPanel(spX,spY,spW,spH,12);
+
+  statsData.forEach((s,i)=>{
+    const sy=spY+18+i*90;
+    if(i>0){ctx.strokeStyle=theme.borderColor;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(spX+16,sy-4);ctx.lineTo(spX+spW-16,sy-4);ctx.stroke();}
+    ctx.font="26px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
+    ctx.fillText(s.e,spX+16,sy+26);
+    ctx.font=`700 ${s.v.length>4?32:40}px Georgia,serif`;
+    ctx.fillStyle=s.l==="GLOBAL RANK"?theme.accentColor:"#f5f4ef";
+    ctx.fillText(s.v,spX+56,sy+30);
+    ctx.font="600 12px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.5)";
+    ctx.fillText(s.l,spX+16,sy+54);
+  });
+
+  // ── 7. BOTTOM — Badges + Pack callout ────────────────────────────────────
+  const earnedBadges=badges.slice(0,6);
+  const hasBadges=earnedBadges.length>0;
+  const hasPackInfo=theme.name;
+
+  // Badge panel — bottom left
+  const bpY=H-240, bpX=36, bpW=hasBadges?(hasPackInfo?580:W-72):0;
+  if(hasBadges) {
+    frostPanel(bpX,bpY,bpW,200,12);
+    // Header
+    ctx.font="700 14px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="left";
+    ctx.fillText(">> BADGES EARNED <<",bpX+bpW/2,bpY+24);
+    // Badges
+    const bSz=70, bGap=(bpW-32-bSz*6)/5;
+    earnedBadges.forEach((badge,i)=>{
+      const bx=bpX+16+i*(bSz+bGap)+bSz/2, by=bpY+110;
+      ctx.save(); ctx.translate(bx,by); hexPath(ctx,bSz/2);
+      ctx.fillStyle="rgba(6,8,6,0.85)"; ctx.fill();
+      ctx.strokeStyle=theme.badgeStroke; ctx.lineWidth=2; ctx.stroke(); ctx.restore();
+      ctx.font="28px sans-serif"; ctx.textAlign="center"; ctx.fillStyle="#f0efea";
+      ctx.fillText(badge.emoji,bx,by+10);
+      ctx.font="700 11px 'DM Sans',sans-serif"; ctx.fillStyle="#f0efea";
+      ctx.fillText(badge.name.length>9?badge.name.slice(0,8)+"…":badge.name,bx,by+bSz/2-2);
+    });
+    // Center header text
+    ctx.textAlign="center"; ctx.font="700 15px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor;
+    ctx.fillText(">> BADGES EARNED <<",bpX+bpW/2,bpY+26); ctx.textAlign="left";
+  }
+
+  // Pack callout — bottom right
+  if(hasPackInfo) {
+    const ppW=hasBadges?W-36-bpX-bpW-16:W-72;
+    const ppX=hasBadges?bpX+bpW+16:36;
+    frostPanel(ppX,bpY,ppW,200,12);
+
+    // Pack icon — use first char of cover name as emoji placeholder
+    const packEmoji = theme.name.includes("Beach")?"🏖":theme.name.includes("Mountain")?"⛰":theme.name.includes("Sunflower")?"🌻":theme.name.includes("Waterfall")?"💧":theme.name.includes("Night")?"🌙":theme.name.includes("Golden")?"🌅":theme.name.includes("Forest")?"🌲":theme.name.includes("Summit")?"🏔":theme.name.includes("Sky")?"✨":theme.name.includes("Temple")?"🌞":theme.name.includes("Garden")?"🌸":theme.name.includes("Celestial")?"💫":"🎨";
+    ctx.font="48px sans-serif"; ctx.textAlign="center";
+    ctx.fillText(packEmoji,ppX+ppW/2,bpY+74);
+
+    // Pack name — if marketplace show pack name, else show "STREAK COVER"
+    if(theme.marketplaceOnly) {
+      ctx.font="700 13px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor;
+      ctx.fillText("RETRO VIBES PACK",ppX+ppW/2,bpY+110);
+    } else {
+      ctx.font="700 12px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor;
+      ctx.fillText("STREAK COVER",ppX+ppW/2,bpY+110);
+    }
+    ctx.font="600 16px 'DM Sans',sans-serif"; ctx.fillStyle="#f5f4ef";
+    ctx.fillText(theme.name.toUpperCase(),ppX+ppW/2,bpY+138);
+
+    // Star badge for marketplace
+    if(theme.marketplaceOnly) {
+      ctx.font="600 11px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor;
+      ctx.fillText("★ MARKETPLACE EXCLUSIVE ★",ppX+ppW/2,bpY+162);
+    } else {
+      ctx.font="600 11px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.45)";
+      ctx.fillText(`UNLOCKED AT DAY ${theme.unlockDay||"?"}`,ppX+ppW/2,bpY+162);
+    }
+    ctx.textAlign="left";
+  }
+
+  // ── 8. FOOTER ─────────────────────────────────────────────────────────────
+  const fY=H-30;
+  // Left
+  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="#9945ff";
+  ctx.textAlign="left"; ctx.fillText("BUILT ON ◎ SOLANA",36,fY);
+  ctx.fillStyle=theme.accentColor; ctx.fillText("  ·  PROOF OF GRASS",36+ctx.measureText("BUILT ON ◎ SOLANA").width,fY);
+  // Center — Touch Grass logo + wordmark
+  try{const logo=await loadImage("/touchgrass-transparent.png");ctx.globalAlpha=0.85;ctx.drawImage(logo,W/2-60,fY-30,34,34);ctx.globalAlpha=1;}catch(e){}
+  ctx.font="700 18px Georgia,serif"; ctx.fillStyle="#f5f4ef"; ctx.textAlign="center";
+  ctx.fillText("TOUCH GRASS",W/2+4,fY-8);
+  ctx.font="500 11px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"99";
+  ctx.fillText("PROOF OF GRASS",W/2,fY+8);
+  // Right
+  ctx.font="500 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.45)";
+  ctx.textAlign="right"; ctx.fillText("proofofgrass.app",W-36,fY);
+  // Solana globe icon
+  ctx.fillText("🌐",W-36-ctx.measureText("proofofgrass.app").width-20,fY);
+  ctx.textAlign="left";
+
+  try { return canvas.toDataURL("image/png"); }
+  catch(e) { throw new Error("canvas_tainted: "+e.message); }
+}) {
   // theme object drives ALL visual decisions — layout is fixed
   const W = 1080, H = 1080;
   const canvas = document.createElement("canvas");
@@ -771,13 +988,14 @@ export default function FlexCardPage() {
       progressTo:   activeCover.progressTo   || "#93a85a",
       name:         activeCover.name         || null,
       marketplaceOnly: activeCover.marketplaceOnly || false,
+      unlockDay:    activeCover.unlockDay    || null,
     } : {
       imageUrl: null, fallback:"linear-gradient(135deg,#0a0c08,#141a10,#0a0c08)",
       accentColor:"#93a85a", borderColor:"rgba(147,168,90,0.35)",
       panelTint:"rgba(6,8,4,0.72)", scrimTop:"rgba(4,6,4,0.82)", scrimBot:"rgba(4,6,4,0.94)",
       glowColor:"#93a85a", badgeStroke:"rgba(147,168,90,0.45)",
       progressFrom:"#5a8a30", progressTo:"#93a85a",
-      name:null, marketplaceOnly:false,
+      name:null, marketplaceOnly:false, unlockDay:null,
     };
     return {
       username, streak, tier, tierTitle, grassScore,
