@@ -188,235 +188,252 @@ function getQuote(streak, bio) {
 
 
 async function generateShareImage({ username, streak, tier, tierTitle, grassScore, rank, subCount, badges, best, shields, bio, hasTG, hasGT, hasST, avatarUrl, avatarFrame, theme }) {
-
-  // theme object drives ALL visual decisions — layout is fixed
   const W = 1080, H = 1080;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
 
-  // ── 1. BASE ───────────────────────────────────────────────────────────────
-  ctx.fillStyle = "#060807";
-  ctx.fillRect(0, 0, W, H);
+  // ── 1. BACKGROUND ────────────────────────────────────────────────────────
+  ctx.fillStyle = "#060807"; ctx.fillRect(0,0,W,H);
 
-  // ── 2. COVER / THEME BACKGROUND ───────────────────────────────────────────
-  let hasCover = false;
+  // ── 2. COVER ART — full bleed, vignette only at edges ────────────────────
   if (theme.imageUrl && theme.imageUrl !== "PASTE_URL_HERE") {
     try {
-      const coverImg = await loadImage(theme.imageUrl);
-      const ir = coverImg.width / coverImg.height, cr = W / H;
-      let dw, dh, dx, dy;
-      if (ir > cr) { dh=H; dw=H*ir; dx=(W-dw)/2; dy=0; }
-      else { dw=W; dh=W/ir; dx=0; dy=(H-dh)/2; }
-      ctx.drawImage(coverImg, dx, dy, dw, dh);
-      hasCover = true;
-      // Directional scrim — heavy top/bottom, clear centre
-      const st = ctx.createLinearGradient(0,0,0,H*0.52);
-      st.addColorStop(0, theme.scrimTop); st.addColorStop(1,"rgba(0,0,0,0)");
-      ctx.fillStyle=st; ctx.fillRect(0,0,W,H*0.52);
-      const sb = ctx.createLinearGradient(0,H*0.48,0,H);
-      sb.addColorStop(0,"rgba(0,0,0,0)"); sb.addColorStop(1,theme.scrimBot);
-      ctx.fillStyle=sb; ctx.fillRect(0,H*0.48,W,H*0.52);
-    } catch(e) {
-      console.warn("[flex] cover load failed:", e?.message);
-      ctx.fillStyle=theme.fallback; ctx.fillRect(0,0,W,H);
-    }
-  } else {
-    ctx.fillStyle=theme.fallback; ctx.fillRect(0,0,W,H);
+      const ci = await loadImage(theme.imageUrl);
+      const ir=ci.width/ci.height, cr=W/H;
+      let dw,dh,dx,dy;
+      if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}
+      else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
+      ctx.drawImage(ci,dx,dy,dw,dh);
+      // Vignette — edges only, keep centre clear
+      const v=ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.75);
+      v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,0.60)");
+      ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+    } catch(e){ ctx.fillStyle=theme.fallback; ctx.fillRect(0,0,W,H); }
+  } else { ctx.fillStyle=theme.fallback; ctx.fillRect(0,0,W,H); }
+
+  // ── 3. OUTER BORDER ──────────────────────────────────────────────────────
+  ctx.strokeStyle=theme.borderColor; ctx.lineWidth=3;
+  roundRect(ctx,20,20,W-40,H-40,16); ctx.stroke();
+
+  // Panel helper
+  function panel(x,y,w,h,r=12){
+    ctx.fillStyle=theme.panelTint; roundRect(ctx,x,y,w,h,r); ctx.fill();
+    ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1; roundRect(ctx,x,y,w,h,r); ctx.stroke();
   }
 
-  // ── 3. OUTER BORDER ───────────────────────────────────────────────────────
-  ctx.strokeStyle=theme.borderColor; ctx.lineWidth=3;
-  roundRect(ctx,28,28,W-56,H-56,22); ctx.stroke();
-
-  // Corner accent marks
-  const cm=28,cl=40;
-  [[cm,cm],[W-cm,cm],[cm,H-cm],[W-cm,H-cm]].forEach(([cx,cy])=>{
-    ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2;
-    const dx=cx===cm?1:-1, dy=cy===cm?1:-1;
-    ctx.beginPath(); ctx.moveTo(cx,cy+dy*cl); ctx.lineTo(cx,cy); ctx.lineTo(cx+dx*cl,cy); ctx.stroke();
-  });
-
-  // ── 4. TOP PANEL — frosted glass ──────────────────────────────────────────
-  const topH=210;
-  ctx.fillStyle=theme.panelTint;
-  roundRect(ctx,28,28,W-56,topH,22); ctx.fill();
-  // Bottom edge of top panel
+  // ── 4. TOP PANEL — full width, avatar + username left, streak right ───────
+  const topH=230;
+  panel(20,20,W-40,topH,16);
   ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(28,28+topH); ctx.lineTo(W-28,28+topH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(20,20+topH); ctx.lineTo(W-20,20+topH); ctx.stroke();
 
   // Avatar
-  const aSize=110, aX=56, aY=54;
+  const aSize=110, aX=44, aY=44;
   try {
-    if(avatarUrl) {
-      const ai=await loadImage(avatarUrl);
-      ctx.save(); ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.clip();
-      ctx.drawImage(ai,aX,aY,aSize,aSize); ctx.restore();
-    } else throw new Error("no avatar");
-  } catch(e) {
-    ctx.fillStyle=theme.accentColor+"30";
+    if(!avatarUrl) throw new Error();
+    const ai=await loadImage(avatarUrl);
+    ctx.save(); ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.clip();
+    ctx.drawImage(ai,aX,aY,aSize,aSize); ctx.restore();
+  } catch {
+    ctx.fillStyle=theme.accentColor+"40";
     ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.fill();
-    ctx.font="700 42px Georgia,serif"; ctx.fillStyle=theme.accentColor;
-    ctx.textAlign="center"; ctx.fillText((username[0]||"?").toUpperCase(),aX+aSize/2,aY+aSize/2+14); ctx.textAlign="left";
+    ctx.font="700 38px Georgia,serif"; ctx.fillStyle=theme.accentColor;
+    ctx.textAlign="center"; ctx.fillText((username[0]||"?").toUpperCase(),aX+aSize/2,aY+aSize/2+13); ctx.textAlign="left";
   }
-  // Avatar ring
   ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2+3,0,Math.PI*2);
-  ctx.strokeStyle = avatarFrame==="crown"?"#c8a84b":avatarFrame==="glow"?theme.accentColor:theme.borderColor;
-  ctx.lineWidth = avatarFrame==="crown"?4:2.5; ctx.stroke();
+  ctx.strokeStyle=avatarFrame==="crown"?"#c8a84b":theme.accentColor; ctx.lineWidth=3; ctx.stroke();
 
-  // Username + tier
+  // Username
   const nX=aX+aSize+18;
-  const uSize=username.length>14?42:username.length>11?50:username.length>8?58:66;
-  ctx.font=`700 ${uSize}px Georgia,serif`; ctx.fillStyle="#f5f4ef";
-  ctx.shadowColor="rgba(0,0,0,0.9)"; ctx.shadowBlur=12;
-  ctx.fillText(`@${username}`,nX,118); ctx.shadowBlur=0;
+  const uSz=username.length>14?44:username.length>10?54:64;
+  ctx.font=`700 ${uSz}px Georgia,serif`; ctx.fillStyle="#f5f4ef";
+  ctx.shadowColor="rgba(0,0,0,0.95)"; ctx.shadowBlur=16;
+  ctx.fillText(`@${username}`,nX,aY+70); ctx.shadowBlur=0;
 
+  // Verified badge
+  const unW=ctx.measureText(`@${username}`).width;
+  ctx.font="700 26px sans-serif"; ctx.fillText("✅",nX+unW+10,aY+66);
+
+  // Tier pill
   const pillTxt=`✦ ${tierTitle}`;
   ctx.font="700 14px 'DM Sans',sans-serif";
-  const pW=ctx.measureText(pillTxt).width+26;
-  ctx.fillStyle=theme.accentColor+"22"; roundRect(ctx,nX,130,pW,26,13); ctx.fill();
-  ctx.strokeStyle=theme.accentColor+"70"; ctx.lineWidth=1; roundRect(ctx,nX,130,pW,26,13); ctx.stroke();
-  ctx.fillStyle=theme.accentColor; ctx.textAlign="center"; ctx.fillText(pillTxt,nX+pW/2,148); ctx.textAlign="left";
+  const pW=ctx.measureText(pillTxt).width+28;
+  ctx.fillStyle="rgba(0,0,0,0.55)"; roundRect(ctx,nX,aY+82,pW,28,14); ctx.fill();
+  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5; roundRect(ctx,nX,aY+82,pW,28,14); ctx.stroke();
+  ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
+  ctx.fillText(pillTxt,nX+pW/2,aY+101); ctx.textAlign="left";
 
-  // Marketplace badge — if cover is a paid cosmetic, make it pop
-  if(theme.marketplaceOnly && theme.name) {
-    const mTxt=`★ ${theme.name}`;
-    ctx.font="700 13px 'DM Sans',sans-serif";
-    const mW=ctx.measureText(mTxt).width+24;
-    ctx.fillStyle=theme.accentColor+"28"; roundRect(ctx,nX,164,mW,24,12); ctx.fill();
-    ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5; roundRect(ctx,nX,164,mW,24,12); ctx.stroke();
-    ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
-    ctx.font="700 12px 'DM Sans',sans-serif";
-    ctx.fillText(mTxt,nX+mW/2,180); ctx.textAlign="left";
-  }
-
-  // Streak — top right
-  ctx.textAlign="right";
-  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.5)";
-  ctx.fillText("CURRENT STREAK",W-50,80);
-  const nSz=streak>=100?128:streak>=10?148:166;
-  ctx.font=`700 ${nSz}px Georgia,serif`;
-  ctx.fillStyle="#f5f4ef";
-  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=50;
-  ctx.fillText(`${streak}`,W-50,200); ctx.shadowBlur=0;
-  const nW=ctx.measureText(`${streak}`).width;
-  ctx.font="600 24px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.45)";
-  ctx.fillText("DAYS",W-50-nW-8,200);
-  ctx.textAlign="left";
-
-  // ── 5. STATS STRIP ────────────────────────────────────────────────────────
-  const stY=28+topH, stH=96;
-  ctx.fillStyle=theme.panelTint; ctx.fillRect(28,stY,W-56,stH);
-  ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(28,stY+stH); ctx.lineTo(W-28,stY+stH); ctx.stroke();
-
-  const stats=[
-    {e:"⚡",v:grassScore>=1000?(grassScore/1000).toFixed(1)+"K":String(grassScore),l:"GRASS SCORE"},
-    {e:"🔥",v:`${best}d`,l:"BEST STREAK"},
-    {e:"🛡",v:String(shields),l:"SHIELDS"},
-    {e:"👑",v:rank?`#${rank}`:"—",l:"RANK",gold:true},
-  ];
-  const sW=(W-56)/4;
-  stats.forEach((s,i)=>{
-    const cx=28+i*sW+sW/2;
-    if(i>0){ctx.strokeStyle="rgba(255,255,255,0.07)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(28+i*sW,stY+10);ctx.lineTo(28+i*sW,stY+stH-10);ctx.stroke();}
-    ctx.font="20px sans-serif"; ctx.textAlign="center"; ctx.fillStyle="#f0efea"; ctx.fillText(s.e,cx,stY+26);
-    ctx.font=`700 ${s.v.length>4?26:32}px Georgia,serif`;
-    ctx.fillStyle=s.gold?theme.accentColor:"#f5f4ef"; ctx.fillText(s.v,cx,stY+62);
-    ctx.font="600 11px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.45)"; ctx.fillText(s.l,cx,stY+82);
-  });
-  ctx.textAlign="left";
-
-  // ── 6. BADGES ROW ─────────────────────────────────────────────────────────
-  const bY=stY+stH, bH=138;
-  ctx.fillStyle=theme.panelTint; ctx.fillRect(28,bY,W-56,bH);
-  ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(28,bY+bH); ctx.lineTo(W-28,bY+bH); ctx.stroke();
-
-  const earnedTop=badges.slice(0,7);
-  const bSz=50, bGap=(W-56-bSz*7)/8;
-  earnedTop.forEach((badge,i)=>{
-    const bx=28+bGap+i*(bSz+bGap)+bSz/2, by=bY+bH/2;
-    ctx.save(); ctx.translate(bx,by); hexPath(ctx,bSz/2);
-    ctx.fillStyle="rgba(8,10,6,0.85)"; ctx.fill();
-    ctx.strokeStyle=theme.badgeStroke; ctx.lineWidth=1.5; ctx.stroke(); ctx.restore();
-    ctx.font="20px sans-serif"; ctx.textAlign="center"; ctx.fillStyle="#f0efea"; ctx.fillText(badge.emoji,bx,by+7);
-    ctx.font="600 9px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.65)";
-    ctx.fillText(badge.name.length>9?badge.name.slice(0,8)+"…":badge.name,bx,by+bSz/2-3);
-  });
-  if(earnedTop.length===0){
-    ctx.font="500 15px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.2)"; ctx.textAlign="center";
-    ctx.fillText("No badges yet — keep going",W/2,bY+bH/2+6); ctx.textAlign="left";
-  }
-
-  // ── 7. PROGRESS BAR ───────────────────────────────────────────────────────
-  const prY=bY+bH, prH=48;
-  ctx.fillStyle=theme.panelTint; ctx.fillRect(28,prY,W-56,prH);
-  ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(28,prY+prH); ctx.lineTo(W-28,prY+prH); ctx.stroke();
-
-  const thresholds=[7,14,30,50,100,180,365,500,1000];
-  const nextT=thresholds.find(t=>t>streak)||1000;
-  const prevT=[...[0,...thresholds]].reverse().find(t=>streak>=t)||0;
-  const fillPct=Math.min(1,(streak-prevT)/Math.max(1,nextT-prevT));
-  const nextLabel=nextT>=1000?"TRANSCENDENT":nextT>=500?"ASCENDED":nextT>=365?"ETERNAL":nextT>=180?"MYTHIC":nextT>=100?"IMMORTAL":nextT>=50?"LEGENDARY":nextT>=30?"ELITE":nextT>=14?"LOCKED IN":"ROOTED";
-
-  const barX=56,barW=W-112,barH=8,barY=prY+20;
-  ctx.fillStyle="rgba(255,255,255,0.07)"; roundRect(ctx,barX,barY,barW,barH,4); ctx.fill();
-  const grad=ctx.createLinearGradient(barX,0,barX+barW*fillPct,0);
-  grad.addColorStop(0,theme.progressFrom); grad.addColorStop(1,theme.progressTo);
-  ctx.fillStyle=grad; roundRect(ctx,barX,barY,barW*fillPct,barH,4); ctx.fill();
-  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=8;
-  ctx.fillStyle=theme.progressTo; roundRect(ctx,barX,barY,barW*fillPct,barH,4); ctx.fill();
-  ctx.shadowBlur=0;
-
-  ctx.font="600 11px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.4)";
-  ctx.fillText(`NEXT: ${nextLabel} · DAY ${nextT}`,barX,prY+44);
-  ctx.textAlign="right"; ctx.fillStyle=theme.accentColor; ctx.fillText(`${streak}/${nextT}`,W-56,prY+44); ctx.textAlign="left";
-
-  // ── 8. BOTTOM PANEL ───────────────────────────────────────────────────────
-  const botY=prY+prH;
-  ctx.fillStyle=theme.panelTint;
-  roundRect(ctx,28,botY,W-56,H-botY-28,22); ctx.fill();
-  ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(28,botY); ctx.lineTo(W-28,botY); ctx.stroke();
-
-  // Cover name badge — milestone covers show name, marketplace covers get premium treatment
+  // Marketplace cover badge (if applicable)
   if(theme.name) {
-    const prefix=theme.marketplaceOnly?"★ ":"";
-    const cnTxt=`${prefix}${theme.name}`;
-    ctx.font=`${theme.marketplaceOnly?"700":"600"} 13px 'DM Sans',sans-serif`;
-    const cnW=ctx.measureText(cnTxt).width+24;
-    ctx.fillStyle=theme.accentColor+(theme.marketplaceOnly?"30":"18");
-    roundRect(ctx,56,botY+14,cnW,24,12); ctx.fill();
+    const prefix = theme.marketplaceOnly ? "★ " : "";
+    const cbTxt = `${prefix}${theme.name}`;
+    ctx.font="700 13px 'DM Sans',sans-serif";
+    const cbW=ctx.measureText(cbTxt).width+22;
+    ctx.fillStyle=theme.accentColor+(theme.marketplaceOnly?"28":"18");
+    roundRect(ctx,nX,aY+118,cbW,24,12); ctx.fill();
     ctx.strokeStyle=theme.accentColor+(theme.marketplaceOnly?"cc":"60");
     ctx.lineWidth=theme.marketplaceOnly?1.5:1;
-    roundRect(ctx,56,botY+14,cnW,24,12); ctx.stroke();
+    roundRect(ctx,nX,aY+118,cbW,24,12); ctx.stroke();
     ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
-    ctx.fillText(cnTxt,56+cnW/2,botY+30); ctx.textAlign="left";
+    ctx.fillText(cbTxt,nX+cbW/2,aY+134); ctx.textAlign="left";
   }
 
-  // Quote
-  const quote=getQuote(streak,bio??"");
-  const qSz=quote.length>55?20:quote.length>40?24:28;
-  ctx.font=`italic ${qSz}px Georgia,serif`; ctx.fillStyle="rgba(240,239,234,0.72)"; ctx.textAlign="center";
-  const maxW=W-120, qWords=quote.split(" ");
-  let line="", qLines=[];
-  for(const w of qWords){const t=line+w+" ";if(ctx.measureText(t).width>maxW&&line){qLines.push(line.trim());line=w+" ";}else line=t;}
-  if(line)qLines.push(line.trim());
-  const qStartY=botY+(theme.name?58:36);
-  qLines.forEach((l,i)=>ctx.fillText(l,W/2,qStartY+i*(qSz+8)));
-  ctx.textAlign="left";
+  // ── STREAK BOX — top right, decorative bordered box ──────────────────────
+  const sbW=310, sbH=190, sbX=W-sbW-36, sbY=30;
+  // Dark bg
+  ctx.fillStyle="rgba(0,0,0,0.65)"; roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.fill();
+  // Accent border
+  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2.5;
+  roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.stroke();
+  // Corner + decorations
+  const cOff=20;
+  [[sbX+cOff,sbY+16],[sbX+sbW-cOff,sbY+16],[sbX+cOff,sbY+sbH-16],[sbX+sbW-cOff,sbY+sbH-16]].forEach(([cx,cy])=>{
+    ctx.fillStyle=theme.accentColor; ctx.font="bold 18px 'DM Sans',sans-serif"; ctx.textAlign="center";
+    ctx.fillText("+",cx,cy+6);
+  });
+  // "CURRENT STREAK" label
+  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.65)"; ctx.textAlign="center";
+  ctx.fillText("CURRENT STREAK",sbX+sbW/2,sbY+34);
+  // Large streak number
+  const numSz=streak>=100?106:streak>=10?124:142;
+  ctx.font=`700 ${numSz}px Georgia,serif`;
+  ctx.fillStyle=theme.accentColor;
+  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=36;
+  ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-46); ctx.shadowBlur=0;
+  // DAYS pill at bottom
+  const dayPillW=100, dayPillH=26;
+  const dayPillX=sbX+sbW/2-dayPillW/2, dayPillY=sbY+sbH-36;
+  ctx.fillStyle="rgba(0,0,0,0.55)"; roundRect(ctx,dayPillX,dayPillY,dayPillW,dayPillH,13); ctx.fill();
+  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5; roundRect(ctx,dayPillX,dayPillY,dayPillW,dayPillH,13); ctx.stroke();
+  ctx.font="700 13px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
+  ctx.fillText("✦ DAYS ✦",sbX+sbW/2,dayPillY+18); ctx.textAlign="left";
 
-  // Branding footer
-  const fY=H-62;
-  try{const logo=await loadImage("/touchgrass-transparent.png");ctx.globalAlpha=0.65;ctx.drawImage(logo,56,fY-14,32,32);ctx.globalAlpha=1;}catch(e){}
-  ctx.font="700 16px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"88";
-  ctx.fillText("PROOF OF GRASS",96,fY+6);
-  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"aa"; ctx.textAlign="center";
-  ctx.fillText("$TOUCHGRASS  ·  #TouchGrass  ·  #ProofOfGrass",W/2,fY+6);
-  ctx.font="500 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.35)"; ctx.textAlign="right";
-  ctx.fillText("proofofgrass.app",W-56,fY+6); ctx.textAlign="left";
+  // ── 5. STATS — left vertical panel ───────────────────────────────────────
+  const spX=20, spY=20+topH+8;
+  const statsArr=[
+    {e:"⚡",v:grassScore>=1000?(grassScore/1000).toFixed(1)+"K":String(grassScore),l:"GRASS SCORE"},
+    {e:"🔥",v:`${best}d`,l:"BEST STREAK"},
+    ...(shields>0?[{e:"🛡",v:String(shields),l:"SHIELDS EARNED"}]:[]),
+    {e:"👑",v:rank?`#${rank}`:"—",l:"GLOBAL RANK",gold:true},
+  ];
+  const spItemH=86, spW=220, spH=statsArr.length*spItemH+8;
+  panel(spX,spY,spW,spH,12);
+
+  statsArr.forEach((s,i)=>{
+    const sy=spY+10+i*spItemH;
+    if(i>0){ctx.strokeStyle=theme.borderColor;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(spX+14,sy-2);ctx.lineTo(spX+spW-14,sy-2);ctx.stroke();}
+    ctx.font="24px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
+    ctx.fillText(s.e,spX+14,sy+28);
+    ctx.font=`700 ${s.v.length>4?30:38}px Georgia,serif`;
+    ctx.fillStyle=s.gold?theme.accentColor:"#f5f4ef";
+    ctx.fillText(s.v,spX+50,sy+32);
+    ctx.font="600 11px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.45)";
+    ctx.fillText(s.l,spX+14,sy+54);
+  });
+
+  // ── 6. PROGRESS BAR — below stats, same width ────────────────────────────
+  const prX=spX, prY=spY+spH+8, prW=spW, prH=48;
+  panel(prX,prY,prW,prH,10);
+  const ths=[7,14,30,50,100,180,365,500,1000];
+  const nxt=ths.find(t=>t>streak)||1000;
+  const prv=[...[0,...ths]].reverse().find(t=>streak>=t)||0;
+  const fp=Math.min(1,(streak-prv)/Math.max(1,nxt-prv));
+  const nxtL=nxt>=1000?"TRANSCENDENT":nxt>=500?"ASCENDED":nxt>=365?"ETERNAL":nxt>=180?"MYTHIC":nxt>=100?"IMMORTAL":nxt>=50?"LEGENDARY":nxt>=30?"ELITE":nxt>=14?"LOCKED IN":"ROOTED";
+  ctx.font="600 10px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="left";
+  ctx.fillText(`${nxtL} · DAY ${nxt}`,prX+12,prY+16);
+  ctx.fillStyle="rgba(240,239,234,0.4)"; ctx.textAlign="right";
+  ctx.fillText(`${streak}/${nxt}`,prX+prW-12,prY+16); ctx.textAlign="left";
+  const barX=prX+12, barY=prY+24, barW=prW-24, barH=10;
+  ctx.fillStyle="rgba(255,255,255,0.08)"; roundRect(ctx,barX,barY,barW,barH,5); ctx.fill();
+  const gr=ctx.createLinearGradient(barX,0,barX+barW*fp,0);
+  gr.addColorStop(0,theme.progressFrom); gr.addColorStop(1,theme.progressTo);
+  ctx.fillStyle=gr; ctx.shadowColor=theme.glowColor; ctx.shadowBlur=8;
+  roundRect(ctx,barX,barY,barW*fp,barH,5); ctx.fill(); ctx.shadowBlur=0;
+
+  // ── 7. BADGES PANEL — bottom left (same width as stats) ──────────────────
+  const earned=badges.slice(0,6);
+  const bpX=spX, bpY=prY+prH+8;
+  const bpH=H-bpY-68; // fills to footer
+  if(earned.length>0){
+    panel(bpX,bpY,spW,bpH,12);
+    ctx.font="700 11px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
+    ctx.fillText("BADGES EARNED",bpX+spW/2,bpY+18); ctx.textAlign="left";
+    // divider
+    ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(bpX+12,bpY+26); ctx.lineTo(bpX+spW-12,bpY+26); ctx.stroke();
+
+    // 3 × 2 grid
+    const bSz=58, bCols=3, bRows=Math.ceil(earned.length/bCols);
+    const bColW=(spW-24)/bCols;
+    earned.forEach((badge,i)=>{
+      const col=i%bCols, row=Math.floor(i/bCols);
+      const bx=bpX+12+col*bColW+bColW/2;
+      const by=bpY+46+row*(bSz+28)+bSz/2;
+      ctx.save(); ctx.translate(bx,by); hexPath(ctx,bSz/2);
+      ctx.fillStyle="rgba(6,8,6,0.88)"; ctx.fill();
+      ctx.strokeStyle=theme.badgeStroke; ctx.lineWidth=2; ctx.stroke(); ctx.restore();
+      ctx.font="24px sans-serif"; ctx.textAlign="center"; ctx.fillStyle="#f0efea";
+      ctx.fillText(badge.emoji,bx,by+9);
+      ctx.font="600 10px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.7)";
+      const bName=badge.name.length>10?badge.name.slice(0,9)+"…":badge.name;
+      ctx.fillText(bName,bx,by+bSz/2-2);
+    });
+  }
+
+  // ── 8. RIGHT CONTENT AREA — cover showcase (takes right side of card) ─────
+  const rcX=spX+spW+16, rcY=20+topH+8, rcW=W-rcX-20, rcH=H-rcY-68;
+
+  // Pack / Cover callout panel — bottom right
+  const cpH=200, cpY=rcY+rcH-cpH;
+  if(theme.name){
+    panel(rcX,cpY,rcW,cpH,12);
+    // Pack emoji
+    const pe=theme.name.includes("Beach")?"🏖":theme.name.includes("Mountain")?"⛰":
+      theme.name.includes("Sunflower")?"🌻":theme.name.includes("Waterfall")?"💧":
+      theme.name.includes("Night")?"🌙":theme.name.includes("Golden")?"🌅":
+      theme.name.includes("Forest")?"🌲":theme.name.includes("Summit")?"🏔":
+      theme.name.includes("Sky")?"✨":theme.name.includes("Temple")?"🌞":
+      theme.name.includes("Garden")?"🌸":theme.name.includes("Celestial")?"💫":"🎨";
+    ctx.font="52px sans-serif"; ctx.textAlign="center";
+    ctx.fillText(pe,rcX+rcW/2,cpY+66);
+    // Pack type label
+    ctx.font="700 13px 'DM Sans',sans-serif";
+    ctx.fillStyle=theme.accentColor+"aa";
+    ctx.fillText(theme.marketplaceOnly?"RETRO COVERS PACK":"STREAK COVER",rcX+rcW/2,cpY+96);
+    // Cover name — large
+    ctx.font="700 24px 'DM Sans',sans-serif"; ctx.fillStyle="#f5f4ef";
+    ctx.fillText(theme.name.toUpperCase(),rcX+rcW/2,cpY+130);
+    // Sub label
+    ctx.font="600 12px 'DM Sans',sans-serif";
+    ctx.fillStyle=theme.marketplaceOnly?theme.accentColor:"rgba(240,239,234,0.4)";
+    ctx.fillText(
+      theme.marketplaceOnly?"★ MARKETPLACE EXCLUSIVE ★":`STREAK COVER · UNLOCKED AT DAY ${theme.unlockDay||"?"}`,
+      rcX+rcW/2,cpY+158
+    );
+    // Accent line at top of panel
+    ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(rcX+40,cpY); ctx.lineTo(rcX+rcW-40,cpY); ctx.stroke();
+    ctx.textAlign="left";
+  }
+
+  // ── 9. FOOTER ─────────────────────────────────────────────────────────────
+  const fY=H-44;
+  // Solana left
+  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="#9945ff"; ctx.textAlign="left";
+  ctx.fillText("BUILT ON ◎ SOLANA",28,fY);
+  const solW=ctx.measureText("BUILT ON ◎ SOLANA").width;
+  ctx.fillStyle=theme.accentColor; ctx.fillText("  ·  PROOF OF GRASS",28+solW,fY);
+  // Centre logo + wordmark
+  try{const lg=await loadImage("/touchgrass-transparent.png");ctx.globalAlpha=0.8;ctx.drawImage(lg,W/2-62,fY-28,30,30);ctx.globalAlpha=1;}catch(e){}
+  ctx.font="700 17px Georgia,serif"; ctx.fillStyle="#f5f4ef"; ctx.textAlign="center";
+  ctx.fillText("TOUCH GRASS",W/2-18,fY-7);
+  ctx.font="600 10px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"99";
+  ctx.fillText("proofofgrass.app",W/2-18,fY+10);
+  // Right
+  ctx.font="500 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.4)"; ctx.textAlign="right";
+  ctx.fillText("$TOUCHGRASS · #TouchGrass · #ProofOfGrass",W-28,fY);
+  ctx.textAlign="left";
 
   try { return canvas.toDataURL("image/png"); }
   catch(e) { throw new Error("canvas_tainted: "+e.message); }
