@@ -219,118 +219,92 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.strokeStyle=theme.borderColor; ctx.lineWidth=3;
   roundRect(ctx,20,20,W-40,H-40,16); ctx.stroke();
 
-  // ── Panel helper ──────────────────────────────────────────────────────────
   function panel(x,y,w,h,r=12){
-    ctx.fillStyle=theme.panelTint;
-    roundRect(ctx,x,y,w,h,r); ctx.fill();
-    ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1.5;
-    roundRect(ctx,x,y,w,h,r); ctx.stroke();
+    ctx.fillStyle=theme.panelTint; roundRect(ctx,x,y,w,h,r); ctx.fill();
+    ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1.5; roundRect(ctx,x,y,w,h,r); ctx.stroke();
   }
 
-  // ── Pill helper ───────────────────────────────────────────────────────────
-  function drawPill(x,y,w,h,txt,r,strong){
+  function pill(x,y,w,h,txt,r,strong){
     ctx.fillStyle=strong?theme.accentColor+"22":"rgba(0,0,0,0.55)";
     roundRect(ctx,x,y,w,h,r); ctx.fill();
     ctx.strokeStyle=strong?theme.accentColor:theme.borderColor;
-    ctx.lineWidth=strong?2:1.5;
-    roundRect(ctx,x,y,w,h,r); ctx.stroke();
+    ctx.lineWidth=strong?2:1.5; roundRect(ctx,x,y,w,h,r); ctx.stroke();
     if(strong){ ctx.shadowColor=theme.glowColor; ctx.shadowBlur=10; roundRect(ctx,x,y,w,h,r); ctx.stroke(); ctx.shadowBlur=0; }
     ctx.fillStyle=strong?"#f5f4ef":theme.accentColor;
     ctx.textAlign="center"; ctx.fillText(txt,x+w/2,y+h*0.68); ctx.textAlign="left";
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // TOP PANEL — Username section
-  // Layout: avatar left | username + pills centre-left | streak box right
-  // ═══════════════════════════════════════════════════════════════════════════
-  const topH=228;
+  // ── TOP PANEL ─────────────────────────────────────────────────────────────
+  // Two pill rows: tier pill + cover pill stacked
+  const topH=252;
   panel(20,20,W-40,topH,16);
   ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(20,20+topH); ctx.lineTo(W-20,20+topH); ctx.stroke();
 
-  // Avatar — vertically centred in top panel
+  // Avatar
   const aSize=116, aX=40, aY=20+(topH-aSize)/2;
   try {
     if(!avatarUrl) throw new Error();
     const ai=await loadImage(avatarUrl);
-    ctx.save();
-    ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.clip();
-    ctx.drawImage(ai,aX,aY,aSize,aSize);
-    ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.clip();
+    ctx.drawImage(ai,aX,aY,aSize,aSize); ctx.restore();
   } catch {
     ctx.fillStyle=theme.accentColor+"30";
     ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.fill();
-    ctx.font=`700 40px Georgia,serif`; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
+    ctx.font="700 40px Georgia,serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
     ctx.fillText((username[0]||"?").toUpperCase(),aX+aSize/2,aY+aSize/2+14); ctx.textAlign="left";
   }
-  // Avatar ring — 2px gap, accent color
   ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2+4,0,Math.PI*2);
-  ctx.strokeStyle=avatarFrame==="crown"?"#c8a84b":theme.accentColor;
-  ctx.lineWidth=3; ctx.stroke();
+  ctx.strokeStyle=avatarFrame==="crown"?"#c8a84b":theme.accentColor; ctx.lineWidth=3; ctx.stroke();
 
-  // Username — one clean line, Bebas Neue, left-aligned to avatar
+  // Username — no checkmark
   const nX=aX+aSize+24;
   const uSz=username.length>14?50:username.length>11?60:70;
-  // Vertical: position username so pills sit in lower half of panel
-  const nameY=aY+aSize*0.54;
-  ctx.font=`${uSz}px 'Bebas Neue',Georgia,serif`;
-  ctx.fillStyle="#f5f4ef";
+  const nameY=aY+aSize*0.48;
+  ctx.font=`${uSz}px 'Bebas Neue',Georgia,serif`; ctx.fillStyle="#f5f4ef";
   ctx.shadowColor="rgba(0,0,0,0.9)"; ctx.shadowBlur=20;
   ctx.fillText(`@${username}`,nX,nameY); ctx.shadowBlur=0;
 
-  // Verified — same baseline as username
-  const unW=ctx.measureText(`@${username}`).width;
-  ctx.font="22px sans-serif";
-  ctx.fillText("✅",nX+unW+12,nameY-4);
-
-  // Pills row — below username, consistent height, same style as stat labels
-  const pillH=32, pillY=nameY+14, pillFont="700 14px 'DM Sans',sans-serif";
+  // Pills — stacked vertically below username
+  const pillH=32, pillFont="700 14px 'DM Sans',sans-serif";
   ctx.font=pillFont;
 
-  // Tier pill
-  const t1txt=`✦ ${tierTitle}`;
-  const t1W=ctx.measureText(t1txt).width+30;
-  drawPill(nX,pillY,t1W,pillH,t1txt,pillH/2,false);
+  // Row 1: Tier
+  const p1txt=`✦ ${tierTitle}`;
+  const p1W=ctx.measureText(p1txt).width+30;
+  const p1Y=nameY+14;
+  pill(nX,p1Y,p1W,pillH,p1txt,pillH/2,false);
 
-  // Cover pill — only shown if cover equipped
+  // Row 2: Cover/Pack name — directly below tier
   if(theme.name){
-    const t2txt=theme.marketplaceOnly?`★ ${theme.name}`:`◈ ${theme.name}`;
-    const t2W=ctx.measureText(t2txt).width+30;
+    const p2txt=theme.marketplaceOnly?`★ ${theme.name}`:`◈ ${theme.name}`;
     ctx.font=pillFont;
-    drawPill(nX+t1W+10,pillY,t2W,pillH,t2txt,pillH/2,theme.marketplaceOnly);
+    const p2W=ctx.measureText(p2txt).width+30;
+    pill(nX,p1Y+pillH+8,p2W,pillH,p2txt,pillH/2,theme.marketplaceOnly);
   }
 
-  // ── Streak box — top right, inside top panel ───────────────────────────────
+  // Streak box — top right
   const sbW=288, sbH=topH-16, sbX=W-sbW-30, sbY=28;
-  ctx.fillStyle="rgba(0,0,0,0.70)";
-  roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.fill();
-  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2.5;
-  roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.stroke();
-  // Corner marks
+  ctx.fillStyle="rgba(0,0,0,0.70)"; roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.fill();
+  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2.5; roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.stroke();
   [[sbX+18,sbY+14],[sbX+sbW-18,sbY+14],[sbX+18,sbY+sbH-14],[sbX+sbW-18,sbY+sbH-14]].forEach(([cx,cy])=>{
     ctx.fillStyle=theme.accentColor+"bb"; ctx.font="bold 16px 'DM Sans',sans-serif";
     ctx.textAlign="center"; ctx.fillText("+",cx,cy+5);
   });
-  // Label
-  ctx.font="600 12px 'DM Sans',sans-serif";
-  ctx.fillStyle="rgba(240,239,234,0.50)"; ctx.textAlign="center";
-  ctx.fillText("CURRENT STREAK",sbX+sbW/2,sbY+30);
-  // Number
-  const nSz=streak>=100?118:streak>=10?136:154;
-  ctx.font=`${nSz}px 'Bebas Neue',Georgia,serif`;
-  ctx.fillStyle=theme.accentColor;
-  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=44;
-  ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-40); ctx.shadowBlur=0;
-  // Days pill
-  const dpW=96,dpH=24,dpX=sbX+sbW/2-dpW/2,dpY=sbY+sbH-32;
+  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.80)"; ctx.textAlign="center";
+  ctx.fillText("CURRENT STREAK",sbX+sbW/2,sbY+32);
+  // Streak number — larger
+  const nSz=streak>=100?130:streak>=10?148:166;
+  ctx.font=`${nSz}px 'Bebas Neue',Georgia,serif`; ctx.fillStyle=theme.accentColor;
+  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=48;
+  ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-36); ctx.shadowBlur=0;
+  const dpW=96,dpH=24,dpX=sbX+sbW/2-dpW/2,dpY=sbY+sbH-28;
   ctx.fillStyle="rgba(0,0,0,0.60)"; roundRect(ctx,dpX,dpY,dpW,dpH,12); ctx.fill();
   ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5; roundRect(ctx,dpX,dpY,dpW,dpH,12); ctx.stroke();
   ctx.font="700 11px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor;
   ctx.fillText("✦ DAYS ✦",sbX+sbW/2,dpY+16); ctx.textAlign="left";
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // LEFT COLUMN
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── LEFT COLUMN ───────────────────────────────────────────────────────────
   const colX=20, colY=20+topH+10, colW=244;
 
   // Stats panel
@@ -340,7 +314,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     ...(shields>0?[{e:"🛡",v:String(shields),l:"SHIELDS EARNED"}]:[]),
     {e:"👑",v:rank?`#${rank}`:"—",l:"GLOBAL RANK",gold:true},
   ];
-  const siH=78, spH=sa.length*siH+14;
+  const siH=80, spH=sa.length*siH+14;
   panel(colX,colY,colW,spH,12);
   sa.forEach((s,i)=>{
     const sy=colY+10+i*siH;
@@ -348,13 +322,16 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(colX+14,sy); ctx.lineTo(colX+colW-14,sy); ctx.stroke();
     }
-    ctx.font="19px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
-    ctx.fillText(s.e,colX+12,sy+26);
+    // Emoji
+    ctx.font="22px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
+    ctx.fillText(s.e,colX+12,sy+30);
+    // Value — brought down slightly
     ctx.font=`${s.v.length>4?42:52}px 'Bebas Neue',Georgia,serif`;
     ctx.fillStyle=s.gold?theme.accentColor:"#f5f4ef";
-    ctx.fillText(s.v,colX+42,sy+34);
-    ctx.font="600 11px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.46)";
-    ctx.fillText(s.l,colX+12,sy+52);
+    ctx.fillText(s.v,colX+44,sy+38);
+    // Label — vibrant, bigger
+    ctx.font="700 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.82)";
+    ctx.fillText(s.l,colX+12,sy+58);
   });
 
   // Progress bar
@@ -365,116 +342,86 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   const prv=[...[0,...ths]].reverse().find(t=>streak>=t)||0;
   const fp=Math.min(1,(streak-prv)/Math.max(1,nxt-prv));
   const nxtL=nxt>=1000?"TRANSCENDENT":nxt>=500?"ASCENDED":nxt>=365?"ETERNAL":nxt>=180?"MYTHIC":nxt>=100?"IMMORTAL":nxt>=50?"LEGENDARY":nxt>=30?"ELITE":nxt>=14?"LOCKED IN":"ROOTED";
-  ctx.font="700 10px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="left";
-  ctx.fillText(`${nxtL} · DAY ${nxt}`,colX+12,prY+16);
-  ctx.fillStyle="rgba(240,239,234,0.36)"; ctx.textAlign="right";
-  ctx.fillText(`${streak}/${nxt}`,colX+colW-12,prY+16); ctx.textAlign="left";
-  const bX2=colX+12,bY2=prY+25,bW2=colW-24,bH2=10;
+  ctx.font="700 11px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="left";
+  ctx.fillText(`${nxtL} · DAY ${nxt}`,colX+12,prY+17);
+  ctx.fillStyle="rgba(240,239,234,0.75)"; ctx.textAlign="right";
+  ctx.fillText(`${streak}/${nxt}`,colX+colW-12,prY+17); ctx.textAlign="left";
+  const bX2=colX+12,bY2=prY+26,bW2=colW-24,bH2=10;
   ctx.fillStyle="rgba(255,255,255,0.07)"; roundRect(ctx,bX2,bY2,bW2,bH2,5); ctx.fill();
   const gr=ctx.createLinearGradient(bX2,0,bX2+bW2*fp,0);
   gr.addColorStop(0,theme.progressFrom); gr.addColorStop(1,theme.progressTo);
   ctx.fillStyle=gr; ctx.shadowColor=theme.glowColor; ctx.shadowBlur=8;
   roundRect(ctx,bX2,bY2,bW2*fp,bH2,5); ctx.fill(); ctx.shadowBlur=0;
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // BADGES PANEL
-  // Redesign: clean dark panel, accent header line, hex grid fills box evenly
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── BADGES PANEL — total count only, no individual badges ─────────────────
   const bpY=prY+prH+8, bpH=H-bpY-68;
-  const earned=badges.slice(0,6);
   panel(colX,bpY,colW,bpH,12);
 
-  // Header — accent line above text, Bebas Neue centered
-  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(colX+20,bpY+36); ctx.lineTo(colX+colW-20,bpY+36); ctx.stroke();
-  ctx.font="20px 'Bebas Neue',Georgia,serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
-  ctx.fillText("BADGES EARNED",colX+colW/2,bpY+28); ctx.textAlign="left";
+  const totalBadges=badges.length;
+  const maxBadges=26; // ALL_BADGES.length
 
-  if(earned.length===0){
-    ctx.font="500 12px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.18)"; ctx.textAlign="center";
-    ctx.fillText("Keep going to earn badges",colX+colW/2,bpY+bpH/2+6);
-    ctx.textAlign="left";
-  } else {
-    // Grid: 3 columns, up to 2 rows
-    // Each cell is equal — hex + name fills it cleanly
-    const bCols=3;
-    const bRows=Math.ceil(earned.length/bCols);
-    const padX=16, padY=44; // padding from panel edge
-    const cellW=(colW-padX*2)/bCols;
-    const cellH=(bpH-padY-8)/bRows;
-    // Hex radius: leaves room for name below
-    const nameFontSz=11;
-    const nameLineH=nameFontSz+6;
-    const hR=Math.min(cellW*0.36, (cellH-nameLineH-8)*0.5, 40);
-    const emojiFontSz=Math.round(hR*0.95);
+  // Large count centered
+  ctx.textAlign="center";
+  // Accent circle behind number
+  ctx.fillStyle=theme.accentColor+"18";
+  ctx.beginPath(); ctx.arc(colX+colW/2,bpY+bpH/2-18,52,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=theme.accentColor+"66"; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(colX+colW/2,bpY+bpH/2-18,52,0,Math.PI*2); ctx.stroke();
 
-    earned.forEach((badge,idx)=>{
-      const col=idx%bCols, row=Math.floor(idx/bCols);
-      const cx=colX+padX+col*cellW+cellW/2;
-      // Centre hex vertically in cell, with name below
-      const totalBlockH=hR*2+nameLineH+4;
-      const hexCY=bpY+padY+row*cellH+(cellH-totalBlockH)/2+hR;
+  // Number
+  ctx.font=`${totalBadges>=10?72:80}px 'Bebas Neue',Georgia,serif`;
+  ctx.fillStyle=theme.accentColor;
+  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=24;
+  ctx.fillText(String(totalBadges),colX+colW/2,bpY+bpH/2+16); ctx.shadowBlur=0;
 
-      // Hex shape
-      ctx.save(); ctx.translate(cx,hexCY); hexPath(ctx,hR);
-      ctx.fillStyle="rgba(8,10,8,0.92)"; ctx.fill();
-      ctx.strokeStyle=theme.badgeStroke; ctx.lineWidth=2; ctx.stroke();
-      ctx.restore();
+  // Label above number
+  ctx.font="700 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.82)";
+  ctx.fillText("BADGES EARNED",colX+colW/2,bpY+bpH/2-76);
 
-      // Inner accent fill (very subtle)
-      ctx.save(); ctx.translate(cx,hexCY); hexPath(ctx,hR-3);
-      ctx.fillStyle=theme.accentColor+"0a"; ctx.fill();
-      ctx.restore();
+  // Divider
+  ctx.strokeStyle=theme.accentColor+"44"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(colX+24,bpY+bpH/2-62); ctx.lineTo(colX+colW-24,bpY+bpH/2-62); ctx.stroke();
 
-      // Emoji — centred in hex
-      ctx.font=`${emojiFontSz}px sans-serif`;
-      ctx.textAlign="center";
-      ctx.fillText(badge.emoji, cx, hexCY+emojiFontSz*0.36);
+  // "/ 26 total" below number
+  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.55)";
+  ctx.fillText(`/ ${maxBadges} total`,colX+colW/2,bpY+bpH/2+42);
 
-      // Name — below hex, DM Sans, never truncated if fits
-      ctx.font=`700 ${nameFontSz}px 'DM Sans',sans-serif`;
-      ctx.fillStyle="rgba(240,239,234,0.88)";
-      const nameY2=hexCY+hR+nameLineH;
-      // Measure and shrink font if needed
-      let dispName=badge.name;
-      let fontSize=nameFontSz;
-      while(ctx.measureText(dispName).width > cellW-4 && fontSize > 8){
-        fontSize--;
-        ctx.font=`700 ${fontSize}px 'DM Sans',sans-serif`;
-      }
-      ctx.fillText(dispName, cx, nameY2);
-      ctx.textAlign="left";
+  // Top earned badge emojis as decoration — small row
+  if(totalBadges>0){
+    const topFew=badges.slice(0,3);
+    const eSz=22, eGap=10, rowW=topFew.length*(eSz+eGap)-eGap;
+    const eStartX=colX+colW/2-rowW/2;
+    ctx.font=`${eSz}px sans-serif`;
+    topFew.forEach((b,i)=>{
+      ctx.fillText(b.emoji,eStartX+i*(eSz+eGap),bpY+bpH/2+74);
     });
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // BOTTOM SPLIT PANEL — Touch Grass | Pack Info
-  // ═══════════════════════════════════════════════════════════════════════════
+  ctx.textAlign="left";
+
+  // ── BOTTOM SPLIT PANEL — Touch Grass | Pack Info ──────────────────────────
   const rcX=colX+colW+14;
   const botW=W-rcX-20, botY=H-268, botH=200;
   panel(rcX,botY,botW,botH,12);
-
-  // Top accent line
   ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(rcX+20,botY); ctx.lineTo(rcX+botW-20,botY); ctx.stroke();
-
-  // Vertical divider
   const halfW=botW/2;
   ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(rcX+halfW,botY+16); ctx.lineTo(rcX+halfW,botY+botH-16); ctx.stroke();
 
-  // LEFT — Touch Grass logo + wordmark
+  // LEFT — Touch Grass
   const lgCX=rcX+halfW/2;
   try {
     const lg=await loadImage("/touchgrass-transparent.png");
-    ctx.globalAlpha=0.95; ctx.drawImage(lg,lgCX-32,botY+22,64,64); ctx.globalAlpha=1;
+    ctx.globalAlpha=0.95; ctx.drawImage(lg,lgCX-34,botY+22,68,68); ctx.globalAlpha=1;
   } catch {}
   ctx.font="36px 'Bebas Neue',Georgia,serif"; ctx.fillStyle="#f5f4ef"; ctx.textAlign="center";
-  ctx.fillText("TOUCH GRASS",lgCX,botY+108);
+  ctx.shadowColor=theme.glowColor+"40"; ctx.shadowBlur=8;
+  ctx.fillText("TOUCH GRASS",lgCX,botY+112); ctx.shadowBlur=0;
   ctx.font="600 11px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"99";
-  ctx.fillText("proofofgrass.app",lgCX,botY+128);
-  ctx.font="500 10px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.24)";
-  ctx.fillText("BUILT ON ◎ SOLANA",lgCX,botY+148);
+  ctx.fillText("proofofgrass.app",lgCX,botY+132);
+  ctx.font="500 10px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.55)";
+  ctx.fillText("BUILT ON ◎ SOLANA",lgCX,botY+152);
 
   // RIGHT — Pack info
   const pkCX=rcX+halfW+halfW/2;
@@ -482,37 +429,36 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     const pe=theme.name.includes("Beach")?"🏖":theme.name.includes("Mountain")?"⛰":
       theme.name.includes("Sunflower")?"🌻":theme.name.includes("Waterfall")?"💧":
       theme.name.includes("Night")?"🌙":theme.name.includes("Golden")?"🌅":
-      theme.name.includes("Forest")?"🌲":theme.name.includes("Summit")?"🏔":
-      theme.name.includes("Sky")?"✨":theme.name.includes("Temple")?"🌞":
-      theme.name.includes("Garden")?"🌸":theme.name.includes("Celestial")?"💫":"🎨";
+      theme.name.includes("Grove")?"🌿":theme.name.includes("Forest")?"🌲":
+      theme.name.includes("Summit")?"🏔":theme.name.includes("Sky")?"✨":
+      theme.name.includes("Temple")?"🌞":theme.name.includes("Garden")?"🌸":
+      theme.name.includes("Celestial")?"💫":"🎨";
     ctx.font="46px sans-serif"; ctx.textAlign="center";
-    ctx.fillText(pe,pkCX,botY+56);
+    ctx.fillText(pe,pkCX,botY+58);
     ctx.font="700 10px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"99";
     ctx.fillText(theme.marketplaceOnly?"RETRO COVERS PACK":"STREAK COVER",pkCX,botY+80);
     ctx.font="34px 'Bebas Neue',Georgia,serif"; ctx.fillStyle="#f5f4ef";
-    ctx.fillText(theme.name.toUpperCase(),pkCX,botY+114);
+    ctx.fillText(theme.name.toUpperCase(),pkCX,botY+116);
     ctx.font="600 11px 'DM Sans',sans-serif";
-    ctx.fillStyle=theme.marketplaceOnly?theme.accentColor:"rgba(240,239,234,0.38)";
+    ctx.fillStyle=theme.marketplaceOnly?theme.accentColor:"rgba(240,239,234,0.55)";
     ctx.fillText(
       theme.marketplaceOnly?"★ MARKETPLACE EXCLUSIVE ★":`UNLOCKED AT DAY ${theme.unlockDay||"?"}`,
-      pkCX,botY+140
+      pkCX,botY+142
     );
-    // Small accent line under exclusive label
     if(theme.marketplaceOnly){
-      const lw=140;
-      ctx.strokeStyle=theme.accentColor+"55"; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(pkCX-lw/2,botY+150); ctx.lineTo(pkCX+lw/2,botY+150); ctx.stroke();
+      const lw=130; ctx.strokeStyle=theme.accentColor+"44"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(pkCX-lw/2,botY+152); ctx.lineTo(pkCX+lw/2,botY+152); ctx.stroke();
     }
   }
   ctx.textAlign="left";
 
-  // ── FOOTER ────────────────────────────────────────────────────────────────
+  // Footer
   const fY=H-36;
   ctx.font="600 12px 'DM Sans',sans-serif"; ctx.fillStyle="#9945ff"; ctx.textAlign="left";
   ctx.fillText("BUILT ON ◎ SOLANA",28,fY);
   const slW=ctx.measureText("BUILT ON ◎ SOLANA").width;
   ctx.fillStyle=theme.accentColor; ctx.fillText("  ·  PROOF OF GRASS",28+slW,fY);
-  ctx.font="600 12px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.36)"; ctx.textAlign="right";
+  ctx.font="600 12px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.70)"; ctx.textAlign="right";
   ctx.fillText("$TOUCHGRASS · #TouchGrass · #ProofOfGrass",W-28,fY);
   ctx.textAlign="left";
 
