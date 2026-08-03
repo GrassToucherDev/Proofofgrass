@@ -198,12 +198,12 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     const bebas = new FontFace("Bebas Neue", "url(https://fonts.gstatic.com/s/bebasneuepro/v3/2V0FKg2vH0NRXP81hDDSSXVeI0g.woff2)");
     await bebas.load();
     document.fonts.add(bebas);
-  } catch(e) { console.warn("Bebas Neue load failed:", e?.message); }
+  } catch(e) {}
 
-  // ── 1. BACKGROUND ────────────────────────────────────────────────────────
+  // ── 1. BACKGROUND ─────────────────────────────────────────────────────────
   ctx.fillStyle = "#060807"; ctx.fillRect(0,0,W,H);
 
-  // ── 2. COVER ART — full bleed, vignette only at edges ────────────────────
+  // ── 2. COVER ART ──────────────────────────────────────────────────────────
   if (theme.imageUrl && theme.imageUrl !== "PASTE_URL_HERE") {
     try {
       const ci = await loadImage(theme.imageUrl);
@@ -212,31 +212,29 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}
       else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
       ctx.drawImage(ci,dx,dy,dw,dh);
-      // Vignette — edges only, keep centre clear
       const v=ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.75);
       v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,0.60)");
       ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
-    } catch(e){ ctx.fillStyle=theme.fallback; ctx.fillRect(0,0,W,H); }
+    } catch { ctx.fillStyle=theme.fallback; ctx.fillRect(0,0,W,H); }
   } else { ctx.fillStyle=theme.fallback; ctx.fillRect(0,0,W,H); }
 
-  // ── 3. OUTER BORDER ──────────────────────────────────────────────────────
+  // ── 3. OUTER BORDER ───────────────────────────────────────────────────────
   ctx.strokeStyle=theme.borderColor; ctx.lineWidth=3;
   roundRect(ctx,20,20,W-40,H-40,16); ctx.stroke();
 
-  // Panel helper
   function panel(x,y,w,h,r=12){
     ctx.fillStyle=theme.panelTint; roundRect(ctx,x,y,w,h,r); ctx.fill();
-    ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1; roundRect(ctx,x,y,w,h,r); ctx.stroke();
+    ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1.5; roundRect(ctx,x,y,w,h,r); ctx.stroke();
   }
 
-  // ── 4. TOP PANEL — full width, avatar + username left, streak right ───────
-  const topH=230;
+  // ── 4. TOP PANEL ──────────────────────────────────────────────────────────
+  const topH = 240;
   panel(20,20,W-40,topH,16);
   ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(20,20+topH); ctx.lineTo(W-20,20+topH); ctx.stroke();
 
   // Avatar
-  const aSize=110, aX=44, aY=44;
+  const aSize=110, aX=44, aY=50;
   try {
     if(!avatarUrl) throw new Error();
     const ai=await loadImage(avatarUrl);
@@ -252,150 +250,188 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.strokeStyle=avatarFrame==="crown"?"#c8a84b":theme.accentColor; ctx.lineWidth=3; ctx.stroke();
 
   // Username
-  const nX=aX+aSize+18;
-  const uSz=username.length>14?44:username.length>10?54:64;
-  ctx.font=`${uSz+10}px 'Bebas Neue',Georgia,serif`; ctx.fillStyle="#f5f4ef";
+  const nX=aX+aSize+20;
+  const uSz=username.length>14?52:username.length>10?62:74;
+  ctx.font=`${uSz}px 'Bebas Neue',Georgia,serif`; ctx.fillStyle="#f5f4ef";
   ctx.shadowColor="rgba(0,0,0,0.95)"; ctx.shadowBlur=16;
-  ctx.fillText(`@${username}`,nX,aY+70); ctx.shadowBlur=0;
-
-  // Verified badge
+  ctx.fillText(`@${username}`,nX,aY+72); ctx.shadowBlur=0;
   const unW=ctx.measureText(`@${username}`).width;
-  ctx.font="700 26px sans-serif"; ctx.fillText("✅",nX+unW+10,aY+66);
+  ctx.font="26px sans-serif"; ctx.fillText("✅",nX+unW+10,aY+68);
 
-  // Tier pill
+  // Tier pill — enlarged
   const pillTxt=`✦ ${tierTitle}`;
-  ctx.font="700 14px 'DM Sans',sans-serif";
-  const pW=ctx.measureText(pillTxt).width+28;
-  ctx.fillStyle="rgba(0,0,0,0.55)"; roundRect(ctx,nX,aY+82,pW,28,14); ctx.fill();
-  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5; roundRect(ctx,nX,aY+82,pW,28,14); ctx.stroke();
+  ctx.font="700 17px 'DM Sans',sans-serif";
+  const pW=ctx.measureText(pillTxt).width+36;
+  const pX=nX, pY=aY+84, pH=36;
+  ctx.fillStyle="rgba(0,0,0,0.6)"; roundRect(ctx,pX,pY,pW,pH,18); ctx.fill();
+  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2; roundRect(ctx,pX,pY,pW,pH,18); ctx.stroke();
   ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
-  ctx.fillText(pillTxt,nX+pW/2,aY+101); ctx.textAlign="left";
+  ctx.fillText(pillTxt,pX+pW/2,pY+24); ctx.textAlign="left";
 
-  // Marketplace cover badge (if applicable)
-  if(theme.name) {
-    const prefix = theme.marketplaceOnly ? "★ " : "";
-    const cbTxt = `${prefix}${theme.name}`;
-    ctx.font="700 13px 'DM Sans',sans-serif";
-    const cbW=ctx.measureText(cbTxt).width+22;
+  // Cover badge pill — enlarged, right next to tier pill
+  if(theme.name){
+    const prefix=theme.marketplaceOnly?"★ ":"";
+    const cbTxt=`${prefix}${theme.name}`;
+    ctx.font="700 17px 'DM Sans',sans-serif";
+    const cbW=ctx.measureText(cbTxt).width+36;
+    const cbX=pX+pW+12, cbY=pY;
     ctx.fillStyle=theme.accentColor+(theme.marketplaceOnly?"28":"18");
-    roundRect(ctx,nX,aY+118,cbW,24,12); ctx.fill();
-    ctx.strokeStyle=theme.accentColor+(theme.marketplaceOnly?"cc":"60");
-    ctx.lineWidth=theme.marketplaceOnly?1.5:1;
-    roundRect(ctx,nX,aY+118,cbW,24,12); ctx.stroke();
-    ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
-    ctx.fillText(cbTxt,nX+cbW/2,aY+134); ctx.textAlign="left";
+    roundRect(ctx,cbX,cbY,cbW,pH,18); ctx.fill();
+    ctx.strokeStyle=theme.accentColor+(theme.marketplaceOnly?"ff":"88");
+    ctx.lineWidth=2; roundRect(ctx,cbX,cbY,cbW,pH,18); ctx.stroke();
+    // Glow for marketplace
+    if(theme.marketplaceOnly){
+      ctx.shadowColor=theme.glowColor; ctx.shadowBlur=12;
+      roundRect(ctx,cbX,cbY,cbW,pH,18); ctx.stroke(); ctx.shadowBlur=0;
+    }
+    ctx.fillStyle="#f5f4ef"; ctx.textAlign="center";
+    ctx.fillText(cbTxt,cbX+cbW/2,cbY+24); ctx.textAlign="left";
   }
 
-  // ── STREAK BOX — top right, decorative bordered box ──────────────────────
-  const sbW=310, sbH=190, sbX=W-sbW-36, sbY=30;
-  // Dark bg
-  ctx.fillStyle="rgba(0,0,0,0.65)"; roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.fill();
-  // Accent border
-  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2.5;
-  roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.stroke();
-  // Corner + decorations
-  const cOff=20;
-  [[sbX+cOff,sbY+16],[sbX+sbW-cOff,sbY+16],[sbX+cOff,sbY+sbH-16],[sbX+sbW-cOff,sbY+sbH-16]].forEach(([cx,cy])=>{
-    ctx.fillStyle=theme.accentColor; ctx.font="bold 18px 'DM Sans',sans-serif"; ctx.textAlign="center";
+  // Streak box — top right
+  const sbW=300, sbH=200, sbX=W-sbW-32, sbY=28;
+  ctx.fillStyle="rgba(0,0,0,0.70)"; roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.fill();
+  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2.5; roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.stroke();
+  // Corner +
+  [[sbX+22,sbY+18],[sbX+sbW-22,sbY+18],[sbX+22,sbY+sbH-18],[sbX+sbW-22,sbY+sbH-18]].forEach(([cx,cy])=>{
+    ctx.fillStyle=theme.accentColor+"cc"; ctx.font="bold 18px 'DM Sans',sans-serif"; ctx.textAlign="center";
     ctx.fillText("+",cx,cy+6);
   });
-  // "CURRENT STREAK" label
-  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.65)"; ctx.textAlign="center";
-  ctx.fillText("CURRENT STREAK",sbX+sbW/2,sbY+34);
-  // Large streak number
-  const numSz=streak>=100?118:streak>=10?138:158;
-  ctx.font=`${numSz+14}px 'Bebas Neue',Georgia,serif`;
-  ctx.fillStyle=theme.accentColor;
-  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=36;
-  ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-46); ctx.shadowBlur=0;
-  // DAYS pill at bottom
-  const dayPillW=100, dayPillH=26;
-  const dayPillX=sbX+sbW/2-dayPillW/2, dayPillY=sbY+sbH-36;
-  ctx.fillStyle="rgba(0,0,0,0.55)"; roundRect(ctx,dayPillX,dayPillY,dayPillW,dayPillH,13); ctx.fill();
-  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5; roundRect(ctx,dayPillX,dayPillY,dayPillW,dayPillH,13); ctx.stroke();
-  ctx.font="700 13px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
-  ctx.fillText("✦ DAYS ✦",sbX+sbW/2,dayPillY+18); ctx.textAlign="left";
+  ctx.font="600 14px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.6)"; ctx.textAlign="center";
+  ctx.fillText("CURRENT STREAK",sbX+sbW/2,sbY+36);
+  const numSz=streak>=100?120:streak>=10?140:158;
+  ctx.font=`${numSz}px 'Bebas Neue',Georgia,serif`; ctx.fillStyle=theme.accentColor;
+  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=40;
+  ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-48); ctx.shadowBlur=0;
+  const dayPW=110, dayPH=28, dayPX=sbX+sbW/2-dayPW/2, dayPY=sbY+sbH-38;
+  ctx.fillStyle="rgba(0,0,0,0.6)"; roundRect(ctx,dayPX,dayPY,dayPW,dayPH,14); ctx.fill();
+  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5; roundRect(ctx,dayPX,dayPY,dayPW,dayPH,14); ctx.stroke();
+  ctx.font="700 13px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor;
+  ctx.fillText("✦ DAYS ✦",sbX+sbW/2,dayPY+19); ctx.textAlign="left";
 
-  // ── 5. STATS — left vertical panel ───────────────────────────────────────
-  const spX=20, spY=20+topH+8;
+  // ── 5. LEFT COLUMN ────────────────────────────────────────────────────────
+  const colX=20, colY=20+topH+10, colW=244;
+
+  // Stats panel
   const statsArr=[
     {e:"⚡",v:grassScore>=1000?(grassScore/1000).toFixed(1)+"K":String(grassScore),l:"GRASS SCORE"},
     {e:"🔥",v:`${best}d`,l:"BEST STREAK"},
     ...(shields>0?[{e:"🛡",v:String(shields),l:"SHIELDS EARNED"}]:[]),
     {e:"👑",v:rank?`#${rank}`:"—",l:"GLOBAL RANK",gold:true},
   ];
-  const spItemH=86, spW=220, spH=statsArr.length*spItemH+8;
-  panel(spX,spY,spW,spH,12);
+  const spItemH=82, spH=statsArr.length*spItemH+16;
+  panel(colX,colY,colW,spH,12);
 
   statsArr.forEach((s,i)=>{
-    const sy=spY+10+i*spItemH;
-    if(i>0){ctx.strokeStyle=theme.borderColor;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(spX+14,sy-2);ctx.lineTo(spX+spW-14,sy-2);ctx.stroke();}
-    ctx.font="18px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
-    ctx.fillText(s.e,spX+14,sy+24);
-    ctx.font=`${s.v.length>4?42:52}px 'Bebas Neue',Georgia,serif`;
+    const sy=colY+12+i*spItemH;
+    if(i>0){
+      ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(colX+16,sy); ctx.lineTo(colX+colW-16,sy); ctx.stroke();
+    }
+    // Emoji
+    ctx.font="22px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
+    ctx.fillText(s.e,colX+14,sy+30);
+    // Value
+    ctx.font=`${s.v.length>4?44:54}px 'Bebas Neue',Georgia,serif`;
     ctx.fillStyle=s.gold?theme.accentColor:"#f5f4ef";
-    ctx.fillText(s.v,spX+44,sy+30);
+    ctx.fillText(s.v,colX+48,sy+38);
+    // Label
     ctx.font="600 12px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.5)";
-    ctx.fillText(s.l,spX+14,sy+54);
+    ctx.fillText(s.l,colX+14,sy+58);
   });
 
-  // ── 6. PROGRESS BAR — below stats, same width ────────────────────────────
-  const prX=spX, prY=spY+spH+8, prW=spW, prH=48;
-  panel(prX,prY,prW,prH,10);
+  // Progress bar
+  const prY=colY+spH+10, prH=52;
+  panel(colX,prY,colW,prH,10);
   const ths=[7,14,30,50,100,180,365,500,1000];
   const nxt=ths.find(t=>t>streak)||1000;
   const prv=[...[0,...ths]].reverse().find(t=>streak>=t)||0;
   const fp=Math.min(1,(streak-prv)/Math.max(1,nxt-prv));
   const nxtL=nxt>=1000?"TRANSCENDENT":nxt>=500?"ASCENDED":nxt>=365?"ETERNAL":nxt>=180?"MYTHIC":nxt>=100?"IMMORTAL":nxt>=50?"LEGENDARY":nxt>=30?"ELITE":nxt>=14?"LOCKED IN":"ROOTED";
-  ctx.font="600 10px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="left";
-  ctx.fillText(`${nxtL} · DAY ${nxt}`,prX+12,prY+16);
+  ctx.font="700 11px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="left";
+  ctx.fillText(`${nxtL} · DAY ${nxt}`,colX+12,prY+18);
   ctx.fillStyle="rgba(240,239,234,0.4)"; ctx.textAlign="right";
-  ctx.fillText(`${streak}/${nxt}`,prX+prW-12,prY+16); ctx.textAlign="left";
-  const barX=prX+12, barY=prY+24, barW=prW-24, barH=10;
+  ctx.fillText(`${streak}/${nxt}`,colX+colW-12,prY+18); ctx.textAlign="left";
+  const barX=colX+12, barY=prY+26, barW=colW-24, barH=10;
   ctx.fillStyle="rgba(255,255,255,0.08)"; roundRect(ctx,barX,barY,barW,barH,5); ctx.fill();
   const gr=ctx.createLinearGradient(barX,0,barX+barW*fp,0);
   gr.addColorStop(0,theme.progressFrom); gr.addColorStop(1,theme.progressTo);
   ctx.fillStyle=gr; ctx.shadowColor=theme.glowColor; ctx.shadowBlur=8;
   roundRect(ctx,barX,barY,barW*fp,barH,5); ctx.fill(); ctx.shadowBlur=0;
 
-  // ── 7. BADGES PANEL — bottom left (same width as stats) ──────────────────
+  // Badges panel — fills remaining left column space to footer
+  const bpY=prY+prH+10, bpH=H-bpY-68;
   const earned=badges.slice(0,6);
-  const bpX=spX, bpY=prY+prH+8;
-  const bpH=H-bpY-68; // fills to footer
   if(earned.length>0){
-    panel(bpX,bpY,spW,bpH,12);
-    ctx.font="22px 'Bebas Neue',Georgia,serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
-    ctx.fillText("BADGES EARNED",bpX+spW/2,bpY+20); ctx.textAlign="left";
-    // divider
+    panel(colX,bpY,colW,bpH,12);
+    // Header centered
+    ctx.font="24px 'Bebas Neue',Georgia,serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
+    ctx.fillText("BADGES EARNED",colX+colW/2,bpY+28); ctx.textAlign="left";
     ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(bpX+12,bpY+26); ctx.lineTo(bpX+spW-12,bpY+26); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(colX+16,bpY+36); ctx.lineTo(colX+colW-16,bpY+36); ctx.stroke();
 
-    // 3 × 2 grid
-    const bSz=68, bCols=3, bRows=Math.ceil(earned.length/bCols);
-    const bColW=(spW-24)/bCols;
+    // 3×2 grid — badges fill the box
+    const bCols=3;
+    const bAvailW=colW-24, bAvailH=bpH-50;
+    const bRows=Math.ceil(earned.length/bCols);
+    const bCellW=bAvailW/bCols, bCellH=bAvailH/bRows;
+    const bSz=Math.min(bCellW*0.62, bCellH*0.62, 72);
+
     earned.forEach((badge,i)=>{
       const col=i%bCols, row=Math.floor(i/bCols);
-      const bx=bpX+12+col*bColW+bColW/2;
-      const by=bpY+50+row*(bSz+32)+bSz/2;
+      const bx=colX+12+col*bCellW+bCellW/2;
+      const by=bpY+44+row*bCellH+bCellH*0.38;
+      // Hex
       ctx.save(); ctx.translate(bx,by); hexPath(ctx,bSz/2);
       ctx.fillStyle="rgba(6,8,6,0.88)"; ctx.fill();
       ctx.strokeStyle=theme.badgeStroke; ctx.lineWidth=2; ctx.stroke(); ctx.restore();
-      ctx.font="28px sans-serif"; ctx.textAlign="center"; ctx.fillStyle="#f0efea";
-      ctx.fillText(badge.emoji,bx,by+10);
-      ctx.font="700 11px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.85)";
+      // Emoji — centered in hex
+      ctx.font=`${Math.round(bSz*0.44)}px sans-serif`;
+      ctx.textAlign="center";
+      ctx.fillStyle="#f0efea";
+      ctx.fillText(badge.emoji,bx,by+bSz*0.16);
+      // Name — centered below hex
+      const nameY=by+bSz*0.56;
+      ctx.font=`600 ${Math.round(bSz*0.17)}px 'DM Sans',sans-serif`;
+      ctx.fillStyle="rgba(240,239,234,0.90)";
       const bName=badge.name.length>11?badge.name.slice(0,10)+"…":badge.name;
-      ctx.fillText(bName,bx,by+bSz/2+2);
+      ctx.fillText(bName,bx,nameY);
     });
   }
 
-  // ── 8. RIGHT CONTENT AREA — cover showcase (takes right side of card) ─────
-  const rcX=spX+spW+16, rcY=20+topH+8, rcW=W-rcX-20, rcH=H-rcY-68;
+  // ── 6. BOTTOM RIGHT — split: Touch Grass logo | Pack info ─────────────────
+  const rcX=colX+colW+14, rcY=colY, rcW=W-rcX-20, rcH=H-rcY-68;
+  const botY=H-280, botH=212;
 
-  // Pack / Cover callout panel — bottom right
-  const cpH=200, cpY=rcY+rcH-cpH;
+  // Bottom split panel
+  panel(rcX,botY,rcW,botH,12);
+  // Accent line at top
+  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(rcX+30,botY); ctx.lineTo(rcX+rcW-30,botY); ctx.stroke();
+
+  const halfW=rcW/2;
+  // Vertical divider
+  ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(rcX+halfW,botY+20); ctx.lineTo(rcX+halfW,botY+botH-20); ctx.stroke();
+
+  // LEFT HALF — Touch Grass logo + wordmark
+  const lgCX=rcX+halfW/2;
+  try {
+    const lg=await loadImage("/touchgrass-transparent.png");
+    ctx.globalAlpha=0.95;
+    ctx.drawImage(lg,lgCX-36,botY+30,72,72);
+    ctx.globalAlpha=1;
+  } catch {}
+  ctx.font="42px 'Bebas Neue',Georgia,serif"; ctx.fillStyle="#f5f4ef"; ctx.textAlign="center";
+  ctx.fillText("TOUCH GRASS",lgCX,botY+126);
+  ctx.font="600 12px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"99";
+  ctx.fillText("proofofgrass.app",lgCX,botY+148);
+  ctx.font="600 11px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.3)";
+  ctx.fillText("BUILT ON ◎ SOLANA",lgCX,botY+170);
+
+  // RIGHT HALF — Pack info
+  const pkCX=rcX+halfW+halfW/2;
   if(theme.name){
-    panel(rcX,cpY,rcW,cpH,12);
-    // Pack emoji
     const pe=theme.name.includes("Beach")?"🏖":theme.name.includes("Mountain")?"⛰":
       theme.name.includes("Sunflower")?"🌻":theme.name.includes("Waterfall")?"💧":
       theme.name.includes("Night")?"🌙":theme.name.includes("Golden")?"🌅":
@@ -403,42 +439,28 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       theme.name.includes("Sky")?"✨":theme.name.includes("Temple")?"🌞":
       theme.name.includes("Garden")?"🌸":theme.name.includes("Celestial")?"💫":"🎨";
     ctx.font="52px sans-serif"; ctx.textAlign="center";
-    ctx.fillText(pe,rcX+rcW/2,cpY+66);
-    // Pack type label
-    ctx.font="700 13px 'DM Sans',sans-serif";
-    ctx.fillStyle=theme.accentColor+"aa";
-    ctx.fillText(theme.marketplaceOnly?"RETRO COVERS PACK":"STREAK COVER",rcX+rcW/2,cpY+96);
-    // Cover name — large
-    ctx.font="48px 'Bebas Neue',Georgia,serif"; ctx.fillStyle="#f5f4ef";
-    ctx.fillText(theme.name.toUpperCase(),rcX+rcW/2,cpY+136);
-    // Sub label
+    ctx.fillText(pe,pkCX,botY+68);
+    ctx.font="700 12px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"aa";
+    ctx.fillText(theme.marketplaceOnly?"RETRO COVERS PACK":"STREAK COVER",pkCX,botY+96);
+    ctx.font="38px 'Bebas Neue',Georgia,serif"; ctx.fillStyle="#f5f4ef";
+    ctx.fillText(theme.name.toUpperCase(),pkCX,botY+136);
     ctx.font="600 12px 'DM Sans',sans-serif";
     ctx.fillStyle=theme.marketplaceOnly?theme.accentColor:"rgba(240,239,234,0.4)";
     ctx.fillText(
-      theme.marketplaceOnly?"★ MARKETPLACE EXCLUSIVE ★":`STREAK COVER · UNLOCKED AT DAY ${theme.unlockDay||"?"}`,
-      rcX+rcW/2,cpY+158
+      theme.marketplaceOnly?"★ MARKETPLACE EXCLUSIVE ★":`UNLOCKED AT DAY ${theme.unlockDay||"?"}`,
+      pkCX,botY+162
     );
-    // Accent line at top of panel
-    ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(rcX+40,cpY); ctx.lineTo(rcX+rcW-40,cpY); ctx.stroke();
-    ctx.textAlign="left";
   }
+  ctx.textAlign="left";
 
-  // ── 9. FOOTER ─────────────────────────────────────────────────────────────
-  const fY=H-44;
-  // Solana left
+  // ── 7. FOOTER BAR ─────────────────────────────────────────────────────────
+  const fY=H-38;
   ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="#9945ff"; ctx.textAlign="left";
   ctx.fillText("BUILT ON ◎ SOLANA",28,fY);
-  const solW=ctx.measureText("BUILT ON ◎ SOLANA").width;
-  ctx.fillStyle=theme.accentColor; ctx.fillText("  ·  PROOF OF GRASS",28+solW,fY);
-  // Centre logo + wordmark
-  try{const lg=await loadImage("/touchgrass-transparent.png");ctx.globalAlpha=0.8;ctx.drawImage(lg,W/2-62,fY-28,30,30);ctx.globalAlpha=1;}catch(e){}
-  ctx.font="28px 'Bebas Neue',Georgia,serif"; ctx.fillStyle="#f5f4ef"; ctx.textAlign="center";
-  ctx.fillText("TOUCH GRASS",W/2-18,fY-6);
-  ctx.font="600 10px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"99";
-  ctx.fillText("proofofgrass.app",W/2-18,fY+10);
-  // Right
-  ctx.font="500 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.4)"; ctx.textAlign="right";
+  const slW=ctx.measureText("BUILT ON ◎ SOLANA").width;
+  ctx.fillStyle=theme.accentColor;
+  ctx.fillText("  ·  PROOF OF GRASS",28+slW,fY);
+  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.4)"; ctx.textAlign="right";
   ctx.fillText("$TOUCHGRASS · #TouchGrass · #ProofOfGrass",W-28,fY);
   ctx.textAlign="left";
 
