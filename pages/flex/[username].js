@@ -193,6 +193,13 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
 
+  // ── 0. LOAD FONTS ─────────────────────────────────────────────────────────
+  try {
+    const bebas = new FontFace("Bebas Neue", "url(https://fonts.gstatic.com/s/bebasneuepro/v3/2V0FKg2vH0NRXP81hDDSSXVeI0g.woff2)");
+    await bebas.load();
+    document.fonts.add(bebas);
+  } catch(e) { console.warn("Bebas Neue load failed:", e?.message); }
+
   // ── 1. BACKGROUND ────────────────────────────────────────────────────────
   ctx.fillStyle = "#060807"; ctx.fillRect(0,0,W,H);
 
@@ -247,7 +254,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // Username
   const nX=aX+aSize+18;
   const uSz=username.length>14?44:username.length>10?54:64;
-  ctx.font=`700 ${uSz}px Georgia,serif`; ctx.fillStyle="#f5f4ef";
+  ctx.font=`${uSz+10}px 'Bebas Neue',Georgia,serif`; ctx.fillStyle="#f5f4ef";
   ctx.shadowColor="rgba(0,0,0,0.95)"; ctx.shadowBlur=16;
   ctx.fillText(`@${username}`,nX,aY+70); ctx.shadowBlur=0;
 
@@ -297,7 +304,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.fillText("CURRENT STREAK",sbX+sbW/2,sbY+34);
   // Large streak number
   const numSz=streak>=100?118:streak>=10?138:158;
-  ctx.font=`700 ${numSz}px Georgia,serif`;
+  ctx.font=`${numSz+14}px 'Bebas Neue',Georgia,serif`;
   ctx.fillStyle=theme.accentColor;
   ctx.shadowColor=theme.glowColor; ctx.shadowBlur=36;
   ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-46); ctx.shadowBlur=0;
@@ -325,11 +332,11 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     if(i>0){ctx.strokeStyle=theme.borderColor;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(spX+14,sy-2);ctx.lineTo(spX+spW-14,sy-2);ctx.stroke();}
     ctx.font="18px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
     ctx.fillText(s.e,spX+14,sy+24);
-    ctx.font=`700 ${s.v.length>4?34:42}px Georgia,serif`;
+    ctx.font=`${s.v.length>4?42:52}px 'Bebas Neue',Georgia,serif`;
     ctx.fillStyle=s.gold?theme.accentColor:"#f5f4ef";
     ctx.fillText(s.v,spX+44,sy+30);
-    ctx.font="600 11px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.45)";
-    ctx.fillText(s.l,spX+14,sy+52);
+    ctx.font="600 12px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.5)";
+    ctx.fillText(s.l,spX+14,sy+54);
   });
 
   // ── 6. PROGRESS BAR — below stats, same width ────────────────────────────
@@ -357,27 +364,27 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   const bpH=H-bpY-68; // fills to footer
   if(earned.length>0){
     panel(bpX,bpY,spW,bpH,12);
-    ctx.font="700 11px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
-    ctx.fillText("BADGES EARNED",bpX+spW/2,bpY+18); ctx.textAlign="left";
+    ctx.font="22px 'Bebas Neue',Georgia,serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
+    ctx.fillText("BADGES EARNED",bpX+spW/2,bpY+20); ctx.textAlign="left";
     // divider
     ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(bpX+12,bpY+26); ctx.lineTo(bpX+spW-12,bpY+26); ctx.stroke();
 
     // 3 × 2 grid
-    const bSz=52, bCols=3, bRows=Math.ceil(earned.length/bCols);
+    const bSz=68, bCols=3, bRows=Math.ceil(earned.length/bCols);
     const bColW=(spW-24)/bCols;
     earned.forEach((badge,i)=>{
       const col=i%bCols, row=Math.floor(i/bCols);
       const bx=bpX+12+col*bColW+bColW/2;
-      const by=bpY+46+row*(bSz+28)+bSz/2;
+      const by=bpY+50+row*(bSz+32)+bSz/2;
       ctx.save(); ctx.translate(bx,by); hexPath(ctx,bSz/2);
       ctx.fillStyle="rgba(6,8,6,0.88)"; ctx.fill();
       ctx.strokeStyle=theme.badgeStroke; ctx.lineWidth=2; ctx.stroke(); ctx.restore();
-      ctx.font="20px sans-serif"; ctx.textAlign="center"; ctx.fillStyle="#f0efea";
-      ctx.fillText(badge.emoji,bx,by+8);
-      ctx.font="600 9px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.7)";
+      ctx.font="28px sans-serif"; ctx.textAlign="center"; ctx.fillStyle="#f0efea";
+      ctx.fillText(badge.emoji,bx,by+10);
+      ctx.font="700 11px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.85)";
       const bName=badge.name.length>11?badge.name.slice(0,10)+"…":badge.name;
-      ctx.fillText(bName,bx,by+bSz/2-1);
+      ctx.fillText(bName,bx,by+bSz/2+2);
     });
   }
 
@@ -402,8 +409,8 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     ctx.fillStyle=theme.accentColor+"aa";
     ctx.fillText(theme.marketplaceOnly?"RETRO COVERS PACK":"STREAK COVER",rcX+rcW/2,cpY+96);
     // Cover name — large
-    ctx.font="700 28px 'DM Sans',sans-serif"; ctx.fillStyle="#f5f4ef";
-    ctx.fillText(theme.name.toUpperCase(),rcX+rcW/2,cpY+132);
+    ctx.font="48px 'Bebas Neue',Georgia,serif"; ctx.fillStyle="#f5f4ef";
+    ctx.fillText(theme.name.toUpperCase(),rcX+rcW/2,cpY+136);
     // Sub label
     ctx.font="600 12px 'DM Sans',sans-serif";
     ctx.fillStyle=theme.marketplaceOnly?theme.accentColor:"rgba(240,239,234,0.4)";
@@ -426,8 +433,8 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.fillStyle=theme.accentColor; ctx.fillText("  ·  PROOF OF GRASS",28+solW,fY);
   // Centre logo + wordmark
   try{const lg=await loadImage("/touchgrass-transparent.png");ctx.globalAlpha=0.8;ctx.drawImage(lg,W/2-62,fY-28,30,30);ctx.globalAlpha=1;}catch(e){}
-  ctx.font="700 17px Georgia,serif"; ctx.fillStyle="#f5f4ef"; ctx.textAlign="center";
-  ctx.fillText("TOUCH GRASS",W/2-18,fY-7);
+  ctx.font="28px 'Bebas Neue',Georgia,serif"; ctx.fillStyle="#f5f4ef"; ctx.textAlign="center";
+  ctx.fillText("TOUCH GRASS",W/2-18,fY-6);
   ctx.font="600 10px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"99";
   ctx.fillText("proofofgrass.app",W/2-18,fY+10);
   // Right
