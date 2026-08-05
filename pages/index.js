@@ -290,48 +290,47 @@ function PromoBanner({ image, title, description, buttonText, href,
         onMouseLeave={() => setHovered(false)}>
 
         {/* 3:2 aspect ratio container */}
-        <div style={{ position:"relative", width:"100%", paddingBottom:"66.666%", background:"#0e1008" }}>
+        <div style={{ position:"relative", width:"100%", paddingBottom:"56.25%", background:"#0e1008", maxHeight:640 }}>
           <img src={imgUrl} alt={title} loading="lazy"
             style={{ position:"absolute", inset:0, width:"100%", height:"100%",
-              objectFit:"cover", objectPosition:"center", display:"block" }} />
+              objectFit:"contain", objectPosition:"center", display:"block" }} />
 
           {/* Dark gradient at bottom for button legibility */}
           <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"40%",
             background:"linear-gradient(to top,rgba(0,0,0,0.72),transparent)",
             pointerEvents:"none" }} />
 
-          {/* Floating buttons — bottom of image */}
-          <div style={{ position:"absolute", bottom:20, left:0, right:0,
-            display:"flex", gap:10, justifyContent:"center",
-            padding:"0 20px", flexWrap:"wrap" }}>
-            <a href={href} target="_blank" rel="noopener noreferrer"
-              style={{ display:"inline-flex", alignItems:"center", gap:7,
-                background:"linear-gradient(135deg,#f97316,#c2410c)",
-                color:"#fff", fontSize:13, fontWeight:700,
-                letterSpacing:"0.05em", padding:"11px 22px",
-                borderRadius:999, textDecoration:"none", whiteSpace:"nowrap",
-                boxShadow:"0 4px 18px rgba(249,115,22,0.45)",
-                transition:"transform 0.15s, box-shadow 0.15s" }}
-              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 24px rgba(249,115,22,0.6)";}}
-              onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 4px 18px rgba(249,115,22,0.45)";}}>
-              {buttonText}
-            </a>
-            {secondaryText && (
-              <Link href={secondaryHref}
-                style={{ display:"inline-flex", alignItems:"center", gap:7,
-                  background:"linear-gradient(135deg,#93a85a,#7a9148)",
-                  color:"#fff", fontSize:13, fontWeight:700,
-                  letterSpacing:"0.05em", padding:"11px 22px",
-                  borderRadius:999, textDecoration:"none", whiteSpace:"nowrap",
-                  boxShadow:"0 4px 18px rgba(147,168,90,0.4)",
-                  transition:"transform 0.15s, box-shadow 0.15s" }}
-                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 24px rgba(147,168,90,0.55)";}}
-                onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 4px 18px rgba(147,168,90,0.4)";}}>
-                {secondaryText}
-              </Link>
-            )}
-          </div>
         </div>
+      </div>
+
+      {/* Buttons — single row below image, never overlapping */}
+      <div style={{ display:"flex", gap:10, justifyContent:"center", marginTop:14, flexWrap:"nowrap" }}>
+        <a href={href} target="_blank" rel="noopener noreferrer"
+          style={{ display:"inline-flex", alignItems:"center", gap:7,
+            background:"linear-gradient(135deg,#f97316,#c2410c)",
+            color:"#fff", fontSize:13, fontWeight:700,
+            letterSpacing:"0.05em", padding:"11px 22px",
+            borderRadius:999, textDecoration:"none", whiteSpace:"nowrap",
+            boxShadow:"0 4px 18px rgba(249,115,22,0.45)",
+            transition:"transform 0.15s, box-shadow 0.15s" }}
+          onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 24px rgba(249,115,22,0.6)";}}
+          onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 4px 18px rgba(249,115,22,0.45)";}}>
+          {buttonText}
+        </a>
+        {secondaryText && (
+          <a href={secondaryHref} target="_blank" rel="noopener noreferrer"
+            style={{ display:"inline-flex", alignItems:"center", gap:7,
+              background:"linear-gradient(135deg,#93a85a,#7a9148)",
+              color:"#fff", fontSize:13, fontWeight:700,
+              letterSpacing:"0.05em", padding:"11px 22px",
+              borderRadius:999, textDecoration:"none", whiteSpace:"nowrap",
+              boxShadow:"0 4px 18px rgba(147,168,90,0.4)",
+              transition:"transform 0.15s, box-shadow 0.15s" }}
+            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 24px rgba(147,168,90,0.55)";}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 4px 18px rgba(147,168,90,0.4)";}}>
+            {secondaryText}
+          </a>
+        )}
       </div>
 
       {/* Info card */}
