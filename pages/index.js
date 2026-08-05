@@ -1512,16 +1512,16 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── PROMO BANNER — Screen Touchers ──────────────────────────────────── */}
+        {/* ── PROMO BANNER — Harvest ───────────────────────────────────────────── */}
         <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
           <PromoBanner
-            image="screen_touchers.png"
-            title="🖥️ Screen Touchers — Mint Now"
-            description="Grab your Screen Toucher. Proceeds go to support youth athletics."
-            buttonText="🎨 Mint Now"
-            href="https://gravemint.io/mint/nrdou0?x=none"
-            secondaryText="🖼️ View Collection"
-            secondaryHref="https://gravemarket.io/collection/screen-touchers"
+            image="harvest_banner.png"
+            title="🌾 Harvest — Lock. Grow. Claim."
+            description="Deposit $TOUCHGRASS for 6 months. On Harvest Day, claim your principal + rewards."
+            buttonText="🌾 Start Harvesting"
+            href="https://harvest.touchgrass.today"
+            secondaryText="📖 Learn More"
+            secondaryHref="https://harvest.touchgrass.today"
             steps={[]}
           />
         </div>
