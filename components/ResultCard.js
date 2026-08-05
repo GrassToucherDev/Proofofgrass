@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { supabase } from "../utils/supabase";
+import { collectAndSendFingerprint } from "../utils/fingerprint";
 
 // ── Premium+ Themes ──────────────────────────────────────────────────────────
 const THEMES = {
@@ -828,6 +829,7 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
             setCurrentStreak(streakCheck.current_streak ?? currentStreak);
             onStreakUpdate?.(streakCheck.current_streak ?? currentStreak);
             setSubmitStatus("success");
+            collectAndSendFingerprint(username);
             return;
           }
         } catch(checkErr) {
