@@ -297,7 +297,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   const nSz=streak>=100?130:streak>=10?148:166;
   ctx.font=`${nSz}px 'Bebas Neue',Georgia,serif`; ctx.fillStyle=theme.accentColor;
   ctx.shadowColor=theme.glowColor; ctx.shadowBlur=48;
-  ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-36); ctx.shadowBlur=0;
+  ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-46); ctx.shadowBlur=0;
   const dpW=96,dpH=24,dpX=sbX+sbW/2-dpW/2,dpY=sbY+sbH-28;
   ctx.fillStyle="rgba(0,0,0,0.60)"; roundRect(ctx,dpX,dpY,dpW,dpH,12); ctx.fill();
   ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5; roundRect(ctx,dpX,dpY,dpW,dpH,12); ctx.stroke();
