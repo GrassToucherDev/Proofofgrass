@@ -958,10 +958,10 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
     const { data: result, error: rpcError } = await supabase.rpc("lock_in_streak", { p_username:username, p_tweet_url:tweetUrl.trim()||null, p_verification:"self_attested" });
     if (rpcError) { console.error("lock_in_streak RPC failed", rpcError); setSubmitError("Something went wrong. Try again."); setSubmitStatus("error"); return; }
     // already_submitted = streak already safe today, treat as success
-    if (result?.status === "already_submitted") { setSubmitStatus("success"); return; }
+    if (result?.status === "already_submitted") { setSubmitStatus("success"); collectAndSendFingerprint(username); return; }
     if (result?.status !== "success") { setSubmitError("Unexpected response. Try again."); setSubmitStatus("error"); return; }
     const newStreak = result.current_streak ?? currentStreak;
-    setCurrentStreak(newStreak); onStreakUpdate?.(newStreak); setSubmitStatus("success"); setTweetUrl("");
+    setCurrentStreak(newStreak); onStreakUpdate?.(newStreak); setSubmitStatus("success"); setTweetUrl(""); collectAndSendFingerprint(username);
     if (result?.lucky_touch?.triggered) setLuckyTouch(result.lucky_touch);
   }, [username, tweetUrl, currentStreak, onStreakUpdate]);
 
