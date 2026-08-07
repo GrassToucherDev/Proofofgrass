@@ -746,6 +746,144 @@ function _oldActivityFeedUnused() {
   );
 }
 // ─── Main page ────────────────────────────────────────────────────────────────
+
+// ─── RewardsBanner — shown once per day to users who haven't met the minimum ──
+function RewardsBanner({ username }) {
+  const [status, setStatus] = useState(null); // null | "no_wallet" | "no_hold" | "ok"
+  const [dismissed, setDismissed] = useState(true); // start hidden, check after load
+
+  useEffect(() => {
+    if (!username) return;
+
+    // Check once-per-day dismissal
+    const key = `pog_reward_banner_${username}`;
+    const lastDismissed = localStorage.getItem(key);
+    const today = new Date().toISOString().slice(0, 10);
+    if (lastDismissed === today) return; // already dismissed today
+
+    // Fetch wallet status from Profiles
+    (async () => {
+      const { data } = await supabase
+        .from("Profiles")
+        .select("wallet_verified, has_touchgrass_holder")
+        .eq("username", username)
+        .maybeSingle();
+
+      if (!data) return;
+
+      if (!data.wallet_verified) {
+        setStatus("no_wallet");
+      } else if (!data.has_touchgrass_holder) {
+        setStatus("no_hold");
+      } else {
+        setStatus("ok");
+        return; // no banner needed
+      }
+      setDismissed(false);
+    })();
+  }, [username]);
+
+  const dismiss = () => {
+    const key = `pog_reward_banner_${username}`;
+    const today = new Date().toISOString().slice(0, 10);
+    localStorage.setItem(key, today);
+    setDismissed(true);
+  };
+
+  if (dismissed || status === null || status === "ok") return null;
+
+  const isNoWallet = status === "no_wallet";
+
+  return (
+    <div style={{
+      margin: "0 0 16px",
+      background: "linear-gradient(135deg,rgba(200,168,75,0.10),rgba(147,168,90,0.06))",
+      border: "1px solid rgba(200,168,75,0.30)",
+      borderRadius: 14,
+      padding: "16px 18px",
+      display: "flex",
+      alignItems: "flex-start",
+      gap: 14,
+      position: "relative",
+    }}>
+      {/* Icon */}
+      <div style={{
+        fontSize: 26, flexShrink: 0, marginTop: 2,
+      }}>
+        {isNoWallet ? "🔗" : "💰"}
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 13, fontWeight: 700, color: "#f0efea", marginBottom: 4,
+        }}>
+          {isNoWallet
+            ? "Connect your wallet to earn rewards"
+            : "Hold $TOUCHGRASS to earn rewards"}
+        </div>
+        <div style={{
+          fontSize: 12, color: "rgba(240,239,234,0.60)", lineHeight: 1.6, marginBottom: 12,
+        }}>
+          {isNoWallet
+            ? "Proof of Grass rewards require a verified wallet holding at least $5 USD in $TOUCHGRASS, or an active Harvest deposit. Connect your wallet on your profile to get started."
+            : "Your wallet is connected but doesn't meet the minimum yet. Hold at least $5 USD in $TOUCHGRASS — or deposit into Harvest — to earn rewards from your streak."}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {isNoWallet ? (
+            <a href={`/u/${username}`}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                background: "linear-gradient(135deg,#c8a84b,#a88c38)",
+                color: "#0a0800", fontSize: 12, fontWeight: 700,
+                padding: "8px 16px", borderRadius: 999, textDecoration: "none",
+                letterSpacing: "0.04em",
+              }}>
+              🔗 Connect Wallet
+            </a>
+          ) : (
+            <>
+              <a href="https://jup.ag/swap/SOL-5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump"
+                target="_blank" rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "linear-gradient(135deg,#c8a84b,#a88c38)",
+                  color: "#0a0800", fontSize: 12, fontWeight: 700,
+                  padding: "8px 16px", borderRadius: 999, textDecoration: "none",
+                  letterSpacing: "0.04em",
+                }}>
+                💰 Buy $TOUCHGRASS
+              </a>
+              <a href="https://harvest.touchgrass.today"
+                target="_blank" rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "transparent",
+                  border: "1px solid rgba(147,168,90,0.45)",
+                  color: "#93a85a", fontSize: 12, fontWeight: 700,
+                  padding: "8px 16px", borderRadius: 999, textDecoration: "none",
+                  letterSpacing: "0.04em",
+                }}>
+                🌾 Deposit into Harvest
+              </a>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Dismiss */}
+      <button onClick={dismiss}
+        style={{
+          background: "none", border: "none", color: "rgba(240,239,234,0.30)",
+          cursor: "pointer", fontSize: 16, flexShrink: 0, padding: "2px 4px",
+          lineHeight: 1,
+        }}>
+        ✕
+      </button>
+    </div>
+  );
+}
+
 export default function Home() {
   const [rawUsername, setRawUsername] = useState("");
   const username = normalizeUsername(rawUsername);
@@ -1510,6 +1648,11 @@ export default function Home() {
             ))}
           </div>
         )}
+
+        {/* ── REWARDS BANNER ──────────────────────────────────────────────────── */}
+        <div style={{ padding: "0 clamp(14px,4vw,48px)" }}>
+          <RewardsBanner username={username} />
+        </div>
 
         {/* ── PROMO BANNER — Harvest ───────────────────────────────────────────── */}
         <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
