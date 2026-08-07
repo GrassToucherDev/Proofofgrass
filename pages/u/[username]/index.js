@@ -570,7 +570,39 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <span style={{display:"inline-block",fontSize:8,color:T.olive,letterSpacing:"0.16em",textTransform:"uppercase",fontWeight:700,border:`1px solid ${T.olive}`,borderRadius:4,padding:"2px 7px",marginBottom:6}}>◎ VERIFIED OUTDOORS</span>
-                    <h1 className="profile-username" style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:"clamp(26px,4.5vw,50px)",fontWeight:700,color:T.white,lineHeight:1,letterSpacing:"-0.02em"}}>{username||"—"}</h1>
+                    <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                      <h1 className="profile-username" style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:"clamp(26px,4.5vw,50px)",fontWeight:700,color:T.white,lineHeight:1,letterSpacing:"-0.02em"}}>{username||"—"}</h1>
+                      {/* Wallet button — owner only, shown inline next to username */}
+                      {isOwner && (
+                        walletVerified && walletAddr
+                          ? (
+                            <div style={{display:"inline-flex",alignItems:"center",gap:6,
+                              background:"rgba(147,168,90,0.10)",
+                              border:"1px solid rgba(147,168,90,0.35)",
+                              borderRadius:20,padding:"4px 12px",flexShrink:0}}>
+                              <span style={{fontSize:10}}>◎</span>
+                              <span style={{fontSize:11,fontWeight:600,color:T.olive}}>
+                                {walletAddr.slice(0,4)}…{walletAddr.slice(-4)}
+                              </span>
+                              <span style={{fontSize:9,color:T.olive}}>✓</span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={()=>{
+                                const el=document.getElementById("wallet-section");
+                                if(el) el.scrollIntoView({behavior:"smooth"});
+                              }}
+                              style={{display:"inline-flex",alignItems:"center",gap:6,
+                                background:"rgba(200,168,75,0.10)",
+                                border:"1px solid rgba(200,168,75,0.40)",
+                                borderRadius:20,padding:"5px 14px",
+                                color:T.gold,fontSize:11,fontWeight:700,
+                                cursor:"pointer",flexShrink:0,letterSpacing:"0.04em"}}>
+                              🔗 Connect Wallet
+                            </button>
+                          )
+                      )}
+                    </div>
                     <div style={{fontSize:12,color:T.dim,marginTop:3}}>@{username}{joinDate&&<span style={{marginLeft:10,fontSize:11,color:T.dim}}>· Joined {joinDate}</span>}</div>
                   </div>
                 </div>
@@ -801,7 +833,7 @@ export default function ProfilePage() {
 
           {/* WALLET */}
           {isOwner && (
-            <div className="card fade" style={{marginBottom:14}}>
+            <div id="wallet-section" className="card fade" style={{marginBottom:14}}>
               <div className="ct">Solana Wallet</div>
               <WalletVerify username={username} currentWallet={walletAddr} currentVerified={walletVerified} onVerified={(addr)=>{ setWalletAddr(addr); setWalletVerified(!!addr); }} />
             </div>
