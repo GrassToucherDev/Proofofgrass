@@ -761,25 +761,80 @@ function RewardsBanner({ username }) {
     const today = new Date().toISOString().slice(0, 10);
     if (lastDismissed === today) return; // already dismissed today
 
-    // Fetch wallet status from Profiles
+    // Fetch wallet + do live balance check
     (async () => {
       const { data } = await supabase
         .from("Profiles")
-        .select("wallet_verified, has_touchgrass_holder")
+        .select("wallet_verified, wallet_address, has_touchgrass_holder")
         .eq("username", username)
         .maybeSingle();
 
       if (!data) return;
 
-      if (!data.wallet_verified) {
+      // No wallet connected
+      if (!data.wallet_verified || !data.wallet_address) {
         setStatus("no_wallet");
-      } else if (!data.has_touchgrass_holder) {
-        setStatus("no_hold");
-      } else {
-        setStatus("ok");
-        return; // no banner needed
+        setDismissed(false);
+        return;
       }
-      setDismissed(false);
+
+      // Already flagged as verified holder in DB — trust it, no banner
+      if (data.has_touchgrass_holder) {
+        setStatus("ok");
+        return;
+      }
+
+      // Wallet connected but not yet verified in DB — do live balance check
+      // $5 USD minimum — fetch price then check token balance
+      try {
+        const MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
+        const { PublicKey, Connection } = await import("@solana/web3.js");
+        const conn = new Connection(
+          process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://solana-mainnet.rpc.extrnode.com",
+          "confirmed"
+        );
+        const walletPubkey = new PublicKey(data.wallet_address);
+        const mintPubkey   = new PublicKey(MINT);
+
+        // Get token balance
+        const accounts = await conn.getParsedTokenAccountsByOwner(walletPubkey, { mint: mintPubkey });
+        const balance = accounts.value.reduce((sum, acc) => {
+          return sum + (acc.account.data.parsed?.info?.tokenAmount?.uiAmount ?? 0);
+        }, 0);
+
+        if (balance === 0) {
+          setStatus("no_hold");
+          setDismissed(false);
+          return;
+        }
+
+        // Fetch price to check USD value
+        const priceRes = await fetch("/api/touchgrass-price").catch(() => null);
+        if (priceRes?.ok) {
+          const { price } = await priceRes.json();
+          if (price > 0) {
+            const usdValue = balance * price;
+            if (usdValue >= 5) {
+              // Meets minimum — update DB so we don't check again
+              await supabase.from("Profiles").update({ has_touchgrass_holder: true })
+                .eq("username", username);
+              setStatus("ok");
+              return;
+            }
+          }
+        }
+
+        // Balance exists but couldn't verify USD value — don't show banner
+        // Better to not penalise than to false-positive
+        setStatus("ok");
+        return;
+
+      } catch(e) {
+        // RPC failed — don't show banner, give benefit of the doubt
+        console.warn("[RewardsBanner] balance check failed:", e?.message);
+        setStatus("ok");
+        return;
+      }
     })();
   }, [username]);
 
