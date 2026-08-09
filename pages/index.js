@@ -765,7 +765,7 @@ function RewardsBanner({ username }) {
     (async () => {
       const { data } = await supabase
         .from("Profiles")
-        .select("wallet_verified, wallet_address, has_touchgrass_holder")
+        .select("wallet_verified, wallet_address, has_touchgrass_holder, wallet_last_checked_at")
         .eq("username", username)
         .maybeSingle();
 
@@ -778,10 +778,19 @@ function RewardsBanner({ username }) {
         return;
       }
 
-      // Already flagged as verified holder in DB — trust it, no banner
+      // Already flagged as verified holder — recheck every 7 days
+      // Aligns with Sunday airdrop cycle
       if (data.has_touchgrass_holder) {
-        setStatus("ok");
-        return;
+        const lastChecked = data.wallet_last_checked_at;
+        const daysSinceCheck = lastChecked
+          ? (Date.now() - new Date(lastChecked).getTime()) / (1000 * 60 * 60 * 24)
+          : 999;
+        if (daysSinceCheck < 7) {
+          // Checked within last 7 days — trust the cached value
+          setStatus("ok");
+          return;
+        }
+        // 7+ days since last check — fall through to live balance check below
       }
 
       // Wallet connected but not yet verified in DB — do live balance check
@@ -803,9 +812,14 @@ function RewardsBanner({ username }) {
         }, 0);
 
         if (balance === 0) {
-          setStatus("no_hold");
-          setDismissed(false);
-          return;
+          // Fell below minimum — update DB and show banner
+        await supabase.from("Profiles").update({
+          has_touchgrass_holder: false,
+          wallet_last_checked_at: new Date().toISOString(),
+        }).eq("username", username).catch(() => {});
+        setStatus("no_hold");
+        setDismissed(false);
+        return;
         }
 
         // Fetch price to check USD value
@@ -816,8 +830,10 @@ function RewardsBanner({ username }) {
             const usdValue = balance * price;
             if (usdValue >= 5) {
               // Meets minimum — update DB so we don't check again
-              await supabase.from("Profiles").update({ has_touchgrass_holder: true })
-                .eq("username", username);
+              await supabase.from("Profiles").update({
+                has_touchgrass_holder: true,
+                wallet_last_checked_at: new Date().toISOString(),
+              }).eq("username", username);
               setStatus("ok");
               return;
             }
