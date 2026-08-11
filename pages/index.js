@@ -610,114 +610,14 @@ function RecentMilestones() {
     </div>
   );
 }
-// ── Recent Proofs feed (submissions only) ──────────────────────────────────
-function RecentProofsFeed() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data: subs } = await supabase
-          .from("Submissions").select("username, created_at")
-          .in("status", ["pending","approved"])
-          .order("created_at", { ascending: false }).limit(10);
-        const names = [...new Set((subs||[]).map(s=>s.username))];
-        const { data: streakRows } = names.length
-          ? await supabase.from("Streaks").select("username,current_streak").in("username", names)
-          : { data: [] };
-        const sMap = Object.fromEntries((streakRows||[]).map(r=>[r.username,r.current_streak]));
-        setItems((subs||[]).map(s=>({ username:s.username, streak:sMap[s.username]??null, time:s.created_at })));
-      } catch(e) { console.warn("recent proofs error", e); }
-      setLoading(false);
-    })();
-  }, []);
-  const T2 = { olive:"#93a85a", gold:"#c8a84b", white:"#f0efea", dim:"rgba(240,239,234,0.22)", bg3:"#0e100b", bg4:"#141710", border:"rgba(255,255,255,0.06)" };
-  const timeAgo = (t) => { const diff=Date.now()-new Date(t); const m=Math.floor(diff/60000),h=Math.floor(diff/3600000),d=Math.floor(diff/86400000); return d>0?`${d}d`:h>0?`${h}h`:m>0?`${m}m`:"now"; };
-  if (loading) return <div style={{display:"flex",flexDirection:"column",gap:6}}>{[1,2,3,4,5].map(i=><div key={i} style={{height:40,borderRadius:8,background:T2.bg4,opacity:0.5}}/>)}</div>;
-  if (!items.length) return <p style={{fontSize:12,color:T2.dim,textAlign:"center",padding:"16px 0"}}>No proofs yet today.</p>;
-  return (
-    <div style={{display:"flex",flexDirection:"column",gap:5}}>
-      {items.map((item,i) => (
-        <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,background:T2.bg4,border:`1px solid ${T2.border}`}}>
-          <div style={{width:32,height:32,borderRadius:8,flexShrink:0,background:"linear-gradient(135deg,#1e3410,#2d4a18)",border:`1px solid rgba(147,168,90,0.2)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🌿</div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:12,fontWeight:600,color:T2.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>@{item.username}</div>
-            {item.streak && <div style={{fontSize:9,color:T2.dim}}>Day {item.streak} · {getStreakTier(item.streak)}</div>}
-          </div>
-          <div style={{fontSize:9,color:T2.dim,flexShrink:0}}>{timeAgo(item.time)}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ── Recent Actions feed (everything except proofs) ──────────────────────────
-function RecentActionsFeed() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    (async () => {
-      try {
-        const [
-          { data: chals },
-          { data: referrals },
-          { data: spotlights },
-        ] = await Promise.all([
-          supabase.from("Challenges").select("challenger,challenged,duration_days,status,created_at,slug").order("created_at",{ascending:false}).limit(8),
-          supabase.from("Referrals").select("referrer_username,referred_username,status,converted_at,created_at").order("created_at",{ascending:false}).limit(6),
-          supabase.from("CommunitySpotlights").select("username,category,display_name,week_start,created_at").eq("status","active").order("created_at",{ascending:false}).limit(6),
-        ]);
-        const feed = [];
-        (chals||[]).forEach(c => {
-          if (c.status==="pending"||c.status==="active") feed.push({username:c.challenger,text:`challenged @${c.challenged} · ${c.duration_days}d`,emoji:"⚡",time:c.created_at,link:`/challenge/${c.slug}`});
-          if (c.status==="completed") feed.push({username:c.challenger,text:`completed a ${c.duration_days}d challenge with @${c.challenged}`,emoji:"🏆",time:c.created_at,link:`/challenge/${c.slug}`});
-        });
-        (referrals||[]).forEach(r => {
-          if (r.status==="converted") feed.push({username:r.referrer_username,text:`brought @${r.referred_username} to Day 10`,emoji:"🤝",time:r.converted_at||r.created_at});
-          else feed.push({username:r.referrer_username,text:"invited someone to the movement",emoji:"🌱",time:r.created_at});
-        });
-        (spotlights||[]).forEach(s => {
-          const badge = getSpotlightBadge(s.category);
-          feed.push({username:s.display_name||s.username,text:getSpotlightFeedText(s.category),emoji:"🏆",badgeImg:badge?.image??null,time:s.created_at,link:"/spotlight"});
-        });
-        feed.sort((a,b)=>new Date(b.time)-new Date(a.time));
-        setItems(feed.slice(0,10));
-      } catch(e) { console.warn("actions feed error", e); }
-      setLoading(false);
-    })();
-  }, []);
-  const T2 = { gold:"#c8a84b", white:"#f0efea", dim:"rgba(240,239,234,0.22)", bg4:"#141710", border:"rgba(255,255,255,0.06)" };
-  const timeAgo = (t) => { const diff=Date.now()-new Date(t); const m=Math.floor(diff/60000),h=Math.floor(diff/3600000),d=Math.floor(diff/86400000); return d>0?`${d}d`:h>0?`${h}h`:m>0?`${m}m`:"now"; };
-  if (loading) return <div style={{display:"flex",flexDirection:"column",gap:6}}>{[1,2,3,4].map(i=><div key={i} style={{height:40,borderRadius:8,background:T2.bg4,opacity:0.5}}/>)}</div>;
-  if (!items.length) return <p style={{fontSize:12,color:T2.dim,textAlign:"center",padding:"16px 0"}}>No recent activity.</p>;
-  return (
-    <div style={{display:"flex",flexDirection:"column",gap:5}}>
-      {items.map((item,i) => {
-        const inner = (
-          <div style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,background:T2.bg4,border:`1px solid ${T2.border}`}}>
-            {item.badgeImg
-              ? <img src={item.badgeImg} alt="" style={{width:28,height:28,objectFit:"contain",flexShrink:0}}/>
-              : <span style={{fontSize:16,flexShrink:0}}>{item.emoji}</span>}
-            <div style={{flex:1,minWidth:0}}>
-              <span style={{fontSize:12,fontWeight:600,color:T2.white}}>@{item.username}</span>
-              <span style={{fontSize:11,color:T2.dim}}> {item.text}</span>
-            </div>
-            <div style={{fontSize:9,color:T2.dim,flexShrink:0}}>{timeAgo(item.time)}</div>
-          </div>
-        );
-        return item.link
-          ? <Link key={i} href={item.link} style={{textDecoration:"none"}}>{inner}</Link>
-          : <div key={i}>{inner}</div>;
-      })}
-    </div>
-  );
-}
+
 
 function ActivityFeed() {
   // kept for any remaining references — renders nothing now
   return null;
 }
-// (old ActivityFeed internals removed — replaced by RecentProofsFeed + RecentActionsFeed)
 // Placeholder to satisfy linter:
 function _oldActivityFeedUnused() {
   const T2 = { olive:"#93a85a", gold:"#c8a84b", white:"#f0efea", dim:"rgba(240,239,234,0.22)", bg3:"#181a12", border:"rgba(255,255,255,0.06)" };
@@ -951,6 +851,102 @@ function RewardsBanner({ username }) {
         }}>
         ✕
       </button>
+    </div>
+  );
+}
+
+
+// ─── LiveTicker — scrolling bar combining recent proofs + recent activity ──────
+function LiveTicker({ username }) {
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [subRes, actRes, chalRes, spotRes, refRes] = await Promise.all([
+          supabase.from("Submissions").select("username,created_at").eq("status","approved")
+            .order("created_at",{ascending:false}).limit(20),
+          supabase.from("ScoreEvents").select("username,event_type,points,created_at")
+            .in("event_type",["milestone_10","milestone_20","milestone_30","milestone_50","milestone_100","milestone_180","milestone_365","milestone_500","lucky_touch_rare","lucky_touch_common"])
+            .order("created_at",{ascending:false}).limit(15),
+          supabase.from("Challenges").select("challenger,challenged,duration_days,status,created_at")
+            .order("created_at",{ascending:false}).limit(10),
+          supabase.from("CommunitySpotlights").select("username,category,display_name,week_start,created_at")
+            .eq("status","active").order("created_at",{ascending:false}).limit(5),
+          supabase.from("Referrals").select("referrer_username,referred_username,status,converted_at,created_at")
+            .eq("status","converted").order("created_at",{ascending:false}).limit(5),
+        ]);
+
+        const feed = [];
+        (subRes.data||[]).forEach(s => feed.push({
+          emoji:"🌿", text:`@${s.username} touched grass`, time: s.created_at,
+        }));
+        (actRes.data||[]).forEach(se => {
+          const labels = {
+            milestone_10:"hit Day 10 🔥", milestone_20:"hit Day 20 🌱",
+            milestone_30:"hit Day 30 🌿", milestone_50:"hit Day 50 ⭐",
+            milestone_100:"hit Day 100 🏆", milestone_180:"hit Day 180 ⚡",
+            milestone_365:"hit Day 365 👑", milestone_500:"hit Day 500 🌌",
+            lucky_touch_rare:"got a Rare Lucky Touch ✨",
+            lucky_touch_common:"got a Lucky Touch 🍀",
+          };
+          if(labels[se.event_type]) feed.push({ emoji:"⚡", text:`@${se.username} ${labels[se.event_type]}`, time: se.created_at });
+        });
+        (chalRes.data||[]).forEach(c => {
+          if(c.status==="active"||c.status==="pending") feed.push({ emoji:"⚡", text:`@${c.challenger} challenged @${c.challenged} · ${c.duration_days}d`, time: c.created_at });
+          if(c.status==="completed") feed.push({ emoji:"🏆", text:`@${c.challenger} vs @${c.challenged} · ${c.duration_days}d challenge complete`, time: c.created_at });
+        });
+        (spotRes.data||[]).forEach(s => feed.push({ emoji:"🌟", text:`@${s.username} won ${s.display_name||s.category} Spotlight`, time: s.created_at }));
+        (refRes.data||[]).forEach(r => feed.push({ emoji:"🤝", text:`@${r.referrer_username} brought @${r.referred_username} to Day 10`, time: r.converted_at||r.created_at }));
+
+        // Sort by time descending, deduplicate
+        feed.sort((a,b) => new Date(b.time) - new Date(a.time));
+        setItems(feed.slice(0,40));
+      } catch(e) { console.warn("ticker error", e); }
+    })();
+  }, []);
+
+  if (items.length === 0) return null;
+
+  // Duplicate items for seamless loop
+  const doubled = [...items, ...items];
+
+  return (
+    <div style={{
+      width:"100%", overflow:"hidden",
+      borderTop:"1px solid rgba(255,255,255,0.055)",
+      borderBottom:"1px solid rgba(255,255,255,0.055)",
+      background:"rgba(147,168,90,0.04)",
+      padding:"10px 0",
+    }}>
+      <style>{`
+        @keyframes ticker-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .ticker-track {
+          display: flex;
+          gap: 0;
+          width: max-content;
+          animation: ticker-scroll 60s linear infinite;
+        }
+        .ticker-track:hover { animation-play-state: paused; }
+      `}</style>
+      <div className="ticker-track">
+        {doubled.map((item, i) => (
+          <div key={i} style={{
+            display:"inline-flex", alignItems:"center", gap:8,
+            padding:"0 32px",
+            borderRight:"1px solid rgba(255,255,255,0.06)",
+            whiteSpace:"nowrap", flexShrink:0,
+          }}>
+            <span style={{ fontSize:13 }}>{item.emoji}</span>
+            <span style={{ fontSize:12, color:"rgba(240,239,234,0.70)", fontWeight:500 }}>
+              {item.text}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1725,6 +1721,9 @@ export default function Home() {
           <RewardsBanner username={username} />
         </div>
 
+        {/* ── LIVE TICKER ─────────────────────────────────────────────────────── */}
+        <LiveTicker username={username} />
+
         {/* ── PROMO BANNER — Harvest ───────────────────────────────────────────── */}
         <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
           <PromoBanner
@@ -1954,216 +1953,9 @@ export default function Home() {
             )}
           </div>
 
-          {/* RECENT PROOFS */}
-          <div className="card" style={{ padding:26, borderLeft:`1px solid ${T.border}` }}>
-            <div className="card-title-row">
-              <span className="card-title" style={{ margin:0 }}>Recent Proofs</span>
-              <Link href="/leaderboard" className="view-all">View All</Link>
-            </div>
-            {recentProofs.length > 0
-              ? recentProofs.map((p, i) => <ProofRow key={i} {...p} />)
-              : [1,2,3,4,5].map(i => (
-                <div key={i} style={{ display:"flex", gap:12, alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${T.border}` }}>
-                  <Skeleton w={44} h={44} />
-                  <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}><Skeleton h={10} /><Skeleton w="55%" h={8} /></div>
-                </div>
-              ))
-            }
-          </div>
-
         </div>
 
-        {/* ── PROGRESSION + CARDS ───────────────────────────────────────────── */}
-        <div className="prog-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr",
-          gap:0, background:T.border, borderBottom:`1px solid ${T.border}`,
-          width:"100%", maxWidth:"100%" }}>
 
-          {/* PROGRESSION */}
-          <div className="card" style={{ padding:28, borderRight:`1px solid ${T.border}` }}>
-            <div className="card-title">Your Progression</div>
-            {hasUser && currentStreak > 0 ? (
-              <>
-                <div style={{ display:"flex", gap:6, marginBottom:20, overflowX:"auto", paddingBottom:4, scrollbarWidth:"none" }}>
-                  <TierBadge name="Rooted"    day={14}  completed={currentStreak>=14}  active={currentStreak>=7   && currentStreak<14} />
-                  <TierBadge name="Elite"     day={30}  completed={currentStreak>=30}  active={currentStreak>=14  && currentStreak<30} />
-                  <TierBadge name="Legendary" day={50}  completed={currentStreak>=50}  active={currentStreak>=30  && currentStreak<50} />
-                  <TierBadge name="Immortal"  day={100} completed={currentStreak>=100} active={currentStreak>=50  && currentStreak<100} />
-                  <TierBadge name="Mythic"    day={180} completed={currentStreak>=180} active={currentStreak>=100 && currentStreak<180} />
-                  <TierBadge name="Eternal"   day={365} completed={currentStreak>=365} active={currentStreak>=180 && currentStreak<365} />
-                  <TierBadge name="Ascended"  day={500} completed={currentStreak>=500} active={currentStreak>=365 && currentStreak<500} />
-                </div>
-                {(() => {
-                  const thr = [0,7,14,30,50,100];
-                  const prev = [...thr].reverse().find(t => currentStreak >= t) ?? 0;
-                  const next = thr.find(t => t > currentStreak);
-                  const fill = next ? Math.round(((currentStreak - prev)/(next - prev))*100) : 100;
-                  const left = next ? next - currentStreak : 0;
-                  return (
-                    <>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:8 }}>
-                        <div>
-                          <div style={{ fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:T.dim, marginBottom:2 }}>Next Milestone</div>
-                          {left > 0 && (
-                            <div style={{ fontSize:13, color:T.olive, fontWeight:700 }}>
-                              {left} day{left!==1?"s":""} to <span style={{ color:T.gold }}>{next ? getStreakTier(next) : "Immortal"}</span>
-                            </div>
-                          )}
-                        </div>
-                        <span style={{ fontSize:11, color:T.dim, fontFamily:"monospace" }}>{currentStreak} / {next ?? "∞"}</span>
-                      </div>
-                      <div style={{ height:5, background:T.bg3, borderRadius:3, overflow:"hidden" }}>
-                        <div style={{ height:"100%", width:`${fill}%`, background:`linear-gradient(90deg,${T.olive},${T.gold})`, borderRadius:3, transition:"width 1.2s ease", boxShadow:`0 0 8px ${T.olive}40` }} />
-                      </div>
-                    </>
-                  );
-                })()}
-              </>
-            ) : (
-              <div style={{ textAlign:"center", padding:"28px 0" }}>
-                <div style={{ fontSize:11, color:T.dim, marginBottom:16 }}>Enter your username to see your progression</div>
-                <input className="username-input" type="text" placeholder="your username"
-                  value={rawUsername} onChange={e => setRawUsername(e.target.value)} style={{ width:180 }} />
-              </div>
-            )}
-
-            {/* ── SHIELD SECTION — redesigned ─────────────────────────────── */}
-            <div id="shield-section" style={{ marginTop:24 }}>
-              {/* Header card — always visible */}
-              <div style={{
-                background:"linear-gradient(135deg,rgba(200,168,75,0.08),rgba(200,168,75,0.03))",
-                border:`1px solid rgba(200,168,75,0.25)`,
-                borderRadius:14, padding:"18px 18px",
-                display:"flex", alignItems:"center", gap:14,
-              }}>
-                <div style={{
-                  width:44, height:44, borderRadius:12, flexShrink:0,
-                  background:"linear-gradient(135deg,rgba(200,168,75,0.25),rgba(200,168,75,0.08))",
-                  border:"1px solid rgba(200,168,75,0.35)",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize:22, boxShadow:"0 0 20px rgba(200,168,75,0.15)",
-                }}>🛡</div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:T.white, marginBottom:2 }}>Streak Shield</div>
-                  <div style={{ fontSize:11, color:"rgba(200,168,75,0.7)" }}>50,000 $TOUCHGRASS · Protects a missed day</div>
-                </div>
-                <button onClick={() => setShowShieldBuy(v => !v)}
-                  style={{
-                    background: showShieldBuy ? "rgba(200,168,75,0.15)" : "transparent",
-                    border:"1px solid rgba(200,168,75,0.35)",
-                    color:T.gold, borderRadius:8,
-                    padding:"8px 14px", fontSize:12, cursor:"pointer",
-                    fontWeight:700, letterSpacing:"0.04em", flexShrink:0,
-                    transition:"all 0.15s",
-                  }}>
-                  {showShieldBuy ? "✕ Close" : "Buy →"}
-                </button>
-              </div>
-
-              {showShieldBuy && (
-                <div style={{
-                  marginTop:8, background:T.bg2,
-                  border:`1px solid ${T.border}`,
-                  borderRadius:14, overflow:"hidden",
-                }}>
-                  {/* Primary CTA */}
-                  <div style={{ padding:"18px 18px 14px" }}>
-                    <a href={buildSolanaPayUrl()}
-                      style={{
-                        display:"flex", alignItems:"center", justifyContent:"center", gap:10,
-                        background:"linear-gradient(135deg,#93a85a,#7a9148)",
-                        color:"#0a0c08", borderRadius:10,
-                        padding:"13px 18px", fontSize:13, fontWeight:700,
-                        textDecoration:"none", letterSpacing:"0.04em",
-                        boxShadow:"0 4px 20px rgba(147,168,90,0.3)",
-                      }}>
-                      ⚡ Open Wallet — Pay 50,000 $TOUCHGRASS
-                    </a>
-                    <div style={{ fontSize:10, color:T.dim, textAlign:"center", marginTop:8 }}>
-                      Opens your wallet with the payment pre-filled · you review and sign
-                    </div>
-                  </div>
-
-                  {/* Divider with OR */}
-                  <div style={{ display:"flex", alignItems:"center", gap:10, padding:"0 18px", marginBottom:14 }}>
-                    <div style={{ flex:1, height:1, background:T.border }} />
-                    <span style={{ fontSize:10, color:T.dim, letterSpacing:"0.1em" }}>OR SEND MANUALLY</span>
-                    <div style={{ flex:1, height:1, background:T.border }} />
-                  </div>
-
-                  {/* Manual send + QR */}
-                  <div style={{ padding:"0 18px 18px", display:"flex", flexDirection:"column", gap:10 }}>
-                    {/* Address row */}
-                    <div style={{ background:T.bg3, borderRadius:10, padding:"12px 14px" }}>
-                      <div style={{ fontSize:9, color:T.dim, letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:6 }}>Burn Address</div>
-                      <div style={{ fontFamily:"monospace", fontSize:11, color:T.olive, wordBreak:"break-all", marginBottom:10 }}>
-                        {SOL_DOMAIN}
-                      </div>
-                      <div style={{ display:"flex", gap:6 }}>
-                        <button onClick={() => { navigator.clipboard.writeText(SOL_DOMAIN).catch(()=>{}); setCopiedDomain(true); setTimeout(()=>setCopiedDomain(false),1500); }}
-                          style={{ flex:1, background:"transparent", border:`1px solid ${T.borderG}`,
-                            color: copiedDomain ? "#4ade80" : T.olive,
-                            borderRadius:7, padding:"7px 0", fontSize:10, cursor:"pointer", fontWeight:600 }}>
-                          {copiedDomain ? "✓ Copied" : "Copy Domain"}
-                        </button>
-                        <button onClick={() => { navigator.clipboard.writeText(BURN_ADDR).catch(()=>{}); setCopiedAddr(true); setTimeout(()=>setCopiedAddr(false),1500); }}
-                          style={{ flex:1, background:"transparent", border:`1px solid ${T.borderG}`,
-                            color: copiedAddr ? "#4ade80" : T.olive,
-                            borderRadius:7, padding:"7px 0", fontSize:10, cursor:"pointer", fontWeight:600 }}>
-                          {copiedAddr ? "✓ Copied" : "Copy Address"}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* QR code */}
-                    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, padding:"10px 0" }}>
-                      <img src={buildQrCodeUrl(buildSolanaPayUrl())} alt="Scan to pay"
-                        style={{ width:120, height:120, borderRadius:10, border:`1px solid ${T.border}` }} />
-                      <div style={{ fontSize:9, color:T.dim }}>Scan with your wallet app</div>
-                    </div>
-
-                    {/* Submit confirmation */}
-                    <div style={{ borderTop:`1px solid ${T.border}`, paddingTop:12 }}>
-                      <div style={{ fontSize:10, color:T.dim, marginBottom:8 }}>
-                        After sending, paste your wallet address for verification:
-                      </div>
-                      <input type="text" className="field" placeholder="Your wallet address"
-                        value={purchaseWallet} onChange={e => setPurchaseWallet(e.target.value)}
-                        style={{ marginBottom:8 }} />
-                      {purchaseError && <div style={{ fontSize:10, color:T.red, marginBottom:8 }}>{purchaseError}</div>}
-                      {latestPurchase && purchaseStatus !== "success" && (
-                        <div style={{ fontSize:10, marginBottom:8,
-                          color: latestPurchase.status==="approved" ? "#4ade80"
-                               : latestPurchase.status==="rejected" ? T.red : T.gold }}>
-                          {latestPurchase.status==="approved" ? "✅ Shield credited"
-                           : latestPurchase.status==="rejected" ? "❌ Rejected — wallet not verified"
-                           : "⏳ Pending admin review"}
-                        </div>
-                      )}
-                      <button className="btn-olive" style={{ justifyContent:"center", width:"100%" }}
-                        onClick={handleBuyShield} disabled={purchaseStatus==="loading"}>
-                        {purchaseStatus==="loading" ? "Submitting…"
-                         : purchaseStatus==="success" ? "✓ Submitted!"
-                         : "Submit Purchase Request"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* RECENT PROOFS */}
-          <div className="card" style={{ padding:28 }}>
-            <div className="card-title">Recent Proofs</div>
-            <RecentProofsFeed />
-          </div>
-
-          {/* RECENT ACTIONS */}
-          <div className="card" style={{ padding:28 }}>
-            <div className="card-title">Recent Activity</div>
-            <RecentActionsFeed />
-          </div>
-        </div>
 
 
 
