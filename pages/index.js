@@ -973,7 +973,10 @@ function CommunityEngagement({ username }) {
                 <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
                   <div style={{ width:42, height:42, borderRadius:"50%", flexShrink:0,
                     background:"linear-gradient(135deg,#93a85a,#c8a84b)",
-                    display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🌿</div>
+                    display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+                    <img src="/touchgrass-transparent.png" alt="Touch Grass"
+                      style={{ width:36, height:36, objectFit:"contain" }} />
+                  </div>
                   <div>
                     <div style={{ fontSize:14, fontWeight:700, color:T.white }}>Touch Grass</div>
                     <div style={{ fontSize:12, color:T.dim }}>@XTouchGrass</div>
