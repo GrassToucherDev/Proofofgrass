@@ -1827,13 +1827,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── COMMUNITY ENGAGEMENT ────────────────────────────────────────── */}
-        <CommunityEngagement username={username} />
-
-        {/* ── REWARDS BANNER ──────────────────────────────────────────────────── */}
-        <div style={{ padding: "0 clamp(14px,4vw,48px)" }}>
-          <RewardsBanner username={username} />
-        </div>
 
         {/* ── MAIN TWO-COLUMN GRID ─────────────────────────────────────────── */}
         <div className="main-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr",
@@ -1951,6 +1944,16 @@ export default function Home() {
         </div>
 
 
+
+
+
+        {/* ── COMMUNITY ENGAGEMENT ────────────────────────────────────────── */}
+        <CommunityEngagement username={username} />
+
+        {/* ── REWARDS BANNER ──────────────────────────────────────────────────── */}
+        <div style={{ padding: "0 clamp(14px,4vw,48px)" }}>
+          <RewardsBanner username={username} />
+        </div>
 
 
 
