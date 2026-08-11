@@ -1509,7 +1509,6 @@ export default function Home() {
       .feed-username{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;}
       .spotlight-scroll{overflow-x:auto;overflow-y:visible;scroll-snap-type:x mandatory;}
       .spotlight-scroll>*{scroll-snap-align:start;}
-      .quests-banner{flex-direction:column !important;text-align:center !important;}
       .footer-cta{flex-direction:column !important;text-align:center !important;align-items:center !important;}
     }
     @media(max-width:400px){.username-input{width:100px !important;font-size:11px !important;}}
@@ -1996,7 +1995,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── STATS + QUESTS ────────────────────────────────────────────────── */}
+        {/* ── STATS ─────────────────────────────────────────────────────────── */}
         <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}` }}>
 
           {/* Stats row */}
@@ -2007,86 +2006,9 @@ export default function Home() {
             <StatCard value={totalProofs !== null ? totalProofs.toLocaleString() : "…"} label="Proofs Logged" last />
           </div>
 
-          {/* Quests — full-width immersive banner */}
-          <div style={{ position:"relative", overflow:"hidden", padding:"28px clamp(14px,4vw,48px)" }}>
-            {/* Background texture */}
-            <div style={{
-              position:"absolute", inset:0, pointerEvents:"none",
-              background:"linear-gradient(135deg,rgba(147,168,90,0.09) 0%,rgba(200,168,75,0.04) 50%,transparent 100%)",
-            }} />
-            <div style={{
-              position:"absolute", top:-40, right:-40, width:220, height:220,
-              borderRadius:"50%", pointerEvents:"none",
-              background:"radial-gradient(circle,rgba(200,168,75,0.08),transparent 70%)",
-            }} />
-
-            <div style={{ position:"relative", display:"flex", alignItems:"center", justifyContent:"space-between", gap:20, flexWrap:"wrap" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:18, minWidth:0, flex:1 }}>
-                {/* Quest icon — larger, more dramatic */}
-                <div style={{
-                  width:60, height:60, borderRadius:16, flexShrink:0,
-                  background:"linear-gradient(135deg,rgba(200,168,75,0.25),rgba(200,168,75,0.08))",
-                  border:"1px solid rgba(200,168,75,0.4)",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize:28,
-                  boxShadow:"0 0 24px rgba(200,168,75,0.2), inset 0 1px 0 rgba(255,255,255,0.05)",
-                }}>⭐</div>
-
-                <div style={{ minWidth:0 }}>
-                  {/* Eyebrow */}
-                  <div style={{
-                    fontSize:9, fontWeight:700, letterSpacing:"0.2em",
-                    textTransform:"uppercase", color:"rgba(200,168,75,0.6)",
-                    marginBottom:4,
-                  }}>Limited Time</div>
-
-                  <div style={{
-                    fontFamily:"'Cormorant Garamond',Georgia,serif",
-                    fontSize:"clamp(20px,3vw,28px)", fontWeight:700,
-                    color:T.white, lineHeight:1.1, marginBottom:6,
-                  }}>Community Quests</div>
-
-                  <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-                    {[
-                      "Earn XP",
-                      "Unlock Badges",
-                      "Vote on DexScreener",
-                    ].map(item => (
-                      <div key={item} style={{
-                        display:"flex", alignItems:"center", gap:5,
-                        fontSize:11, color:"rgba(240,239,234,0.55)",
-                      }}>
-                        <span style={{ color:T.olive, fontSize:9 }}>✦</span>
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* CTA */}
-              <Link href="/quests" style={{
-                display:"inline-flex", alignItems:"center", gap:8,
-                background:"linear-gradient(135deg,#c8a84b,#a88c38)",
-                color:"#0a0800",
-                fontFamily:"'DM Sans',sans-serif",
-                fontSize:13, fontWeight:800,
-                letterSpacing:"0.06em", textTransform:"uppercase",
-                padding:"13px 24px", borderRadius:10,
-                textDecoration:"none", flexShrink:0,
-                boxShadow:"0 4px 20px rgba(200,168,75,0.35)",
-                whiteSpace:"nowrap",
-                transition:"all 0.2s",
-              }}>
-                View Quests →
-              </Link>
-            </div>
-          </div>
         </div>
 
-        {/* ── MAP PREVIEW ──────────────────────────────────────────────────── */}
-        <div style={{ padding:"18px clamp(14px,4vw,32px)", background:T.bg, borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
-        </div>
+
 
 
 
