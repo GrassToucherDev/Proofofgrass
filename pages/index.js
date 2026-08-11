@@ -1005,14 +1005,7 @@ function CommunityEngagement({ username }) {
             {post.tweet_text && post.tweet_text.length > 200 ? post.tweet_text.slice(0,197)+"..." : post.tweet_text}
           </div>
 
-          {/* Meta row */}
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-            <div style={{ display:"flex", gap:16 }}>
-              <span style={{ fontSize:11, color:T.dim }}>❤️ {post.likes || 0}</span>
-              <span style={{ fontSize:11, color:T.dim }}>🔁 {post.reposts || 0}</span>
-              <span style={{ fontSize:11, color:T.dim }}>{post.tweet_date || ""}</span>
-            </div>
-          </div>
+
         </div>
 
         </div>

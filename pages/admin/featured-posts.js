@@ -12,7 +12,7 @@ const T = {
   white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
 };
 
-const EMPTY_FORM = { tweet_url:"", tweet_text:"", tweet_date:"", likes:0, reposts:0, sort_order:0, active:true };
+const EMPTY_FORM = { tweet_url:"", sort_order:0, active:true };
 
 export default function FeaturedPostsAdmin() {
   const [authed,   setAuthed]   = useState(false);
@@ -37,15 +37,11 @@ export default function FeaturedPostsAdmin() {
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3000); };
 
   const handleSave = async () => {
-    if(!form.tweet_url || !form.tweet_text) return flash("URL and text are required.");
+    if(!form.tweet_url) return flash("Tweet URL is required.");
     setSaving(true);
     if(editing) {
       const { error } = await supabase.from("FeaturedPosts").update({
         tweet_url: form.tweet_url.trim(),
-        tweet_text: form.tweet_text.trim(),
-        tweet_date: form.tweet_date.trim() || null,
-        likes: parseInt(form.likes)||0,
-        reposts: parseInt(form.reposts)||0,
         sort_order: parseInt(form.sort_order)||0,
         active: form.active,
       }).eq("id", editing);
@@ -54,10 +50,6 @@ export default function FeaturedPostsAdmin() {
     } else {
       const { error } = await supabase.from("FeaturedPosts").insert([{
         tweet_url: form.tweet_url.trim(),
-        tweet_text: form.tweet_text.trim(),
-        tweet_date: form.tweet_date.trim() || null,
-        likes: parseInt(form.likes)||0,
-        reposts: parseInt(form.reposts)||0,
         sort_order: parseInt(form.sort_order)||0,
         active: form.active,
       }]);
@@ -70,9 +62,7 @@ export default function FeaturedPostsAdmin() {
 
   const handleEdit = (post) => {
     setEditing(post.id);
-    setForm({ tweet_url:post.tweet_url, tweet_text:post.tweet_text,
-      tweet_date:post.tweet_date||"", likes:post.likes||0,
-      reposts:post.reposts||0, sort_order:post.sort_order||0, active:post.active });
+    setForm({ tweet_url:post.tweet_url, sort_order:post.sort_order||0, active:post.active });
     window.scrollTo(0,0);
   };
 
@@ -149,32 +139,10 @@ export default function FeaturedPostsAdmin() {
             <input style={inputStyle} placeholder="https://twitter.com/XTouchGrass/status/..."
               value={form.tweet_url} onChange={e=>setForm(f=>({...f,tweet_url:e.target.value}))} />
 
-            <label style={{fontSize:11,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase"}}>Tweet Text *</label>
-            <textarea style={{...inputStyle,height:100,resize:"vertical"}}
-              placeholder="Paste the tweet text here..."
-              value={form.tweet_text} onChange={e=>setForm(f=>({...f,tweet_text:e.target.value}))} />
-
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10}}>
-              <div>
-                <label style={{fontSize:11,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase"}}>Date</label>
-                <input style={inputStyle} placeholder="Aug 11, 2026"
-                  value={form.tweet_date} onChange={e=>setForm(f=>({...f,tweet_date:e.target.value}))} />
-              </div>
-              <div>
-                <label style={{fontSize:11,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase"}}>Likes</label>
-                <input style={inputStyle} type="number" placeholder="0"
-                  value={form.likes} onChange={e=>setForm(f=>({...f,likes:e.target.value}))} />
-              </div>
-              <div>
-                <label style={{fontSize:11,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase"}}>Reposts</label>
-                <input style={inputStyle} type="number" placeholder="0"
-                  value={form.reposts} onChange={e=>setForm(f=>({...f,reposts:e.target.value}))} />
-              </div>
-              <div>
-                <label style={{fontSize:11,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase"}}>Order</label>
-                <input style={inputStyle} type="number" placeholder="0"
-                  value={form.sort_order} onChange={e=>setForm(f=>({...f,sort_order:e.target.value}))} />
-              </div>
+            <div style={{marginBottom:10}}>
+              <label style={{fontSize:11,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase"}}>Display Order (0 = first)</label>
+              <input style={inputStyle} type="number" placeholder="0"
+                value={form.sort_order} onChange={e=>setForm(f=>({...f,sort_order:e.target.value}))} />
             </div>
 
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
@@ -221,11 +189,6 @@ export default function FeaturedPostsAdmin() {
                         {post.active?"ACTIVE":"HIDDEN"}
                       </span>
                       <span style={{fontSize:10,color:T.dim}}>Order: {post.sort_order}</span>
-                      {post.tweet_date && <span style={{fontSize:10,color:T.dim}}>{post.tweet_date}</span>}
-                      <span style={{fontSize:10,color:T.dim}}>❤️ {post.likes} · 🔁 {post.reposts}</span>
-                    </div>
-                    <div style={{fontSize:13,color:T.white,marginBottom:6,lineHeight:1.5}}>
-                      {post.tweet_text.length>150?post.tweet_text.slice(0,147)+"...":post.tweet_text}
                     </div>
                     <a href={post.tweet_url} target="_blank" rel="noopener noreferrer"
                       style={{fontSize:11,color:T.dim,textDecoration:"none",wordBreak:"break-all"}}>
