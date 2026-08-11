@@ -896,11 +896,168 @@ function LiveTicker({ username }) {
 }
 
 
-// ─── CommunityEngagement — Featured X posts carousel + DexScreener ───────────
+// ─── CommunityEngagement — Featured X posts + DexScreener as stacked sections ──
 const DEXSCREENER_URL = "https://dexscreener.com/solana/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const DEXSCREENER_EMBED = "https://dexscreener.com/solana/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump?embed=1&theme=dark&trades=0&info=0";
 
 function CommunityEngagement({ username }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [clicked, setClicked] = useState({});
+  const [posts, setPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("FeaturedPosts")
+          .select("*")
+          .eq("active", true)
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: false });
+        setPosts(data || []);
+      } catch(e) { console.warn("featured posts error", e); }
+      setPostsLoading(false);
+    })();
+  }, []);
+
+  const trackClick = async (linkType, url) => {
+    try {
+      await supabase.from("ClickEvents").insert([{ username: username || null, link_type: linkType, url }]);
+    } catch(e) {}
+    setClicked(prev => ({ ...prev, [url]: true }));
+  };
+
+  const post = posts[activeIdx] || null;
+
+  return (
+    <>
+      {/* ── FEATURED X POSTS ─────────────────────────────────────────────────── */}
+      <div style={{
+        width:"100%", background:T.bg,
+        borderTop:`1px solid ${T.border}`,
+        borderBottom:`1px solid ${T.border}`,
+        padding:"28px clamp(14px,4vw,48px)",
+      }}>
+        {/* Header */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:18 }}>𝕏</span>
+            <span style={{ fontSize:14, fontWeight:700, color:T.white, letterSpacing:"0.04em" }}>FEATURED POSTS</span>
+          </div>
+          <a href="https://twitter.com/XTouchGrass" target="_blank" rel="noopener noreferrer"
+            onClick={() => trackClick("profile","https://twitter.com/XTouchGrass")}
+            style={{ fontSize:12, color:T.olive, textDecoration:"none" }}>
+            @XTouchGrass →
+          </a>
+        </div>
+
+        {/* Tweet embed */}
+        <div style={{ maxWidth:600, margin:"0 auto" }}>
+          {postsLoading ? (
+            <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:12,
+              height:280, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <div style={{ fontSize:12, color:T.dim }}>Loading…</div>
+            </div>
+          ) : posts.length === 0 ? (
+            <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:12,
+              height:200, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <div style={{ fontSize:12, color:T.dim }}>No featured posts yet.</div>
+            </div>
+          ) : post ? (
+            <>
+              <div style={{ borderRadius:12, overflow:"hidden", border:`1px solid ${T.border}`, marginBottom:12 }}>
+                <iframe
+                  key={post.tweet_url}
+                  src={`https://twitframe.com/show?url=${encodeURIComponent(post.tweet_url)}&theme=dark`}
+                  style={{ width:"100%", height:300, border:"none", display:"block" }}
+                  title="Featured tweet" scrolling="no"
+                />
+              </div>
+              <a href={post.tweet_url} target="_blank" rel="noopener noreferrer"
+                onClick={() => trackClick("tweet", post.tweet_url)}
+                style={{
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                  width:"100%", padding:"12px",
+                  background: clicked[post.tweet_url] ? "rgba(147,168,90,0.15)" : "rgba(255,255,255,0.04)",
+                  border:`1px solid ${clicked[post.tweet_url] ? T.olive : T.border}`,
+                  borderRadius:8, color: clicked[post.tweet_url] ? T.olive : T.muted,
+                  fontSize:13, fontWeight:700, textDecoration:"none",
+                  letterSpacing:"0.06em", cursor:"pointer", transition:"all 0.15s",
+                }}>
+                {clicked[post.tweet_url] ? "✓ Opened" : "Like · Reply · Repost on X →"}
+              </a>
+            </>
+          ) : null}
+
+          {/* Carousel nav */}
+          {posts.length > 1 && (
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:12, marginTop:16 }}>
+              <button onClick={() => setActiveIdx(i => (i - 1 + posts.length) % posts.length)}
+                style={{ background:"none", border:`1px solid ${T.border}`, color:T.dim,
+                  borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer" }}>← Prev</button>
+              <div style={{ display:"flex", gap:6 }}>
+                {posts.map((_, i) => (
+                  <button key={i} onClick={() => setActiveIdx(i)}
+                    style={{ width: i===activeIdx?20:8, height:8, borderRadius:4, border:"none",
+                      cursor:"pointer", background: i===activeIdx?T.olive:T.border,
+                      transition:"all 0.2s", padding:0 }} />
+                ))}
+              </div>
+              <button onClick={() => setActiveIdx(i => (i + 1) % posts.length)}
+                style={{ background:"none", border:`1px solid ${T.border}`, color:T.dim,
+                  borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer" }}>Next →</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── DEXSCREENER ──────────────────────────────────────────────────────── */}
+      <div style={{
+        width:"100%", background:T.bg,
+        borderBottom:`1px solid ${T.border}`,
+        padding:"28px clamp(14px,4vw,48px)",
+      }}>
+        {/* Header */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:16 }}>📈</span>
+            <span style={{ fontSize:14, fontWeight:700, color:T.white, letterSpacing:"0.04em" }}>$TOUCHGRASS</span>
+          </div>
+          <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
+            onClick={() => trackClick("dexscreener", DEXSCREENER_URL)}
+            style={{ fontSize:12, color:T.olive, textDecoration:"none" }}>
+            View on DexScreener →
+          </a>
+        </div>
+
+        {/* Chart embed */}
+        <div style={{ borderRadius:12, overflow:"hidden", border:`1px solid ${T.border}`, marginBottom:14 }}>
+          <iframe
+            src={DEXSCREENER_EMBED}
+            style={{ width:"100%", height:400, border:"none", display:"block" }}
+            title="$TOUCHGRASS on DexScreener"
+            allow="clipboard-write"
+          />
+        </div>
+
+        {/* Upvote CTA */}
+        <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
+          onClick={() => trackClick("dexscreener_upvote", DEXSCREENER_URL)}
+          style={{
+            display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+            maxWidth:400, margin:"0 auto", padding:"12px",
+            background:"linear-gradient(135deg,rgba(147,168,90,0.15),rgba(200,168,75,0.08))",
+            border:`1px solid rgba(147,168,90,0.35)`,
+            borderRadius:8, color:T.olive, fontSize:13, fontWeight:700,
+            textDecoration:"none", letterSpacing:"0.06em",
+          }}>
+          🔼 Upvote $TOUCHGRASS on DexScreener
+        </a>
+      </div>
+    </>
+  );
+}) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [clicked, setClicked] = useState({});
   const [posts, setPosts] = useState([]);
