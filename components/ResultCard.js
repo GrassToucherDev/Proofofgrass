@@ -1632,15 +1632,15 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
                       : sharableFileRef.current;
                     let cancelled = false;
 
+                    // Lock streak immediately on all platforms — before share opens
+                    setShareInitiated(true);
+                    lockInStreak();
+
                     if (isIOS) {
                       // ── iOS: native share sheet ────────────────────────────
                       const canShare = !isInAppBrowser
                         && typeof navigator.share === "function"
                         && typeof navigator.canShare === "function";
-                      // Lock streak FIRST before share — iOS can background app during share
-                      setShareInitiated(true);
-                      lockInStreak();
-                      setTimeout(() => {
                       if (canShare && file && navigator.canShare({ files:[file] })) {
                         setShareHint(true);
                         navigator.share({ files:[file], text })
@@ -1656,14 +1656,9 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
                         navigator.clipboard.writeText(text).catch(()=>{});
                         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
                       }
-
                     } else if (isAndroid) {
-                      // ── Android: lock streak FIRST then share
-                      setShareInitiated(true); // keep card visible for retry
-                      // Android apps background the browser during share — lock must fire before
-                      lockInStreak();
-                      // Small delay so RPC has time to initiate before app backgrounds
-                      setTimeout(() => { try {
+                      // ── Android: download image + open X ──────────────────
+                      try {
                         if (file) {
                           const url = URL.createObjectURL(file);
                           const a = document.createElement("a");
@@ -1673,11 +1668,8 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
                       } catch(e) {}
                       navigator.clipboard.writeText(text).catch(()=>{});
                       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-
                     } else {
-                      // ── Desktop: lock first then open X
-                      setShareInitiated(true);
-                      lockInStreak();
+                      // ── Desktop: open X compose ────────────────────────────
                       navigator.clipboard.writeText(text).catch(()=>{});
                       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
                     }
