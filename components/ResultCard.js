@@ -1640,7 +1640,7 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
                       // Lock streak FIRST before share — iOS can background app during share
                       setShareInitiated(true);
                       lockInStreak();
-                      await new Promise(r => setTimeout(r, 300));
+                      setTimeout(() => {
                       if (canShare && file && navigator.canShare({ files:[file] })) {
                         setShareHint(true);
                         navigator.share({ files:[file], text })
@@ -1663,8 +1663,7 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
                       // Android apps background the browser during share — lock must fire before
                       lockInStreak();
                       // Small delay so RPC has time to initiate before app backgrounds
-                      await new Promise(r => setTimeout(r, 300));
-                      try {
+                      setTimeout(() => { try {
                         if (file) {
                           const url = URL.createObjectURL(file);
                           const a = document.createElement("a");
