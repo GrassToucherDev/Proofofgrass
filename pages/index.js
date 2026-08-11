@@ -956,24 +956,37 @@ function CommunityEngagement({ username }) {
         <div style={{ maxWidth:600, margin:"0 auto" }}>
           {postsLoading ? (
             <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:12,
-              height:280, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              height:160, display:"flex", alignItems:"center", justifyContent:"center" }}>
               <div style={{ fontSize:12, color:T.dim }}>Loading…</div>
             </div>
           ) : posts.length === 0 ? (
             <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:12,
-              height:200, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              height:160, display:"flex", alignItems:"center", justifyContent:"center" }}>
               <div style={{ fontSize:12, color:T.dim }}>No featured posts yet.</div>
             </div>
           ) : post ? (
             <>
-              <div style={{ borderRadius:12, overflow:"hidden", border:`1px solid ${T.border}`, marginBottom:12 }}>
-                <iframe
-                  key={post.tweet_url}
-                  src={`https://twitframe.com/show?url=${encodeURIComponent(post.tweet_url)}&theme=dark`}
-                  style={{ width:"100%", height:300, border:"none", display:"block" }}
-                  title="Featured tweet" scrolling="no"
-                />
+              {/* Clean tweet card — no third-party iframes */}
+              <div style={{ background:T.bg2, border:`1px solid ${T.border}`,
+                borderRadius:12, padding:"20px", marginBottom:12 }}>
+                {/* Account row */}
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+                  <div style={{ width:42, height:42, borderRadius:"50%", flexShrink:0,
+                    background:"linear-gradient(135deg,#93a85a,#c8a84b)",
+                    display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🌿</div>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:700, color:T.white }}>Touch Grass</div>
+                    <div style={{ fontSize:12, color:T.dim }}>@XTouchGrass</div>
+                  </div>
+                  <div style={{ marginLeft:"auto", fontSize:18, color:"#1d9bf0" }}>𝕏</div>
+                </div>
+                {/* Tweet text */}
+                <div style={{ fontSize:15, color:"rgba(240,239,234,0.90)", lineHeight:1.65,
+                  whiteSpace:"pre-wrap", wordBreak:"break-word" }}>
+                  {post.tweet_text ? (post.tweet_text.length > 280 ? post.tweet_text.slice(0, 277) + "..." : post.tweet_text) : ""}
+                </div>
               </div>
+              {/* CTA */}
               <a href={post.tweet_url} target="_blank" rel="noopener noreferrer"
                 onClick={() => trackClick("tweet", post.tweet_url)}
                 style={{
