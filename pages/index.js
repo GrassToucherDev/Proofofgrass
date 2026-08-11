@@ -898,7 +898,6 @@ function LiveTicker({ username }) {
 
 // ─── CommunityEngagement — Featured X posts + DexScreener as stacked sections ──
 const DEXSCREENER_URL = "https://dexscreener.com/solana/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
-const DEXSCREENER_EMBED = "https://dexscreener.com/solana/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump?embed=1&theme=dark&trades=0&info=0";
 
 function CommunityEngagement({ username }) {
   const [activeIdx, setActiveIdx] = useState(0);
@@ -1028,49 +1027,8 @@ function CommunityEngagement({ username }) {
         </div>
       </div>
 
-      {/* ── DEXSCREENER ──────────────────────────────────────────────────────── */}
-      <div style={{
-        width:"100%", background:T.bg,
-        borderBottom:`1px solid ${T.border}`,
-        padding:"28px clamp(14px,4vw,48px)",
-      }}>
-        {/* Header */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <span style={{ fontSize:16 }}>📈</span>
-            <span style={{ fontSize:14, fontWeight:700, color:T.white, letterSpacing:"0.04em" }}>$TOUCHGRASS</span>
-          </div>
-          <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
-            onClick={() => trackClick("dexscreener", DEXSCREENER_URL)}
-            style={{ fontSize:12, color:T.olive, textDecoration:"none" }}>
-            View on DexScreener →
-          </a>
-        </div>
-
-        {/* Chart embed */}
-        <div style={{ borderRadius:12, overflow:"hidden", border:`1px solid ${T.border}`, marginBottom:14 }}>
-          <iframe
-            src={DEXSCREENER_EMBED}
-            style={{ width:"100%", height:400, border:"none", display:"block" }}
-            title="$TOUCHGRASS on DexScreener"
-            allow="clipboard-write"
-          />
-        </div>
-
-        {/* Upvote CTA */}
-        <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
-          onClick={() => trackClick("dexscreener_upvote", DEXSCREENER_URL)}
-          style={{
-            display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-            maxWidth:400, margin:"0 auto", padding:"12px",
-            background:"linear-gradient(135deg,rgba(147,168,90,0.15),rgba(200,168,75,0.08))",
-            border:`1px solid rgba(147,168,90,0.35)`,
-            borderRadius:8, color:T.olive, fontSize:13, fontWeight:700,
-            textDecoration:"none", letterSpacing:"0.06em",
-          }}>
-          🔼 Upvote $TOUCHGRASS on DexScreener
-        </a>
-      </div>
+      {/* ── $TOUCHGRASS PRICE CARD ───────────────────────────────────────────── */}
+      <DexCard trackClick={trackClick} />
     </>
   );
 }
