@@ -1900,7 +1900,7 @@ export default function Home() {
 
         {/* ── MAP PREVIEW ──────────────────────────────────────────────────── */}
         <div style={{ padding:"18px clamp(14px,4vw,32px)", background:T.bg, borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
-          <MapPreviewCard />
+
         </div>
 
 
