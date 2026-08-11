@@ -676,6 +676,7 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
   const [submitStatus, setSubmitStatus] = useState(null);
   // ── Style picker modal ────────────────────────────────────────────────────
   const [showStylePicker,  setShowStylePicker]  = useState(false);
+  const [shareInitiated,   setShareInitiated]   = useState(false); // Android: keep card visible after share
   const [shareStyle, setShareStyle]             = useState(() => {
     if (typeof localStorage !== "undefined") {
       return localStorage.getItem("pog_preferred_share_style") || "outdoor_photo";
@@ -784,8 +785,9 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
     setSubmitStatus("loading");
     setSubmitError("");
 
-    // Retry wrapper — network hiccups during share flow are common
-    const rpcWithRetry = async (retries = 2) => {
+    // Retry wrapper — up to 5 attempts with increasing delays
+    // Critical: this must succeed even if the app is backgrounded during share
+    const rpcWithRetry = async (retries = 5) => {
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
           const locationPayload = locationMode === "gps"
@@ -800,10 +802,13 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
             p_username: username?.toLowerCase().trim(), p_tweet_url: null, p_verification: "self_attested",
             ...locationPayload,
           });
+          // If we got a response (even an error), return it — don't retry
           return res;
         } catch(e) {
+          console.warn(`lock_in_streak attempt ${attempt + 1} failed:`, e?.message);
           if (attempt === retries) throw e;
-          await new Promise(r => setTimeout(r, 1200 * (attempt + 1)));
+          // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
         }
       }
     };
@@ -1447,6 +1452,17 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
       )}
 
       {/* ── SUCCESS — card stays accessible ────────────────────────── */}
+      {/* Android share hint — card stays accessible if they need to retry */}
+      {shareInitiated && submitStatus === "success" && (
+        <div style={{
+          background:"rgba(147,168,90,0.08)",border:"1px solid rgba(147,168,90,0.2)",
+          borderRadius:10,padding:"12px 14px",marginBottom:12,
+          fontSize:12,color:"rgba(240,239,234,0.7)",lineHeight:1.6,textAlign:"center",
+        }}>
+          ✓ Streak locked in. If your share didn't go through, tap the share button again above.
+        </div>
+      )}
+
       {submitStatus === "success" && (
         <div style={{width:"100%",borderRadius:14,overflow:"hidden",border:"1px solid rgba(147,168,90,0.3)"}}>
           {/* Confirmation bar */}
@@ -1621,31 +1637,33 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
                       const canShare = !isInAppBrowser
                         && typeof navigator.share === "function"
                         && typeof navigator.canShare === "function";
+                      // Lock streak FIRST before share — iOS can background app during share
+                      setShareInitiated(true);
+                      lockInStreak();
+                      await new Promise(r => setTimeout(r, 300));
                       if (canShare && file && navigator.canShare({ files:[file] })) {
                         setShareHint(true);
                         navigator.share({ files:[file], text })
-                          .then(() => {
-                            setShareHint(false);
-                            lockInStreak();
-                          })
+                          .then(() => { setShareHint(false); })
                           .catch(err => {
                             setShareHint(false);
-                            if (err?.name === "AbortError") {
-                              cancelled = true;
-                            } else {
+                            if (err?.name !== "AbortError") {
                               navigator.clipboard.writeText(text).catch(()=>{});
                               window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-                              lockInStreak();
                             }
                           });
                       } else {
                         navigator.clipboard.writeText(text).catch(()=>{});
                         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-                        lockInStreak();
                       }
 
                     } else if (isAndroid) {
-                      // ── Android: download image + open X + lock ────────────
+                      // ── Android: lock streak FIRST then share
+                      setShareInitiated(true); // keep card visible for retry
+                      // Android apps background the browser during share — lock must fire before
+                      lockInStreak();
+                      // Small delay so RPC has time to initiate before app backgrounds
+                      await new Promise(r => setTimeout(r, 300));
                       try {
                         if (file) {
                           const url = URL.createObjectURL(file);
@@ -1656,13 +1674,13 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
                       } catch(e) {}
                       navigator.clipboard.writeText(text).catch(()=>{});
                       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-                      lockInStreak();
 
                     } else {
-                      // ── Desktop: clipboard + X compose ────────────────────
+                      // ── Desktop: lock first then open X
+                      setShareInitiated(true);
+                      lockInStreak();
                       navigator.clipboard.writeText(text).catch(()=>{});
                       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-                      lockInStreak();
                     }
                   }}
                   aria-label="Continue to X"
