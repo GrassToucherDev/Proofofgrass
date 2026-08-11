@@ -973,59 +973,33 @@ function CommunityEngagement({ username }) {
             alignItems:"center", justifyContent:"center" }}>
             <div style={{ fontSize:12, color:T.dim }}>No featured posts yet.</div>
           </div>
-        ) : !post ? null : (
-        <div style={{
-          background: T.bg2,
-          border: `1px solid ${T.border}`,
-          borderRadius: 12,
-          padding: "18px 18px 14px",
-          marginBottom: 14,
-          minHeight: 140,
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-        }}>
-          {/* Account row */}
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: "50%",
-              background: "linear-gradient(135deg,#93a85a,#c8a84b)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, flexShrink: 0,
-            }}>🌿</div>
-            <div>
-              <div style={{ fontSize:13, fontWeight:700, color:T.white }}>Touch Grass</div>
-              <div style={{ fontSize:11, color:T.dim }}>@XTouchGrass</div>
+        ) : post ? (
+          <>
+            <div style={{ borderRadius:12, overflow:"hidden", border:`1px solid ${T.border}`,
+              marginBottom:12, background:T.bg2, minHeight:200 }}>
+              <iframe
+                key={post.tweet_url}
+                src={`https://twitframe.com/show?url=${encodeURIComponent(post.tweet_url)}&theme=dark`}
+                style={{ width:"100%", height:280, border:"none", display:"block" }}
+                title="Featured tweet"
+                scrolling="no"
+              />
             </div>
-            <div style={{ marginLeft:"auto", fontSize:16 }}>𝕏</div>
-          </div>
-
-          {/* Tweet text */}
-          <div style={{ fontSize:13, color:"rgba(240,239,234,0.85)", lineHeight:1.6, flex:1 }}>
-            {post.tweet_text && post.tweet_text.length > 200 ? post.tweet_text.slice(0,197)+"..." : post.tweet_text}
-          </div>
-
-
-        </div>
-
-        </div>
-        )} {/* end post card conditional */}
-
-        {/* CTA button */}
-        {post && <a href={post.tweet_url} target="_blank" rel="noopener noreferrer"
-          onClick={() => trackClick("tweet", post.tweet_url)}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center", gap:8,
-            width: "100%", padding: "11px",
-            background: clicked[post.tweet_url] ? "rgba(147,168,90,0.15)" : "rgba(255,255,255,0.04)",
-            border: `1px solid ${clicked[post.tweet_url] ? T.olive : T.border}`,
-            borderRadius: 8, color: clicked[post.tweet_url] ? T.olive : T.muted,
-            fontSize: 12, fontWeight: 700, textDecoration: "none",
-            letterSpacing: "0.06em", cursor: "pointer",
-            transition: "all 0.15s",
-          }}>
-          {clicked[post.tweet_url] ? "✓ Opened" : "View & Engage on X →"}
-        </a>}
+            <a href={post.tweet_url} target="_blank" rel="noopener noreferrer"
+              onClick={() => trackClick("tweet", post.tweet_url)}
+              style={{
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                width:"100%", padding:"11px", marginBottom:12,
+                background: clicked[post.tweet_url] ? "rgba(147,168,90,0.15)" : "rgba(255,255,255,0.04)",
+                border:`1px solid ${clicked[post.tweet_url] ? T.olive : T.border}`,
+                borderRadius:8, color: clicked[post.tweet_url] ? T.olive : T.muted,
+                fontSize:12, fontWeight:700, textDecoration:"none",
+                letterSpacing:"0.06em", cursor:"pointer", transition:"all 0.15s",
+              }}>
+              {clicked[post.tweet_url] ? "✓ Opened" : "Like · Reply · Repost on X →"}
+            </a>
+          </>
+        ) : null}
 
         {/* Carousel dots */}
         <div style={{ display:"flex", justifyContent:"center", gap:8, marginTop:14 }}>
