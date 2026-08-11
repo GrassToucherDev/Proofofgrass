@@ -928,7 +928,7 @@ function LiveTicker({ username }) {
           display: flex;
           gap: 0;
           width: max-content;
-          animation: ticker-scroll 60s linear infinite;
+          animation: ticker-scroll 120s linear infinite;
         }
         .ticker-track:hover { animation-play-state: paused; }
       `}</style>
@@ -1519,6 +1519,9 @@ export default function Home() {
           </>
         )}
 
+        {/* ── LIVE TICKER ─────────────────────────────────────────────────────── */}
+        <LiveTicker username={username} />
+
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
         <section className="hero-section" style={{ position:"relative", overflow:"hidden" }}>
           {/* Background */}
@@ -1720,9 +1723,6 @@ export default function Home() {
         <div style={{ padding: "0 clamp(14px,4vw,48px)" }}>
           <RewardsBanner username={username} />
         </div>
-
-        {/* ── LIVE TICKER ─────────────────────────────────────────────────────── */}
-        <LiveTicker username={username} />
 
         {/* ── PROMO BANNER — Harvest ───────────────────────────────────────────── */}
         <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
