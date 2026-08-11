@@ -897,37 +897,29 @@ function LiveTicker({ username }) {
 
 
 // ─── CommunityEngagement — Featured X posts carousel + DexScreener ───────────
-// Update FEATURED_POSTS with tweet URLs you want to feature
-const FEATURED_POSTS = [
-  {
-    url: "https://twitter.com/XTouchGrass/status/TWEET_ID_1",
-    text: "Paste your tweet text here — this is what users will see on the card.",
-    date: "Aug 11, 2026",
-    likes: 24,
-    reposts: 8,
-  },
-  {
-    url: "https://twitter.com/XTouchGrass/status/TWEET_ID_2",
-    text: "Paste your second tweet text here. Keep it short — first 200 chars show.",
-    date: "Aug 10, 2026",
-    likes: 31,
-    reposts: 12,
-  },
-  {
-    url: "https://twitter.com/XTouchGrass/status/TWEET_ID_3",
-    text: "Third featured tweet goes here. Update these whenever you post something big.",
-    date: "Aug 9, 2026",
-    likes: 18,
-    reposts: 5,
-  },
-];
-
 const DEXSCREENER_URL = "https://dexscreener.com/solana/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const DEXSCREENER_EMBED = "https://dexscreener.com/solana/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump?embed=1&theme=dark&trades=0&info=0";
 
 function CommunityEngagement({ username }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [clicked, setClicked] = useState({});
+  const [posts, setPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("FeaturedPosts")
+          .select("*")
+          .eq("active", true)
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: false });
+        setPosts(data || []);
+      } catch(e) { console.warn("featured posts error", e); }
+      setPostsLoading(false);
+    })();
+  }, []);
 
   const trackClick = async (linkType, url) => {
     try {
@@ -941,7 +933,7 @@ function CommunityEngagement({ username }) {
     setClicked(prev => ({ ...prev, [url]: true }));
   };
 
-  const post = FEATURED_POSTS[activeIdx];
+  const post = posts[activeIdx] || null;
 
   return (
     <div style={{
@@ -969,6 +961,19 @@ function CommunityEngagement({ username }) {
         </div>
 
         {/* Post card */}
+        {postsLoading ? (
+          <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:12,
+            padding:"18px", marginBottom:14, minHeight:140, display:"flex",
+            alignItems:"center", justifyContent:"center" }}>
+            <div style={{ fontSize:12, color:T.dim }}>Loading posts…</div>
+          </div>
+        ) : posts.length === 0 ? (
+          <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:12,
+            padding:"18px", marginBottom:14, minHeight:140, display:"flex",
+            alignItems:"center", justifyContent:"center" }}>
+            <div style={{ fontSize:12, color:T.dim }}>No featured posts yet.</div>
+          </div>
+        ) : !post ? null : (
         <div style={{
           background: T.bg2,
           border: `1px solid ${T.border}`,
@@ -997,38 +1002,41 @@ function CommunityEngagement({ username }) {
 
           {/* Tweet text */}
           <div style={{ fontSize:13, color:"rgba(240,239,234,0.85)", lineHeight:1.6, flex:1 }}>
-            {post.text.length > 200 ? post.text.slice(0,197)+"..." : post.text}
+            {post.tweet_text && post.tweet_text.length > 200 ? post.tweet_text.slice(0,197)+"..." : post.tweet_text}
           </div>
 
           {/* Meta row */}
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
             <div style={{ display:"flex", gap:16 }}>
-              <span style={{ fontSize:11, color:T.dim }}>❤️ {post.likes}</span>
-              <span style={{ fontSize:11, color:T.dim }}>🔁 {post.reposts}</span>
-              <span style={{ fontSize:11, color:T.dim }}>{post.date}</span>
+              <span style={{ fontSize:11, color:T.dim }}>❤️ {post.likes || 0}</span>
+              <span style={{ fontSize:11, color:T.dim }}>🔁 {post.reposts || 0}</span>
+              <span style={{ fontSize:11, color:T.dim }}>{post.tweet_date || ""}</span>
             </div>
           </div>
         </div>
 
+        </div>
+        )} {/* end post card conditional */}
+
         {/* CTA button */}
-        <a href={post.url} target="_blank" rel="noopener noreferrer"
-          onClick={() => trackClick("tweet", post.url)}
+        {post && <a href={post.tweet_url} target="_blank" rel="noopener noreferrer"
+          onClick={() => trackClick("tweet", post.tweet_url)}
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap:8,
             width: "100%", padding: "11px",
-            background: clicked[post.url] ? "rgba(147,168,90,0.15)" : "rgba(255,255,255,0.04)",
-            border: `1px solid ${clicked[post.url] ? T.olive : T.border}`,
-            borderRadius: 8, color: clicked[post.url] ? T.olive : T.muted,
+            background: clicked[post.tweet_url] ? "rgba(147,168,90,0.15)" : "rgba(255,255,255,0.04)",
+            border: `1px solid ${clicked[post.tweet_url] ? T.olive : T.border}`,
+            borderRadius: 8, color: clicked[post.tweet_url] ? T.olive : T.muted,
             fontSize: 12, fontWeight: 700, textDecoration: "none",
             letterSpacing: "0.06em", cursor: "pointer",
             transition: "all 0.15s",
           }}>
-          {clicked[post.url] ? "✓ Opened" : "View & Engage on X →"}
-        </a>
+          {clicked[post.tweet_url] ? "✓ Opened" : "View & Engage on X →"}
+        </a>}
 
         {/* Carousel dots */}
         <div style={{ display:"flex", justifyContent:"center", gap:8, marginTop:14 }}>
-          {FEATURED_POSTS.map((_, i) => (
+          {posts.map((_, i) => (
             <button key={i} onClick={() => setActiveIdx(i)}
               style={{
                 width: i === activeIdx ? 20 : 8, height: 8,
@@ -1042,12 +1050,12 @@ function CommunityEngagement({ username }) {
 
         {/* Prev / Next */}
         <div style={{ display:"flex", justifyContent:"space-between", marginTop:10 }}>
-          <button onClick={() => setActiveIdx(i => (i - 1 + FEATURED_POSTS.length) % FEATURED_POSTS.length)}
+          <button onClick={() => setActiveIdx(i => (i - 1 + Math.max(1, posts.length)) % Math.max(1, posts.length))}
             style={{ background:"none", border:`1px solid ${T.border}`, color:T.dim,
               borderRadius:6, padding:"5px 12px", fontSize:11, cursor:"pointer" }}>
             ← Prev
           </button>
-          <button onClick={() => setActiveIdx(i => (i + 1) % FEATURED_POSTS.length)}
+          <button onClick={() => setActiveIdx(i => (i + 1) % Math.max(1, posts.length))}
             style={{ background:"none", border:`1px solid ${T.border}`, color:T.dim,
               borderRadius:6, padding:"5px 12px", fontSize:11, cursor:"pointer" }}>
             Next →
