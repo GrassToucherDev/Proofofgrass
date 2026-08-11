@@ -1057,6 +1057,7 @@ function CommunityEngagement({ username }) {
       </div>
     </>
   );
+}
 
 export default function Home() {
   const [rawUsername, setRawUsername] = useState("");
