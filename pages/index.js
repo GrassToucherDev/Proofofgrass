@@ -376,63 +376,7 @@ function PromoBanner({ image, title, description, buttonText, href,
 }
 
 // ─── Map preview card ─────────────────────────────────────────────────────────
-function MapPreviewCard() {
-  const [stats, setStats] = useState({ mapped:0, regions:0, countries:0 });
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("Submissions")
-        .select("location_label,location_country")
-        .not("location_source", "eq", "none")
-        .in("status", ["pending","approved"])
-        .limit(5000);
-      const rows = data ?? [];
-      const uniqueLabels    = new Set(rows.map(r => r.location_label).filter(Boolean));
-      const uniqueCountries = new Set(rows.map(r => r.location_country).filter(Boolean));
-      setStats({ mapped: rows.length, regions: uniqueLabels.size, countries: uniqueCountries.size });
-      setLoading(false);
-    })();
-  }, []);
-  const T2 = {
-    bg3:"#141710", border:"rgba(255,255,255,0.055)", borderGold:"rgba(200,168,75,0.35)",
-    gold:"#c8a84b", olive:"#93a85a", white:"#f0efea", dim:"rgba(240,239,234,0.24)",
-  };
-  return (
-    <a href="/map" style={{ textDecoration:"none", display:"block",
-      background: "linear-gradient(145deg,#0e100b,#141710)",
-      border:`1px solid ${T2.borderGold}`, borderRadius:14, padding:"22px 20px",
-      boxShadow:"0 0 24px rgba(200,168,75,0.08)", transition:"transform 0.15s" }}
-      onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
-      onMouseLeave={e => e.currentTarget.style.transform = ""}>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <span style={{ fontSize:18 }}>🌎</span>
-          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:16,
-            fontWeight:700, color:T2.white }}>Proof of Grass Map</span>
-        </div>
-        <span style={{ fontSize:10, color:T2.gold, fontWeight:600 }}>View Map →</span>
-      </div>
-      <div style={{ display:"flex", gap:20 }}>
-        {[
-          ["Mapped Proofs", stats.mapped],
-          ["Regions", stats.regions],
-          ["Countries", stats.countries],
-        ].map(([label, value]) => (
-          <div key={label}>
-            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:20,
-              fontWeight:700, color:T2.olive }}>
-              {loading ? "—" : value}
-            </div>
-            <div style={{ fontSize:9, color:T2.dim, textTransform:"uppercase", letterSpacing:"0.06em" }}>
-              {label}
-            </div>
-          </div>
-        ))}
-      </div>
-    </a>
-  );
-}
+
 // ─── Spotlight section ────────────────────────────────────────────────────────
 const SPOT_CATS = Object.values(SPOTLIGHT_BADGES).map(b => ({
   key:   b.key,
@@ -1724,122 +1668,6 @@ export default function Home() {
           <RewardsBanner username={username} />
         </div>
 
-        {/* ── PROMO BANNER — Harvest ───────────────────────────────────────────── */}
-        <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
-          <PromoBanner
-            image="harvest_banner.png"
-            title="🌾 Harvest — Lock. Grow. Claim."
-            description="Deposit $TOUCHGRASS for 6 months. On Harvest Day, claim your principal + rewards."
-            buttonText="🌾 Start Harvesting"
-            href="https://harvest.touchgrass.today"
-            secondaryText="📖 Learn More"
-            secondaryHref="https://harvest.touchgrass.today"
-            steps={[]}
-          />
-        </div>
-
-        {/* ── ENTER USERNAME BANNER ─────────────────────────────────────────── */}
-        {mounted && !hasUser && (
-          <div style={{ background:`${T.olive}08`, borderBottom:`1px solid ${T.borderG}`,
-            padding:"11px clamp(14px,4vw,48px)", display:"flex", alignItems:"center",
-            justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
-            <span style={{ fontSize:12, color:T.dim }}>Enter your username above to see your streak, log proof, and join the leaderboard.</span>
-          </div>
-        )}
-
-        {/* ── STATS + QUESTS ────────────────────────────────────────────────── */}
-        <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}` }}>
-
-          {/* Stats row */}
-          <div className="stat-strip" style={{ display:"flex", borderBottom:`1px solid ${T.border}` }}>
-            <StatCard value={dailyCount !== null ? dailyCount.toLocaleString() : "…"} label="Active Touchers Today" />
-            <StatCard value={fmtBurned(totalBurned)} label="$TOUCHGRASS Burned" />
-            <StatCard value={topStreaker ? `${topStreaker.streak}d` : "…"} sub={topStreaker ? `@${topStreaker.username}` : ""} label="Top Streak" accent />
-            <StatCard value={totalProofs !== null ? totalProofs.toLocaleString() : "…"} label="Proofs Logged" last />
-          </div>
-
-          {/* Quests — full-width immersive banner */}
-          <div style={{ position:"relative", overflow:"hidden", padding:"28px clamp(14px,4vw,48px)" }}>
-            {/* Background texture */}
-            <div style={{
-              position:"absolute", inset:0, pointerEvents:"none",
-              background:"linear-gradient(135deg,rgba(147,168,90,0.09) 0%,rgba(200,168,75,0.04) 50%,transparent 100%)",
-            }} />
-            <div style={{
-              position:"absolute", top:-40, right:-40, width:220, height:220,
-              borderRadius:"50%", pointerEvents:"none",
-              background:"radial-gradient(circle,rgba(200,168,75,0.08),transparent 70%)",
-            }} />
-
-            <div style={{ position:"relative", display:"flex", alignItems:"center", justifyContent:"space-between", gap:20, flexWrap:"wrap" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:18, minWidth:0, flex:1 }}>
-                {/* Quest icon — larger, more dramatic */}
-                <div style={{
-                  width:60, height:60, borderRadius:16, flexShrink:0,
-                  background:"linear-gradient(135deg,rgba(200,168,75,0.25),rgba(200,168,75,0.08))",
-                  border:"1px solid rgba(200,168,75,0.4)",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize:28,
-                  boxShadow:"0 0 24px rgba(200,168,75,0.2), inset 0 1px 0 rgba(255,255,255,0.05)",
-                }}>⭐</div>
-
-                <div style={{ minWidth:0 }}>
-                  {/* Eyebrow */}
-                  <div style={{
-                    fontSize:9, fontWeight:700, letterSpacing:"0.2em",
-                    textTransform:"uppercase", color:"rgba(200,168,75,0.6)",
-                    marginBottom:4,
-                  }}>Limited Time</div>
-
-                  <div style={{
-                    fontFamily:"'Cormorant Garamond',Georgia,serif",
-                    fontSize:"clamp(20px,3vw,28px)", fontWeight:700,
-                    color:T.white, lineHeight:1.1, marginBottom:6,
-                  }}>Community Quests</div>
-
-                  <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-                    {[
-                      "Earn XP",
-                      "Unlock Badges",
-                      "Vote on DexScreener",
-                    ].map(item => (
-                      <div key={item} style={{
-                        display:"flex", alignItems:"center", gap:5,
-                        fontSize:11, color:"rgba(240,239,234,0.55)",
-                      }}>
-                        <span style={{ color:T.olive, fontSize:9 }}>✦</span>
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* CTA */}
-              <Link href="/quests" style={{
-                display:"inline-flex", alignItems:"center", gap:8,
-                background:"linear-gradient(135deg,#c8a84b,#a88c38)",
-                color:"#0a0800",
-                fontFamily:"'DM Sans',sans-serif",
-                fontSize:13, fontWeight:800,
-                letterSpacing:"0.06em", textTransform:"uppercase",
-                padding:"13px 24px", borderRadius:10,
-                textDecoration:"none", flexShrink:0,
-                boxShadow:"0 4px 20px rgba(200,168,75,0.35)",
-                whiteSpace:"nowrap",
-                transition:"all 0.2s",
-              }}>
-                View Quests →
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* ── MAP PREVIEW ──────────────────────────────────────────────────── */}
-        <div style={{ padding:"18px clamp(14px,4vw,32px)", background:T.bg, borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
-          <MapPreviewCard />
-        </div>
-
         {/* ── MAIN TWO-COLUMN GRID ─────────────────────────────────────────── */}
         <div className="main-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr",
           gap:0, background:T.border, borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`,
@@ -1956,6 +1784,124 @@ export default function Home() {
         </div>
 
 
+
+
+
+        {/* ── PROMO BANNER — Harvest ───────────────────────────────────────────── */}
+        <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
+          <PromoBanner
+            image="harvest_banner.png"
+            title="🌾 Harvest — Lock. Grow. Claim."
+            description="Deposit $TOUCHGRASS for 6 months. On Harvest Day, claim your principal + rewards."
+            buttonText="🌾 Start Harvesting"
+            href="https://harvest.touchgrass.today"
+            secondaryText="📖 Learn More"
+            secondaryHref="https://harvest.touchgrass.today"
+            steps={[]}
+          />
+        </div>
+
+        {/* ── ENTER USERNAME BANNER ─────────────────────────────────────────── */}
+        {mounted && !hasUser && (
+          <div style={{ background:`${T.olive}08`, borderBottom:`1px solid ${T.borderG}`,
+            padding:"11px clamp(14px,4vw,48px)", display:"flex", alignItems:"center",
+            justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+            <span style={{ fontSize:12, color:T.dim }}>Enter your username above to see your streak, log proof, and join the leaderboard.</span>
+          </div>
+        )}
+
+        {/* ── STATS + QUESTS ────────────────────────────────────────────────── */}
+        <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}` }}>
+
+          {/* Stats row */}
+          <div className="stat-strip" style={{ display:"flex", borderBottom:`1px solid ${T.border}` }}>
+            <StatCard value={dailyCount !== null ? dailyCount.toLocaleString() : "…"} label="Active Touchers Today" />
+            <StatCard value={fmtBurned(totalBurned)} label="$TOUCHGRASS Burned" />
+            <StatCard value={topStreaker ? `${topStreaker.streak}d` : "…"} sub={topStreaker ? `@${topStreaker.username}` : ""} label="Top Streak" accent />
+            <StatCard value={totalProofs !== null ? totalProofs.toLocaleString() : "…"} label="Proofs Logged" last />
+          </div>
+
+          {/* Quests — full-width immersive banner */}
+          <div style={{ position:"relative", overflow:"hidden", padding:"28px clamp(14px,4vw,48px)" }}>
+            {/* Background texture */}
+            <div style={{
+              position:"absolute", inset:0, pointerEvents:"none",
+              background:"linear-gradient(135deg,rgba(147,168,90,0.09) 0%,rgba(200,168,75,0.04) 50%,transparent 100%)",
+            }} />
+            <div style={{
+              position:"absolute", top:-40, right:-40, width:220, height:220,
+              borderRadius:"50%", pointerEvents:"none",
+              background:"radial-gradient(circle,rgba(200,168,75,0.08),transparent 70%)",
+            }} />
+
+            <div style={{ position:"relative", display:"flex", alignItems:"center", justifyContent:"space-between", gap:20, flexWrap:"wrap" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:18, minWidth:0, flex:1 }}>
+                {/* Quest icon — larger, more dramatic */}
+                <div style={{
+                  width:60, height:60, borderRadius:16, flexShrink:0,
+                  background:"linear-gradient(135deg,rgba(200,168,75,0.25),rgba(200,168,75,0.08))",
+                  border:"1px solid rgba(200,168,75,0.4)",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:28,
+                  boxShadow:"0 0 24px rgba(200,168,75,0.2), inset 0 1px 0 rgba(255,255,255,0.05)",
+                }}>⭐</div>
+
+                <div style={{ minWidth:0 }}>
+                  {/* Eyebrow */}
+                  <div style={{
+                    fontSize:9, fontWeight:700, letterSpacing:"0.2em",
+                    textTransform:"uppercase", color:"rgba(200,168,75,0.6)",
+                    marginBottom:4,
+                  }}>Limited Time</div>
+
+                  <div style={{
+                    fontFamily:"'Cormorant Garamond',Georgia,serif",
+                    fontSize:"clamp(20px,3vw,28px)", fontWeight:700,
+                    color:T.white, lineHeight:1.1, marginBottom:6,
+                  }}>Community Quests</div>
+
+                  <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                    {[
+                      "Earn XP",
+                      "Unlock Badges",
+                      "Vote on DexScreener",
+                    ].map(item => (
+                      <div key={item} style={{
+                        display:"flex", alignItems:"center", gap:5,
+                        fontSize:11, color:"rgba(240,239,234,0.55)",
+                      }}>
+                        <span style={{ color:T.olive, fontSize:9 }}>✦</span>
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <Link href="/quests" style={{
+                display:"inline-flex", alignItems:"center", gap:8,
+                background:"linear-gradient(135deg,#c8a84b,#a88c38)",
+                color:"#0a0800",
+                fontFamily:"'DM Sans',sans-serif",
+                fontSize:13, fontWeight:800,
+                letterSpacing:"0.06em", textTransform:"uppercase",
+                padding:"13px 24px", borderRadius:10,
+                textDecoration:"none", flexShrink:0,
+                boxShadow:"0 4px 20px rgba(200,168,75,0.35)",
+                whiteSpace:"nowrap",
+                transition:"all 0.2s",
+              }}>
+                View Quests →
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* ── MAP PREVIEW ──────────────────────────────────────────────────── */}
+        <div style={{ padding:"18px clamp(14px,4vw,32px)", background:T.bg, borderBottom:`1px solid ${T.border}`, width:"100%", maxWidth:"100%" }}>
+          <MapPreviewCard />
+        </div>
 
 
 
