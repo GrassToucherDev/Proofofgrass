@@ -1011,7 +1011,7 @@ function DexCard({ trackClick }) {
           </div>
 
           {/* CTAs */}
-          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center" }}>
             <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
               onClick={() => trackClick("dexscreener_upvote", DEXSCREENER_URL)}
               style={{
