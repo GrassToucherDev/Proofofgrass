@@ -896,6 +896,151 @@ function LiveTicker({ username }) {
 }
 
 
+
+// ─── DexCard — live $TOUCHGRASS price via DexScreener API ────────────────────
+const TOUCHGRASS_PAIR = "JBa82FBaVSHCBERdBBpEFvCkSTbKGhijHBQ3YSFV2GmK"; // main pair
+const DEXSCREENER_URL = "https://dexscreener.com/solana/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
+
+function DexCard({ trackClick }) {
+  const [price,    setPrice]    = useState(null);
+  const [change24, setChange24] = useState(null);
+  const [vol24,    setVol24]    = useState(null);
+  const [mcap,     setMcap]     = useState(null);
+  const [liq,      setLiq]      = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(
+          `https://api.dexscreener.com/latest/dex/tokens/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump`
+        );
+        const data = await res.json();
+        const pair = data?.pairs?.[0];
+        if (!pair) throw new Error("no pair");
+        setPrice(parseFloat(pair.priceUsd || 0));
+        setChange24(parseFloat(pair.priceChange?.h24 || 0));
+        setVol24(parseFloat(pair.volume?.h24 || 0));
+        setMcap(parseFloat(pair.marketCap || 0));
+        setLiq(parseFloat(pair.liquidity?.usd || 0));
+      } catch(e) {
+        setError(true);
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  const fmt = (n) => n >= 1e6 ? `$${(n/1e6).toFixed(2)}M`
+    : n >= 1e3 ? `$${(n/1e3).toFixed(1)}K`
+    : `$${n.toFixed(2)}`;
+
+  const fmtPrice = (n) => {
+    if (!n) return "—";
+    if (n < 0.000001) return `$${n.toExponential(2)}`;
+    if (n < 0.001) return `$${n.toFixed(8)}`;
+    if (n < 1) return `$${n.toFixed(6)}`;
+    return `$${n.toFixed(4)}`;
+  };
+
+  const up = change24 >= 0;
+
+  return (
+    <div style={{
+      width:"100%", background:T.bg,
+      borderBottom:`1px solid ${T.border}`,
+      padding:"28px clamp(14px,4vw,48px)",
+    }}>
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <img src="/touchgrass-transparent.png" alt="" style={{ width:28, height:28, objectFit:"contain" }} />
+          <span style={{ fontSize:14, fontWeight:700, color:T.white, letterSpacing:"0.04em" }}>$TOUCHGRASS</span>
+        </div>
+        <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
+          onClick={() => trackClick("dexscreener", DEXSCREENER_URL)}
+          style={{ fontSize:12, color:T.olive, textDecoration:"none" }}>
+          View on DexScreener →
+        </a>
+      </div>
+
+      {loading ? (
+        <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+          {[120,80,100,90].map((w,i) => <Skeleton key={i} w={w} h={40} />)}
+        </div>
+      ) : error ? (
+        <div style={{ fontSize:13, color:T.dim, padding:"20px 0" }}>
+          Unable to load price data.{" "}
+          <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
+            style={{ color:T.olive }}>View on DexScreener →</a>
+        </div>
+      ) : (
+        <>
+          {/* Price + change */}
+          <div style={{ display:"flex", alignItems:"flex-end", gap:14, marginBottom:24, flexWrap:"wrap" }}>
+            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+              fontSize:"clamp(32px,5vw,52px)", fontWeight:700, color:T.white, lineHeight:1 }}>
+              {fmtPrice(price)}
+            </div>
+            <div style={{
+              fontSize:15, fontWeight:700, marginBottom:4,
+              color: up ? "#4ade80" : "#f87171",
+            }}>
+              {up ? "▲" : "▼"} {Math.abs(change24).toFixed(2)}% (24h)
+            </div>
+          </div>
+
+          {/* Stats row */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))", gap:12, marginBottom:24 }}>
+            {[
+              { label:"24h Volume", value: fmt(vol24) },
+              { label:"Market Cap", value: fmt(mcap) },
+              { label:"Liquidity",  value: fmt(liq) },
+            ].map(s => (
+              <div key={s.label} style={{
+                background:T.bg2, border:`1px solid ${T.border}`,
+                borderRadius:10, padding:"14px 16px",
+              }}>
+                <div style={{ fontSize:10, color:T.dim, letterSpacing:"0.1em",
+                  textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
+                <div style={{ fontSize:18, fontWeight:700, color:T.white, fontFamily:"'Cormorant Garamond',Georgia,serif" }}>
+                  {s.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* CTAs */}
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+            <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
+              onClick={() => trackClick("dexscreener_upvote", DEXSCREENER_URL)}
+              style={{
+                display:"inline-flex", alignItems:"center", gap:8, padding:"11px 20px",
+                background:"linear-gradient(135deg,rgba(147,168,90,0.15),rgba(200,168,75,0.08))",
+                border:`1px solid rgba(147,168,90,0.35)`,
+                borderRadius:8, color:T.olive, fontSize:13, fontWeight:700,
+                textDecoration:"none", letterSpacing:"0.04em",
+              }}>
+              🔼 Upvote on DexScreener
+            </a>
+            <a href="https://jup.ag/swap/SOL-5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump"
+              target="_blank" rel="noopener noreferrer"
+              onClick={() => trackClick("buy_touchgrass", "https://jup.ag/swap/SOL-5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump")}
+              style={{
+                display:"inline-flex", alignItems:"center", gap:8, padding:"11px 20px",
+                background:"linear-gradient(135deg,#93a85a,#7a9148)",
+                borderRadius:8, color:"#0a0c08", fontSize:13, fontWeight:700,
+                textDecoration:"none", letterSpacing:"0.04em",
+              }}>
+              💰 Buy $TOUCHGRASS
+            </a>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── CommunityEngagement — Featured X posts + DexScreener as stacked sections ──
 const DEXSCREENER_URL = "https://dexscreener.com/solana/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 
