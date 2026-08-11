@@ -1042,7 +1042,6 @@ function DexCard({ trackClick }) {
 }
 
 // ─── CommunityEngagement — Featured X posts + DexScreener as stacked sections ──
-const DEXSCREENER_URL = "https://dexscreener.com/solana/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 
 function CommunityEngagement({ username }) {
   const [activeIdx, setActiveIdx] = useState(0);
