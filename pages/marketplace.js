@@ -46,6 +46,23 @@ const CATALOGUE = [
     ],
     tags: ["Retro Beach","Retro Mountain","Retro Sunflower","Retro Waterfall","Retro Night"],
   },
+  {
+    id:          "anime_nature_pack",
+    name:        "Anime Nature Pack",
+    category:    "cosmetics",
+    status:      "live",
+    featured:    true,
+    usdPrice:    5.00,
+    description: "Five exclusive anime-inspired nature covers for your Proof of Grass profile. Each cover brings a unique Japanese aesthetic to your flex card and profile.",
+    covers: [
+      { slug:"marketplace_cherry_blossom", name:"Cherry Blossom", emoji:"🌸", imageUrl:`${SUPABASE_URL}/covers/cherry_blossom.png`, fallback:"linear-gradient(135deg,#1a0010,#3d0028,#ff9eb540)" },
+      { slug:"marketplace_torii_forest",   name:"Torii Forest",   emoji:"⛩️",  imageUrl:`${SUPABASE_URL}/covers/torii_forest.png`,   fallback:"linear-gradient(135deg,#0d0a00,#2a1a00,#c8611b40)" },
+      { slug:"marketplace_lake_sunrise",   name:"Lake Sunrise",   emoji:"🌅", imageUrl:`${SUPABASE_URL}/covers/lake_sunrise.png`,   fallback:"linear-gradient(135deg,#001018,#002030,#f4a26140)" },
+      { slug:"marketplace_beach_coast",    name:"Beach Coast",    emoji:"🏖️",  imageUrl:`${SUPABASE_URL}/covers/beach_coast.png`,    fallback:"linear-gradient(135deg,#001824,#003040,#48cae440)" },
+      { slug:"marketplace_city_view",      name:"City View",      emoji:"🌆", imageUrl:`${SUPABASE_URL}/covers/city_view.png`,      fallback:"linear-gradient(135deg,#06050e,#0e0c1e,#7b6ff040)" },
+    ],
+    tags: ["Cherry Blossom","Torii Forest","Lake Sunrise","Beach Coast","City View"],
+  },
 ];
 
 const CATEGORIES = [
