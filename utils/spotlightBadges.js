@@ -8,10 +8,10 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 export const SPOTLIGHT_BADGES = {
-  longest_streak: {
-    key:        "longest_streak",
-    image:      "/badges/longest_streak_champion.png",
-    title:      "Longest Streak Champion",
+  community_mvp: {
+    key:        "community_mvp",
+    image:      "/badges/community_mvp.png",
+    title:      "Community MVP",
     emoji:      "🔥",
     label:      "LONGEST STREAK",
     color:      "#f97316",
@@ -23,7 +23,7 @@ export const SPOTLIGHT_BADGES = {
       accent:"#f97316",
     },
     xCaption: (username, week) =>
-      `🔥 I just won the Longest Streak Champion Spotlight on Proof of Grass!\n\n${week}\n\n💪 Touching grass every day pays off.\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\n\n@XTouchGrass | ProofOfGrass.app`,
+      `🔥 I just won the Community MVP Spotlight on Proof of Grass!\n\n${week}\n\n💪 Showing up every day for the community pays off.\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\n\n@XTouchGrass | ProofOfGrass.app`,
   },
   meme_lord: {
     key:        "meme_lord",

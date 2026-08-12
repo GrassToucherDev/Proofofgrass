@@ -54,7 +54,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
 
-  const badge = getSpotlightBadge(win.category) ?? SPOTLIGHT_BADGES.longest_streak;
+  const badge = getSpotlightBadge(win.category) ?? SPOTLIGHT_BADGES.community_mvp;
   const { theme } = badge;
 
   // ── Background ──────────────────────────────────────────────────────────────
@@ -117,7 +117,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   }
 
   // Longest Streak sunrise rays
-  if (win.category === "longest_streak") {
+  if (win.category === "community_mvp") {
     ctx.save();
     const cx = W/2, cy = H * 0.28;
     for (let i = 0; i < 14; i++) {

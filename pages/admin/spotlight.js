@@ -13,7 +13,7 @@ const T = {
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
 const CATEGORIES = [
-  { key:"longest_streak",  emoji:"🔥", name:"Longest Streak",  color:"#f97316" },
+  { key:"community_mvp",  emoji:"🔥", name:"Community MVP",  color:"#f97316" },
   { key:"meme_lord",       emoji:"😂", name:"Meme Lord",        color:T.gold    },
   { key:"biggest_shiller", emoji:"📣", name:"Biggest Shiller",  color:T.olive   },
   { key:"space_warrior",   emoji:"🎧", name:"Space Warrior",    color:"#a78bfa" },
@@ -37,7 +37,7 @@ function fmtDate(iso) {
 }
 
 const EMPTY_FORM = {
-  category:"longest_streak", username:"", display_name:"", avatar_url:"",
+  category:"community_mvp", username:"", display_name:"", avatar_url:"",
   week_start:"", week_end:"", description:"", x_link:"", proof_link:"",
 };
 

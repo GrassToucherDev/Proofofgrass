@@ -360,7 +360,7 @@ export default function SpotlightPage() {
                     <div style={{ fontSize:12, fontWeight:700, color:cat.color,
                       marginBottom:4 }}>{cat.name}</div>
                     <div style={{ fontSize:11, color:T.dim, lineHeight:1.5 }}>
-                      {cat.key === "longest_streak" && "The community member with the highest active streak that week."}
+                      {cat.key === "community_mvp" && "The community member who showed up most for the community that week."}
                       {cat.key === "meme_lord"      && "Best meme, recap, or creative content related to Touch Grass."}
                       {cat.key === "biggest_shiller" && "Most active community builder, referrer, or promoter."}
                       {cat.key === "space_warrior"   && "Most active participant in Touch Grass Twitter Spaces."}
