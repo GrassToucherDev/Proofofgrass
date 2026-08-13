@@ -1046,26 +1046,79 @@ export default function ProfilePage() {
                 <div className="ct" style={{margin:0}}>Prestige Covers</div>
                 <div style={{fontSize:10,color:T.dim,letterSpacing:"0.08em"}}>{unlockedCovers.length} / {COVER_DEFINITIONS.length} unlocked</div>
               </div>
-              <div className="cover-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10}}>
-                {COVER_DEFINITIONS.map(cov=>{
-                  const isUnlocked=unlockedCovers.includes(cov.slug);
-                  const isActive=profileRow?.active_cover_id===cov.slug;
+              {/* ── Milestone Covers ── */}
+              <div style={{marginBottom:18}}>
+                <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:T.dim,marginBottom:8}}>Streak Milestones</div>
+                <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
+                  {COVER_DEFINITIONS.filter(c=>!c.marketplaceOnly).map(cov=>{
+                    const isUnlocked=unlockedCovers.includes(cov.slug);
+                    const isActive=profileRow?.active_cover_id===cov.slug;
+                    return (
+                      <div key={cov.slug} onClick={()=>{ if(isOwner&&isUnlocked&&!isActive) equipCover(cov.slug); }}
+                        style={{position:"relative",borderRadius:10,overflow:"hidden",flexShrink:0,width:140,height:88,
+                          border:`1px solid ${isActive?T.olive:T.border}`,cursor:isOwner&&isUnlocked?"pointer":"default",
+                          boxShadow:isActive?`0 0 14px ${T.olive}40`:"none"}}>
+                        {isUnlocked&&isCoverUrlReady(cov.imageUrl)
+                          ?<img src={cov.imageUrl} alt={cov.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",filter:isActive?"none":"brightness(0.85)"}} onError={e=>{e.currentTarget.style.display="none";e.currentTarget.parentElement.style.background=cov.fallback;}}/>
+                          :isUnlocked?<div style={{width:"100%",height:"100%",background:cov.fallback,filter:isActive?"none":"brightness(0.85)"}}/>
+                          :<div style={{width:"100%",height:"100%",background:T.bg3,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:3}}>
+                            <span style={{fontSize:20,opacity:0.25}}>🔒</span>
+                            <span style={{fontSize:7,color:T.dim,letterSpacing:"0.06em",textTransform:"uppercase"}}>Day {cov.unlockDay}</span>
+                          </div>
+                        }
+                        <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,transparent 40%,rgba(8,10,6,0.92) 100%)",display:"flex",flexDirection:"column",justifyContent:"flex-end",padding:"6px 8px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:T.white,fontFamily:"'Cormorant Garamond',Georgia,serif",lineHeight:1.2}}>{cov.name}</div>
+                          <div style={{fontSize:7,color:isUnlocked?T.olive:T.dim,letterSpacing:"0.06em",textTransform:"uppercase",marginTop:2}}>{isActive?"✦ Equipped":isUnlocked?(isOwner?"Tap to equip":"Unlocked"):`Day ${cov.unlockDay} streak`}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── Marketplace Packs — one row per pack ── */}
+              {(()=>{
+                const packs = [...new Set(COVER_DEFINITIONS.filter(c=>c.marketplaceOnly).map(c=>c.pack))];
+                return packs.map(packId => {
+                  const packCovers = COVER_DEFINITIONS.filter(c=>c.pack===packId);
+                  const packName = packId.replace(/_/g,' ').replace(/\w/g,l=>l.toUpperCase());
+                  const anyUnlocked = packCovers.some(c=>unlockedCovers.includes(c.slug));
                   return (
-                    <div key={cov.slug} style={{position:"relative",borderRadius:10,overflow:"hidden",border:`1px solid ${isActive?T.olive:T.border}`,aspectRatio:"16/9",cursor:isOwner&&isUnlocked?"pointer":"default",boxShadow:isActive?`0 0 14px ${T.olive}40`:"none"}}
-                      onClick={()=>{ if(isOwner&&isUnlocked&&!isActive) equipCover(cov.slug); }}>
-                      {isUnlocked&&isCoverUrlReady(cov.imageUrl)?
-                        <img src={cov.imageUrl} alt={cov.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",filter:isActive?"none":"brightness(0.85)"}} onError={e=>{e.currentTarget.style.display="none";e.currentTarget.parentElement.style.background=cov.fallback;}}/>
-                        :isUnlocked?<div style={{width:"100%",height:"100%",background:cov.fallback,filter:isActive?"none":"brightness(0.85)"}}/>
-                        :<div style={{width:"100%",height:"100%",background:cov.marketplaceOnly?"rgba(200,168,75,0.04)":T.bg3,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,border:cov.marketplaceOnly?"1px solid rgba(200,168,75,0.15)":"none"}}><span style={{fontSize:22,opacity:0.3}}>{cov.marketplaceOnly?"🏪":"🔒"}</span><span style={{fontSize:7,color:cov.marketplaceOnly?"rgba(200,168,75,0.5)":T.dim,letterSpacing:"0.06em",textTransform:"uppercase"}}>{cov.marketplaceOnly?"Marketplace":"Day "+cov.unlockDay}</span></div>
-                      }
-                      <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,transparent 40%,rgba(8,10,6,0.9) 100%)",display:"flex",flexDirection:"column",justifyContent:"flex-end",padding:8}}>
-                        <div style={{fontSize:11,fontWeight:700,color:T.white,fontFamily:"'Cormorant Garamond',Georgia,serif"}}>{cov.name}</div>
-                        <div style={{fontSize:8,color:isUnlocked?T.olive:cov.marketplaceOnly?"rgba(200,168,75,0.5)":T.dim,letterSpacing:"0.06em",textTransform:"uppercase",marginTop:2}}>{isActive?"✦ Equipped":isUnlocked?(isOwner?"Tap to equip":"Unlocked"):cov.marketplaceOnly?"Buy in Marketplace":`Day ${cov.unlockDay} streak`}</div>
+                    <div key={packId} style={{marginBottom:18}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                        <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:anyUnlocked?T.gold:T.dim}}>{packName}</div>
+                        {!anyUnlocked&&<a href="/marketplace" style={{fontSize:9,color:T.gold,textDecoration:"none",letterSpacing:"0.06em",opacity:0.7}}>Buy in Marketplace →</a>}
+                      </div>
+                      <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
+                        {packCovers.map(cov=>{
+                          const isUnlocked=unlockedCovers.includes(cov.slug);
+                          const isActive=profileRow?.active_cover_id===cov.slug;
+                          return (
+                            <div key={cov.slug} onClick={()=>{ if(isOwner&&isUnlocked&&!isActive) equipCover(cov.slug); }}
+                              style={{position:"relative",borderRadius:10,overflow:"hidden",flexShrink:0,width:140,height:88,
+                                border:`1.5px solid ${isActive?T.olive:isUnlocked?"rgba(200,168,75,0.5)":T.border}`,
+                                cursor:isOwner&&isUnlocked?"pointer":"default",
+                                boxShadow:isActive?`0 0 14px ${T.olive}40`:isUnlocked?"0 0 8px rgba(200,168,75,0.15)":"none"}}>
+                              {isUnlocked&&isCoverUrlReady(cov.imageUrl)
+                                ?<img src={cov.imageUrl} alt={cov.name} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",filter:isActive?"none":"brightness(0.85)"}} onError={e=>{e.currentTarget.style.display="none";e.currentTarget.parentElement.style.background=cov.fallback;}}/>
+                                :isUnlocked?<div style={{width:"100%",height:"100%",background:cov.fallback}}/>
+                                :<div style={{width:"100%",height:"100%",background:"rgba(200,168,75,0.03)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:3,border:"1px solid rgba(200,168,75,0.08)"}}>
+                                  <span style={{fontSize:20,opacity:0.2}}>🏪</span>
+                                  <span style={{fontSize:7,color:"rgba(200,168,75,0.35)",letterSpacing:"0.06em",textTransform:"uppercase"}}>Locked</span>
+                                </div>
+                              }
+                              <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,transparent 40%,rgba(8,10,6,0.92) 100%)",display:"flex",flexDirection:"column",justifyContent:"flex-end",padding:"6px 8px"}}>
+                                <div style={{fontSize:10,fontWeight:700,color:T.white,fontFamily:"'Cormorant Garamond',Georgia,serif",lineHeight:1.2}}>{cov.name}</div>
+                                <div style={{fontSize:7,color:isUnlocked?T.olive:"rgba(200,168,75,0.5)",letterSpacing:"0.06em",textTransform:"uppercase",marginTop:2}}>{isActive?"✦ Equipped":isUnlocked?(isOwner?"Tap to equip":"Unlocked"):"★ Marketplace"}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                });
+              })()}
             </div>
           </div>
 
