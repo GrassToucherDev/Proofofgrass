@@ -71,11 +71,15 @@ export default function WalletPurchaseModal({
 
       // ── Build reliable connection first ──────────────────────────────────
       const { Connection: SolConn } = await import("@solana/web3.js");
+      // Read RPC from window to avoid process.env issues in dynamic imports
+      // Get RPC — NEXT_PUBLIC_ vars are inlined at build time
       const reliableRpcs = [
-        "https://solana-mainnet.rpc.extrnode.com",
+        process.env.NEXT_PUBLIC_SOLANA_RPC_URL,
+        process.env.NEXT_PUBLIC_RPC_URL,
         "https://rpc.ankr.com/solana",
+        "https://solana-mainnet.rpc.extrnode.com",
         "https://api.mainnet-beta.solana.com",
-      ];
+      ].filter(Boolean);
 
       let reliableConn = null;
       let blockhash, lastValidBlockHeight;
