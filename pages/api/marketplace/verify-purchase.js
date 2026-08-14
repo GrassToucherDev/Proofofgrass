@@ -21,6 +21,13 @@ const COVER_UNLOCKS = {
     "marketplace_beach_coast",
     "marketplace_city_view",
   ],
+  y2k_pack: [
+    "marketplace_chrome_meadow",
+    "marketplace_aqua_coast",
+    "marketplace_bubble_forest",
+    "marketplace_dream_sky",
+    "marketplace_cyber_garden",
+  ],
 };
 
 async function rpcCall(method, params) {

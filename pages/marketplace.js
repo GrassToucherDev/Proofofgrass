@@ -63,6 +63,23 @@ const CATALOGUE = [
     ],
     tags: ["Cherry Blossom","Torii Forest","Lake Sunrise","Beach Coast","City View"],
   },
+  {
+    id:          "y2k_pack",
+    name:        "Touch Grass Y2K",
+    category:    "cosmetics",
+    status:      "live",
+    featured:    true,
+    usdPrice:    5.00,
+    description: "Five Y2K-inspired covers dripping in chrome, neon, and digital nostalgia. Take your profile back to the future.",
+    covers: [
+      { slug:"marketplace_chrome_meadow", name:"Chrome Meadow", emoji:"🪩", imageUrl:`${SUPABASE_URL}/covers/chrome_meadow.png`, fallback:"linear-gradient(135deg,#0a0a14,#1a1a2e,#c0c0ff40)" },
+      { slug:"marketplace_aqua_coast",    name:"Aqua Coast",    emoji:"🌊", imageUrl:`${SUPABASE_URL}/covers/aqua_coast.png`,    fallback:"linear-gradient(135deg,#001a1a,#003030,#00ffff40)" },
+      { slug:"marketplace_bubble_forest", name:"Bubble Forest", emoji:"🫧", imageUrl:`${SUPABASE_URL}/covers/bubble_forest.png`, fallback:"linear-gradient(135deg,#140020,#280040,#dd88ff40)" },
+      { slug:"marketplace_dream_sky",     name:"Dream Sky",     emoji:"✨", imageUrl:`${SUPABASE_URL}/covers/dream_sky.png`,     fallback:"linear-gradient(135deg,#001428,#002050,#66aaff40)" },
+      { slug:"marketplace_cyber_garden",  name:"Cyber Garden",  emoji:"🌿", imageUrl:`${SUPABASE_URL}/covers/cyber_garden.png`,  fallback:"linear-gradient(135deg,#001408,#002810,#00ff8840)" },
+    ],
+    tags: ["Chrome Meadow","Aqua Coast","Bubble Forest","Dream Sky","Cyber Garden"],
+  },
 ];
 
 const CATEGORIES = [
