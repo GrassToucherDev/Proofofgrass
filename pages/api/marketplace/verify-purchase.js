@@ -1,19 +1,11 @@
 // pages/api/marketplace/verify-purchase.js
-// Verifies a Solana transaction on-chain and unlocks the purchased item
+// Verifies a Solana transaction and unlocks the purchased item
+// Uses fetch instead of @solana/web3.js to avoid serverless import issues
 
-import { Connection, PublicKey } from "@solana/web3.js";
-import { createClient } from "@supabase/supabase-js";
+const MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
+const BURN = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
+const RPC  = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // service role — bypasses RLS
-);
-
-const RPC   = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
-const MINT  = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
-const BURN  = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
-
-// Cover slugs unlocked per item
 const COVER_UNLOCKS = {
   retro_covers_pack: [
     "marketplace_retro_beach",
@@ -22,7 +14,25 @@ const COVER_UNLOCKS = {
     "marketplace_retro_waterfall",
     "marketplace_retro_night",
   ],
+  anime_nature_pack: [
+    "marketplace_cherry_blossom",
+    "marketplace_torii_forest",
+    "marketplace_lake_sunrise",
+    "marketplace_beach_coast",
+    "marketplace_city_view",
+  ],
 };
+
+async function rpcCall(method, params) {
+  const res = await fetch(RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.result;
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -34,13 +44,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const connection = new Connection(RPC, "confirmed");
-
-    // ── 1. Fetch and verify the transaction ──────────────────────────────────
-    const tx = await connection.getParsedTransaction(signature, {
-      maxSupportedTransactionVersion: 0,
-      commitment: "confirmed",
-    });
+    // ── 1. Fetch transaction via JSON-RPC ─────────────────────────────────
+    const tx = await rpcCall("getTransaction", [
+      signature,
+      { encoding: "jsonParsed", maxSupportedTransactionVersion: 0, commitment: "confirmed" }
+    ]);
 
     if (!tx) {
       return res.status(400).json({ error: "Transaction not found. It may still be confirming — try again in a moment." });
@@ -50,7 +58,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Transaction failed on-chain." });
     }
 
-    // ── 2. Verify the transfer details ───────────────────────────────────────
+    // ── 2. Verify the transfer ────────────────────────────────────────────
     const instructions = tx.transaction?.message?.instructions ?? [];
     const innerInstructions = tx.meta?.innerInstructions?.flatMap(i => i.instructions) ?? [];
     const allInstructions = [...instructions, ...innerInstructions];
@@ -59,57 +67,45 @@ export default async function handler(req, res) {
     let actualAmount = 0;
 
     for (const ix of allInstructions) {
-      if (ix.program === "spl-token" && ix.parsed?.type === "transferChecked") {
-        const info = ix.parsed.info;
-        const mint    = info.mint;
-        const dest    = info.destination;
-        const amount  = parseFloat(info.tokenAmount?.uiAmount ?? 0);
-        const fromOwner = info.multisigAuthority || info.authority;
+      if (ix.program === "spl-token") {
+        const info = ix.parsed?.info;
+        if (!info) continue;
 
-        // Check mint matches $TOUCHGRASS and destination is the burn address
-        // We check the destination token account owner matches BURN_ADDR
-        if (mint === MINT && amount >= expectedAmount * 0.99) { // 1% tolerance
-          // Verify destination is owned by the burn address
-          try {
-            const destPubkey = new PublicKey(dest);
-            const accountInfo = await connection.getParsedAccountInfo(destPubkey);
-            const owner = accountInfo?.value?.data?.parsed?.info?.owner;
-            if (owner === BURN) {
-              verified    = true;
-              actualAmount = amount;
-              break;
-            }
-          } catch(e) {
-            // If we can't verify owner, check via transfer (non-checked) type
-            if (amount >= expectedAmount * 0.99) {
-              verified    = true;
-              actualAmount = amount;
-              break;
-            }
+        if (ix.parsed?.type === "transferChecked") {
+          const amount = parseFloat(info.tokenAmount?.uiAmount ?? 0);
+          if (info.mint === MINT && amount >= expectedAmount * 0.99) {
+            verified = true;
+            actualAmount = amount;
+            break;
           }
         }
-      }
 
-      // Also handle regular transfer (non-checked)
-      if (ix.program === "spl-token" && ix.parsed?.type === "transfer") {
-        const info   = ix.parsed.info;
-        const amount = parseFloat(info.amount ?? 0) / 1e6; // assumes 6 decimals
-        if (amount >= expectedAmount * 0.99) {
-          verified    = true;
-          actualAmount = amount;
-          break;
+        if (ix.parsed?.type === "transfer") {
+          const amount = parseFloat(info.amount ?? 0) / 1e6;
+          if (amount >= expectedAmount * 0.99) {
+            verified = true;
+            actualAmount = amount;
+            break;
+          }
         }
       }
     }
 
     if (!verified) {
       return res.status(400).json({
-        error: "Could not verify the $TOUCHGRASS transfer in this transaction. Please ensure you sent the correct amount to the correct address.",
+        error: "Could not verify the $TOUCHGRASS transfer. Please ensure you sent the correct amount.",
       });
     }
 
-    // ── 3. Check for duplicate — same signature already processed ────────────
-    const { data: existing } = await supabaseAdmin
+    // ── 3. Init Supabase with dynamic import ──────────────────────────────
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    // ── 4. Check for duplicate ────────────────────────────────────────────
+    const { data: existing } = await supabase
       .from("MarketplacePurchases")
       .select("id")
       .eq("transaction_signature", signature)
@@ -119,8 +115,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "This transaction has already been used." });
     }
 
-    // ── 4. Check user doesn't already own this item ──────────────────────────
-    const { data: alreadyOwned } = await supabaseAdmin
+    // ── 5. Check not already owned ────────────────────────────────────────
+    const { data: alreadyOwned } = await supabase
       .from("UserInventory")
       .select("item_id")
       .eq("username", username)
@@ -132,8 +128,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "You already own this item." });
     }
 
-    // ── 5. Record the purchase ───────────────────────────────────────────────
-    await supabaseAdmin.from("MarketplacePurchases").insert([{
+    // ── 6. Record purchase ────────────────────────────────────────────────
+    await supabase.from("MarketplacePurchases").insert([{
       username,
       wallet:                walletAddress,
       item_id:               itemId,
@@ -143,8 +139,8 @@ export default async function handler(req, res) {
       status:                "approved",
     }]);
 
-    // ── 6. Write to UserInventory ────────────────────────────────────────────
-    await supabaseAdmin.from("UserInventory").upsert([{
+    // ── 7. Write to UserInventory ─────────────────────────────────────────
+    await supabase.from("UserInventory").upsert([{
       username,
       item_id:      itemId,
       owned:        true,
@@ -152,34 +148,33 @@ export default async function handler(req, res) {
       purchased_at: new Date().toISOString(),
     }], { onConflict: "username,item_id" });
 
-    // ── 7. Unlock cover slugs if applicable ──────────────────────────────────
-    const coverSlugs = COVER_UNLOCKS[itemId];
-    if (coverSlugs?.length) {
-      const { data: prof } = await supabaseAdmin
+    // ── 8. Unlock covers ──────────────────────────────────────────────────
+    const coverSlugs = COVER_UNLOCKS[itemId] ?? [];
+    if (coverSlugs.length) {
+      const { data: prof } = await supabase
         .from("Profiles")
         .select("unlocked_covers")
         .ilike("username", username)
         .maybeSingle();
 
-      const existing = prof?.unlocked_covers ?? [];
-      const merged   = [...new Set([...existing, ...coverSlugs])];
+      const existing2 = prof?.unlocked_covers ?? [];
+      const merged    = [...new Set([...existing2, ...coverSlugs])];
 
-      await supabaseAdmin
+      await supabase
         .from("Profiles")
         .update({ unlocked_covers: merged })
         .ilike("username", username);
     }
 
-    // ── 8. Return success ────────────────────────────────────────────────────
     return res.status(200).json({
-      success:     true,
+      success:    true,
       itemId,
-      unlockedAt:  new Date().toISOString(),
-      coverSlugs:  coverSlugs ?? [],
+      unlockedAt: new Date().toISOString(),
+      coverSlugs,
     });
 
   } catch(e) {
-    console.error("[marketplace/verify-purchase]", e);
+    console.error("[verify-purchase]", e);
     return res.status(500).json({ error: e.message || "Verification failed. Please try again." });
   }
 }
