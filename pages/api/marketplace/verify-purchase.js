@@ -28,6 +28,13 @@ const COVER_UNLOCKS = {
     "marketplace_dream_sky",
     "marketplace_cyber_garden",
   ],
+  trenches_pack: [
+    "marketplace_ath_overlook",
+    "marketplace_rug_pull_ravine",
+    "marketplace_bear_market_blizzard",
+    "marketplace_moonbag_camp",
+    "marketplace_liquidity_lagoon",
+  ],
 };
 
 async function rpcCall(method, params) {

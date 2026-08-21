@@ -80,6 +80,23 @@ const CATALOGUE = [
     ],
     tags: ["Chrome Meadow","Aqua Coast","Bubble Forest","Dream Sky","Cyber Garden"],
   },
+  {
+    id:          "trenches_pack",
+    name:        "Touch Grass Trenches",
+    category:    "cosmetics",
+    status:      "live",
+    featured:    true,
+    usdPrice:    5.00,
+    description: "Five covers for the battle-hardened crypto survivalist. From ATH highs to bear market lows — this pack tells the whole story.",
+    covers: [
+      { slug:"marketplace_ath_overlook",        name:"ATH Overlook",        emoji:"🚀", imageUrl:`${SUPABASE_URL}/covers/ath_overlook.png`,        fallback:"linear-gradient(135deg,#0a1400,#142800,#a8ff4440)" },
+      { slug:"marketplace_rug_pull_ravine",     name:"Rug Pull Ravine",     emoji:"📉", imageUrl:`${SUPABASE_URL}/covers/rug_pull_ravine.png`,    fallback:"linear-gradient(135deg,#140000,#280000,#ff444440)" },
+      { slug:"marketplace_bear_market_blizzard",name:"Bear Market Blizzard",emoji:"🐻", imageUrl:`${SUPABASE_URL}/covers/bear_market_blizzard.png`,fallback:"linear-gradient(135deg,#060810,#0c1020,#7799ff40)" },
+      { slug:"marketplace_moonbag_camp",        name:"Moonbag Camp",        emoji:"🌕", imageUrl:`${SUPABASE_URL}/covers/moonbag_camp.png`,       fallback:"linear-gradient(135deg,#0a0800,#1e1400,#ffd70040)" },
+      { slug:"marketplace_liquidity_lagoon",    name:"Liquidity Lagoon",    emoji:"💧", imageUrl:`${SUPABASE_URL}/covers/liquidity_lagoon.png`,   fallback:"linear-gradient(135deg,#001418,#002830,#00ddcc40)" },
+    ],
+    tags: ["ATH Overlook","Rug Pull Ravine","Bear Market Blizzard","Moonbag Camp","Liquidity Lagoon"],
+  },
 ];
 
 const CATEGORIES = [
