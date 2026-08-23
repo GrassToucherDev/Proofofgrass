@@ -354,6 +354,20 @@ function UploadModal({ collection, slotNumber, existingLabels, username, onClose
       setStatus("success");
       setResult({ ...classification, points: pts, complete: isComplete });
       onSuccess?.();
+
+      // Award Grass Draw field_guide bonus — fire and forget
+      try {
+        fetch("/api/grass-draw/award-bonus", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username,
+            entry_type: "field_guide",
+            source_id: `fg_${username}_${collection.slug}_${slotNumber}`,
+            notes: `Field Guide: ${collection.slug} slot ${slotNumber} — ${classification.label}`,
+          }),
+        }).catch(() => {});
+      } catch(e) {}
     } catch(e) {
       setErrMsg(e.message || "Something went wrong.");
       setStatus("error");

@@ -1679,6 +1679,7 @@ export default function Home() {
               {/* Nav items */}
               {[
                 { href:"#upload",                    label:"Dashboard",    icon:"🏠", internal:true  },
+                { href:"/grass-draw",                label:"Grass Draw",   icon:"🌱", internal:false },
                 { href:"/leaderboard",               label:"Leaderboard",  icon:"🏆", internal:false },
                 { href:"/spotlight",                 label:"Spotlight",    icon:"⭐", internal:false },
                 { href:"/create",                    label:"Create",       icon:"✨", internal:false },

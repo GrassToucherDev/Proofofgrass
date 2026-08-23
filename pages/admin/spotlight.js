@@ -71,14 +71,12 @@ export default function AdminSpotlight() {
 
   useEffect(() => { if (authed) loadSpotlights(); }, [authed, loadSpotlights]);
 
-  // Auto-fill week dates when week_start changes
   const handleWeekStart = (val) => {
     const monday = getMondayOf(val || new Date().toISOString().slice(0,10));
     const sunday = getSundayOf(monday);
     setForm(f => ({ ...f, week_start: monday, week_end: sunday }));
   };
 
-  // Prefill this week's dates on mount
   useEffect(() => {
     const monday = getMondayOf(new Date().toISOString().slice(0,10));
     const sunday = getSundayOf(monday);
@@ -138,6 +136,21 @@ export default function AdminSpotlight() {
       setSuccess(editId ? "Winner updated." : "Winner saved.");
       cancelEdit();
       loadSpotlights();
+
+      // Award Grass Draw spotlight bonus — only on new saves, not edits
+      if (!editId) {
+        fetch("/api/grass-draw/award-bonus", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username:       payload.username,
+            entry_type:     "spotlight",
+            source_id:      `spotlight_${payload.category}_${payload.week_start}`,
+            admin_username: "admin",
+            notes:          `Spotlight winner — ${payload.category} — week of ${payload.week_start}`,
+          }),
+        }).catch(() => {});
+      }
     }
     setSaving(false);
   };
@@ -214,7 +227,6 @@ export default function AdminSpotlight() {
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <div style={{ minHeight:"100vh", background:T.bg }}>
 
-        {/* NAV */}
         <nav style={{ position:"sticky", top:0, zIndex:100, display:"flex",
           alignItems:"center", justifyContent:"space-between",
           padding:"0 clamp(14px,4vw,48px)", height:56,
@@ -236,7 +248,6 @@ export default function AdminSpotlight() {
 
         <div style={{ padding:"32px clamp(14px,5vw,64px)", maxWidth:960, margin:"0 auto" }}>
 
-          {/* HEADER */}
           <div style={{ marginBottom:28 }}>
             <div style={{ fontSize:10, letterSpacing:"0.22em", color:T.gold,
               textTransform:"uppercase", marginBottom:8, fontWeight:600 }}>Admin</div>
@@ -246,7 +257,6 @@ export default function AdminSpotlight() {
             </h1>
           </div>
 
-          {/* WINNER ENTRY FORM */}
           <div style={{ background:T.bg2, border:`1px solid ${editId ? T.borderGold : T.borderG}`,
             borderRadius:14, padding:"28px 24px", marginBottom:28 }}>
             <div style={{ fontSize:12, fontWeight:700, color: editId ? T.gold : T.olive,
@@ -256,7 +266,6 @@ export default function AdminSpotlight() {
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
 
-              {/* Category */}
               <div className="field" style={{ gridColumn:"1/-1" }}>
                 <label className="label">Category</label>
                 <select className="inp" value={form.category}
@@ -267,7 +276,6 @@ export default function AdminSpotlight() {
                 </select>
               </div>
 
-              {/* Username */}
               <div className="field">
                 <label className="label">Username</label>
                 <input className="inp" placeholder="@username"
@@ -275,7 +283,6 @@ export default function AdminSpotlight() {
                   onChange={e => setForm(f => ({ ...f, username:e.target.value }))} />
               </div>
 
-              {/* Display name */}
               <div className="field">
                 <label className="label">Display Name (optional)</label>
                 <input className="inp" placeholder="Override display name"
@@ -283,21 +290,18 @@ export default function AdminSpotlight() {
                   onChange={e => setForm(f => ({ ...f, display_name:e.target.value }))} />
               </div>
 
-              {/* Week start */}
               <div className="field">
                 <label className="label">Week Start (Monday)</label>
                 <input type="date" className="inp" value={form.week_start}
                   onChange={e => handleWeekStart(e.target.value)} />
               </div>
 
-              {/* Week end */}
               <div className="field">
                 <label className="label">Week End (auto-filled)</label>
                 <input type="date" className="inp" value={form.week_end}
                   onChange={e => setForm(f => ({ ...f, week_end:e.target.value }))} />
               </div>
 
-              {/* Description */}
               <div className="field" style={{ gridColumn:"1/-1" }}>
                 <label className="label">Description / Reason</label>
                 <textarea className="inp" rows={3}
@@ -307,7 +311,6 @@ export default function AdminSpotlight() {
                   style={{ resize:"vertical" }} />
               </div>
 
-              {/* X link */}
               <div className="field">
                 <label className="label">X Post Link (optional)</label>
                 <input className="inp" placeholder="https://x.com/..."
@@ -315,7 +318,6 @@ export default function AdminSpotlight() {
                   onChange={e => setForm(f => ({ ...f, x_link:e.target.value }))} />
               </div>
 
-              {/* Proof link */}
               <div className="field">
                 <label className="label">Proof Link (optional)</label>
                 <input className="inp" placeholder="https://..."
@@ -323,9 +325,8 @@ export default function AdminSpotlight() {
                   onChange={e => setForm(f => ({ ...f, proof_link:e.target.value }))} />
               </div>
 
-              {/* Avatar override */}
               <div className="field" style={{ gridColumn:"1/-1" }}>
-                <label className="label">Avatar URL Override (optional — uses profile avatar by default)</label>
+                <label className="label">Avatar URL Override (optional)</label>
                 <input className="inp" placeholder="https://... leave blank to use profile avatar"
                   value={form.avatar_url}
                   onChange={e => setForm(f => ({ ...f, avatar_url:e.target.value }))} />
@@ -355,7 +356,6 @@ export default function AdminSpotlight() {
             </div>
           </div>
 
-          {/* EXISTING WINNERS TABLE */}
           <div style={{ background:T.bg2, border:`1px solid ${T.border}`,
             borderRadius:14, overflow:"auto" }}>
             <div style={{ padding:"16px 20px", borderBottom:`1px solid ${T.border}`,

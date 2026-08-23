@@ -297,7 +297,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   const nSz=streak>=100?130:streak>=10?148:166;
   ctx.font=`${nSz}px 'Bebas Neue',Georgia,serif`; ctx.fillStyle=theme.accentColor;
   ctx.shadowColor=theme.glowColor; ctx.shadowBlur=48;
-  ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-46); ctx.shadowBlur=0;
+  ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-36); ctx.shadowBlur=0;
   const dpW=96,dpH=24,dpX=sbX+sbW/2-dpW/2,dpY=sbY+sbH-28;
   ctx.fillStyle="rgba(0,0,0,0.60)"; roundRect(ctx,dpX,dpY,dpW,dpH,12); ctx.fill();
   ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5; roundRect(ctx,dpX,dpY,dpW,dpH,12); ctx.stroke();
@@ -314,7 +314,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     ...(shields>0?[{e:"🛡",v:String(shields),l:"SHIELDS EARNED"}]:[]),
     {e:"👑",v:rank?`#${rank}`:"—",l:"GLOBAL RANK",gold:true},
   ];
-  const siH=80, spH=sa.length*siH+14;
+  const siH=86, spH=sa.length*siH+14;
   panel(colX,colY,colW,spH,12);
   sa.forEach((s,i)=>{
     const sy=colY+10+i*siH;
@@ -322,16 +322,19 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(colX+14,sy); ctx.lineTo(colX+colW-14,sy); ctx.stroke();
     }
+    // Fixed vertical layout within each row:
+    // emoji at top, value below it, label at bottom — all left-aligned
+    const valFontSz=s.v.length>4?36:46;
     // Emoji
-    ctx.font="22px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
-    ctx.fillText(s.e,colX+12,sy+30);
-    // Value — brought down slightly
-    ctx.font=`${s.v.length>4?42:52}px 'Bebas Neue',Georgia,serif`;
+    ctx.font="20px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
+    ctx.fillText(s.e,colX+12,sy+22);
+    // Value — same left edge as emoji
+    ctx.font=`${valFontSz}px 'Bebas Neue',Georgia,serif`;
     ctx.fillStyle=s.gold?theme.accentColor:"#f5f4ef";
-    ctx.fillText(s.v,colX+44,sy+38);
-    // Label — vibrant, bigger
-    ctx.font="700 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.82)";
-    ctx.fillText(s.l,colX+12,sy+58);
+    ctx.fillText(s.v,colX+12,sy+54);
+    // Label — flush left, below value
+    ctx.font="700 12px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.80)";
+    ctx.fillText(s.l,colX+12,sy+68);
   });
 
   // Progress bar
@@ -358,44 +361,42 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   panel(colX,bpY,colW,bpH,12);
 
   const totalBadges=badges.length;
-  const maxBadges=26; // ALL_BADGES.length
+  const maxBadges=26;
+  const circleCX=colX+colW/2;
 
-  // Large count centered
+  // Everything vertically centred in the panel
+  const cirR=62; // circle radius
+  const cirCY=bpY+bpH/2; // true vertical centre of panel
+
   ctx.textAlign="center";
-  // Accent circle behind number
-  ctx.fillStyle=theme.accentColor+"18";
-  ctx.beginPath(); ctx.arc(colX+colW/2,bpY+bpH/2-18,52,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle=theme.accentColor+"66"; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.arc(colX+colW/2,bpY+bpH/2-18,52,0,Math.PI*2); ctx.stroke();
 
-  // Number
-  ctx.font=`${totalBadges>=10?72:80}px 'Bebas Neue',Georgia,serif`;
+  // "BADGES EARNED" label — above circle, with accent divider below it
+  const labelY=cirCY-cirR-24;
+  ctx.font="700 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.85)";
+  ctx.fillText("BADGES EARNED",circleCX,labelY);
+  ctx.strokeStyle=theme.accentColor+"50"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(colX+24,labelY+8); ctx.lineTo(colX+colW-24,labelY+8); ctx.stroke();
+
+  // Accent circle
+  ctx.fillStyle=theme.accentColor+"1a";
+  ctx.beginPath(); ctx.arc(circleCX,cirCY,cirR,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=theme.accentColor+"88"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(circleCX,cirCY,cirR,0,Math.PI*2); ctx.stroke();
+  // Inner ring
+  ctx.strokeStyle=theme.accentColor+"30"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(circleCX,cirCY,cirR-8,0,Math.PI*2); ctx.stroke();
+
+  // Number — centred in circle
+  // Canvas text baseline is alphabetic; to visually centre: y = cirCY + fontSize*0.35
+  const numFontSz=totalBadges>=10?68:76;
+  ctx.font=`${numFontSz}px 'Bebas Neue',Georgia,serif`;
   ctx.fillStyle=theme.accentColor;
-  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=24;
-  ctx.fillText(String(totalBadges),colX+colW/2,bpY+bpH/2+16); ctx.shadowBlur=0;
+  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=20;
+  ctx.fillText(String(totalBadges),circleCX,cirCY+numFontSz*0.35); ctx.shadowBlur=0;
 
-  // Label above number
-  ctx.font="700 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.82)";
-  ctx.fillText("BADGES EARNED",colX+colW/2,bpY+bpH/2-76);
-
-  // Divider
-  ctx.strokeStyle=theme.accentColor+"44"; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(colX+24,bpY+bpH/2-62); ctx.lineTo(colX+colW-24,bpY+bpH/2-62); ctx.stroke();
-
-  // "/ 26 total" below number
-  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.55)";
-  ctx.fillText(`/ ${maxBadges} total`,colX+colW/2,bpY+bpH/2+42);
-
-  // Top earned badge emojis as decoration — small row
-  if(totalBadges>0){
-    const topFew=badges.slice(0,3);
-    const eSz=22, eGap=10, rowW=topFew.length*(eSz+eGap)-eGap;
-    const eStartX=colX+colW/2-rowW/2;
-    ctx.font=`${eSz}px sans-serif`;
-    topFew.forEach((b,i)=>{
-      ctx.fillText(b.emoji,eStartX+i*(eSz+eGap),bpY+bpH/2+74);
-    });
-  }
+  // "/ 26 total" — below circle, centred
+  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.60)";
+  ctx.fillText(`/ ${maxBadges} total`,circleCX,cirCY+cirR+22);
 
   ctx.textAlign="left";
 
@@ -677,6 +678,21 @@ export default function FlexCardPage() {
     setGeneratingImg(false);
   }, [buildImageParams, username, streak]);
 
+  // Award Grass Draw bonus in background — non-blocking, fire-and-forget
+  const awardFlexDrawBonus = useCallback(() => {
+    if (!username) return;
+    fetch("/api/grass-draw/award-bonus", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username,
+        entry_type: "flex_card",
+        source_id: `flex_${username}_${new Date().toISOString().split("T")[0]}`,
+        notes: `Flex Card shared — Day ${streak}`,
+      }),
+    }).catch(() => {}); // silent — never block the share
+  }, [username, streak]);
+
   // flexToX — fully synchronous tap handler.
   // Image is pre-built in useEffect above so there is ZERO async work
   // between the button tap and navigator.share() — iOS requires this.
@@ -695,6 +711,7 @@ export default function FlexCardPage() {
       navigator.share({ files:[file], title:`Day ${streak} — ${tier.label} 🌿`, text })
         .then(() => {
           try { localStorage.setItem("pog_flexed_week", new Date().toISOString()); } catch(e) {}
+          awardFlexDrawBonus();
         })
         .catch(e => {
           if (e?.name === "AbortError") return;
@@ -705,6 +722,7 @@ export default function FlexCardPage() {
     }
 
     // Desktop or no share API — open X compose + download image
+    awardFlexDrawBonus();
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
     if (dataUrl) {
       const a = document.createElement("a");
@@ -712,7 +730,7 @@ export default function FlexCardPage() {
       a.download = `proof-of-grass-${username}-day${streak}.png`;
       a.click();
     }
-  }, [username, streak, tier]);
+  }, [username, streak, tier, awardFlexDrawBonus]);
 
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
