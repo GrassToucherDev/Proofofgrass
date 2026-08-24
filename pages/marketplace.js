@@ -97,6 +97,36 @@ const CATALOGUE = [
     ],
     tags: ["ATH Overlook","Rug Pull Ravine","Bear Market Blizzard","Moonbag Camp","Liquidity Lagoon"],
   },
+  {
+    id:          "streak_shield",
+    name:        "Streak Shield",
+    category:    "consumable",
+    status:      "live",
+    featured:    true,
+    usdPrice:    5.00,
+    description: "Miss a day without breaking your streak. A Shield automatically activates when you miss a submission, keeping your streak alive. Shields are stackable — stock up.",
+    covers:      [],
+    tags:        ["Shield","Streak Protection","Consumable"],
+    emoji:       "🛡️",
+    consumable:  true,
+    consumable_type: "shield",
+    quantity:    1,
+  },
+  {
+    id:          "sunset_pass",
+    name:        "Sunset Pass",
+    category:    "consumable",
+    status:      "live",
+    featured:    true,
+    usdPrice:    5.00,
+    description: "Extend your daily submission window by 2 hours. The day normally resets at midnight UTC — a Sunset Pass pushes your deadline to 2:00 AM UTC. Sunset Passes are stackable.",
+    covers:      [],
+    tags:        ["Sunset Pass","Extended Window","Consumable"],
+    emoji:       "🌅",
+    consumable:  true,
+    consumable_type: "sunset_pass",
+    quantity:    1,
+  },
 ];
 
 const CATEGORIES = [
@@ -177,7 +207,8 @@ function StyleSwatch({ style, selected, onClick }) {
 // ── Item card ─────────────────────────────────────────────────────────────────
 function ItemCard({ item, tokensFor, owned, onBuy, onPreview, username }) {
   const tokens  = tokensFor(item.usdPrice);
-  const isLive  = item.status === "live";
+  const isLive      = item.status === "live";
+  const isConsumable = !!item.consumable;
 
   return (
     <div style={{
@@ -199,8 +230,29 @@ function ItemCard({ item, tokensFor, owned, onBuy, onPreview, username }) {
         )}
       </div>
 
-      {/* Artwork — covers show images, proof styles show swatches */}
-      {item.covers ? (
+      {/* Artwork — consumables show icon, covers show images, styles show swatches */}
+      {item.consumable ? (
+        <div style={{
+          minHeight:160, background:`linear-gradient(135deg,${T.bg3},${T.bg2})`,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          flexDirection:"column", gap:12, position:"relative",
+          border:`1px solid ${T.border}`, borderRadius:"0",
+        }}>
+          <div style={{
+            fontSize:64,
+            filter:"drop-shadow(0 0 20px rgba(200,168,75,0.3))",
+          }}>{item.emoji}</div>
+          <div style={{
+            fontSize:10, letterSpacing:"0.16em", textTransform:"uppercase",
+            color:T.gold, fontWeight:700,
+          }}>Consumable</div>
+          <div style={{
+            position:"absolute", bottom:12, left:0, right:0, textAlign:"center",
+            fontFamily:"'Cormorant Garamond',Georgia,serif",
+            fontSize:18, fontWeight:700, color:T.white,
+          }}>{item.name}</div>
+        </div>
+      ) : item.covers ? (
         <div style={{
           display:"grid", gridTemplateColumns:"1fr 1fr",
           gap:2, background:T.bg3, minHeight:160, position:"relative",
@@ -234,7 +286,8 @@ function ItemCard({ item, tokensFor, owned, onBuy, onPreview, username }) {
             }}>+{item.covers.length - 4} more</div>
           )}
         </div>
-      ) : item.styles && (
+      ) : item.covers && item.covers.length === 0 ? null
+      : item.styles && (
         <div style={{
           display:"grid", gridTemplateColumns:"1fr 1fr",
           gap:0, background:T.bg3, minHeight:160, position:"relative",
@@ -469,7 +522,11 @@ export default function Marketplace() {
     }
   }, []);
 
-  const isOwned = (itemId) => inventory.includes(itemId);
+  const isOwned = (itemId) => {
+    const item = CATALOGUE.find(c => c.id === itemId);
+    if (item?.consumable) return false; // consumables can always be repurchased
+    return inventory.includes(itemId);
+  };
 
   const filteredItems = tab === "featured"
     ? CATALOGUE.filter(i => i.featured && i.status === "live")

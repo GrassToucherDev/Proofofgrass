@@ -180,11 +180,57 @@ export default async function handler(req, res) {
         .ilike("username", username);
     }
 
+    // ── 9. Deliver consumables (shield / sunset_pass) ────────────────────────
+    const CONSUMABLE_ITEMS = {
+      streak_shield: { consumable_type: "shield",      quantity: 1 },
+      sunset_pass:   { consumable_type: "sunset_pass", quantity: 1 },
+    };
+
+    if (CONSUMABLE_ITEMS[itemId]) {
+      const { consumable_type, quantity } = CONSUMABLE_ITEMS[itemId];
+
+      // Upsert UserConsumables
+      const { data: existing } = await supabase
+        .from("UserConsumables")
+        .select("quantity")
+        .ilike("username", username)
+        .eq("consumable_type", consumable_type)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("UserConsumables")
+          .update({ quantity: existing.quantity + quantity, updated_at: new Date().toISOString() })
+          .ilike("username", username)
+          .eq("consumable_type", consumable_type);
+      } else {
+        await supabase.from("UserConsumables").insert([{
+          username: username.toLowerCase(),
+          consumable_type,
+          quantity,
+        }]);
+      }
+
+      // Also increment Streaks.shield_count for shields
+      if (consumable_type === "shield") {
+        const { data: streak } = await supabase
+          .from("Streaks")
+          .select("shield_count")
+          .ilike("username", username)
+          .maybeSingle();
+        if (streak) {
+          await supabase.from("Streaks")
+            .update({ shield_count: (streak.shield_count || 0) + quantity })
+            .ilike("username", username);
+        }
+      }
+    }
+
     return res.status(200).json({
       success:    true,
       itemId,
       unlockedAt: new Date().toISOString(),
       coverSlugs,
+      consumable: CONSUMABLE_ITEMS[itemId] || null,
     });
 
   } catch(e) {
