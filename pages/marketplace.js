@@ -118,7 +118,7 @@ const CATALOGUE = [
     category:    "consumable",
     status:      "live",
     featured:    true,
-    usdPrice:    5.00,
+    usdPrice:    2.50,
     description: "Extend your daily submission window by 2 hours. The day normally resets at midnight UTC — a Sunset Pass pushes your deadline to 2:00 AM UTC. Sunset Passes are stackable.",
     covers:      [],
     tags:        ["Sunset Pass","Extended Window","Consumable"],
