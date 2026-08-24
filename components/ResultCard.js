@@ -676,7 +676,11 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
   const [submitStatus, setSubmitStatus] = useState(null);
   // ── Style picker modal ────────────────────────────────────────────────────
   const [showStylePicker,  setShowStylePicker]  = useState(false);
-  const [shareInitiated,   setShareInitiated]   = useState(false); // Android: keep card visible after share
+  const [shareInitiated,   setShareInitiated]   = useState(false);
+  const [sunsetWarning,    setSunsetWarning]    = useState(false);
+  const [sunsetActivated,  setSunsetActivated]  = useState(false);
+  const [sunsetPasses,     setSunsetPasses]     = useState(0);
+  const [activatingSunset, setActivatingSunset] = useState(false); // Android: keep card visible after share
   const [shareStyle, setShareStyle]             = useState(() => {
     if (typeof localStorage !== "undefined") {
       return localStorage.getItem("pog_preferred_share_style") || "outdoor_photo";
