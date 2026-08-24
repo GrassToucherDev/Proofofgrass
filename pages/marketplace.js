@@ -100,7 +100,7 @@ const CATALOGUE = [
   {
     id:          "streak_shield",
     name:        "Streak Shield",
-    category:    "consumable",
+    category:    "utility",
     status:      "live",
     featured:    true,
     usdPrice:    5.00,
@@ -115,7 +115,7 @@ const CATALOGUE = [
   {
     id:          "sunset_pass",
     name:        "Sunset Pass",
-    category:    "consumable",
+    category:    "utility",
     status:      "live",
     featured:    true,
     usdPrice:    2.50,
@@ -131,9 +131,9 @@ const CATALOGUE = [
 
 const CATEGORIES = [
   { id:"featured",        label:"🏪 Featured",          comingSoon:false },
+  { id:"cosmetics",       label:"🎨 Cosmetics",          comingSoon:false },
+  { id:"utility",         label:"🛡️ Utility",             comingSoon:false },
   { id:"premium_proofs",  label:"🖼 Premium Proofs",     comingSoon:true  },
-  { id:"consumables",     label:"🛡 Consumables",        comingSoon:false },
-  { id:"cosmetics",       label:"🎨 Profile Cosmetics",  comingSoon:false },
   { id:"limited",         label:"🎁 Limited Editions",   comingSoon:true  },
 ];
 
@@ -631,7 +631,7 @@ export default function Marketplace() {
           </div>
 
           {/* Consumables tab — redirect to existing burns page */}
-          {tab === "consumables" && (
+          {tab === "utility" && (
             <div style={{background:T.bg2,border:`1px solid ${T.border}`,borderRadius:16,padding:"32px",textAlign:"center"}}>
               <div style={{fontSize:28,marginBottom:12}}>🛡</div>
               <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:700,color:T.white,marginBottom:8}}>
@@ -650,7 +650,7 @@ export default function Marketplace() {
           )}
 
           {/* Item grid */}
-          {tab !== "consumables" && filteredItems.length > 0 && (
+          {tab !== "utility" && filteredItems.length > 0 && (
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:20,marginBottom:24}}>
               {filteredItems.map(item => (
                 <ItemCard
@@ -667,7 +667,7 @@ export default function Marketplace() {
           )}
 
           {/* Empty state */}
-          {tab !== "consumables" && filteredItems.length === 0 && (
+          {tab !== "utility" && filteredItems.length === 0 && (
             <div style={{textAlign:"center",padding:"60px 0",color:T.dim}}>
               <div style={{fontSize:32,marginBottom:12}}>🔮</div>
               <div style={{fontSize:14,color:T.muted,marginBottom:6}}>Nothing here yet</div>
