@@ -106,7 +106,7 @@ const CATALOGUE = [
     usdPrice:    5.00,
     description: "Miss a day without breaking your streak. A Shield automatically activates when you miss a submission, keeping your streak alive. Shields are stackable — stock up.",
     covers:      [],
-    tags:        ["Shield","Streak Protection","Consumable"],
+    tags:        ["Streak Protection","Stackable"],
     emoji:       "🛡️",
     consumable:  true,
     consumable_type: "shield",
@@ -121,7 +121,7 @@ const CATALOGUE = [
     usdPrice:    2.50,
     description: "Extend your daily submission window by 2 hours. The day normally resets at midnight UTC — a Sunset Pass pushes your deadline to 2:00 AM UTC. Sunset Passes are stackable.",
     covers:      [],
-    tags:        ["Sunset Pass","Extended Window","Consumable"],
+    tags:        ["Extended Window","Stackable"],
     emoji:       "🌅",
     consumable:  true,
     consumable_type: "sunset_pass",
@@ -235,21 +235,16 @@ function ItemCard({ item, tokensFor, owned, onBuy, onPreview, username }) {
         <div style={{
           minHeight:160, background:`linear-gradient(135deg,${T.bg3},${T.bg2})`,
           display:"flex", alignItems:"center", justifyContent:"center",
-          flexDirection:"column", gap:12, position:"relative",
-          border:`1px solid ${T.border}`, borderRadius:"0",
+          flexDirection:"column", gap:8, position:"relative", padding:"20px 16px 36px",
         }}>
           <div style={{
-            fontSize:64,
-            filter:"drop-shadow(0 0 20px rgba(200,168,75,0.3))",
+            fontSize:56, lineHeight:1,
+            filter:"drop-shadow(0 0 16px rgba(200,168,75,0.25))",
           }}>{item.emoji}</div>
           <div style={{
-            fontSize:10, letterSpacing:"0.16em", textTransform:"uppercase",
-            color:T.gold, fontWeight:700,
-          }}>Consumable</div>
-          <div style={{
-            position:"absolute", bottom:12, left:0, right:0, textAlign:"center",
+            position:"absolute", bottom:10, left:0, right:0, textAlign:"center",
             fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize:18, fontWeight:700, color:T.white,
+            fontSize:17, fontWeight:700, color:T.white, letterSpacing:"0.02em",
           }}>{item.name}</div>
         </div>
       ) : item.covers ? (
