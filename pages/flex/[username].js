@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../utils/supabase";
-import { resolveActiveCover, isCoverUrlReady } from "../../utils/coverDefinitions";
+import { resolveActiveCover, isCoverUrlReady, COVER_DEFINITIONS } from "../../utils/coverDefinitions";
+import Head from "next/head";
 
 const T = {
   bg:     "#080a06", bg2: "#0e100b", bg3: "#141710", bg4: "#1a1e13",
@@ -193,275 +194,269 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
 
-  // Fonts
+  // ── Font loading ──────────────────────────────────────────────────────────
   try {
     const f = new FontFace("Bebas Neue","url(https://fonts.gstatic.com/s/bebasneuepro/v3/2V0FKg2vH0NRXP81hDDSSXVeI0g.woff2)");
     await f.load(); document.fonts.add(f);
   } catch {}
 
-  // Background
-  ctx.fillStyle="#060807"; ctx.fillRect(0,0,W,H);
+  // ── Accent color from theme ───────────────────────────────────────────────
+  const accent  = theme.accentColor  || "#7dc832";
+  const accent2 = theme.progressTo   || "#5ba622";
+  const glow    = theme.glowColor    || "#7dc832";
+  const border  = theme.borderColor  || "rgba(125,200,50,0.5)";
+
+  // ── Background ────────────────────────────────────────────────────────────
+  ctx.fillStyle = "#e8f4fd"; ctx.fillRect(0,0,W,H);
   if (theme.imageUrl && theme.imageUrl !== "PASTE_URL_HERE") {
     try {
-      const ci=await loadImage(theme.imageUrl);
-      const ir=ci.width/ci.height,cr=W/H;
+      const ci = await loadImage(theme.imageUrl);
+      const ir=ci.width/ci.height, cr=W/H;
       let dw,dh,dx,dy;
       if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}
       else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
       ctx.drawImage(ci,dx,dy,dw,dh);
-      const v=ctx.createRadialGradient(W/2,H/2,H*0.28,W/2,H/2,H*0.76);
-      v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,0.65)");
-      ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
-    } catch { ctx.fillStyle=theme.fallback; ctx.fillRect(0,0,W,H); }
-  } else { ctx.fillStyle=theme.fallback; ctx.fillRect(0,0,W,H); }
-
-  // Outer border
-  ctx.strokeStyle=theme.borderColor; ctx.lineWidth=3;
-  roundRect(ctx,20,20,W-40,H-40,16); ctx.stroke();
-
-  function panel(x,y,w,h,r=12){
-    ctx.fillStyle=theme.panelTint; roundRect(ctx,x,y,w,h,r); ctx.fill();
-    ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1.5; roundRect(ctx,x,y,w,h,r); ctx.stroke();
+    } catch {
+      // Fallback gradient
+      const gb = ctx.createLinearGradient(0,0,0,H);
+      gb.addColorStop(0,"#c5e3f7"); gb.addColorStop(1,"#d8f0e8");
+      ctx.fillStyle=gb; ctx.fillRect(0,0,W,H);
+    }
+  } else {
+    const gb = ctx.createLinearGradient(0,0,0,H);
+    gb.addColorStop(0,"#c5e3f7"); gb.addColorStop(1,"#d8f0e8");
+    ctx.fillStyle=gb; ctx.fillRect(0,0,W,H);
   }
 
-  function pill(x,y,w,h,txt,r,strong){
-    ctx.fillStyle=strong?theme.accentColor+"22":"rgba(0,0,0,0.55)";
+  // ── Outer rounded border ───────────────────────────────────────────────────
+  ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 6;
+  roundRect(ctx,12,12,W-24,H-24,28); ctx.stroke();
+
+  // ── Helper: glass panel ───────────────────────────────────────────────────
+  function glassPanel(x,y,w,h,r=16,alpha=0.82) {
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
     roundRect(ctx,x,y,w,h,r); ctx.fill();
-    ctx.strokeStyle=strong?theme.accentColor:theme.borderColor;
-    ctx.lineWidth=strong?2:1.5; roundRect(ctx,x,y,w,h,r); ctx.stroke();
-    if(strong){ ctx.shadowColor=theme.glowColor; ctx.shadowBlur=10; roundRect(ctx,x,y,w,h,r); ctx.stroke(); ctx.shadowBlur=0; }
-    ctx.fillStyle=strong?"#f5f4ef":theme.accentColor;
-    ctx.textAlign="center"; ctx.fillText(txt,x+w/2,y+h*0.68); ctx.textAlign="left";
+    ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 1.5;
+    roundRect(ctx,x,y,w,h,r); ctx.stroke();
   }
 
-  // ── TOP PANEL ─────────────────────────────────────────────────────────────
-  // Two pill rows: tier pill + cover pill stacked
-  const topH=252;
-  panel(20,20,W-40,topH,16);
-  ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(20,20+topH); ctx.lineTo(W-20,20+topH); ctx.stroke();
+  // ─────────────────────────────────────────────────────────────────────────
+  // SECTION 1 — TOP IDENTITY + STREAK CARD
+  // ─────────────────────────────────────────────────────────────────────────
+  const TOP_Y = 40, TOP_H = 260;
+
+  // Identity — no background panel
+  const ID_X = 36, ID_Y = TOP_Y, ID_W = 580, ID_H = TOP_H;
 
   // Avatar
-  const aSize=116, aX=40, aY=20+(topH-aSize)/2;
+  const AV = 160, AV_X = ID_X, AV_Y = ID_Y - 20;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(AV_X+AV/2, AV_Y+AV/2, AV/2, 0, Math.PI*2); ctx.clip();
   try {
     if(!avatarUrl) throw new Error();
-    const ai=await loadImage(avatarUrl);
-    ctx.save(); ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.clip();
-    ctx.drawImage(ai,aX,aY,aSize,aSize); ctx.restore();
+    const ai = await loadImage(avatarUrl);
+    ctx.drawImage(ai, AV_X, AV_Y, AV, AV);
   } catch {
-    ctx.fillStyle=theme.accentColor+"30";
-    ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.fill();
-    ctx.font="700 40px Georgia,serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="center";
-    ctx.fillText((username[0]||"?").toUpperCase(),aX+aSize/2,aY+aSize/2+14); ctx.textAlign="left";
+    const ag = ctx.createLinearGradient(AV_X,AV_Y,AV_X+AV,AV_Y+AV);
+    ag.addColorStop(0,accent+"44"); ag.addColorStop(1,accent+"22");
+    ctx.fillStyle=ag; ctx.fill();
+    ctx.font="700 48px Georgia,serif"; ctx.fillStyle=accent; ctx.textAlign="center";
+    ctx.fillText((username[0]||"?").toUpperCase(), AV_X+AV/2, AV_Y+AV/2+17);
   }
-  ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2+4,0,Math.PI*2);
-  ctx.strokeStyle=avatarFrame==="crown"?"#c8a84b":theme.accentColor; ctx.lineWidth=3; ctx.stroke();
+  ctx.restore();
+  // Avatar ring
+  ctx.strokeStyle = avatarFrame==="crown" ? "#c8a84b" : "rgba(255,255,255,0.95)";
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(AV_X+AV/2, AV_Y+AV/2, AV/2+5, 0, Math.PI*2); ctx.stroke();
+  // Verified dot
+  ctx.fillStyle = "#5ba622";
+  ctx.beginPath(); ctx.arc(AV_X+AV-8, AV_Y+AV-8, 14, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "white"; ctx.font = "bold 14px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("✓", AV_X+AV-8, AV_Y+AV-4); ctx.textAlign = "left";
 
-  // Username — no checkmark
-  const nX=aX+aSize+24;
-  const uSz=username.length>14?50:username.length>11?60:70;
-  const nameY=aY+aSize*0.48;
-  ctx.font=`${uSz}px 'Bebas Neue',Georgia,serif`; ctx.fillStyle="#f5f4ef";
-  ctx.shadowColor="rgba(0,0,0,0.9)"; ctx.shadowBlur=20;
-  ctx.fillText(`@${username}`,nX,nameY); ctx.shadowBlur=0;
+  // Username
+  const NX = AV_X + AV + 16;
+  const uSz = username.length>14 ? 52 : username.length>11 ? 62 : 72;
+  const NY = ID_Y + 68;
+  ctx.font = `700 ${uSz}px 'Playfair Display',Georgia,serif`;
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 16;
+  ctx.shadowOffsetY = 2;
+  ctx.fillText(`@${username}`, NX, NY);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-  // Pills — stacked vertically below username
-  const pillH=32, pillFont="700 14px 'DM Sans',sans-serif";
-  ctx.font=pillFont;
+  // Tier chip
+  const T_Y = NY + 10;
+  const T_TXT = `✦ ${tierTitle.toUpperCase()}`;
+  ctx.font = "700 13px 'DM Sans',sans-serif";
+  const T_W = ctx.measureText(T_TXT).width + 28;
+  ctx.fillStyle = accent + "22";
+  roundRect(ctx, NX, T_Y, T_W, 28, 14); ctx.fill();
+  ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
+  roundRect(ctx, NX, T_Y, T_W, 28, 14); ctx.stroke();
+  ctx.fillStyle = "#0a2005"; ctx.fillText(T_TXT, NX+14, T_Y+19);
 
-  // Row 1: Tier
-  const p1txt=`✦ ${tierTitle}`;
-  const p1W=ctx.measureText(p1txt).width+30;
-  const p1Y=nameY+14;
-  pill(nX,p1Y,p1W,pillH,p1txt,pillH/2,false);
-
-  // Row 2: Cover/Pack name — directly below tier
-  if(theme.name){
-    const p2txt=theme.marketplaceOnly?`★ ${theme.name}`:`◈ ${theme.name}`;
-    ctx.font=pillFont;
-    const p2W=ctx.measureText(p2txt).width+30;
-    pill(nX,p1Y+pillH+8,p2W,pillH,p2txt,pillH/2,theme.marketplaceOnly);
+  // Skin chip (if has active cover)
+  if (theme.name) {
+    const S_Y = T_Y + 36;
+    const skinEmoji = theme.name.includes("Blossom")?"🌸":theme.name.includes("Beach")?"🏖":
+      theme.name.includes("Mountain")?"⛰":theme.name.includes("Sunflower")?"🌻":
+      theme.name.includes("Night")?"🌙":theme.name.includes("Torii")?"⛩":
+      theme.name.includes("Sunrise")?"🌅":theme.name.includes("City")?"🌆":
+      theme.name.includes("Chrome")?"🪩":theme.name.includes("Aqua")?"🌊":
+      theme.name.includes("Bubble")?"🫧":theme.name.includes("Dream")?"✨":
+      theme.name.includes("Garden")?"🌿":theme.name.includes("ATH")?"🚀":
+      theme.name.includes("Rug")?"📉":theme.name.includes("Bear")?"🐻":
+      theme.name.includes("Moon")?"🌕":theme.name.includes("Lagoon")?"💧":"🎨";
+    const S_TXT = `${skinEmoji} ${theme.name.toUpperCase()}`;
+    ctx.font = "700 13px 'DM Sans',sans-serif";
+    const S_W = ctx.measureText(S_TXT).width + 28;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    roundRect(ctx, NX, S_Y, S_W, 28, 14); ctx.fill();
+    ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
+    roundRect(ctx, NX, S_Y, S_W, 28, 14); ctx.stroke();
+    ctx.fillStyle = "#ffffff"; ctx.fillText(S_TXT, NX+14, S_Y+19);
   }
 
-  // Streak box — top right
-  const sbW=288, sbH=topH-16, sbX=W-sbW-30, sbY=28;
-  ctx.fillStyle="rgba(0,0,0,0.70)"; roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.fill();
-  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2.5; roundRect(ctx,sbX,sbY,sbW,sbH,14); ctx.stroke();
-  [[sbX+18,sbY+14],[sbX+sbW-18,sbY+14],[sbX+18,sbY+sbH-14],[sbX+sbW-18,sbY+sbH-14]].forEach(([cx,cy])=>{
-    ctx.fillStyle=theme.accentColor+"bb"; ctx.font="bold 16px 'DM Sans',sans-serif";
-    ctx.textAlign="center"; ctx.fillText("+",cx,cy+5);
-  });
-  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.80)"; ctx.textAlign="center";
-  ctx.fillText("CURRENT STREAK",sbX+sbW/2,sbY+32);
-  // Streak number — larger
-  const nSz=streak>=100?130:streak>=10?148:166;
-  ctx.font=`${nSz}px 'Bebas Neue',Georgia,serif`; ctx.fillStyle=theme.accentColor;
-  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=48;
-  ctx.fillText(`${streak}`,sbX+sbW/2,sbY+sbH-36); ctx.shadowBlur=0;
-  const dpW=96,dpH=24,dpX=sbX+sbW/2-dpW/2,dpY=sbY+sbH-28;
-  ctx.fillStyle="rgba(0,0,0,0.60)"; roundRect(ctx,dpX,dpY,dpW,dpH,12); ctx.fill();
-  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=1.5; roundRect(ctx,dpX,dpY,dpW,dpH,12); ctx.stroke();
-  ctx.font="700 11px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor;
-  ctx.fillText("✦ DAYS ✦",sbX+sbW/2,dpY+16); ctx.textAlign="left";
+  // ── STREAK CARD — top right ───────────────────────────────────────────────
+  const SC_W = 340, SC_H = TOP_H + 30, SC_X = W - SC_W - 36, SC_Y = TOP_Y - 10;
+  // White glass card with soft shadow
+  ctx.shadowColor = "rgba(26,74,10,0.15)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
+  glassPanel(SC_X, SC_Y, SC_W, SC_H, 24, 0.90);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-  // ── LEFT COLUMN ───────────────────────────────────────────────────────────
-  const colX=20, colY=20+topH+10, colW=244;
+  // Decorative top bar
+  const bar_g = ctx.createLinearGradient(SC_X,SC_Y,SC_X+SC_W,SC_Y);
+  bar_g.addColorStop(0, accent+"44"); bar_g.addColorStop(1, accent2+"22");
+  ctx.fillStyle = bar_g;
+  roundRect(ctx,SC_X,SC_Y,SC_W,5,3); ctx.fill();
 
-  // Stats panel
-  const sa=[
-    {e:"⚡",v:grassScore>=1000?(grassScore/1000).toFixed(1)+"K":String(grassScore),l:"GRASS SCORE"},
-    {e:"🔥",v:`${best}d`,l:"BEST STREAK"},
-    ...(shields>0?[{e:"🛡",v:String(shields),l:"SHIELDS EARNED"}]:[]),
-    {e:"👑",v:rank?`#${rank}`:"—",l:"GLOBAL RANK",gold:true},
+  // "CURRENT STREAK" label
+  ctx.font = "700 14px 'DM Sans',sans-serif";
+  ctx.fillStyle = accent; ctx.textAlign = "center";
+  ctx.fillText("— CURRENT STREAK —", SC_X+SC_W/2, SC_Y+38);
+
+  // Big streak number — serif, theme-accented
+  const nSz = streak>=1000?130:streak>=100?160:190;
+  ctx.font = `400 ${nSz}px 'Fredoka One',cursive`;
+  ctx.fillStyle = "#1a4a0a";
+  ctx.shadowColor = accent+"60"; ctx.shadowBlur = 32;
+  ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+46+nSz*0.85);
+  ctx.shadowBlur = 0;
+
+  // "DAYS" label
+  ctx.font = "700 18px 'DM Sans',sans-serif";
+  ctx.fillStyle = accent;
+  ctx.fillText("DAYS", SC_X+SC_W/2, SC_Y+SC_H-36);
+
+  // Decorative lines flanking DAYS
+  const daysY = SC_Y+SC_H-36;
+  const lineW = 60;
+  const daysW = ctx.measureText("DAYS").width;
+  ctx.strokeStyle = accent+"60"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(SC_X+SC_W/2-daysW/2-14,daysY-5); ctx.lineTo(SC_X+SC_W/2-daysW/2-14-lineW,daysY-5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(SC_X+SC_W/2+daysW/2+14,daysY-5); ctx.lineTo(SC_X+SC_W/2+daysW/2+14+lineW,daysY-5); ctx.stroke();
+  ctx.textAlign = "left";
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SECTION 2 — BACKGROUND (open space, cover shows through)
+  // ─────────────────────────────────────────────────────────────────────────
+  // No panel — the cosmetic background is the hero
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SECTION 3 — STATS PANEL (4 stats horizontal)
+  // ─────────────────────────────────────────────────────────────────────────
+  const SP_Y = 780, SP_H = 160, SP_X = 36, SP_W = W - 72;
+  ctx.shadowColor = "rgba(26,74,10,0.12)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 4;
+  glassPanel(SP_X, SP_Y, SP_W, SP_H, 20, 0.88);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  const gsVal = grassScore>=1000 ? (grassScore/1000).toFixed(1)+"K" : String(grassScore);
+  const statsData = [
+    { icon:"🌿", label:"GRASS SCORE",   value:gsVal,                 color:"#1a4a0a" },
+    { icon:"🔥", label:"BEST STREAK",   value:`${best}d`,            color:"#e05050" },
+    { icon:"👑", label:"GLOBAL RANK",   value:rank?`#${rank}`:"—",   color:"#c8a84b" },
+    { icon:"🏅", label:"BADGES EARNED", value:String(badges.length), color:"#7b5ea7" },
   ];
-  const siH=86, spH=sa.length*siH+14;
-  panel(colX,colY,colW,spH,12);
-  sa.forEach((s,i)=>{
-    const sy=colY+10+i*siH;
-    if(i>0){
-      ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(colX+14,sy); ctx.lineTo(colX+colW-14,sy); ctx.stroke();
+
+  const colW4 = SP_W / statsData.length;
+  statsData.forEach((s, i) => {
+    const cx = SP_X + colW4*i + colW4/2;
+    const cy = SP_Y + SP_H/2;
+
+    // Divider (not first)
+    if (i > 0) {
+      ctx.strokeStyle = "rgba(200,220,190,0.6)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(SP_X+colW4*i, SP_Y+20); ctx.lineTo(SP_X+colW4*i, SP_Y+SP_H-20); ctx.stroke();
     }
-    // Fixed vertical layout within each row:
-    // emoji at top, value below it, label at bottom — all left-aligned
-    const valFontSz=s.v.length>4?36:46;
-    // Emoji
-    ctx.font="20px sans-serif"; ctx.fillStyle="#f0efea"; ctx.textAlign="left";
-    ctx.fillText(s.e,colX+12,sy+22);
-    // Value — same left edge as emoji
-    ctx.font=`${valFontSz}px 'Bebas Neue',Georgia,serif`;
-    ctx.fillStyle=s.gold?theme.accentColor:"#f5f4ef";
-    ctx.fillText(s.v,colX+12,sy+54);
-    // Label — flush left, below value
-    ctx.font="700 12px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.80)";
-    ctx.fillText(s.l,colX+12,sy+68);
+
+    // Icon circle
+    ctx.fillStyle = s.color + "18";
+    ctx.beginPath(); ctx.arc(cx, cy-24, 22, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = s.color+"40"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cy-24, 22, 0, Math.PI*2); ctx.stroke();
+    ctx.font = "22px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(s.icon, cx, cy-17);
+
+    // Label
+    ctx.font = "700 11px 'Plus Jakarta Sans',sans-serif";
+    ctx.fillStyle = s.color; ctx.textAlign = "center";
+    ctx.fillText(s.label, cx, cy+8);
+
+    // Value
+    const valSz = s.value.length>5 ? 32 : 40;
+    ctx.font = `700 ${valSz}px 'Playfair Display',Georgia,serif`;
+    ctx.fillStyle = "#050f02";
+    ctx.fillText(s.value, cx, cy+48);
   });
+  ctx.textAlign = "left";
 
-  // Progress bar
-  const prY=colY+spH+8, prH=50;
-  panel(colX,prY,colW,prH,10);
-  const ths=[7,14,30,50,100,180,365,500,1000];
-  const nxt=ths.find(t=>t>streak)||1000;
-  const prv=[...[0,...ths]].reverse().find(t=>streak>=t)||0;
-  const fp=Math.min(1,(streak-prv)/Math.max(1,nxt-prv));
-  const nxtL=nxt>=1000?"TRANSCENDENT":nxt>=500?"ASCENDED":nxt>=365?"ETERNAL":nxt>=180?"MYTHIC":nxt>=100?"IMMORTAL":nxt>=50?"LEGENDARY":nxt>=30?"ELITE":nxt>=14?"LOCKED IN":"ROOTED";
-  ctx.font="700 11px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor; ctx.textAlign="left";
-  ctx.fillText(`${nxtL} · DAY ${nxt}`,colX+12,prY+17);
-  ctx.fillStyle="rgba(240,239,234,0.75)"; ctx.textAlign="right";
-  ctx.fillText(`${streak}/${nxt}`,colX+colW-12,prY+17); ctx.textAlign="left";
-  const bX2=colX+12,bY2=prY+26,bW2=colW-24,bH2=10;
-  ctx.fillStyle="rgba(255,255,255,0.07)"; roundRect(ctx,bX2,bY2,bW2,bH2,5); ctx.fill();
-  const gr=ctx.createLinearGradient(bX2,0,bX2+bW2*fp,0);
-  gr.addColorStop(0,theme.progressFrom); gr.addColorStop(1,theme.progressTo);
-  ctx.fillStyle=gr; ctx.shadowColor=theme.glowColor; ctx.shadowBlur=8;
-  roundRect(ctx,bX2,bY2,bW2*fp,bH2,5); ctx.fill(); ctx.shadowBlur=0;
+  // ─────────────────────────────────────────────────────────────────────────
+  // SECTION 4 — MILESTONE PROGRESS BAR
+  // ─────────────────────────────────────────────────────────────────────────
+  const MP_Y = SP_Y + SP_H + 16, MP_H = 100, MP_X = 36, MP_W = W - 72;
+  ctx.shadowColor = "rgba(26,74,10,0.10)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 3;
+  glassPanel(MP_X, MP_Y, MP_W, MP_H, 16, 0.88);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-  // ── BADGES PANEL — total count only, no individual badges ─────────────────
-  const bpY=prY+prH+8, bpH=H-bpY-68;
-  panel(colX,bpY,colW,bpH,12);
+  const ths = [7,14,30,50,100,180,365,500,1000];
+  const nxt = ths.find(t=>t>streak)||1000;
+  const prv = [...[0,...ths]].reverse().find(t=>streak>=t)||0;
+  const fp  = Math.min(1,(streak-prv)/Math.max(1,nxt-prv));
+  const nxtLabels = {7:"ROOTED",14:"LOCKED IN",30:"ELITE",50:"LEGENDARY",100:"IMMORTAL",180:"MYTHIC",365:"ETERNAL",500:"ASCENDED",1000:"TRANSCENDENT"};
+  const nxtL = nxtLabels[nxt]||"MYTHIC";
+  const nxtEmoji = nxt>=1000?"✨":nxt>=500?"🌌":nxt>=365?"👑":nxt>=180?"⚡":nxt>=100?"💯":nxt>=50?"🌅":nxt>=30?"🌲":nxt>=14?"💧":"🌱";
 
-  const totalBadges=badges.length;
-  const maxBadges=26;
-  const circleCX=colX+colW/2;
+  // Milestone icon circle (left)
+  const MC_CX = MP_X + 34, MC_CY = MP_Y + MP_H/2;
+  ctx.fillStyle = accent+"22";
+  ctx.beginPath(); ctx.arc(MC_CX, MC_CY, 22, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = accent+"66"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(MC_CX, MC_CY, 22, 0, Math.PI*2); ctx.stroke();
+  ctx.font = "22px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText(nxtEmoji, MC_CX, MC_CY+8);
 
-  // Everything vertically centred in the panel
-  const cirR=62; // circle radius
-  const cirCY=bpY+bpH/2; // true vertical centre of panel
+  // Label row
+  ctx.font = "700 14px 'DM Sans',sans-serif"; ctx.fillStyle = "#1a4a0a"; ctx.textAlign = "left";
+  ctx.fillText(`${nxtL} · DAY ${nxt}`, MP_X+68, MP_Y+22);
+  ctx.font = "600 13px 'DM Sans',sans-serif"; ctx.fillStyle = accent; ctx.textAlign = "right";
+  ctx.fillText(`${streak} / ${nxt}`, MP_X+MP_W-16, MP_Y+22);
 
-  ctx.textAlign="center";
+  // Progress bar track
+  const BX = MP_X+68, BY = MP_Y+32, BW = MP_W-84, BH = 14;
+  ctx.fillStyle = "rgba(200,220,190,0.5)";
+  roundRect(ctx,BX,BY,BW,BH,7); ctx.fill();
 
-  // "BADGES EARNED" label — above circle, with accent divider below it
-  const labelY=cirCY-cirR-24;
-  ctx.font="700 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.85)";
-  ctx.fillText("BADGES EARNED",circleCX,labelY);
-  ctx.strokeStyle=theme.accentColor+"50"; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(colX+24,labelY+8); ctx.lineTo(colX+colW-24,labelY+8); ctx.stroke();
+  // Progress fill
+  const pg = ctx.createLinearGradient(BX,0,BX+BW*fp,0);
+  pg.addColorStop(0, accent); pg.addColorStop(1, accent2);
+  ctx.fillStyle = pg;
+  ctx.shadowColor = glow; ctx.shadowBlur = 10;
+  roundRect(ctx,BX,BY,BW*fp,BH,7); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.textAlign = "left";
 
-  // Accent circle
-  ctx.fillStyle=theme.accentColor+"1a";
-  ctx.beginPath(); ctx.arc(circleCX,cirCY,cirR,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle=theme.accentColor+"88"; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.arc(circleCX,cirCY,cirR,0,Math.PI*2); ctx.stroke();
-  // Inner ring
-  ctx.strokeStyle=theme.accentColor+"30"; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.arc(circleCX,cirCY,cirR-8,0,Math.PI*2); ctx.stroke();
-
-  // Number — centred in circle
-  // Canvas text baseline is alphabetic; to visually centre: y = cirCY + fontSize*0.35
-  const numFontSz=totalBadges>=10?68:76;
-  ctx.font=`${numFontSz}px 'Bebas Neue',Georgia,serif`;
-  ctx.fillStyle=theme.accentColor;
-  ctx.shadowColor=theme.glowColor; ctx.shadowBlur=20;
-  ctx.fillText(String(totalBadges),circleCX,cirCY+numFontSz*0.35); ctx.shadowBlur=0;
-
-  // "/ 26 total" — below circle, centred
-  ctx.font="600 13px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.60)";
-  ctx.fillText(`/ ${maxBadges} total`,circleCX,cirCY+cirR+22);
-
-  ctx.textAlign="left";
-
-  // ── BOTTOM SPLIT PANEL — Touch Grass | Pack Info ──────────────────────────
-  const rcX=colX+colW+14;
-  const botW=W-rcX-20, botY=H-268, botH=200;
-  panel(rcX,botY,botW,botH,12);
-  ctx.strokeStyle=theme.accentColor; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(rcX+20,botY); ctx.lineTo(rcX+botW-20,botY); ctx.stroke();
-  const halfW=botW/2;
-  ctx.strokeStyle=theme.borderColor; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(rcX+halfW,botY+16); ctx.lineTo(rcX+halfW,botY+botH-16); ctx.stroke();
-
-  // LEFT — Touch Grass
-  const lgCX=rcX+halfW/2;
-  try {
-    const lg=await loadImage("/touchgrass-transparent.png");
-    ctx.globalAlpha=0.95; ctx.drawImage(lg,lgCX-34,botY+22,68,68); ctx.globalAlpha=1;
-  } catch {}
-  ctx.font="36px 'Bebas Neue',Georgia,serif"; ctx.fillStyle="#f5f4ef"; ctx.textAlign="center";
-  ctx.shadowColor=theme.glowColor+"40"; ctx.shadowBlur=8;
-  ctx.fillText("TOUCH GRASS",lgCX,botY+112); ctx.shadowBlur=0;
-  ctx.font="600 11px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"99";
-  ctx.fillText("proofofgrass.app",lgCX,botY+132);
-  ctx.font="500 10px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.55)";
-  ctx.fillText("BUILT ON ◎ SOLANA",lgCX,botY+152);
-
-  // RIGHT — Pack info
-  const pkCX=rcX+halfW+halfW/2;
-  if(theme.name){
-    const pe=theme.name.includes("Beach")?"🏖":theme.name.includes("Mountain")?"⛰":
-      theme.name.includes("Sunflower")?"🌻":theme.name.includes("Waterfall")?"💧":
-      theme.name.includes("Night")?"🌙":theme.name.includes("Golden")?"🌅":
-      theme.name.includes("Grove")?"🌿":theme.name.includes("Forest")?"🌲":
-      theme.name.includes("Summit")?"🏔":theme.name.includes("Sky")?"✨":
-      theme.name.includes("Temple")?"🌞":theme.name.includes("Garden")?"🌸":
-      theme.name.includes("Celestial")?"💫":"🎨";
-    ctx.font="46px sans-serif"; ctx.textAlign="center";
-    ctx.fillText(pe,pkCX,botY+58);
-    ctx.font="700 10px 'DM Sans',sans-serif"; ctx.fillStyle=theme.accentColor+"99";
-    ctx.fillText(theme.marketplaceOnly?"RETRO COVERS PACK":"STREAK COVER",pkCX,botY+80);
-    ctx.font="34px 'Bebas Neue',Georgia,serif"; ctx.fillStyle="#f5f4ef";
-    ctx.fillText(theme.name.toUpperCase(),pkCX,botY+116);
-    ctx.font="600 11px 'DM Sans',sans-serif";
-    ctx.fillStyle=theme.marketplaceOnly?theme.accentColor:"rgba(240,239,234,0.55)";
-    ctx.fillText(
-      theme.marketplaceOnly?"★ MARKETPLACE EXCLUSIVE ★":`UNLOCKED AT DAY ${theme.unlockDay||"?"}`,
-      pkCX,botY+142
-    );
-    if(theme.marketplaceOnly){
-      const lw=130; ctx.strokeStyle=theme.accentColor+"44"; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(pkCX-lw/2,botY+152); ctx.lineTo(pkCX+lw/2,botY+152); ctx.stroke();
-    }
-  }
-  ctx.textAlign="left";
-
-  // Footer
-  const fY=H-36;
-  ctx.font="600 12px 'DM Sans',sans-serif"; ctx.fillStyle="#9945ff"; ctx.textAlign="left";
-  ctx.fillText("BUILT ON ◎ SOLANA",28,fY);
-  const slW=ctx.measureText("BUILT ON ◎ SOLANA").width;
-  ctx.fillStyle=theme.accentColor; ctx.fillText("  ·  PROOF OF GRASS",28+slW,fY);
-  ctx.font="600 12px 'DM Sans',sans-serif"; ctx.fillStyle="rgba(240,239,234,0.70)"; ctx.textAlign="right";
-  ctx.fillText("$TOUCHGRASS · #TouchGrass · #ProofOfGrass",W-28,fY);
-  ctx.textAlign="left";
+  // Footer removed
 
   try { return canvas.toDataURL("image/png"); }
   catch(e) { throw new Error("canvas_tainted: "+e.message); }
@@ -475,22 +470,14 @@ function roundRect(ctx,x,y,w,h,r){
   ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
 }
 
-function hexPath(ctx,r){
-  ctx.beginPath();
-  for(let i=0;i<6;i++){const angle=(Math.PI/3)*i-Math.PI/6;const px=r*Math.cos(angle),py=r*Math.sin(angle);i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);}
-  ctx.closePath();
-}
-
 function loadImage(src){
   return new Promise((res,rej)=>{
-    // 8 second timeout — prevents hanging on slow/blocked resources
     const timer = setTimeout(() => rej(new Error("loadImage timeout: " + src)), 8000);
     const done = (val) => { clearTimeout(timer); res(val); };
     const fail = (err) => { clearTimeout(timer); rej(err); };
     const img=new Image(); img.crossOrigin="anonymous";
     img.onload=()=>done(img);
     img.onerror=()=>{
-      // Try via fetch blob URL to bypass some CORS restrictions
       fetch(src,{mode:"cors"})
         .then(r=>r.blob())
         .then(blob=>{
@@ -732,354 +719,509 @@ export default function FlexCardPage() {
     }
   }, [username, streak, tier, awardFlexDrawBonus]);
 
+  const [activeTab, setActiveTab] = useState("backgrounds");
+  const [previewCover, setPreviewCover] = useState(null); // temp preview cover
+
+  // All packs the user has unlocked
+  const unlockedCovers = profileRow?.unlocked_covers ?? [];
+
+  // All cover definitions grouped by pack
+  const SUPABASE_URL = "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public";
+  const PACK_DEFS = [
+    {
+      id:"retro_covers_pack", name:"Retro Vibes Pack", emoji:"🌅",
+      bg:"linear-gradient(135deg,#8B4513,#D2691E)",
+      covers:[
+        { slug:"marketplace_retro_beach",     name:"Retro Beach",     imageUrl:`${SUPABASE_URL}/covers/retro_beach.png`,     fallback:"linear-gradient(135deg,#001a2e,#003d5c)" },
+        { slug:"marketplace_retro_mountain",  name:"Retro Mountain",  imageUrl:`${SUPABASE_URL}/covers/retro_mountain.png`,  fallback:"linear-gradient(135deg,#0d0d14,#1a1a2e)" },
+        { slug:"marketplace_retro_sunflower", name:"Retro Sunflower", imageUrl:`${SUPABASE_URL}/covers/retro_sunflower.png`, fallback:"linear-gradient(135deg,#1a1200,#3d2e00)" },
+        { slug:"marketplace_retro_waterfall", name:"Retro Waterfall", imageUrl:`${SUPABASE_URL}/covers/retro_waterfall.png`, fallback:"linear-gradient(135deg,#001a14,#00352a)" },
+        { slug:"marketplace_retro_night",     name:"Retro Night",     imageUrl:`${SUPABASE_URL}/covers/retro_night.png`,     fallback:"linear-gradient(135deg,#04040e,#0a0a1e)" },
+      ],
+    },
+    {
+      id:"anime_nature_pack", name:"Anime Outdoors", emoji:"🌸",
+      bg:"linear-gradient(135deg,#FF69B4,#9370DB)",
+      covers:[
+        { slug:"marketplace_cherry_blossom", name:"Cherry Blossom", imageUrl:`${SUPABASE_URL}/covers/cherry_blossom.png`, fallback:"linear-gradient(135deg,#1a0010,#3d0028)" },
+        { slug:"marketplace_torii_forest",   name:"Torii Forest",   imageUrl:`${SUPABASE_URL}/covers/torii_forest.png`,   fallback:"linear-gradient(135deg,#0d0a00,#2a1a00)" },
+        { slug:"marketplace_lake_sunrise",   name:"Lake Sunrise",   imageUrl:`${SUPABASE_URL}/covers/lake_sunrise.png`,   fallback:"linear-gradient(135deg,#001018,#002030)" },
+        { slug:"marketplace_beach_coast",    name:"Beach Coast",    imageUrl:`${SUPABASE_URL}/covers/beach_coast.png`,    fallback:"linear-gradient(135deg,#001824,#003040)" },
+        { slug:"marketplace_city_view",      name:"City View",      imageUrl:`${SUPABASE_URL}/covers/city_view.png`,      fallback:"linear-gradient(135deg,#06050e,#0e0c1e)" },
+      ],
+    },
+    {
+      id:"y2k_pack", name:"Y2K Outdoors", emoji:"💿",
+      bg:"linear-gradient(135deg,#00CED1,#9370DB)",
+      covers:[
+        { slug:"marketplace_chrome_meadow", name:"Chrome Meadow", imageUrl:`${SUPABASE_URL}/covers/chrome_meadow.png`, fallback:"linear-gradient(135deg,#0a0a14,#1a1a2e)" },
+        { slug:"marketplace_aqua_coast",    name:"Aqua Coast",    imageUrl:`${SUPABASE_URL}/covers/aqua_coast.png`,    fallback:"linear-gradient(135deg,#001a1a,#003030)" },
+        { slug:"marketplace_bubble_forest", name:"Bubble Forest", imageUrl:`${SUPABASE_URL}/covers/bubble_forest.png`, fallback:"linear-gradient(135deg,#140020,#280040)" },
+        { slug:"marketplace_dream_sky",     name:"Dream Sky",     imageUrl:`${SUPABASE_URL}/covers/dream_sky.png`,     fallback:"linear-gradient(135deg,#001428,#002050)" },
+        { slug:"marketplace_cyber_garden",  name:"Cyber Garden",  imageUrl:`${SUPABASE_URL}/covers/cyber_garden.png`,  fallback:"linear-gradient(135deg,#001408,#002810)" },
+      ],
+    },
+    {
+      id:"trenches_pack", name:"The Trenches", emoji:"🌿",
+      bg:"linear-gradient(135deg,#1a2d0e,#3d7a12)",
+      covers:[
+        { slug:"marketplace_ath_overlook",         name:"ATH Overlook",         imageUrl:`${SUPABASE_URL}/covers/ath_overlook.png`,         fallback:"linear-gradient(135deg,#0a1400,#142800)" },
+        { slug:"marketplace_rug_pull_ravine",      name:"Rug Pull Ravine",      imageUrl:`${SUPABASE_URL}/covers/rug_pull_ravine.png`,     fallback:"linear-gradient(135deg,#140000,#280000)" },
+        { slug:"marketplace_bear_market_blizzard", name:"Bear Market Blizzard", imageUrl:`${SUPABASE_URL}/covers/bear_market_blizzard.png`, fallback:"linear-gradient(135deg,#060810,#0c1020)" },
+        { slug:"marketplace_moonbag_camp",         name:"Moonbag Camp",         imageUrl:`${SUPABASE_URL}/covers/moonbag_camp.png`,        fallback:"linear-gradient(135deg,#0a0800,#1e1400)" },
+        { slug:"marketplace_liquidity_lagoon",     name:"Liquidity Lagoon",     imageUrl:`${SUPABASE_URL}/covers/liquidity_lagoon.png`,    fallback:"linear-gradient(135deg,#001418,#002830)" },
+      ],
+    },
+  ];
+
+  // Effective cover — previewCover overrides active
+  const effectiveCover = previewCover || activeCover;
+
+  const V2G = {
+    bg:"white", green:"#5ba622", darkGreen:"#1a4a0a",
+    midGray:"#6b7d60", border:"rgba(200,220,190,0.5)",
+    lightBg:"rgba(125,200,50,0.06)",
+  };
+
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600;700;800&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html{scroll-behavior:smooth;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
-    ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:${T.bg};}::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
-    @keyframes shimmer{0%,100%{opacity:0.4;}50%{opacity:0.8;}}
-    .fade{animation:fadeUp 0.7s ease both;}.fade2{animation:fadeUp 0.7s 0.1s ease both;}.fade3{animation:fadeUp 0.7s 0.2s ease both;}
-    .skel{background:${T.bg3};border-radius:6px;animation:shimmer 1.8s ease-in-out infinite;}
-    .panel{background:${T.bg2};border:1px solid ${T.border};border-radius:16px;padding:22px;}
-    .ct{font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${T.oliveDim};margin-bottom:16px;display:flex;align-items:center;gap:7px;}
-    .ct::before{content:"✦";color:${T.olive};font-size:8px;}
-    .btn-share{display:inline-flex;align-items:center;gap:7px;background:${T.white};color:${T.bg};border:none;border-radius:9px;padding:11px 22px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;letter-spacing:0.04em;}
-    .btn-share:hover{background:#e8e7e2;transform:translateY(-1px);}
-    .btn-ghost{display:inline-flex;align-items:center;gap:7px;background:transparent;border:1px solid ${T.border};border-radius:9px;padding:11px 22px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:${T.white};cursor:pointer;transition:all 0.2s;}
-    .btn-ghost:hover{border-color:${T.olive};color:${T.olive};}
-    .nav-lk{color:${T.dim};font-size:13px;font-weight:500;text-decoration:none;transition:color 0.2s;}
-    .nav-lk:hover{color:${T.white};}
+    body{background:#e8f4fd;font-family:'DM Sans',sans-serif;}
+    .fcs-tab{padding:10px 18px;border-radius:20px;border:1.5px solid rgba(200,220,190,0.5);
+      font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
+      transition:all 0.15s;white-space:nowrap;background:white;color:#1a4a0a;}
+    .fcs-tab:hover{border-color:#5ba622;color:#5ba622;}
+    .fcs-tab.active{background:#5ba622;color:white;border-color:#5ba622;
+      box-shadow:0 2px 10px rgba(91,166,34,0.3);}
+    .fcs-cover-card{border-radius:12px;overflow:hidden;cursor:pointer;
+      transition:transform 0.15s,box-shadow 0.15s;border:2px solid transparent;}
+    .fcs-cover-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(26,74,10,0.14);}
+    .fcs-cover-card.active{border-color:#5ba622;box-shadow:0 0 0 2px rgba(91,166,34,0.3);}
+    .fcs-pack-card{border-radius:14px;overflow:hidden;cursor:pointer;
+      transition:transform 0.15s;background:white;border:1.5px solid rgba(200,220,190,0.5);}
+    .fcs-pack-card:hover{transform:translateY(-2px);}
+    .skel{background:rgba(200,220,190,0.3);border-radius:6px;animation:fcsShimmer 1.4s ease-in-out infinite;}
+    @keyframes fcsShimmer{0%,100%{opacity:0.5;}50%{opacity:0.9;}}
     @media(max-width:640px){
-      .stats-grid{grid-template-columns:repeat(2,1fr)!important;}
-      .bottom-row{grid-template-columns:1fr!important;}
-      .badge-row{grid-template-columns:repeat(3,1fr)!important;}
-      .nav-links{display:none!important;}
+      .fcs-grid{grid-template-columns:repeat(2,1fr)!important;}
     }
   `;
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div style={{ minHeight:"100vh", background:T.bg }}>
+      <Head>
+        <title>Flex Card Studio — @{username} | Touch Grass</title>
+        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+      </Head>
+      <style dangerouslySetInnerHTML={{ __html:css }} />
 
-        {/* NAV */}
-        <nav style={{ position:"sticky", top:0, zIndex:200, display:"flex", alignItems:"center",
-          justifyContent:"space-between", padding:"0 clamp(14px,4vw,48px)", height:56, gap:12,
-          background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}` }}>
-          <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width:26, height:26, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>Touch Grass</span>
+      <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>
+
+        {/* ── NAV ──────────────────────────────────────────────────────────── */}
+        <nav style={{ position:"sticky", top:0, zIndex:200, height:60,
+          display:"flex", alignItems:"center", padding:"0 clamp(14px,4vw,40px)", gap:16,
+          background:"rgba(255,255,255,0.95)", backdropFilter:"blur(20px)",
+          borderBottom:"1px solid rgba(200,220,190,0.5)",
+          boxShadow:"0 2px 16px rgba(26,74,10,0.07)" }}>
+
+          {/* Back */}
+          <Link href={`/u/${username}`}
+            style={{ display:"flex", alignItems:"center", gap:6, textDecoration:"none",
+              color:"#1a4a0a", fontSize:13, fontWeight:600, flexShrink:0 }}>
+            ← Back
           </Link>
-          <div className="nav-links" style={{ display:"flex", gap:24 }}>
-            <Link href="/" className="nav-lk">Dashboard</Link>
-            <Link href="/leaderboard" className="nav-lk">Leaderboard</Link>
-            <Link href={`/u/${username}`} className="nav-lk">Profile</Link>
+
+          {/* Title */}
+          <div style={{ flex:1, textAlign:"center" }}>
+            <div style={{ fontSize:15, fontWeight:800, color:"#1a4a0a" }}>Flex Card Studio</div>
           </div>
-          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
-            <button onClick={flexToX} disabled={!cardReady} className="btn-share"
-              style={{ fontSize:11, padding:"7px 14px", opacity:!cardReady?0.5:1 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-              </svg>
-              {!cardReady ? "…" : "Flex to X"}
-            </button>
-          </div>
+
+          {/* Help */}
+          <button style={{ background:"transparent", border:"1.5px solid rgba(200,220,190,0.5)",
+            borderRadius:20, padding:"6px 14px", fontSize:12, fontWeight:600,
+            color:"#6b7d60", cursor:"pointer", flexShrink:0, fontFamily:"DM Sans,sans-serif" }}>
+            Help
+          </button>
         </nav>
 
-        <div style={{ maxWidth:720, margin:"0 auto", padding:"32px clamp(14px,4vw,32px) 60px" }}>
+        {/* ── COSMETICS BANNER ─────────────────────────────────────────────── */}
+        <div style={{ background:"rgba(125,200,50,0.08)", borderBottom:"1px solid rgba(125,200,50,0.2)",
+          padding:"10px clamp(14px,4vw,40px)", display:"flex", alignItems:"center",
+          justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:16 }}>🎨</span>
+            <span style={{ fontSize:13, fontWeight:600, color:"#1a4a0a" }}>
+              Skins are cosmetics from the Marketplace
+            </span>
+          </div>
+          <Link href="/marketplace"
+            style={{ fontSize:12, fontWeight:700, color:"#5ba622", textDecoration:"none",
+              background:"rgba(125,200,50,0.1)", border:"1px solid rgba(125,200,50,0.3)",
+              borderRadius:20, padding:"5px 14px" }}>
+            Browse Marketplace →
+          </Link>
+        </div>
 
-          {/* FLEX CARD */}
-          <div ref={cardRef} style={{
-            background:`linear-gradient(160deg,${T.bg2} 0%,${T.bg3} 50%,${T.bg2} 100%)`,
-            border:`1px solid ${T.borderG}`, borderRadius:20, overflow:"hidden",
-            boxShadow:`0 0 60px ${tier.glow}20, 0 32px 80px rgba(0,0,0,0.6)`, position:"relative",
-          }}>
-            <div style={{ position:"absolute", top:-80, right:-80, width:320, height:320,
-              borderRadius:"50%", background:`${tier.glow}`, opacity:0.06,
-              filter:"blur(80px)", pointerEvents:"none" }} />
+        <div style={{ maxWidth:800, margin:"0 auto", padding:"24px clamp(14px,4vw,24px) 80px" }}>
 
-            {/* HERO */}
-            <div className="fade" style={{ padding:"28px 28px 22px",
-              background: activeCover && isCoverUrlReady(activeCover.imageUrl)
-                ? `linear-gradient(135deg,rgba(20,21,16,0.55),rgba(20,21,16,0.85)), url(${activeCover.imageUrl})`
-                : activeCover?.fallback ? activeCover.fallback
-                : `linear-gradient(135deg,${T.bg3},${T.bg2})`,
-              backgroundSize:"cover", backgroundPosition:"center",
-              borderBottom:`1px solid ${T.border}`, position:"relative",
-              display:"flex", alignItems:"flex-start", justifyContent:"space-between",
-              gap:16, flexWrap:"wrap" }}>
-              <div style={{ display:"flex", gap:16, alignItems:"flex-start", minWidth:0 }}>
-                <div style={{ width:72, height:72, borderRadius:"50%", flexShrink:0,
-                  background:`linear-gradient(135deg,${T.bg4},${T.olive}22)`,
-                  overflow:"hidden",
-                  boxShadow: profileRow?.avatar_frame==="crown"
-                    ? `0 0 0 3px ${T.gold}, 0 0 20px ${T.gold}60`
-                    : profileRow?.avatar_frame==="glow"
-                      ? `0 0 0 2px ${T.olive}, 0 0 16px ${T.olive}50`
-                      : `0 0 24px ${tier.glow}40`,
-                  border: profileRow?.avatar_frame==="crown" ? `2px solid ${T.gold}`
-                    : profileRow?.avatar_frame==="glow" ? `2px solid ${T.olive}`
-                    : `2px solid ${tier.color}`,
-                  display:"flex", alignItems:"center", justifyContent:"center", fontSize:28,
-                  fontFamily:"'Cormorant Garamond',Georgia,serif", fontWeight:700, color:T.white }}>
-                  {profileRow?.avatar_url
-                    ? <img src={profileRow.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                    : (profileRow?.avatar_emoji || username[0]?.toUpperCase() || "🌿")}
-                </div>
-                <div style={{ minWidth:0 }}>
-                  <div style={{ display:"inline-flex", alignItems:"center", gap:5,
-                    fontSize:8, color:T.olive, letterSpacing:"0.14em", textTransform:"uppercase",
-                    fontWeight:700, border:`1px solid ${T.olive}`, borderRadius:20,
-                    padding:"2px 8px", marginBottom:7 }}>◎ VERIFIED OUTDOORS</div>
-                  <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                    fontSize:"clamp(26px,5vw,44px)", fontWeight:700, color:T.white,
-                    lineHeight:0.95, letterSpacing:"-0.02em", marginBottom:5 }}>
-                    {username || "—"}
-                  </h1>
-                  <div style={{ fontSize:12, color:T.dim, marginBottom:10 }}>@{username}</div>
-                  <div style={{ display:"inline-flex", alignItems:"center", gap:6,
-                    background:`${tier.color}15`, border:`1px solid ${tier.color}50`,
-                    borderRadius:20, padding:"4px 12px" }}>
-                    <span style={{ color:tier.color, fontSize:9, fontWeight:700, letterSpacing:"0.16em", textTransform:"uppercase" }}>
-                      ✦ {tierTitle}
-                    </span>
-                  </div>
-                  {joinDate && <div style={{ fontSize:10, color:T.dim, marginTop:8 }}>📅 JOINED {joinDate.toUpperCase()}</div>}
-                </div>
-              </div>
-              <div style={{ textAlign:"right", flexShrink:0 }}>
-                <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.dim, textTransform:"uppercase", marginBottom:6 }}>Current Streak</div>
-                {loading
-                  ? <div className="skel" style={{ width:120, height:72, marginBottom:8 }} />
-                  : <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                    fontSize:"clamp(52px,8vw,88px)", fontWeight:700, color:T.white,
-                    lineHeight:0.88, letterSpacing:"-0.04em", textShadow:`0 0 40px ${tier.glow}60` }}>
-                    <span style={{ fontSize:"0.35em", color:T.dim, verticalAlign:"top", lineHeight:3.1, letterSpacing:"0.04em" }}>DAY </span>
-                    {streak}
-                  </div>}
-                <div style={{ display:"inline-flex", alignItems:"center", gap:6,
-                  background:`${tier.color}12`, border:`1px solid ${tier.color}40`,
-                  borderRadius:20, padding:"4px 12px", marginTop:6 }}>
-                  <span style={{ fontSize:9, letterSpacing:"0.16em", color:tier.color, textTransform:"uppercase", fontWeight:700 }}>✦ {tier.label}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* STATS */}
-            <div className="stats-grid fade2" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", borderBottom:`1px solid ${T.border}` }}>
-              <StatCell icon="🌱" value={loading?"…":grassScore.toLocaleString()} label="Grass Score" accent />
-              <StatCell icon="👑" value={loading?"…":(rank?`#${rank}`:"—")} label={`Global Rank\nTop ${pct}%`} />
-              <StatCell icon="🔥" value={loading?"…":`${streak}d`} label="Current Streak" last />
-            </div>
-            <div className="stats-grid fade2" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", borderBottom:`1px solid ${T.border}` }}>
-              <StatCell icon="🏆" value={loading?"…":`${best}d`} label="Longest Streak" />
-              <StatCell icon="🤝" value={loading?"…":(profileRow?.referral_count_successful??0)} label="Successful Referrals" />
-              <StatCell icon="🎖" value={loading?"…":earnedBadges.length} label="Badges Earned" last />
-            </div>
-
-            {/* BADGES */}
-            <div className="fade2" style={{ padding:"22px 24px", borderBottom:`1px solid ${T.border}` }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
-                <div className="ct" style={{ margin:0 }}>Top Badges</div>
-                <span style={{ fontSize:10, color:T.gold, fontWeight:600 }}>{earnedBadges.length} / {ALL_BADGES.length} Collected</span>
-              </div>
-              {topBadges.length > 0 ? (
-                <div className="badge-row" style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:12 }}>
-                  {topBadges.map(b => <BadgeHex key={b.id} badge={b} size={52} totalUsers={totalUsers} />)}
-                </div>
-              ) : (
-                <div style={{ fontSize:12, color:T.dim, padding:"12px 0" }}>No badges earned yet — keep going.</div>
+          {/* ── LIVE FLEX CARD PREVIEW ────────────────────────────────────── */}
+          <div style={{ marginBottom:20 }}>
+            <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
+              textTransform:"uppercase", color:"#6b7d60", marginBottom:12,
+              display:"flex", alignItems:"center", gap:8 }}>
+              <span>👁</span> Live Preview
+              {previewCover && (
+                <span style={{ fontSize:10, color:"#5ba622", fontWeight:600,
+                  background:"rgba(125,200,50,0.1)", borderRadius:20, padding:"2px 10px" }}>
+                  Previewing: {previewCover.name}
+                </span>
               )}
             </div>
 
-            {/* MILESTONES + HEATMAP */}
-            <div className="bottom-row fade3" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", borderBottom:`1px solid ${T.border}` }}>
-              <div style={{ padding:"22px 24px", borderRight:`1px solid ${T.border}` }}>
-                <div className="ct">Milestones</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  {milestones.map(m => (
-                    <div key={m.label} style={{ display:"flex", alignItems:"center", gap:10 }}>
-                      <div style={{ width:32, height:32, borderRadius:"50%", flexShrink:0,
-                        background:m.done?`${T.olive}18`:T.bg3,
-                        border:`1.5px solid ${m.done?T.olive:T.border}`,
-                        display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>{m.icon}</div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:11, fontWeight:600, color:m.done?T.white:T.dim }}>{m.label}</div>
-                      </div>
-                      <div style={{ textAlign:"right", flexShrink:0 }}>
-                        {m.done
-                          ? <span style={{ fontSize:10, color:T.olive }}>✓</span>
-                          : <span style={{ fontSize:10, color:T.dim }}>{m.date}</span>}
-                      </div>
+            {/* Card preview */}
+            <div ref={cardRef} style={{
+              borderRadius:20, overflow:"hidden", position:"relative",
+              background:effectiveCover?.fallback||"linear-gradient(135deg,#1a4a0a,#2d7a1a)",
+              boxShadow:"0 8px 40px rgba(26,74,10,0.2)",
+              minHeight:260,
+            }}>
+              {/* Cover bg */}
+              {effectiveCover?.imageUrl && (
+                <div style={{ position:"absolute", inset:0,
+                  backgroundImage:`url(${effectiveCover.imageUrl})`,
+                  backgroundSize:"cover", backgroundPosition:"center" }} />
+              )}
+              {/* Scrim */}
+              <div style={{ position:"absolute", inset:0,
+                background:"linear-gradient(180deg,rgba(0,0,0,0.3) 0%,rgba(0,0,0,0.75) 100%)" }} />
+
+              {/* Card content */}
+              <div style={{ position:"relative", padding:"28px 28px 24px", display:"flex",
+                flexDirection:"column", gap:16 }}>
+
+                {/* Top row — avatar + username + tier */}
+                <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                  <div style={{ width:56, height:56, borderRadius:"50%", flexShrink:0,
+                    background:"rgba(125,200,50,0.3)", border:"2px solid rgba(255,255,255,0.6)",
+                    display:"flex", alignItems:"center", justifyContent:"center", fontSize:26,
+                    overflow:"hidden" }}>
+                    {profileRow?.avatar_url
+                      ? <img src={profileRow.avatar_url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:"50%" }} />
+                      : (profileRow?.avatar_emoji||"🌿")
+                    }
+                  </div>
+                  <div>
+                    <div style={{ fontSize:18, fontWeight:800, color:"white", lineHeight:1 }}>
+                      @{username}
+                    </div>
+                    <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)", marginTop:3 }}>
+                      {tier.label} {tier.emoji}
+                    </div>
+                  </div>
+                  <div style={{ marginLeft:"auto", textAlign:"right" }}>
+                    <div style={{ fontSize:9, color:"rgba(255,255,255,0.6)", letterSpacing:"0.1em",
+                      textTransform:"uppercase", marginBottom:2 }}>Day</div>
+                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                      fontSize:48, fontWeight:700, color:"white", lineHeight:1 }}>{streak}</div>
+                  </div>
+                </div>
+
+                {/* Stats row */}
+                <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                  {[
+                    { label:"Streak",     value:`${streak}d` },
+                    { label:"Best",       value:`${best}d`   },
+                    { label:"Proofs",     value:subCount      },
+                    { label:"Grass Score",value:grassScore.toLocaleString() },
+                  ].map(s=>(
+                    <div key={s.label} style={{ background:"rgba(255,255,255,0.12)",
+                      backdropFilter:"blur(8px)", borderRadius:10, padding:"8px 12px",
+                      border:"1px solid rgba(255,255,255,0.2)", flex:"1 1 80px", minWidth:0 }}>
+                      <div style={{ fontSize:9, color:"rgba(255,255,255,0.6)",
+                        textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:2 }}>{s.label}</div>
+                      <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                        fontSize:18, fontWeight:700, color:"white" }}>{s.value}</div>
                     </div>
                   ))}
                 </div>
-              </div>
-              <div style={{ padding:"22px 24px" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-                  <div className="ct" style={{ margin:0 }}>Streak Heatmap</div>
-                  <span style={{ fontSize:9, color:T.olive, fontWeight:700, letterSpacing:"0.1em" }}>{streak} DAYS STRONG</span>
-                </div>
-                {loading ? <div className="skel" style={{ height:80 }} /> : <StreakHeatmap submissions={submissions} streak={streak} />}
-              </div>
-            </div>
 
-            {/* MOTTO + LOCATION */}
-            <div className="fade3" style={{ padding:"18px 24px", borderBottom:`1px solid ${T.border}`,
-              display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, flexWrap:"wrap" }}>
-              <div style={{ flex:1, minWidth:160 }}>
-                <div style={{ fontSize:8, letterSpacing:"0.18em", color:T.dim, textTransform:"uppercase", marginBottom:5 }}>I Touch Grass to...</div>
-                <div style={{ fontSize:15, color:T.muted, fontStyle:"italic", lineHeight:1.6, fontFamily:"'Cormorant Garamond',Georgia,serif" }}>
-                  {getQuote(streak, profileRow?.bio ?? "")}
-                </div>
-              </div>
-              {profileRow?.location && (
-                <div style={{ textAlign:"right" }}>
-                  <div style={{ fontSize:8, letterSpacing:"0.18em", color:T.dim, textTransform:"uppercase", marginBottom:5 }}>Favorite Spot</div>
-                  <div style={{ fontSize:11, color:T.muted }}>📍 {profileRow.location}</div>
-                </div>
-              )}
-            </div>
-
-            {/* COMMUNITY + CHALLENGES */}
-            <div className="fade3" style={{ display:"flex", borderBottom:`1px solid ${T.border}` }}>
-              {[
-                {icon:"🏆",value:chalDone,label:"Challenges Won"},
-                {icon:"⚡",value:chalSent,label:"Challenges Sent"},
-                {icon:"🌿",value:subCount,label:"Proofs Logged"},
-                {icon:"🔥",value:`${grassScore>=1000?(grassScore/1000).toFixed(1)+"K":grassScore}`,label:"Grass Score"},
-              ].map((s,i,arr)=>(
-                <div key={s.label} style={{ flex:1, display:"flex", flexDirection:"column",
-                  alignItems:"center", gap:5, padding:"16px 8px",
-                  borderRight:i<arr.length-1?`1px solid ${T.border}`:"none" }}>
-                  <span style={{ fontSize:20 }}>{s.icon}</span>
-                  <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:700, color:T.white, lineHeight:1 }}>{s.value}</span>
-                  <span style={{ fontSize:8.5, color:T.dim, letterSpacing:"0.1em", textTransform:"uppercase", textAlign:"center" }}>{s.label}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* COMMUNITY BUILDER */}
-            {(() => {
-              const refCount=profileRow?.referral_count_successful??0;
-              if(refCount===0)return null;
-              const RBADGES=[
-                {count:1,name:"Community Builder",emoji:"🤝"},
-                {count:5,name:"Grass Recruiter",emoji:"🌱"},
-                {count:10,name:"Community Cultivator",emoji:"🌿"},
-                {count:25,name:"Growth Leader",emoji:"🌳"},
-                {count:50,name:"Ecosystem Builder",emoji:"🏛"},
-                {count:100,name:"Grass Evangelist",emoji:"👑"},
-              ];
-              const badge=[...RBADGES].reverse().find(b=>refCount>=b.count);
-              const next=RBADGES.find(b=>refCount<b.count);
-              return (
-                <div className="fade3" style={{padding:"16px 24px",borderBottom:`1px solid ${T.border}`}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-                    <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.18em",textTransform:"uppercase",color:T.muted,display:"flex",alignItems:"center",gap:6}}>
-                      <span>🤝</span> Community Builder
-                    </div>
-                    {badge&&<span style={{fontSize:11,color:T.gold,fontWeight:600}}>{badge.emoji} {badge.name}</span>}
+                {/* Touch Grass branding */}
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <img src="/touchgrass-transparent.png" alt="" style={{ width:16, height:16, opacity:0.7 }} />
+                    <span style={{ fontSize:10, color:"rgba(255,255,255,0.5)", letterSpacing:"0.08em" }}>
+                      proofofgrass.app
+                    </span>
                   </div>
-                  <div style={{display:"flex",alignItems:"center",gap:16,marginTop:10}}>
-                    <div>
-                      <span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:700,color:T.gold}}>{refCount}</span>
-                      <span style={{fontSize:10,color:T.dim,marginLeft:5}}>successful referral{refCount!==1?"s":""}</span>
-                    </div>
-                    {next&&(
-                      <div style={{flex:1,minWidth:80}}>
-                        <div style={{fontSize:9,color:T.dim,marginBottom:4}}>Next: {next.emoji} {next.name}</div>
-                        <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:99,overflow:"hidden"}}>
-                          <div style={{height:"100%",borderRadius:99,background:`linear-gradient(90deg,${T.olive},${T.gold})`,width:`${Math.min(100,Math.round((refCount/next.count)*100))}%`}}/>
+                  <div style={{ fontSize:9, color:"rgba(255,255,255,0.4)", letterSpacing:"0.06em" }}>
+                    BUILT ON ◎ SOLANA
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── TABS ─────────────────────────────────────────────────────────── */}
+          <div style={{ display:"flex", gap:8, marginBottom:20, overflowX:"auto",
+            scrollbarWidth:"none", paddingBottom:4 }}>
+            {[
+              { id:"backgrounds", label:"🖼 Background Pack" },
+              { id:"layout",      label:"📐 Layout" },
+              { id:"badges",      label:"🏅 Badges" },
+              { id:"preview",     label:"👁 Preview" },
+            ].map(tab=>(
+              <button key={tab.id} onClick={()=>setActiveTab(tab.id)}
+                className={`fcs-tab ${activeTab===tab.id?"active":""}`}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── TAB CONTENT ──────────────────────────────────────────────────── */}
+
+          {/* Backgrounds tab */}
+          {activeTab==="backgrounds" && (
+            <div>
+              <div style={{ fontSize:13, fontWeight:600, color:"#6b7d60", marginBottom:16 }}>
+                Marketplace Backgrounds
+              </div>
+
+              {PACK_DEFS.map(pack=>{
+                const hasAny = pack.covers.some(c=>unlockedCovers.includes(c.slug));
+                return (
+                  <div key={pack.id} style={{ marginBottom:24 }}>
+                    {/* Pack header */}
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                      marginBottom:12 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <div style={{ width:36, height:36, borderRadius:10, background:pack.bg,
+                          display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>
+                          {pack.emoji}
+                        </div>
+                        <div>
+                          <div style={{ fontSize:14, fontWeight:700, color:"#1a4a0a" }}>{pack.name}</div>
+                          <div style={{ fontSize:11, color:"#6b7d60" }}>
+                            {hasAny?"Owned":"Not owned"} · {pack.covers.length} covers
+                          </div>
                         </div>
                       </div>
-                    )}
+                      {!hasAny && (
+                        <Link href="/marketplace"
+                          style={{ fontSize:12, fontWeight:700, color:"#5ba622",
+                            textDecoration:"none", background:"rgba(125,200,50,0.1)",
+                            border:"1px solid rgba(125,200,50,0.3)", borderRadius:20,
+                            padding:"5px 14px" }}>
+                          Buy Pack →
+                        </Link>
+                      )}
+                    </div>
+
+                    {/* Cover grid */}
+                    <div className="fcs-grid" style={{ display:"grid",
+                      gridTemplateColumns:"repeat(5,1fr)", gap:10 }}>
+                      {pack.covers.map(cover=>{
+                        const owned  = unlockedCovers.includes(cover.slug);
+                        const active = (profileRow?.active_cover_id===cover.slug)||
+                                       (previewCover?.slug===cover.slug);
+                        return (
+                          <div key={cover.slug}
+                            className={`fcs-cover-card ${active?"active":""}`}
+                            style={{ opacity:owned?1:0.4,
+                              cursor:owned?"pointer":"default",
+                              position:"relative" }}
+                            onClick={()=>{
+                              if(!owned) return;
+                              setPreviewCover(cover);
+                            }}>
+                            {/* Cover image */}
+                            <div style={{ height:70, background:cover.fallback, overflow:"hidden" }}>
+                              <img src={cover.imageUrl} alt={cover.name} loading="lazy"
+                                style={{ width:"100%", height:"100%", objectFit:"cover" }}
+                                onError={e=>{e.currentTarget.style.display="none";}} />
+                            </div>
+                            {/* Name */}
+                            <div style={{ padding:"6px 8px", background:"white",
+                              fontSize:9, fontWeight:600, color:"#1a4a0a",
+                              lineHeight:1.3 }}>{cover.name}</div>
+                            {/* Lock overlay */}
+                            {!owned && (
+                              <div style={{ position:"absolute", inset:0, display:"flex",
+                                alignItems:"center", justifyContent:"center",
+                                background:"rgba(255,255,255,0.5)", fontSize:18 }}>🔒</div>
+                            )}
+                            {/* Active check */}
+                            {active && owned && (
+                              <div style={{ position:"absolute", top:6, right:6, width:20, height:20,
+                                borderRadius:"50%", background:"#5ba622",
+                                display:"flex", alignItems:"center", justifyContent:"center",
+                                fontSize:10, color:"white" }}>✓</div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Milestone covers */}
+              <div style={{ marginBottom:24 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+                  <div style={{ width:36, height:36, borderRadius:10,
+                    background:"linear-gradient(135deg,#1a4a0a,#2d7a1a)",
+                    display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🌿</div>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:700, color:"#1a4a0a" }}>Milestone Covers</div>
+                    <div style={{ fontSize:11, color:"#6b7d60" }}>Unlocked by reaching streak milestones</div>
                   </div>
                 </div>
-              );
-            })()}
-
-            {/* ECOSYSTEM STATUS */}
-            <div className="fade3" style={{ padding:"18px 24px", borderBottom:`1px solid ${T.border}` }}>
-              <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:T.muted, marginBottom:14, display:"flex", alignItems:"center", gap:6 }}>
-                <span style={{ color:T.olive }}>🌱</span> Ecosystem Status
+                <div className="fcs-grid" style={{ display:"grid",
+                  gridTemplateColumns:"repeat(5,1fr)", gap:10 }}>
+                  {COVER_DEFINITIONS.filter(c=>!c.marketplaceOnly).map(cov=>{
+                    const owned  = unlockedCovers.includes(cov.slug);
+                    const active = (profileRow?.active_cover_id===cov.slug)||
+                                   (previewCover?.slug===cov.slug);
+                    return (
+                      <div key={cov.slug}
+                        className={`fcs-cover-card ${active?"active":""}`}
+                        style={{ opacity:owned?1:0.4,
+                          cursor:owned?"pointer":"default",
+                          position:"relative", borderRadius:12, overflow:"hidden",
+                          border:`2px solid ${active?"#5ba622":"rgba(200,220,190,0.5)"}` }}
+                        onClick={()=>{ if(owned) setPreviewCover(cov); }}>
+                        <div style={{ height:70, background:cov.fallback, overflow:"hidden" }}>
+                          {cov.imageUrl && (
+                            <img src={cov.imageUrl} alt={cov.name} loading="lazy"
+                              style={{ width:"100%", height:"100%", objectFit:"cover" }}
+                              onError={e=>{e.currentTarget.style.display="none";}} />
+                          )}
+                        </div>
+                        <div style={{ padding:"6px 8px", background:"white",
+                          fontSize:9, fontWeight:600, color:"#1a4a0a", lineHeight:1.3 }}>
+                          {cov.name}
+                          {!owned && <div style={{ fontSize:8, color:"#6b7d60" }}>Day {cov.unlockDay}</div>}
+                        </div>
+                        {active && owned && (
+                          <div style={{ position:"absolute", top:6, right:6, width:20, height:20,
+                            borderRadius:"50%", background:"#5ba622",
+                            display:"flex", alignItems:"center", justifyContent:"center",
+                            fontSize:10, color:"white" }}>✓</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap" }}>
-                {[
-                  {key:"hasTG",icon:"🪙",name:"$TOUCHGRASS HOLDER",label:profileRow?.has_touchgrass_holder?"VERIFIED HOLDER":"NOT VERIFIED",verified:profileRow?.has_touchgrass_holder,accent:T.gold,note:"Hold 100K+ $TOUCHGRASS to qualify"},
-                  {key:"hasGT",icon:"🌿",name:"GRASS TOUCHER",label:profileRow?.has_grass_toucher?"NFT HOLDER":"LOCKED",verified:profileRow?.has_grass_toucher,accent:T.olive,note:null},
-                  {key:"hasST",icon:"📱",name:"SCREEN TOUCHER",label:profileRow?.has_screen_toucher?"NFT HOLDER":"LOCKED",verified:profileRow?.has_screen_toucher,accent:"#a78bfa",note:null},
-                ].map(item=>(
-                  <div key={item.key} style={{ flex:"1 1 0", minWidth:0, borderRadius:10, padding:"12px 10px", textAlign:"center",
-                    background:item.verified?`${item.accent}0a`:T.bg3,
-                    border:`1px solid ${item.verified?item.accent+"50":T.border}`,
-                    opacity:item.verified?1:0.45 }}>
-                    <div style={{ fontSize:22, marginBottom:6 }}>{item.icon}</div>
-                    <div style={{ fontSize:10, fontWeight:700, color:item.verified?T.white:T.dim, letterSpacing:"0.04em", marginBottom:5 }}>{item.name}</div>
-                    <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
-                      color:item.verified?item.accent:T.dim,
-                      border:`1px solid ${item.verified?item.accent+"40":T.border}`,
-                      borderRadius:20, padding:"2px 7px", display:"inline-block" }}>
-                      {item.verified?"✓":"✗"} {item.label}
+            </div>
+          )}
+
+          {/* Layout tab */}
+          {activeTab==="layout" && (
+            <div style={{ padding:"32px", textAlign:"center", background:"white",
+              borderRadius:16, border:"1px solid rgba(200,220,190,0.5)" }}>
+              <div style={{ fontSize:32, marginBottom:12 }}>📐</div>
+              <div style={{ fontSize:16, fontWeight:700, color:"#1a4a0a", marginBottom:6 }}>Layout Options</div>
+              <div style={{ fontSize:13, color:"#6b7d60" }}>Coming soon — custom layouts are on the roadmap.</div>
+            </div>
+          )}
+
+          {/* Badges tab */}
+          {activeTab==="badges" && (
+            <div style={{ background:"white", borderRadius:16, padding:"20px",
+              border:"1px solid rgba(200,220,190,0.5)" }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
+                textTransform:"uppercase", color:"#6b7d60", marginBottom:16 }}>
+                Your Earned Badges
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:12 }}>
+                {earnedBadges.slice(0,12).map(b=>(
+                  <div key={b.id} style={{ display:"flex", flexDirection:"column",
+                    alignItems:"center", gap:6 }} title={b.name}>
+                    <div style={{ width:52, height:52, borderRadius:14,
+                      background:"rgba(125,200,50,0.1)", border:"1.5px solid rgba(125,200,50,0.3)",
+                      display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>
+                      {b.emoji}
                     </div>
-                    {!item.verified&&item.note&&<div style={{ fontSize:8, color:T.dim, marginTop:5, lineHeight:1.4 }}>{item.note}</div>}
+                    <div style={{ fontSize:8, fontWeight:600, color:"#1a4a0a",
+                      textAlign:"center", lineHeight:1.3 }}>{b.name}</div>
                   </div>
                 ))}
               </div>
-              {(() => {
-                const count=[profileRow?.has_touchgrass_holder,profileRow?.has_grass_toucher,profileRow?.has_screen_toucher].filter(Boolean).length;
-                const pct2=Math.round((count/3)*100);
-                return (
-                  <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap" }}>
-                    <div style={{ flex:1, minWidth:120 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
-                        <span style={{ fontSize:9, color:T.dim, letterSpacing:"0.12em", textTransform:"uppercase" }}>Ecosystem Completion</span>
-                        <span style={{ fontSize:11, fontWeight:700, color:count===3?T.gold:T.olive }}>{count}/3</span>
-                      </div>
-                      <div style={{ height:3, background:"rgba(255,255,255,0.06)", borderRadius:99, overflow:"hidden" }}>
-                        <div style={{ height:"100%", width:`${pct2}%`, borderRadius:99, background:`linear-gradient(90deg,${T.olive},${T.gold})`, transition:"width 1.2s ease" }} />
-                      </div>
-                    </div>
-                    {count===3&&<div style={{ fontSize:11, fontWeight:700, color:T.gold, letterSpacing:"0.06em", flexShrink:0 }}>👑 FULL ECOSYSTEM TOUCHER</div>}
-                  </div>
-                );
-              })()}
             </div>
+          )}
 
-            {/* FOOTER */}
-            <div className="fade3" style={{ padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-                <img src="/touchgrass-transparent.png" alt="" style={{ width:16, height:16, opacity:0.5 }} />
-                <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:12, color:T.dim, fontStyle:"italic" }}>
-                  {getQuote(streak, profileRow?.bio ?? "")}
-                </span>
+          {/* Preview tab */}
+          {activeTab==="preview" && (
+            <div style={{ background:"white", borderRadius:16, padding:"20px",
+              border:"1px solid rgba(200,220,190,0.5)" }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
+                textTransform:"uppercase", color:"#6b7d60", marginBottom:16 }}>
+                Card Preview
               </div>
-              <div style={{ fontSize:10, color:T.dim, letterSpacing:"0.1em" }}>#TouchGrass #ProofOfGrass · proofofgrass.app</div>
+              {loading ? (
+                <div className="skel" style={{ height:200 }} />
+              ) : (
+                <div style={{ fontSize:13, color:"#6b7d60", textAlign:"center", padding:"20px 0" }}>
+                  Your live card preview is shown above. Use the Backgrounds tab to change your skin.
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          {/* SHARE ACTIONS */}
-          <div className="fade3" style={{ display:"flex", gap:10, marginTop:20, justifyContent:"center", flexWrap:"wrap" }}>
-            <button onClick={flexToX} disabled={!cardReady} className="btn-share" style={{ opacity:!cardReady?0.5:1 }}>
-              <span style={{display:"flex",alignItems:"center",gap:7}}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                </svg>
-                {!cardReady ? "Preparing…" : "Flex to X"}
-              </span>
-            </button>
-            <button onClick={downloadCard} disabled={generatingImg} className="btn-ghost" style={{ opacity:generatingImg?0.7:1 }}>
-              {downloaded ? "✓ Downloaded!" : "↓ Save Card"}
-            </button>
-            <button onClick={copyLink} className="btn-ghost">
-              {copied ? "✓ Copied" : "↗ Copy Link"}
-            </button>
-            <Link href={`/u/${username}`} className="btn-ghost" style={{ textDecoration:"none" }}>← Full Profile</Link>
-          </div>
-          {downloaded && <p style={{ textAlign:"center", fontSize:11, color:"rgba(147,168,90,0.7)", marginTop:8 }}>Card saved to device ✓</p>}
+          {/* ── ACTION BUTTONS ────────────────────────────────────────────── */}
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:24 }}>
+            {/* Apply background */}
+            {previewCover && (
+              <button
+                onClick={async()=>{
+                  // Save active cover to profile
+                  await supabase.from("Profiles")
+                    .upsert({ username, active_cover_id:previewCover.slug }, { onConflict:"username" });
+                  setPreviewCover(null);
+                }}
+                style={{ background:"linear-gradient(135deg,#7dc832,#5ba622)",
+                  color:"white", border:"none", borderRadius:12, padding:"14px",
+                  fontSize:15, fontWeight:700, cursor:"pointer",
+                  boxShadow:"0 4px 16px rgba(125,200,50,0.35)", fontFamily:"DM Sans,sans-serif",
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                ✓ Apply Background
+              </button>
+            )}
 
+            {/* Preview Flex Card */}
+            <button onClick={flexToX} disabled={!cardReady}
+              style={{ background:cardReady?"linear-gradient(135deg,#7dc832,#5ba622)":"rgba(200,220,190,0.4)",
+                color:cardReady?"white":"#6b7d60", border:"none", borderRadius:12, padding:"14px",
+                fontSize:15, fontWeight:700, cursor:cardReady?"pointer":"default",
+                boxShadow:cardReady?"0 4px 16px rgba(125,200,50,0.35)":"none",
+                fontFamily:"DM Sans,sans-serif",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+              {!cardReady?"⏳ Building Card…":"🚀 Share Flex Card to X"}
+            </button>
+
+            {/* Download + copy */}
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={downloadCard} disabled={generatingImg}
+                style={{ flex:1, padding:"12px", borderRadius:12, cursor:"pointer",
+                  background:"white", border:"1.5px solid rgba(200,220,190,0.5)",
+                  color:"#1a4a0a", fontSize:13, fontWeight:600, fontFamily:"DM Sans,sans-serif" }}>
+                {downloaded?"✓ Downloaded!":"↓ Download Card"}
+              </button>
+              <button onClick={copyLink}
+                style={{ flex:1, padding:"12px", borderRadius:12, cursor:"pointer",
+                  background:"white", border:"1.5px solid rgba(200,220,190,0.5)",
+                  color:"#1a4a0a", fontSize:13, fontWeight:600, fontFamily:"DM Sans,sans-serif" }}>
+                {copied?"✓ Copied!":"↗ Copy Link"}
+              </button>
+            </div>
+
+            {/* View profile link */}
+            <Link href={`/u/${username}`}
+              style={{ textAlign:"center", fontSize:12, color:"#6b7d60",
+                textDecoration:"none", marginTop:4 }}>
+              ← Back to Profile
+            </Link>
+          </div>
         </div>
       </div>
     </>

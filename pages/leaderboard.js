@@ -1,479 +1,597 @@
-import { useEffect, useState } from "react";
+// pages/leaderboard.js — V2 Leaderboard (Mockup Match)
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import Head from "next/head";
 import { supabase } from "../utils/supabase";
+import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
-// ─── Tokens (match dashboard exactly) ────────────────────────────────────────
-const T = {
-  bg:      "#0e0f0b",
-  bg2:     "#141510",
-  bg3:     "#1c1e17",
-  border:  "rgba(255,255,255,0.07)",
-  borderG: "rgba(147,168,90,0.2)",
-  olive:   "#93a85a",
-  gold:    "#c8a84b",
-  white:   "#f0efea",
-  muted:   "rgba(240,239,234,0.50)",
-  dim:     "rgba(240,239,234,0.24)",
-};
+function norm(v) { return String(v ?? "").replace(/@/g, "").toLowerCase().trim(); }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function normalizeUsername(val) {
-  return String(val ?? "").replace(/@/g, "").toLowerCase().trim();
+const PAGE_SIZE = 20;
+
+// ── Tier logic ────────────────────────────────────────────────────────────────
+function getTier(n) {
+  if (n>=1000) return { label:"TRANSCENDENT", color:"#f0fdf4", emoji:"✨" };
+  if (n>=500)  return { label:"ASCENDED",     color:"#e0f2fe", emoji:"🌌" };
+  if (n>=365)  return { label:"ETERNAL",      color:"#fef9c3", emoji:"👑" };
+  if (n>=180)  return { label:"MYTHIC",       color:"#fbbf24", emoji:"⚡" };
+  if (n>=100)  return { label:"IMMORTAL",     color:"#f97316", emoji:"💯" };
+  if (n>=50)   return { label:"LEGENDARY",    color:"#c8a84b", emoji:"🌅" };
+  if (n>=30)   return { label:"ELITE",        color:"#a78bfa", emoji:"🌲" };
+  if (n>=14)   return { label:"LOCKED IN",    color:"#7dc832", emoji:"💧" };
+  if (n>=7)    return { label:"ROOTED",       color:"#b8c87a", emoji:"🌱" };
+  return             { label:"SEED",          color:"#6b7d60", emoji:"🌱" };
 }
 
-function getStreakTier(streak) {
-  if (streak >= 1000) return { label:"TRANSCENDENT", color:"#f0fdf4", border:"rgba(240,253,244,0.5)" };
-  if (streak >= 500)  return { label:"ASCENDED",     color:"#e0f2fe", border:"rgba(224,242,254,0.5)" };
-  if (streak >= 365)  return { label:"ETERNAL",      color:"#fff9c4", border:"#a08000" };
-  if (streak >= 180)  return { label:"MYTHIC",       color:"#fbbf24", border:"#92400e" };
-  if (streak >= 100)  return { label:"IMMORTAL",     color:"#f97316", border:"#7c2d12" };
-  if (streak >= 50)   return { label:"LEGENDARY",    color:T.gold,    border:"#7a5c00" };
-  if (streak >= 30)   return { label:"ELITE",        color:"#c084fc", border:"#6d28d9" };
-  if (streak >= 14)   return { label:"LOCKED IN",    color:T.olive,   border:"#4a5a28" };
-  if (streak >= 7)    return { label:"ROOTED",       color:"#b8c87a", border:"#5a6a30" };
-  if (streak >= 3)    return { label:"GROWING",      color:"#a0b870", border:"#4a5828" };
-  return { label:"SEED", color:"rgba(240,239,234,0.35)", border:"rgba(255,255,255,0.1)" };
-}
-
-function getNextTier(streak) {
-  const tiers = [3, 7, 14, 30, 50, 100, 180, 365, 500, 1000];
-  const next = tiers.find(t => streak < t);
+function getNextMilestone(streak) {
+  const ths = [7,14,30,50,100,180,365,500,1000];
+  const names = {7:"ROOTED",14:"LOCKED IN",30:"ELITE",50:"LEGENDARY",
+    100:"IMMORTAL",180:"MYTHIC",365:"ETERNAL",500:"ASCENDED",1000:"TRANSCENDENT"};
+  const next = ths.find(t => t > streak);
   if (!next) return null;
-  return { days: next, remaining: next - streak };
+  return { days: next - streak, name: names[next] };
 }
 
-function getTopPercent(streak) {
-  if (streak >= 30) return 1;
-  if (streak >= 14) return 5;
-  if (streak >= 7)  return 10;
-  return null;
-}
-
-// Leaderboard built from Streaks as source of truth.
-// sortBy: 'grass_score' (default/main) | 'current_streak' | 'referral_count'
-function buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, avatarMap, filterFn, sortBy = "grass_score") {
-  return (streaks || [])
-    .filter(s => normalizeUsername(s.username))
-    .filter(filterFn ?? (() => true))
-    .map(s => {
-      const u = normalizeUsername(s.username);
-      return {
-        username: u,
-        current_streak: s.current_streak ?? 1,
-        best_streak: s.best_streak ?? 1,
-        grass_score: scoreMap?.[u] ?? 0,
-        referral_count: referralMap?.[u] ?? 0,
-        avatar_url: avatarMap?.[u] ?? null,
-        count: countMap[u] ?? 0,
-        created_at: dateMap[u] ?? s.last_submission_date ?? new Date(0).toISOString(),
-      };
-    })
-    .sort((a, b) => b[sortBy] - a[sortBy]);
-}
-
-// ─── Card component ───────────────────────────────────────────────────────────
-function LBCard({ item, index, board }) {
-  const tier   = getStreakTier(item.current_streak);
-  const topPct = getTopPercent(item.current_streak);
-  const nextTier = getNextTier(item.current_streak);
-  const thresholds = [0, 3, 7, 14, 30, 50, 100, 180, 365, 500, 1000];
-  const prev  = [...thresholds].reverse().find(t => item.current_streak >= t) ?? 0;
-  const nextT = nextTier?.days ?? 365;
-  const fill  = nextT - prev > 0 ? Math.min(100, Math.round(((item.current_streak - prev) / (nextT - prev)) * 100)) : 100;
-  const barLabel = !nextTier ? "✦ transcendent" : `${nextTier.remaining}d to ${getStreakTier(nextTier.days).label}`;
-  const medals = ["🥇","🥈","🥉"];
-
+// ── Skeleton row ──────────────────────────────────────────────────────────────
+function SkelRow() {
   return (
-    <div className="lb-card" style={{
-      overflow:"hidden",
-      borderRadius:12,
-      background: T.bg2,
-      border: `1px solid ${index === 0 ? tier.color : tier.border}`,
-      boxShadow: index === 0 ? `0 0 24px ${tier.color}22` :
-                 item.current_streak >= 100 ? "0 0 16px rgba(249,115,22,0.1)" :
-                 item.current_streak >= 50  ? "0 0 14px rgba(200,168,75,0.1)" : "none",
-      transition:"transform 0.2s, box-shadow 0.2s",
-      cursor:"pointer",
-    }}
-    onClick={() => window.location.href = `/u/${item.username}`}
-    onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow=`0 8px 28px ${tier.color}18`; }}
-    onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow=""; }}
-    >
-      {/* Top accent line */}
-      <div style={{ height:2, flexShrink:0, background:`linear-gradient(90deg,transparent,${tier.color},transparent)`, opacity:0.5 }} />
-
-      <div style={{ flex:1, padding:14, display:"flex", flexDirection:"column", gap:8 }}>
-        {/* Rank + tier */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:700, color:tier.color, lineHeight:1 }}>
-            {medals[index] ?? `#${index+1}`}
-          </span>
-          <span style={{ fontSize:8, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase",
-            color:"#fff", border:`1px solid ${tier.color}`, borderRadius:4,
-            padding:"2px 6px", background:`${tier.color}22`,
-            textShadow:`0 0 6px ${tier.color}`, whiteSpace:"nowrap" }}>
-            {tier.label}
-          </span>
-        </div>
-
-        {/* Avatar + Username — links to public profile */}
-        <Link href={`/u/${item.username}`} onClick={e => e.stopPropagation()}
-          style={{ display:"flex", alignItems:"center", gap:8, textDecoration:"none",
-          transition:"color 0.15s", minWidth:0 }}
-          onMouseEnter={e => { e.currentTarget.querySelector('.lb-username').style.color = tier.color; }}
-          onMouseLeave={e => { e.currentTarget.querySelector('.lb-username').style.color = T.white; }}>
-          {item.avatar_url ? (
-            <img src={item.avatar_url} alt="" loading="lazy" className="lb-avatar"
-              style={{ width:44, height:44, borderRadius:"50%", objectFit:"cover",
-                border:`1px solid ${T.borderG}`, flexShrink:0, background:T.bg3 }} />
-          ) : (
-            <div className="lb-avatar" style={{ width:44, height:44, borderRadius:"50%",
-              border:`1px solid ${T.borderG}`, flexShrink:0, background:T.bg3,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:18, fontWeight:700,
-              color:T.olive }}>
-              {item.username?.[0]?.toUpperCase() ?? "?"}
-            </div>
-          )}
-          <span className="lb-username" style={{ fontSize:14, fontWeight:600, color:T.white,
-            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-            fontFamily:"'DM Sans',sans-serif", transition:"color 0.15s" }}>
-            @{item.username}
-          </span>
-        </Link>
-
-        {/* Primary ranking metric — depends on active board */}
-        <div style={{ display:"flex", alignItems:"baseline", gap:5, marginTop:"auto" }}>
-          {board === "current_streak" ? (
-            <>
-              <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:700,
-                lineHeight:1, color:tier.color, textShadow:`0 0 16px ${tier.color}60` }}>
-                🔥 {item.current_streak}
-              </span>
-              <span style={{ fontSize:11, color:T.dim, fontWeight:500 }}>
-                day{item.current_streak !== 1 ? "s" : ""}
-              </span>
-            </>
-          ) : board === "referral_count" ? (
-            <>
-              <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:700,
-                lineHeight:1, color:tier.color, textShadow:`0 0 16px ${tier.color}60` }}>
-                🤝 {item.referral_count}
-              </span>
-              <span style={{ fontSize:11, color:T.dim, fontWeight:500 }}>
-                referral{item.referral_count !== 1 ? "s" : ""}
-              </span>
-            </>
-          ) : (
-            <>
-              <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:700,
-                lineHeight:1, color:tier.color, textShadow:`0 0 16px ${tier.color}60` }}>
-                🌱 {(item.grass_score ?? 0).toLocaleString()}
-              </span>
-              <span style={{ fontSize:11, color:T.dim, fontWeight:500 }}>
-                grass score
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Secondary stats — always show streak + grass score + referrals for context */}
-        <div style={{ display:"flex", gap:10, fontSize:11, color:T.muted, flexWrap:"wrap" }}>
-          {board !== "current_streak" && (
-            <span>🔥 {item.current_streak}d <span style={{color:T.dim}}>· best {item.best_streak}</span></span>
-          )}
-          {board === "current_streak" && (
-            <span>🏆 best {item.best_streak}d</span>
-          )}
-          {board !== "grass_score" && (
-            <span style={{ color:T.dim }}>· 🌱 {(item.grass_score ?? 0).toLocaleString()}</span>
-          )}
-          {board !== "referral_count" && item.referral_count > 0 && (
-            <span style={{ color:T.dim }}>· 🤝 {item.referral_count}</span>
-          )}
-        </div>
-
-        {/* Progress bar */}
-        <div style={{ height:3, borderRadius:99, overflow:"hidden", background:"rgba(255,255,255,0.08)" }}>
-          <div style={{ height:"100%", width:`${fill}%`, borderRadius:99,
-            background:`linear-gradient(90deg,${tier.color}80,${tier.color})`,
-            boxShadow:`0 0 6px ${tier.color}60`, transition:"width 1s ease" }} />
-        </div>
-        <div style={{ fontSize:9, color:T.dim, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{barLabel}</div>
-
-        {/* Top % badge */}
-        {topPct !== null && (
-          <span style={{ alignSelf:"flex-start", fontSize:9, fontWeight:700,
-            letterSpacing:"0.1em", textTransform:"uppercase", color:"#fff",
-            border:`1px solid ${tier.color}`, borderRadius:4, padding:"2px 6px",
-            background:`${tier.color}18` }}>
-            ✦ top {topPct}%
-          </span>
-        )}
+    <div style={{ display:"flex", alignItems:"center", gap:14, padding:"16px 20px",
+      borderBottom:`1px solid ${V2.borderSoft}` }}>
+      <div style={{ width:32, height:32, borderRadius:8, background:"rgba(200,220,190,0.3)" }} />
+      <div style={{ width:48, height:48, borderRadius:"50%", background:"rgba(200,220,190,0.3)", flexShrink:0 }} />
+      <div style={{ flex:1, display:"flex", flexDirection:"column", gap:6 }}>
+        <div style={{ height:14, width:"40%", borderRadius:4, background:"rgba(200,220,190,0.3)" }} />
+        <div style={{ height:10, width:"25%", borderRadius:4, background:"rgba(200,220,190,0.2)" }} />
       </div>
+      <div style={{ height:32, width:80, borderRadius:8, background:"rgba(200,220,190,0.2)" }} />
     </div>
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
-export default function Leaderboard() {
-  const [tab,        setTab]        = useState("alltime");
-  const [board,      setBoard]      = useState("grass_score"); // 'grass_score' | 'current_streak' | 'referral_count'
-  const [data,       setData]       = useState([]);
-  const [weeklyData, setWeeklyData] = useState([]);
-  const [rankQuery,  setRankQuery]  = useState("");
-  const [loading,    setLoading]    = useState(true);
+// ── Medal ─────────────────────────────────────────────────────────────────────
+function Medal({ rank }) {
+  if (rank === 1) return <div style={{ fontSize:28, width:36, textAlign:"center" }}>🥇</div>;
+  if (rank === 2) return <div style={{ fontSize:28, width:36, textAlign:"center" }}>🥈</div>;
+  if (rank === 3) return <div style={{ fontSize:28, width:36, textAlign:"center" }}>🥉</div>;
+  return <div style={{ width:36, textAlign:"center", fontFamily:V2.fontSerif,
+    fontSize:16, fontWeight:700, color:V2.midGray }}>{rank}</div>;
+}
 
-  const BOARDS = [
-    { key:"grass_score",    label:"🏆 Grass Score",      sub:"Overall progression" },
-    { key:"current_streak", label:"🔥 Streaks",           sub:"Consistency" },
-    { key:"referral_count", label:"🤝 Community Builder", sub:"Referrals" },
-  ];
+// ── Leaderboard row ───────────────────────────────────────────────────────────
+function LBRow({ row, rank, lbType, isCurrentUser }) {
+  const tier = getTier(row.current_streak ?? row.best_streak ?? 0);
+  const next = getNextMilestone(row.current_streak ?? 0);
+  const streak = lbType === "streaks" ? (row.current_streak ?? 0) : (row.best_streak ?? 0);
+  const gs = row.grass_score ?? 0;
+  const refs = row.referral_count_successful ?? 0;
+  const rankColors = { 1:"rgba(200,168,75,0.08)", 2:"rgba(180,180,180,0.08)", 3:"rgba(205,127,50,0.08)" };
+  const rankBorders = { 1:"rgba(200,168,75,0.3)", 2:"rgba(180,180,180,0.3)", 3:"rgba(205,127,50,0.3)" };
+
+  return (
+    <Link href={`/u/${row.username}`} style={{ textDecoration:"none", display:"block" }}>
+      <div style={{
+        display:"flex", alignItems:"center", gap:12, padding:"14px 20px",
+        borderBottom:`1px solid ${V2.borderSoft}`,
+        background: isCurrentUser
+          ? "rgba(125,200,50,0.08)"
+          : rankColors[rank] || "white",
+        borderLeft: isCurrentUser
+          ? `3px solid ${V2.grassGreen}`
+          : rank <= 3 ? `3px solid ${rankBorders[rank]}` : "3px solid transparent",
+        transition:"background 0.15s",
+      }}
+      onMouseEnter={e=>e.currentTarget.style.background=isCurrentUser?"rgba(125,200,50,0.12)":"rgba(125,200,50,0.04)"}
+      onMouseLeave={e=>e.currentTarget.style.background=isCurrentUser?"rgba(125,200,50,0.08)":rankColors[rank]||"white"}>
+
+        {/* Rank / Medal */}
+        <Medal rank={rank} />
+
+        {/* Avatar */}
+        <div style={{ width:48, height:48, borderRadius:"50%", flexShrink:0,
+          background:`linear-gradient(135deg,${V2.grassGreen}40,${V2.grassGreen}20)`,
+          border:`2px solid ${rank===1?"rgba(200,168,75,0.5)":rank===2?"rgba(180,180,180,0.5)":rank===3?"rgba(205,127,50,0.5)":V2.borderSoft}`,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:20, overflow:"hidden" }}>
+          {row.avatar_url
+            ? <img src={row.avatar_url} alt="" loading="lazy"
+                style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:"50%" }}
+                onError={e=>{ e.currentTarget.style.display="none"; }} />
+            : (row.avatar_emoji || row.username?.[0]?.toUpperCase() || "🌿")
+          }
+        </div>
+
+        {/* Username + tier */}
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:15, fontWeight:700, color:V2.forestGreen,
+            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+            @{row.username}
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:3, flexWrap:"wrap" }}>
+            <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em",
+              background:`${tier.color}30`, color:V2.forestGreen,
+              border:`1px solid ${tier.color}60`, borderRadius:20, padding:"2px 8px" }}>
+              {tier.emoji} {tier.label}
+            </span>
+            {next && (
+              <span style={{ fontSize:10, color:V2.midGray }}>
+                · {next.days}d to {next.name}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Secondary stats — hidden on very small screens */}
+        <div style={{ display:"flex", gap:16, flexShrink:0 }} className="lb-secondary">
+          {lbType !== "community" && (
+            <div style={{ textAlign:"center", minWidth:56 }}>
+              <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen }}>
+                🔥 {streak}d
+              </div>
+              <div style={{ fontSize:9, color:V2.midGray, textTransform:"uppercase",
+                letterSpacing:"0.08em" }}>
+                {lbType === "streaks" ? "Streak" : "Best Streak"}
+              </div>
+            </div>
+          )}
+          {lbType !== "community" && (
+            <div style={{ textAlign:"center", minWidth:48 }}>
+              <div style={{ fontSize:14, fontWeight:700, color:V2.gold }}>
+                🤝 {refs}
+              </div>
+              <div style={{ fontSize:9, color:V2.midGray, textTransform:"uppercase",
+                letterSpacing:"0.08em" }}>Referrals</div>
+            </div>
+          )}
+          {lbType === "community" && (
+            <div style={{ textAlign:"center", minWidth:56 }}>
+              <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen }}>
+                🔥 {streak}d
+              </div>
+              <div style={{ fontSize:9, color:V2.midGray, textTransform:"uppercase",
+                letterSpacing:"0.08em" }}>Streak</div>
+            </div>
+          )}
+        </div>
+
+        {/* Primary score */}
+        <div style={{ flexShrink:0, textAlign:"right",
+          background:`${V2.grassGreen}10`,
+          border:`1px solid ${V2.borderGreen}`,
+          borderRadius:12, padding:"8px 14px", minWidth:90 }}>
+          <div style={{ fontFamily:V2.fontSerif,
+            fontSize:lbType==="community"?20:18, fontWeight:700,
+            color:V2.forestGreen, lineHeight:1 }}>
+            🌱 {lbType==="community"
+              ? refs
+              : lbType==="streaks"
+                ? `${streak}d`
+                : gs.toLocaleString()}
+          </div>
+          <div style={{ fontSize:9, color:V2.midGray, textTransform:"uppercase",
+            letterSpacing:"0.08em", marginTop:2 }}>
+            {lbType==="community" ? "referrals" : lbType==="streaks" ? "streak" : "grass score"}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function Leaderboard() {
+  const [lbType,      setLbType]      = useState("grass_score");
+  const [timeFilter,  setTimeFilter]  = useState("all");
+  const [rows,        setRows]        = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page,        setPage]        = useState(0);
+  const [hasMore,     setHasMore]     = useState(true);
+  const [error,       setError]       = useState("");
+
+  const [rankInput,   setRankInput]   = useState("");
+  const [rankResult,  setRankResult]  = useState(null);
+  const [rankLoading, setRankLoading] = useState(false);
+  const [rankError,   setRankError]   = useState("");
+  const [currentUser, setCurrentUser] = useState("");
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const weekStart = new Date();
-      weekStart.setUTCHours(0,0,0,0);
-      weekStart.setUTCDate(weekStart.getUTCDate() - 6);
+    const saved = typeof window !== "undefined" ? localStorage.getItem("pog_username") : null;
+    if (saved) { setCurrentUser(norm(saved)); setRankInput(norm(saved)); }
+  }, []);
 
-      const [{ data: streaks }, { data: subs }, { data: profiles }] = await Promise.all([
-        supabase.from("Streaks").select("username,current_streak,best_streak,last_submission_date"),
-        supabase.from("Submissions").select("username,created_at").in("status",["pending","approved"]).order("created_at",{ascending:false}),
-        supabase.from("Profiles").select("username,grass_score,referral_count_successful,avatar_url"),
+  const fetchRows = useCallback(async (reset = false) => {
+    if (reset) { setLoading(true); setRows([]); setPage(0); setHasMore(true); }
+    else setLoadingMore(true);
+    setError("");
+
+    const offset = reset ? 0 : page * PAGE_SIZE;
+
+    try {
+      let query;
+      if (lbType === "grass_score") {
+        query = supabase.from("Profiles")
+          .select("username,grass_score,avatar_url,avatar_emoji,referral_count_successful")
+          .order("grass_score", { ascending:false })
+          .range(offset, offset + PAGE_SIZE - 1);
+      } else if (lbType === "streaks") {
+        query = supabase.from("Streaks")
+          .select("username,current_streak,best_streak")
+          .order("current_streak", { ascending:false })
+          .range(offset, offset + PAGE_SIZE - 1);
+      } else {
+        query = supabase.from("Profiles")
+          .select("username,referral_count_successful,grass_score,avatar_url,avatar_emoji")
+          .order("referral_count_successful", { ascending:false })
+          .range(offset, offset + PAGE_SIZE - 1);
+      }
+
+      const { data, error: err } = await query;
+      if (err) throw err;
+
+      // For streaks, join grass_score from Profiles
+      let enriched = data || [];
+      if (lbType === "streaks" && enriched.length > 0) {
+        const usernames = enriched.map(r => r.username);
+        const { data: profiles } = await supabase.from("Profiles")
+          .select("username,grass_score,avatar_url,avatar_emoji,referral_count_successful")
+          .in("username", usernames);
+        const profileMap = Object.fromEntries((profiles||[]).map(p=>[norm(p.username),p]));
+        enriched = enriched.map(r => ({ ...r, ...profileMap[norm(r.username)] }));
+      }
+
+      if (reset) {
+        setRows(enriched);
+      } else {
+        setRows(prev => [...prev, ...enriched]);
+      }
+      setHasMore(enriched.length === PAGE_SIZE);
+      setPage(reset ? 1 : page + 1);
+    } catch(e) {
+      setError("Couldn't load the leaderboard. Try again.");
+    }
+
+    setLoading(false); setLoadingMore(false);
+  }, [lbType, timeFilter, page]);
+
+  useEffect(() => { fetchRows(true); }, [lbType, timeFilter]);
+
+  const checkRank = useCallback(async () => {
+    const u = norm(rankInput);
+    if (!u) return;
+    setRankLoading(true); setRankError(""); setRankResult(null);
+    try {
+      const [{ data:pr }, { data:sr }, { data:allGs }] = await Promise.all([
+        supabase.from("Profiles").select("grass_score,referral_count_successful,avatar_url")
+          .ilike("username",u).maybeSingle(),
+        supabase.from("Streaks").select("current_streak,best_streak")
+          .ilike("username",u).maybeSingle(),
+        supabase.from("Profiles").select("username,grass_score")
+          .order("grass_score",{ascending:false}),
       ]);
-
-      const scoreMap = {}, referralMap = {}, avatarMap = {};
-      (profiles || []).forEach(p => {
-        const u = normalizeUsername(p.username);
-        scoreMap[u] = p.grass_score ?? 0;
-        referralMap[u] = p.referral_count_successful ?? 0;
-        avatarMap[u] = p.avatar_url || null;
+      if (!pr && !sr) { setRankError("Username not found."); setRankLoading(false); return; }
+      const rank = (allGs||[]).findIndex(r=>norm(r.username)===u) + 1;
+      const pct  = allGs?.length ? ((rank/allGs.length)*100).toFixed(1) : "—";
+      setRankResult({
+        username:u, rank, total:allGs?.length||0, pct,
+        grassScore: pr?.grass_score ?? 0,
+        bestStreak: sr?.best_streak ?? 0,
+        currentStreak: sr?.current_streak ?? 0,
+        refs: pr?.referral_count_successful ?? 0,
+        avatarUrl: pr?.avatar_url ?? null,
       });
+    } catch(e) { setRankError("Failed to load rank."); }
+    setRankLoading(false);
+  }, [rankInput]);
 
-      const countMap = {}, dateMap = {}, weeklySet = new Set();
-      (subs || []).forEach(r => {
-        const u = normalizeUsername(r.username);
-        countMap[u] = (countMap[u] ?? 0) + 1;
-        if (!dateMap[u] || new Date(r.created_at) > new Date(dateMap[u])) dateMap[u] = r.created_at;
-        if (new Date(r.created_at) >= weekStart) weeklySet.add(u);
-      });
-
-      setData(buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, avatarMap, null, board));
-      setWeeklyData(buildLeaderboard(streaks, countMap, dateMap, scoreMap, referralMap, avatarMap, s => weeklySet.has(normalizeUsername(s.username)), board));
-      setLoading(false);
-    })();
-  }, [board]);
-
-  const activeData = tab === "alltime" ? data : weeklyData;
-  const normalizedQ = normalizeUsername(rankQuery);
-  const rankResult = normalizedQ
-    ? (() => {
-        const idx = activeData.findIndex(r => normalizeUsername(r.username) === normalizedQ);
-        return idx === -1 ? null : { rank: idx + 1, ...activeData[idx] };
-      })()
-    : undefined;
-
-  const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html{scroll-behavior:smooth;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
-    ::-webkit-scrollbar{width:4px;}
-    ::-webkit-scrollbar-track{background:${T.bg};}
-    ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
-    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
-    .tab-btn{border:1px solid ${T.border};border-radius:6px;padding:8px 20px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;transition:all 0.2s;}
-    .tab-active{background:${T.olive};color:#0e1108;border-color:${T.olive};}
-    .tab-inactive{background:transparent;color:${T.dim};}
-    .tab-inactive:hover{border-color:${T.olive};color:${T.olive};}
-    .rank-input{width:100%;background:${T.bg3};border:none;border-bottom:1px solid ${T.border};padding:10px 0;color:${T.white};font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;}
-    .rank-input:focus{border-bottom-color:${T.olive};}
-    .rank-input::placeholder{color:${T.dim};}
-    /* Mobile nav — hide middle links, show only logo + back */
-    @media(max-width:640px){
-      .nav-links{display:none !important;}
-      .lb-grid{grid-template-columns:1fr !important;}
-      .lb-avatar{width:38px !important;height:38px !important;}
+  const css = V2GlobalCSS + `
+    .lb-type-btn { padding:12px 18px; border-radius:14px; cursor:pointer;
+      border:1.5px solid ${V2.borderSoft}; font-family:${V2.fontSans};
+      font-size:13px; font-weight:600; transition:all 0.15s; white-space:nowrap; }
+    .lb-type-btn.active { background:${V2.grassGreen}; color:white;
+      border-color:${V2.grassGreen}; box-shadow:0 2px 12px rgba(125,200,50,0.3); }
+    .lb-type-btn.inactive { background:white; color:${V2.forestGreen}; }
+    .lb-time-btn { padding:8px 16px; border-radius:20px; cursor:pointer;
+      border:1.5px solid ${V2.borderSoft}; font-family:${V2.fontSans};
+      font-size:12px; font-weight:600; transition:all 0.15s; white-space:nowrap; }
+    .lb-time-btn.active { background:${V2.forestGreen}; color:white; border-color:${V2.forestGreen}; }
+    .lb-time-btn.inactive { background:white; color:${V2.forestGreen}; }
+    .lb-time-btn.soon { opacity:0.4; cursor:default; }
+    @media(max-width:600px) {
+      .lb-secondary { display:none !important; }
     }
-    /* Tablet — 2 columns */
-    @media(min-width:641px) and (max-width:900px){
-      .lb-grid{grid-template-columns:1fr 1fr !important;}
-    }
-    /* Equal height cards via grid row alignment */
-    .lb-grid > a { display:flex; }
-    .lb-card { display:flex; flex-direction:column; width:100%; }
   `;
+
+  const LB_TYPES = [
+    { id:"grass_score", icon:"🌿", label:"Grass Score",       sub:"Overall progression" },
+    { id:"streaks",     icon:"🔥", label:"Streaks",           sub:"Consistency"         },
+    { id:"community",   icon:"🤝", label:"Community Builder", sub:"Referrals"           },
+  ];
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div style={{ minHeight:"100vh", background:T.bg }}>
+      <Head>
+        <title>Outdoor Leaderboard | Proof of Grass</title>
+        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+      </Head>
+      <style dangerouslySetInnerHTML={{ __html:css }} />
 
-        {/* NAV */}
-        <nav style={{ position:"sticky", top:0, zIndex:100, display:"flex", alignItems:"center",
-          justifyContent:"space-between", padding:"0 clamp(14px,4vw,48px)", height:56,
-          background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}`,
-          gap:12 }}>
-          <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width:26, height:26, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
+      <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>
+
+        {/* ── NAV ──────────────────────────────────────────────────────────── */}
+        <nav style={{ position:"sticky", top:0, zIndex:200, height:64,
+          display:"flex", alignItems:"center", padding:"0 clamp(14px,4vw,40px)", gap:20,
+          background:"rgba(255,255,255,0.95)", backdropFilter:"blur(20px)",
+          borderBottom:`1px solid ${V2.borderSoft}`,
+          boxShadow:"0 2px 16px rgba(26,74,10,0.07)" }}>
+          <Link href="/" style={{ display:"flex", alignItems:"center", gap:10,
+            textDecoration:"none", flexShrink:0 }}>
+            <img src="/touchgrass-transparent.png" alt="" style={{ width:36, height:36, objectFit:"contain" }} />
+            <span style={{ fontFamily:V2.fontSans, fontSize:16, fontWeight:800, color:V2.forestGreen }}>
+              Touch Grass <span style={{ fontWeight:400, opacity:0.5 }}>| Proof of Grass</span>
+            </span>
           </Link>
-          <div className="nav-links" style={{ display:"flex", gap:24, alignItems:"center" }}>
-            <Link href="/" style={{ fontSize:13, color:T.dim, textDecoration:"none", fontWeight:500 }}>Dashboard</Link>
-            <span style={{ fontSize:13, color:T.olive, fontWeight:600 }}>Leaderboard</span>
-            <a href="https://touchgrass.today" style={{ fontSize:13, color:T.dim, textDecoration:"none", fontWeight:500 }} target="_blank" rel="noopener noreferrer">Website</a>
+          <div style={{ display:"flex", gap:4, flex:1, overflowX:"auto", scrollbarWidth:"none" }}>
+            {[["Dashboard","/"],["Leaderboard","/leaderboard"],["Grass Draw","/grass-draw"],["Marketplace","/marketplace"]].map(([l,h])=>(
+              <Link key={l} href={h} style={{ fontSize:13, fontWeight:l==="Leaderboard"?700:500,
+                color:l==="Leaderboard"?V2.grassGreen:V2.forestGreen,
+                textDecoration:"none", padding:"6px 12px", borderRadius:20, whiteSpace:"nowrap" }}>{l}</Link>
+            ))}
           </div>
-          <Link href="/" style={{ fontSize:11, color:T.olive, textDecoration:"none", letterSpacing:"0.06em", flexShrink:0, whiteSpace:"nowrap" }}>← Back</Link>
+          {currentUser && (
+            <Link href={`/u/${currentUser}`} style={{ display:"flex", alignItems:"center", gap:8,
+              background:"white", border:`1px solid ${V2.borderSoft}`, borderRadius:20,
+              padding:"6px 14px", textDecoration:"none", flexShrink:0 }}>
+              <span style={{ fontSize:16 }}>🌿</span>
+              <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{currentUser}</span>
+            </Link>
+          )}
         </nav>
 
-        {/* HERO HEADER */}
-        <div style={{ padding:"48px clamp(14px,5vw,64px) 0", borderBottom:`1px solid ${T.border}` }}>
-          <div style={{ fontSize:10, letterSpacing:"0.22em", color:T.olive, textTransform:"uppercase", marginBottom:12, fontWeight:600 }}>Community</div>
-          <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(36px,6vw,72px)", fontWeight:700, color:T.white, lineHeight:1, letterSpacing:"-0.02em", marginBottom:12 }}>
-            The Outdoor<br />Leaderboard
-          </h1>
-          <p style={{ fontSize:14, color:T.dim, marginBottom:32, fontWeight:300, maxWidth:420, lineHeight:1.7 }}>
-            {board === "current_streak"
-              ? "Real streaks. Real people. Going outside every day."
-              : board === "referral_count"
-              ? "Bring people outside. Build the movement."
-              : "Daily proofs, milestones, badges, and referrals — every contribution counts."}
-          </p>
+        {/* ── HERO ─────────────────────────────────────────────────────────── */}
+        <div style={{ position:"relative", overflow:"hidden", minHeight:500,
+          background:"linear-gradient(160deg,#c5e3f7 0%,#d8f0e8 60%,#e8f4fd 100%)",
+          padding:"40px clamp(14px,4vw,48px) 32px" }}>
 
-          {/* BOARD SELECTOR — three competitions */}
-          <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
-            {BOARDS.map(b => (
-              <button
-                key={b.key}
-                className={`tab-btn ${board===b.key ? "tab-active" : "tab-inactive"}`}
-                onClick={() => setBoard(b.key)}
-                style={{ display:"flex", flexDirection:"column", alignItems:"flex-start",
-                  gap:2, padding:"10px 18px", height:"auto" }}
-              >
-                <span>{b.label}</span>
-                <span style={{ fontSize:8, letterSpacing:"0.08em", textTransform:"none",
-                  opacity:0.7, fontWeight:500 }}>{b.sub}</span>
-              </button>
-            ))}
+          {/* Banner image */}
+          <div style={{ position:"absolute", inset:0, pointerEvents:"none" }}>
+            <img src="/leaderboard-banner.png" alt=""
+              style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }} />
           </div>
+          {/* Overlay */}
+          <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+            background:"linear-gradient(90deg,rgba(197,227,247,0.95) 0%,rgba(197,227,247,0.80) 55%,rgba(197,227,247,0.15) 100%)" }} />
 
-          {/* Tabs */}
-          <div style={{ display:"flex", gap:8, marginBottom:32 }}>
-            <button className={`tab-btn ${tab==="alltime" ? "tab-active" : "tab-inactive"}`} onClick={() => setTab("alltime")}>All Time</button>
-            <button className={`tab-btn ${tab==="weekly"  ? "tab-active" : "tab-inactive"}`} onClick={() => setTab("weekly")}>This Week</button>
-            <button className={`tab-btn ${tab==="friends" ? "tab-active" : "tab-inactive"}`} onClick={() => setTab("friends")} style={{ position:"relative" }}>
-              Friends
-              <span style={{ fontSize:7, fontWeight:700, color:"#c8a84b",
-                background:"rgba(200,168,75,0.15)", border:"1px solid rgba(200,168,75,0.35)",
-                borderRadius:3, padding:"1px 4px", marginLeft:5,
-                letterSpacing:"0.08em", verticalAlign:"middle" }}>SOON</span>
-            </button>
-          </div>
-        </div>
+          <div style={{ position:"relative", maxWidth:560 }}>
+            {/* Community badge */}
+            <div style={{ display:"inline-flex", alignItems:"center", gap:8, marginBottom:16,
+              background:"rgba(255,255,255,0.85)", border:`1px solid ${V2.borderGreen}`,
+              borderRadius:20, padding:"6px 16px" }}>
+              <span style={{ fontSize:14 }}>🌿</span>
+              <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em",
+                textTransform:"uppercase", color:V2.grassGreen }}>Community</span>
+            </div>
 
-        <div style={{ padding:"32px clamp(14px,5vw,64px)" }}>
+            <h1 style={{ fontFamily:V2.fontSans, fontWeight:900,
+              fontSize:"clamp(32px,6vw,60px)", color:V2.forestGreen,
+              lineHeight:1.1, marginBottom:14 }}>
+              The Outdoor<br/>Leaderboard
+            </h1>
+            <p style={{ fontSize:15, color:V2.textBody, lineHeight:1.6, marginBottom:28, maxWidth:420 }}>
+              Daily proofs, milestones, badges, and referrals — every contribution counts.
+            </p>
 
-          {/* YOUR RANK LOOKUP */}
-          <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:14, padding:"24px 28px", marginBottom:32 }}>
-            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:T.muted, marginBottom:16 }}>Your Rank</div>
-            <input
-              className="rank-input"
-              type="text"
-              placeholder="Enter your username"
-              value={rankQuery}
-              onChange={e => setRankQuery(e.target.value)}
-            />
-            <div style={{ marginTop:16 }}>
-              {rankResult === undefined && (
-                <p style={{ fontSize:12, color:T.dim }}>Type your username to see where you stand.</p>
-              )}
-              {rankResult === null && (
-                <p style={{ fontSize:12, color:T.dim }}>Not ranked yet — submit your proof to join.</p>
-              )}
-              {rankResult && (
-                <div style={{ display:"flex", gap:32, flexWrap:"wrap", marginTop:8 }}>
-                  {[
-                    ["Rank",        `#${rankResult.rank}`],
-                    ["Grass Score", `🌱 ${rankResult.grass_score.toLocaleString()}`],
-                    ["Streak",      `🔥 ${rankResult.current_streak}d`],
-                    ["Best",        `🏆 ${rankResult.best_streak}d`],
-                    ["Referrals",   `🤝 ${rankResult.referral_count}`],
-                    ["Tier",        getStreakTier(rankResult.current_streak).label],
-                  ].map(([label, val]) => (
-                    <div key={label}>
-                      <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", color:T.dim, marginBottom:4 }}>{label}</div>
-                      <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:700, color:T.white, lineHeight:1 }}>{val}</div>
+            {/* LB type buttons */}
+            <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:16 }}>
+              {LB_TYPES.map(t => (
+                <button key={t.id} onClick={()=>setLbType(t.id)}
+                  className={`lb-type-btn ${lbType===t.id?"active":"inactive"}`}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontSize:18 }}>{t.icon}</span>
+                    <div style={{ textAlign:"left" }}>
+                      <div>{t.label}</div>
+                      <div style={{ fontSize:10, opacity:0.7, fontWeight:400 }}>{t.sub}</div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* GRID */}
-          {tab === "friends" ? (
-            <div style={{ textAlign:"center", padding:"48px 20px",
-              background:T.bg2, border:`1px solid rgba(147,168,90,0.2)`,
-              borderRadius:14 }}>
-              <div style={{ fontSize:42, marginBottom:16 }}>👥</div>
-              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                fontSize:22, fontWeight:700, color:T.white, marginBottom:8 }}>
-                Friends Leaderboard
-              </div>
-              <div style={{ fontSize:13, color:T.dim, lineHeight:1.7,
-                marginBottom:20, maxWidth:300, margin:"0 auto 20px" }}>
-                See how your streak ranks among people you follow.
-                Coming soon — follow some Touchers first.
-              </div>
-              <a href="/leaderboard" style={{
-                display:"inline-block", background:"transparent",
-                border:`1px solid rgba(147,168,90,0.35)`,
-                borderRadius:9, padding:"10px 22px",
-                fontSize:12, fontWeight:700, color:"#93a85a",
-                textDecoration:"none",
-              }}>Browse the Global Rankings →</a>
-            </div>
-          ) : loading ? (
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12 }} className="lb-grid">
-              {Array.from({length:8}).map((_,i) => (
-                <div key={i} style={{ height:180, borderRadius:12, background:T.bg2, border:`1px solid ${T.border}`, opacity:0.5 }} />
+                  </div>
+                </button>
               ))}
             </div>
-          ) : activeData.length === 0 ? (
-            <div style={{ textAlign:"center", padding:"64px 0", color:T.dim, fontSize:14 }}>
-              {tab === "weekly" ? "No activity this week yet." : "No entries yet."}
-            </div>
-          ) : (
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12, alignItems:"stretch" }} className="lb-grid">
-              {activeData.map((item, i) => <LBCard key={`${item.username}-${i}`} item={item} index={i} board={board} />)}
-            </div>
-          )}
 
-          {/* STREAK RESETS NOTE */}
-          <p style={{ fontSize:10, color:T.dim, letterSpacing:"0.12em", textTransform:"uppercase", marginTop:24, textAlign:"center" }}>
-            {board === "current_streak"
-              ? "Streaks reset at 00:00 UTC"
-              : "Grass Score never resets — streaks can, your progress can't"}
-          </p>
+            {/* Time filters */}
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              <button onClick={()=>setTimeFilter("all")}
+                className={`lb-time-btn ${timeFilter==="all"?"active":"inactive"}`}>
+                🏆 All Time
+              </button>
+              <button onClick={()=>setTimeFilter("week")}
+                className={`lb-time-btn ${timeFilter==="week"?"active":"inactive"}`}>
+                📅 This Week
+              </button>
+              <button className="lb-time-btn soon" disabled>
+                👥 Friends <span style={{ fontSize:9, background:V2.grassGreen, color:"white",
+                  borderRadius:20, padding:"1px 6px", marginLeft:4 }}>SOON</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* FOOTER */}
-        <footer style={{ borderTop:`1px solid ${T.border}`, padding:"20px clamp(14px,4vw,48px)",
-          display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12, background:T.bg }}>
-          <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width:16, height:16, opacity:0.45 }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:13, color:T.dim }}>touch grass © 2024</span>
-          </div>
-          <div style={{ display:"flex", gap:22, flexWrap:"wrap" }}>
-            {[["Dashboard","/"],["Website","https://touchgrass.today"],["X","https://twitter.com/XTouchGrass"]].map(([label,href]) => (
-              <Link key={label} href={href} style={{ fontSize:10, color:T.dim, textDecoration:"none", letterSpacing:"0.08em", textTransform:"uppercase" }}>{label}</Link>
-            ))}
-          </div>
-          <div style={{ fontSize:10, color:T.dim, letterSpacing:"0.1em" }}>BUILT ON ◎ SOLANA</div>
-        </footer>
+        <div style={{ maxWidth:960, margin:"0 auto", padding:"24px clamp(14px,4vw,24px) 80px" }}>
 
+          {/* ── CHECK YOUR RANK ──────────────────────────────────────────── */}
+          <div style={{ background:"white", borderRadius:20, padding:"24px",
+            boxShadow:"0 4px 24px rgba(26,74,10,0.10)", border:`1px solid ${V2.borderSoft}`,
+            marginBottom:24 }}>
+            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between",
+              gap:20, flexWrap:"wrap" }}>
+              <div>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                  <span style={{ fontSize:18 }}>🌱</span>
+                  <span style={{ fontSize:16, fontWeight:800, color:V2.forestGreen }}>Check Your Rank</span>
+                </div>
+                <div style={{ fontSize:13, color:V2.textMuted }}>Type your username to see where you stand.</div>
+              </div>
+              <div style={{ display:"flex", gap:10, flex:1, minWidth:240, flexWrap:"wrap" }}>
+                <div style={{ flex:1, minWidth:160, display:"flex", alignItems:"center", gap:8,
+                  background:"rgba(125,200,50,0.04)", border:`1.5px solid ${V2.borderSoft}`,
+                  borderRadius:12, padding:"10px 14px" }}>
+                  <span style={{ fontSize:16, color:V2.midGray }}>🔍</span>
+                  <input value={rankInput} onChange={e=>setRankInput(e.target.value)}
+                    onKeyDown={e=>e.key==="Enter"&&checkRank()}
+                    placeholder="Enter username..."
+                    style={{ flex:1, border:"none", outline:"none", fontSize:14,
+                      color:V2.forestGreen, background:"transparent", fontFamily:V2.fontSans }} />
+                </div>
+                <button onClick={checkRank} disabled={rankLoading||!rankInput}
+                  style={{ ...V2Styles.btnPrimary, padding:"10px 20px", fontSize:13,
+                    opacity:!rankInput?0.5:1 }}>
+                  {rankLoading ? "Loading…" : "🌿 Check Rank"}
+                </button>
+              </div>
+            </div>
+            {rankError && (
+              <div style={{ marginTop:12, fontSize:13, color:"#e05050" }}>{rankError}</div>
+            )}
+          </div>
+
+          {/* ── LEADERBOARD LIST ──────────────────────────────────────────── */}
+          <div style={{ background:"white", borderRadius:20, overflow:"hidden",
+            boxShadow:"0 4px 24px rgba(26,74,10,0.10)", border:`1px solid ${V2.borderSoft}`,
+            marginBottom:24 }}>
+
+            {/* Header */}
+            <div style={{ padding:"20px 24px", borderBottom:`1px solid ${V2.borderSoft}`,
+              display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:18 }}>🌱</span>
+                  <span style={{ fontSize:16, fontWeight:800, color:V2.forestGreen }}>
+                    Top Grass Touchers
+                  </span>
+                </div>
+                <div style={{ fontSize:12, color:V2.midGray, marginTop:3 }}>
+                  Ranked by {lbType==="grass_score"?"Grass Score":lbType==="streaks"?"Current Streak":"Referrals"}
+                </div>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:6,
+                background:"rgba(125,200,50,0.08)", borderRadius:20, padding:"6px 12px" }}>
+                <div style={{ width:6, height:6, borderRadius:"50%", background:V2.grassGreen,
+                  boxShadow:`0 0 6px ${V2.grassGreen}` }} />
+                <span style={{ fontSize:11, fontWeight:700, color:V2.grassGreen }}>Updating Live</span>
+              </div>
+            </div>
+
+            {/* Rows */}
+            {loading ? (
+              Array.from({length:8}).map((_,i) => <SkelRow key={i} />)
+            ) : error ? (
+              <div style={{ padding:"60px 24px", textAlign:"center" }}>
+                <div style={{ fontSize:32, marginBottom:12 }}>😕</div>
+                <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen, marginBottom:8 }}>{error}</div>
+                <button onClick={()=>fetchRows(true)}
+                  style={{ ...V2Styles.btnPrimary, fontSize:13 }}>Retry</button>
+              </div>
+            ) : rows.length === 0 ? (
+              <div style={{ padding:"60px 24px", textAlign:"center" }}>
+                <div style={{ fontSize:32, marginBottom:12 }}>🌱</div>
+                <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen, marginBottom:6 }}>
+                  No entries yet
+                </div>
+                <div style={{ fontSize:13, color:V2.midGray }}>
+                  Be the first to log a Proof and start climbing.
+                </div>
+              </div>
+            ) : (
+              rows.map((row, i) => (
+                <LBRow key={row.username || i}
+                  row={row} rank={i+1} lbType={lbType}
+                  isCurrentUser={currentUser && norm(row.username)===currentUser} />
+              ))
+            )}
+
+            {/* Load more */}
+            {!loading && hasMore && rows.length > 0 && (
+              <div style={{ padding:"16px 24px", textAlign:"center",
+                borderTop:`1px solid ${V2.borderSoft}` }}>
+                <button onClick={()=>fetchRows(false)} disabled={loadingMore}
+                  style={{ ...V2Styles.btnSecondary, fontSize:13, padding:"10px 24px" }}>
+                  {loadingMore ? "Loading…" : "Load More"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ── USER RANK SUMMARY ────────────────────────────────────────── */}
+          {rankResult && (
+            <div style={{ background:"linear-gradient(135deg,rgba(125,200,50,0.08),rgba(125,200,50,0.04))",
+              borderRadius:20, padding:"28px 24px",
+              boxShadow:"0 4px 24px rgba(26,74,10,0.10)",
+              border:`1.5px solid ${V2.borderGreen}`,
+              display:"flex", alignItems:"center", gap:24, flexWrap:"wrap" }}>
+
+              {/* Avatar + headline */}
+              <div style={{ display:"flex", alignItems:"center", gap:16, flex:1, minWidth:200 }}>
+                <div style={{ width:64, height:64, borderRadius:"50%", flexShrink:0,
+                  background:V2.gradientGrassBtn, border:`3px solid white`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:28, overflow:"hidden", boxShadow:V2.shadowGlow }}>
+                  {rankResult.avatarUrl
+                    ? <img src={rankResult.avatarUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:"50%" }} />
+                    : "🌿"}
+                </div>
+                <div>
+                  <div style={{ fontFamily:V2.fontSans, fontSize:18, fontWeight:800,
+                    color:V2.forestGreen, marginBottom:4 }}>
+                    You are in the top {rankResult.pct}%
+                  </div>
+                  <div style={{ fontSize:13, color:V2.grassGreen, fontWeight:600 }}>
+                    Keep touching grass and climb higher!
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div style={{ display:"flex", gap:20, flexWrap:"wrap", flexShrink:0 }}>
+                {[
+                  { label:"Your Rank",   value:`#${rankResult.rank}`,                    sub:`Top ${rankResult.pct}%`     },
+                  { label:"Grass Score", value:rankResult.grassScore.toLocaleString(),   sub:`↑ ${rankResult.refs} refs`  },
+                  { label:"Best Streak", value:`${rankResult.bestStreak}d`,              sub:"Keep it up!"                },
+                ].map(s=>(
+                  <div key={s.label} style={{ textAlign:"center" }}>
+                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em",
+                      textTransform:"uppercase", color:V2.midGray, marginBottom:4 }}>{s.label}</div>
+                    <div style={{ fontFamily:V2.fontSerif, fontSize:28, fontWeight:700,
+                      color:V2.forestGreen, lineHeight:1, marginBottom:3 }}>{s.value}</div>
+                    <div style={{ fontSize:11, color:V2.grassGreen, fontWeight:600 }}>{s.sub}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* ── MOBILE BOTTOM NAV ────────────────────────────────────────────────── */}
+      <nav style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:150,
+        height:64, display:"flex", alignItems:"stretch",
+        background:"rgba(255,255,255,0.96)", backdropFilter:"blur(20px)",
+        borderTop:`1px solid ${V2.borderSoft}`,
+        boxShadow:"0 -2px 20px rgba(26,74,10,0.08)" }}>
+        <style>{`@media(min-width:768px){.lb-bottom-nav{display:none!important;}}`}</style>
+        {[
+          { href:"/",             label:"Home",        icon:"🏠" },
+          { href:"/#upload",      label:"Log Proof",   icon:"🌿" },
+          { href:`/u/${currentUser||""}`, label:"Profile", icon:"👤" },
+          { href:"/leaderboard",  label:"Leaderboard", icon:"🏆", active:true },
+          { href:"/grass-draw",   label:"Grass Draw",  icon:"🌱" },
+        ].map((tab,i)=>(
+          <Link key={i} href={tab.href} style={{ flex:1, display:"flex", flexDirection:"column",
+            alignItems:"center", justifyContent:"center", gap:3, textDecoration:"none",
+            color:tab.active?V2.grassGreen:V2.midGray, fontSize:10,
+            fontWeight:tab.active?700:500, fontFamily:V2.fontSans }}>
+            <span style={{ fontSize:20 }}>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </Link>
+        ))}
+      </nav>
     </>
   );
 }

@@ -1,916 +1,705 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+// pages/field-guide.js — V2 Field Guide (Mockup Match)
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import Head from "next/head";
 import { supabase } from "../utils/supabase";
+import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
-const T = {
-  bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
-  border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)",
-  borderGold:"rgba(200,168,75,0.4)",
-  olive:"#93a85a", gold:"#c8a84b",
-  white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
-};
+function norm(v) { return String(v ?? "").replace(/@/g, "").toLowerCase().trim(); }
 
+// ── Collection definitions — rendered dynamically ─────────────────────────────
 const COLLECTIONS = [
   {
-    slug:"skies", name:"Skies", icon:"🌤",
-    description:"Capture 10 unique sky moments — golden hour, storm clouds, clear blue, star trails, and more.",
-    badge:"Sky Collector", badgeSlug:"field-guide-skies",
-    color:"#67e8f9", glow:"rgba(103,232,249,0.15)",
-    hint:"Try: sunrise, storm clouds, blue sky, stars, fog, rainbow, sunset, overcast, golden hour, moonlit",
+    id: "skies",
+    name: "Skies",
+    icon: "⛅",
+    description: "Capture 10 unique sky moments — golden hour, storm clouds, clear blue, star trails, and more.",
+    slots: 10,
+    bg: "linear-gradient(135deg,#e0f0ff,#c5e3f7)",
   },
   {
-    slug:"plants", name:"Plants & Foliage", icon:"🌿",
-    description:"Document 10 unique plants and foliage — leaves, bark, roots, canopy, and everything in between.",
-    badge:"Plant Collector", badgeSlug:"field-guide-plants",
-    color:T.olive, glow:"rgba(147,168,90,0.15)",
-    hint:"Try: leaf close-up, tree bark, roots, canopy, moss, fern, grass, vine, flower, fallen leaves",
+    id: "plants_foliage",
+    name: "Plants & Foliage",
+    icon: "🌿",
+    description: "Document 10 unique plants and foliage — leaves, bark, roots, canopy, and everything in between.",
+    slots: 10,
+    bg: "linear-gradient(135deg,#e8f5e9,#d4edda)",
   },
 ];
 
-const TOTAL_SLOTS = 10;
-const POINTS_PER_ENTRY = 25;
-const POINTS_PER_COLLECTION = 500;
-
-function getUsername() {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("pog_username")?.replace(/@/g,"").toLowerCase().trim() || "";
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+function Skel({ w="100%", h=16, r=8 }) {
+  return <div style={{ width:w, height:h, borderRadius:r,
+    background:"linear-gradient(90deg,rgba(200,220,190,0.3) 0%,rgba(220,235,210,0.5) 50%,rgba(200,220,190,0.3) 100%)",
+    backgroundSize:"200% 100%", animation:"v2Shimmer 1.4s ease-in-out infinite" }} />;
 }
 
-function fmtDate(s) {
-  if (!s) return "";
-  return new Date(s).toLocaleDateString("en-US",{ month:"short", day:"numeric" });
+// ── Slot component ────────────────────────────────────────────────────────────
+function Slot({ num, entry, onTapEmpty, onTapFilled, isOwner }) {
+  const filled = !!entry;
+  return (
+    <button
+      onClick={()=> filled ? onTapFilled(entry) : isOwner ? onTapEmpty(num) : null}
+      aria-label={`Slot ${num} — ${filled ? "filled" : "empty"}`}
+      style={{
+        width:"100%", aspectRatio:"1/1", borderRadius:12,
+        border: filled ? `2px solid ${V2.borderGreen}` : "2px dashed rgba(200,220,190,0.6)",
+        background: filled ? "rgba(125,200,50,0.06)" : "rgba(255,255,255,0.6)",
+        cursor: filled || isOwner ? "pointer" : "default",
+        display:"flex", flexDirection:"column", alignItems:"center",
+        justifyContent:"center", gap:4, overflow:"hidden", position:"relative",
+        padding:0, transition:"all 0.15s",
+      }}
+      onMouseEnter={e=>{ if(filled||isOwner) e.currentTarget.style.transform="scale(1.04)"; }}
+      onMouseLeave={e=>{ e.currentTarget.style.transform=""; }}>
+      {filled ? (
+        <>
+          <img src={entry.image_url} alt={`Slot ${num}`} loading="lazy"
+            style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }} />
+          <div style={{ position:"absolute", inset:0,
+            background:"linear-gradient(180deg,transparent 60%,rgba(0,0,0,0.5) 100%)" }} />
+          <div style={{ position:"absolute", bottom:4, right:6, fontSize:9,
+            fontWeight:700, color:"white" }}>✓</div>
+          <div style={{ position:"absolute", bottom:4, left:6, fontSize:9,
+            color:"rgba(255,255,255,0.8)" }}>#{num}</div>
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize:20, color:"rgba(200,220,190,0.8)" }}>+</div>
+          <div style={{ fontSize:9, color:V2.midGray, fontWeight:600 }}>#{num}</div>
+        </>
+      )}
+    </button>
+  );
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-// ── Collection Card ───────────────────────────────────────────────────────────
-function CollectionCard({ collection, entries, progress, onAddEntry, isOwner }) {
-  const filled   = entries.length;
-  const complete = filled >= TOTAL_SLOTS;
-  const pct      = Math.round((filled / TOTAL_SLOTS) * 100);
+// ── Collection card ───────────────────────────────────────────────────────────
+function CollectionCard({ col, entries, onTapEmpty, onTapFilled, isOwner }) {
+  const filled = entries.length;
+  const pct    = Math.round((filled / col.slots) * 100);
+  const complete = filled >= col.slots;
 
   return (
-    <div style={{
-      background:`linear-gradient(145deg,${T.bg2},${T.bg3})`,
-      border:`1px solid ${complete ? collection.color+"60" : T.border}`,
-      borderRadius:18, overflow:"hidden",
-      boxShadow: complete ? `0 0 40px ${collection.glow}` : "none",
-    }}>
+    <div style={{ background:"white", borderRadius:20, overflow:"hidden",
+      boxShadow:"0 2px 20px rgba(26,74,10,0.08)", border:`1px solid ${V2.borderSoft}` }}>
+
       {/* Header */}
-      <div style={{ padding:"22px 22px 16px", borderBottom:`1px solid ${T.border}` }}>
-        <div style={{ display:"flex", alignItems:"flex-start",
-          justifyContent:"space-between", gap:12, marginBottom:14 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ fontSize:36 }}>{collection.icon}</div>
-            <div>
-              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                fontSize:22, fontWeight:700, color:T.white,
-                marginBottom:3 }}>{collection.name}</div>
-              <div style={{ fontSize:11, color:T.dim, lineHeight:1.5 }}>
-                {collection.description}
-              </div>
-            </div>
+      <div style={{ padding:"20px 20px 16px",
+        background:complete?"rgba(125,200,50,0.08)":"white",
+        borderBottom:`1px solid ${V2.borderSoft}` }}>
+        <div style={{ display:"flex", alignItems:"flex-start", gap:14, marginBottom:16 }}>
+          <div style={{ width:56, height:56, borderRadius:14, flexShrink:0,
+            background:col.bg,
+            display:"flex", alignItems:"center", justifyContent:"center", fontSize:28 }}>
+            {col.icon}
           </div>
-          {/* Complete stamp */}
-          {complete && (
-            <div style={{ flexShrink:0, display:"flex", flexDirection:"column",
-              alignItems:"center", gap:4,
-              background:`${collection.color}12`,
-              border:`1.5px solid ${collection.color}60`,
-              borderRadius:12, padding:"10px 14px" }}>
-              <span style={{ fontSize:20 }}>✦</span>
-              <span style={{ fontSize:9, fontWeight:700, color:collection.color,
-                letterSpacing:"0.12em", textTransform:"uppercase" }}>Complete</span>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+              <h3 style={{ fontFamily:V2.fontSans, fontSize:20, fontWeight:800,
+                color:V2.forestGreen }}>{col.name}</h3>
+              {complete && <span style={{ fontSize:11, fontWeight:700, color:V2.grassGreen,
+                background:"rgba(125,200,50,0.1)", border:`1px solid ${V2.borderGreen}`,
+                borderRadius:20, padding:"2px 10px" }}>✓ Complete</span>}
             </div>
-          )}
+            <p style={{ fontSize:13, color:V2.textMuted, lineHeight:1.5 }}>{col.description}</p>
+          </div>
         </div>
 
-        {/* Progress bar */}
-        <div style={{ display:"flex", alignItems:"center",
-          justifyContent:"space-between", marginBottom:6 }}>
-          <span style={{ fontSize:11, color:T.dim }}>
-            {filled} / {TOTAL_SLOTS} entries
-          </span>
-          <span style={{ fontSize:11, fontWeight:700,
-            color: complete ? collection.color : T.muted }}>{pct}%</span>
+        {/* Progress */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+          marginBottom:8 }}>
+          <span style={{ fontSize:12, color:V2.midGray }}>{filled} / {col.slots} entries</span>
+          <span style={{ fontSize:12, fontWeight:700, color:complete?V2.grassGreen:V2.midGray }}>{pct}%</span>
         </div>
-        <div style={{ height:5, background:T.bg, borderRadius:3, overflow:"hidden" }}>
-          <div style={{ height:"100%", width:`${pct}%`,
-            background:`linear-gradient(90deg,${collection.color}99,${collection.color})`,
-            borderRadius:3, transition:"width 1s ease" }} />
+        <div style={{ height:6, background:"rgba(200,220,190,0.3)", borderRadius:3, overflow:"hidden" }}>
+          <div style={{ height:"100%", width:`${pct}%`, borderRadius:3,
+            background:complete?V2.gradientGrassBtn:"linear-gradient(90deg,#7dc832,#5ba622)",
+            transition:"width 1s ease" }} />
         </div>
       </div>
 
-      {/* Photo grid — 10 slots */}
-      <div style={{ padding:"16px 22px 20px" }}>
-        <div style={{ display:"grid",
-          gridTemplateColumns:"repeat(5,1fr)", gap:8, marginBottom:16 }}>
-          {Array.from({ length: TOTAL_SLOTS }).map((_, i) => {
-            const entry = entries[i];
-            return (
-              <div key={i} style={{
-                aspectRatio:"1",
-                borderRadius:10,
-                overflow:"hidden",
-                border:`1px solid ${entry ? collection.color+"40" : T.border}`,
-                background: entry ? "#000" : T.bg,
-                position:"relative",
-                cursor: !entry && isOwner && !complete ? "pointer" : "default",
-              }}
-                onClick={() => !entry && isOwner && !complete && onAddEntry(collection, i + 1)}>
-                {entry ? (
-                  <>
-                    <img src={entry.photo_url} alt={entry.ai_label || ""}
-                      loading="lazy"
-                      style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                    {/* Slot number overlay */}
-                    <div style={{ position:"absolute", top:4, left:5,
-                      fontSize:9, fontWeight:700,
-                      color:"rgba(255,255,255,0.6)" }}>
-                      {i + 1}
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ width:"100%", height:"100%",
-                    display:"flex", flexDirection:"column",
-                    alignItems:"center", justifyContent:"center", gap:3 }}>
-                    <span style={{ fontSize:14, opacity:0.2 }}>+</span>
-                    <span style={{ fontSize:8, color:T.dim }}>#{i + 1}</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Hint */}
-        {!complete && isOwner && (
-          <div style={{ fontSize:10, color:T.dim, lineHeight:1.6,
-            padding:"8px 12px", background:T.bg, borderRadius:8,
-            border:`1px solid ${T.border}`, marginBottom:12 }}>
-            💡 {collection.hint}
-          </div>
-        )}
-
-        {/* Add entry button */}
-        {isOwner && !complete && (
-          <button onClick={() => onAddEntry(collection, filled + 1)}
-            style={{ width:"100%", background:`${collection.color}15`,
-              color:collection.color,
-              border:`1px solid ${collection.color}40`,
-              borderRadius:10, padding:"11px",
-              fontSize:13, fontWeight:700, cursor:"pointer",
-              transition:"all 0.2s" }}
-            onMouseEnter={e => e.currentTarget.style.background=`${collection.color}25`}
-            onMouseLeave={e => e.currentTarget.style.background=`${collection.color}15`}>
-            + Add Entry to {collection.name}
-          </button>
-        )}
-
-        {/* Entry labels */}
-        {entries.length > 0 && (
-          <div style={{ marginTop:12, display:"flex", flexWrap:"wrap", gap:6 }}>
-            {entries.map((e, i) => (
-              <span key={i} style={{ fontSize:10, color:T.muted,
-                background:T.bg, border:`1px solid ${T.border}`,
-                borderRadius:20, padding:"3px 9px" }}>
-                {e.ai_label || `Entry ${i + 1}`}
-              </span>
-            ))}
-          </div>
-        )}
+      {/* Slot grid */}
+      <div style={{ padding:16,
+        display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8 }}>
+        {Array.from({ length:col.slots }, (_,i) => {
+          const num   = i + 1;
+          const entry = entries.find(e => e.slot_number === num);
+          return (
+            <Slot key={num} num={num} entry={entry||null}
+              onTapEmpty={onTapEmpty} onTapFilled={onTapFilled}
+              isOwner={isOwner} />
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// ── Upload Modal ──────────────────────────────────────────────────────────────
-function UploadModal({ collection, slotNumber, existingLabels, username, onClose, onSuccess }) {
-  const [file,       setFile]       = useState(null);
-  const [preview,    setPreview]    = useState(null);
-  const [status,     setStatus]     = useState(null); // null|classifying|uploading|success|error|rejected
-  const [result,     setResult]     = useState(null);
-  const [errMsg,     setErrMsg]     = useState("");
-  const [dragging,   setDragging]   = useState(false);
-  const fileRef = useRef(null);
+// ── Upload modal ──────────────────────────────────────────────────────────────
+function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
+  const [file,      setFile]      = useState(null);
+  const [preview,   setPreview]   = useState(null);
+  const [status,    setStatus]    = useState("idle"); // idle|uploading|verifying|done|error
+  const [message,   setMessage]   = useState("");
+  const inputRef = useRef(null);
 
   const handleFile = (f) => {
-    if (!f || !f.type.startsWith("image/")) return;
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
-    setStatus(null); setResult(null); setErrMsg("");
+    if (!f) return;
+    setFile(f); setPreview(URL.createObjectURL(f));
   };
 
   const handleSubmit = async () => {
     if (!file || !username) return;
-    setStatus("classifying");
-    setErrMsg("");
-
+    setStatus("uploading"); setMessage("");
     try {
-      // ── One submission per day (UTC) ──────────────────────────────────────
-      const todayUTC = new Date().toISOString().slice(0, 10);
-      const { data: todayEntries } = await supabase
-        .from("FieldGuideEntries")
-        .select("id")
-        .eq("username", username)
-        .gte("submitted_at", `${todayUTC}T00:00:00.000Z`)
-        .lt("submitted_at",  `${todayUTC}T23:59:59.999Z`)
-        .limit(1);
+      // Upload to Supabase storage
+      const ext  = file.name.split(".").pop() || "jpg";
+      const path = `${username}/${collection.id}/slot_${slotNum}_${Date.now()}.${ext}`;
+      const { error:upErr } = await supabase.storage
+        .from("field-guide-photos").upload(path, file, { upsert:true });
+      if (upErr) throw upErr;
 
-      if (todayEntries && todayEntries.length > 0) {
-        setStatus("error");
-        setErrMsg("You've already submitted a Field Guide entry today. Come back tomorrow.");
-        return;
-      }
+      const { data:urlData } = supabase.storage.from("field-guide-photos").getPublicUrl(path);
+      const imageUrl = urlData?.publicUrl;
 
-      // Convert to base64 for Claude Vision
-      const base64 = await fileToBase64(file);
+      setStatus("verifying"); setMessage("AI is verifying your photo…");
 
-      // Call classification API
-      const classRes = await fetch("/api/field-guide/classify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      // Submit to API for verification
+      const res  = await fetch("/api/field-guide/submit", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          imageBase64:    base64,
-          mimeType:       file.type,
-          collectionSlug: collection.slug,
-          existingLabels,
+          username, collection_id:collection.id,
+          slot_number:slotNum, image_url:imageUrl,
         }),
       });
+      const data = await res.json();
 
-      const classification = await classRes.json();
-
-      if (!classRes.ok) throw new Error(classification.error || "Classification failed");
-
-      if (!classification.approved) {
-        setStatus("rejected");
-        setResult(classification);
-        return;
+      if (data.success) {
+        setStatus("done");
+        setMessage("Verified! Your find has been added to your collection.");
+        setTimeout(() => { onSuccess(); onClose(); }, 1500);
+      } else {
+        setStatus("error");
+        setMessage(data.message || "This photo doesn't appear to match the collection or may be too similar to an existing submission.");
       }
-
-      // ── Upload photo ────────────────────────────────────────────────
-      setStatus("uploading");
-      const ext  = file.name.split(".").pop() || "jpg";
-      const storagePath = `${username}/${collection.slug}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("field-guide-photos")
-        .upload(storagePath, file, { contentType: file.type, upsert: false });
-      if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
-
-      const { data: urlData } = supabase.storage
-        .from("field-guide-photos").getPublicUrl(storagePath);
-
-      // ── Insert entry ─────────────────────────────────────────────────
-      const { error: entryErr } = await supabase
-        .from("FieldGuideEntries")
-        .insert({
-          username,
-          collection_slug: collection.slug,
-          slot_number:     slotNumber,
-          photo_url:       urlData.publicUrl,
-          storage_path:    storagePath,
-          ai_label:        classification.label || "entry",
-          ai_confidence:   classification.confidence || "medium",
-          status:          "approved",
-        });
-      if (entryErr) throw new Error(`Entry save failed: ${entryErr.message}`);
-
-      // ── Upsert progress ──────────────────────────────────────────────
-      const newFilled  = existingLabels.length + 1;
-      const isComplete = newFilled >= TOTAL_SLOTS;
-      const { error: progErr } = await supabase
-        .from("FieldGuideProgress")
-        .upsert({
-          username,
-          collection_slug: collection.slug,
-          slots_filled:    newFilled,
-          completed_at:    isComplete ? new Date().toISOString() : null,
-          badge_awarded:   isComplete,
-        }, { onConflict: "username,collection_slug" });
-      if (progErr) console.warn("progress upsert:", progErr.message);
-
-      // ── Grass Score ──────────────────────────────────────────────────
-      const pts = isComplete
-        ? POINTS_PER_ENTRY + POINTS_PER_COLLECTION
-        : POINTS_PER_ENTRY;
-
-      const { data: prof } = await supabase
-        .from("Profiles")
-        .select("grass_score")
-        .eq("username", username)
-        .maybeSingle();
-
-      const { error: scoreErr } = await supabase
-        .from("Profiles")
-        .update({ grass_score: (prof?.grass_score || 0) + pts })
-        .eq("username", username);
-      if (scoreErr) console.warn("grass_score update:", scoreErr.message);
-
-      // ── ScoreEvents (non-fatal) ──────────────────────────────────────
-      try {
-        await supabase.from("ScoreEvents").insert({
-          username,
-          event_type: "field_guide_entry",
-          points:     pts,
-          source_id:  null,
-          metadata: {
-            collection: collection.slug,
-            slot:       slotNumber,
-            label:      classification.label,
-            complete:   isComplete,
-          },
-        });
-      } catch(e) { console.warn("ScoreEvents:", e.message); }
-
-      // ── Mastery check (non-fatal) ────────────────────────────────────
-      if (isComplete) {
-        try {
-          const { data: allCols }  = await supabase
-            .from("FieldGuideCollections").select("slug").eq("active", true);
-          const { data: allProg }  = await supabase
-            .from("FieldGuideProgress").select("collection_slug,slots_filled")
-            .eq("username", username);
-          const completeSet = new Set(
-            (allProg || []).filter(p => p.slots_filled >= TOTAL_SLOTS).map(p => p.collection_slug)
-          );
-          completeSet.add(collection.slug);
-          const hasMastery     = (allCols || []).every(c => completeSet.has(c.slug));
-          const completedCount = completeSet.size;
-          await supabase.from("Profiles").update({
-            field_guide_mastery:              hasMastery,
-            field_guide_mastery_at:           hasMastery ? new Date().toISOString() : null,
-            field_guide_collections_complete: completedCount,
-          }).eq("username", username);
-        } catch(e) { console.warn("mastery check:", e.message); }
-      }
-
-      setStatus("success");
-      setResult({ ...classification, points: pts, complete: isComplete });
-      onSuccess?.();
-
-      // Award Grass Draw field_guide bonus — fire and forget
-      try {
-        fetch("/api/grass-draw/award-bonus", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username,
-            entry_type: "field_guide",
-            source_id: `fg_${username}_${collection.slug}_${slotNumber}`,
-            notes: `Field Guide: ${collection.slug} slot ${slotNumber} — ${classification.label}`,
-          }),
-        }).catch(() => {});
-      } catch(e) {}
     } catch(e) {
-      setErrMsg(e.message || "Something went wrong.");
       setStatus("error");
+      setMessage("Something went wrong. Please try again.");
     }
   };
 
   return (
-    <>
-      <div onClick={status === "classifying" || status === "uploading" ? undefined : onClose}
-        style={{ position:"fixed", inset:0, zIndex:998,
-          background:"rgba(0,0,0,0.75)", backdropFilter:"blur(5px)" }} />
-      <div style={{ position:"fixed", left:"50%", top:"50%",
-        transform:"translate(-50%,-50%)", zIndex:999,
-        width:"min(500px,95vw)", maxHeight:"90vh", overflowY:"auto",
-        background:T.bg2, border:`1px solid ${collection.color}40`,
-        borderRadius:20, padding:"26px 22px",
-        boxShadow:`0 0 60px ${collection.glow}, 0 20px 60px rgba(0,0,0,0.7)` }}>
+    <div style={{ position:"fixed", inset:0, zIndex:300,
+      background:"rgba(0,0,0,0.55)", backdropFilter:"blur(10px)",
+      display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
+      onClick={onClose}>
+      <div style={{ background:"white", borderRadius:24, overflow:"hidden",
+        maxWidth:480, width:"100%", boxShadow:"0 20px 60px rgba(26,74,10,0.2)" }}
+        onClick={e=>e.stopPropagation()}>
 
         {/* Header */}
-        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
-          <span style={{ fontSize:28 }}>{collection.icon}</span>
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:11, color:T.dim, marginBottom:2 }}>
-              {collection.name} — Slot #{slotNumber}
+        <div style={{ padding:"20px 24px", borderBottom:`1px solid ${V2.borderSoft}`,
+          display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ fontSize:16, fontWeight:800, color:V2.forestGreen }}>
+              {collection.icon} {collection.name}
             </div>
-            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:18, fontWeight:700, color:T.white }}>
-              Add New Entry
-            </div>
+            <div style={{ fontSize:12, color:V2.midGray }}>Slot #{slotNum}</div>
           </div>
-          {status !== "classifying" && status !== "uploading" && (
-            <button onClick={onClose}
-              style={{ background:"none", border:"none", color:T.dim,
-                cursor:"pointer", fontSize:20, lineHeight:1 }}>×</button>
-          )}
+          <button onClick={onClose} style={{ background:"none", border:"none",
+            cursor:"pointer", fontSize:22, color:V2.midGray }}>×</button>
         </div>
 
-        {status === "success" ? (
-          <div style={{ textAlign:"center", padding:"16px 0" }}>
-            <div style={{ fontSize:48, marginBottom:12 }}>
-              {result?.complete ? "🏅" : "✅"}
-            </div>
-            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:22, fontWeight:700, color:collection.color,
-              marginBottom:8 }}>
-              {result?.complete ? `${collection.name} Complete!` : "Entry Added!"}
-            </div>
-            <div style={{ fontSize:13, color:T.muted, marginBottom:6 }}>
-              "{result?.label}"
-            </div>
-            <div style={{ fontSize:13, fontWeight:700, color:T.olive, marginBottom:20 }}>
-              +{result?.points} Grass Score
-              {result?.complete && ` (includes ${POINTS_PER_COLLECTION} completion bonus!)`}
-            </div>
-            <button onClick={onClose}
-              style={{ background:collection.color, color:"#0a0c08",
-                border:"none", borderRadius:10, padding:"11px 28px",
-                fontSize:13, fontWeight:700, cursor:"pointer" }}>
-              {result?.complete ? "🎉 Awesome!" : "Nice! Keep going"}
-            </button>
+        <div style={{ padding:"20px 24px" }}>
+          {/* Photo requirements */}
+          <div style={{ fontSize:12, color:V2.midGray, marginBottom:16, lineHeight:1.5 }}>
+            📋 Real outdoor photo · No AI-generated images · Must match this collection · Unique submission
           </div>
-        ) : status === "rejected" ? (
-          <div style={{ textAlign:"center", padding:"16px 0" }}>
-            <div style={{ fontSize:40, marginBottom:12 }}>🔍</div>
-            <div style={{ fontSize:16, fontWeight:700, color:"#ef4444", marginBottom:8 }}>
-              Not Accepted
-            </div>
-            <div style={{ fontSize:13, color:T.muted, marginBottom:6, lineHeight:1.6 }}>
-              {result?.reason}
-            </div>
-            {result?.confidence === "low" && (
-              <div style={{ fontSize:11, color:T.dim, marginBottom:16 }}>
-                Try a clearer photo where the subject is more prominent.
+
+          {/* Upload area */}
+          <div onClick={()=>inputRef.current?.click()}
+            style={{ borderRadius:16, overflow:"hidden", marginBottom:16, cursor:"pointer",
+              border:`2px dashed ${preview?V2.borderGreen:V2.borderSoft}`,
+              background:"rgba(125,200,50,0.04)",
+              minHeight:200, display:"flex", alignItems:"center", justifyContent:"center" }}>
+            {preview ? (
+              <img src={preview} alt="" style={{ width:"100%", maxHeight:260, objectFit:"cover" }} />
+            ) : (
+              <div style={{ textAlign:"center", padding:32 }}>
+                <div style={{ fontSize:40, marginBottom:8 }}>📸</div>
+                <div style={{ fontSize:14, fontWeight:600, color:V2.forestGreen, marginBottom:4 }}>
+                  Tap to choose a photo
+                </div>
+                <div style={{ fontSize:12, color:V2.midGray }}>or drag and drop</div>
               </div>
             )}
-            <button onClick={() => { setStatus(null); setFile(null); setPreview(null); }}
-              style={{ background:T.bg3, border:`1px solid ${T.border}`,
-                color:T.dim, borderRadius:10, padding:"10px 22px",
-                fontSize:13, cursor:"pointer" }}>
-              Try a Different Photo
-            </button>
           </div>
-        ) : (
-          <>
-            {/* Drop zone */}
-            <div
-              onDragOver={e => { e.preventDefault(); setDragging(true); }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); }}
-              onClick={() => !preview && fileRef.current?.click()}
-              style={{ border:`1.5px dashed ${dragging ? collection.color : T.border}`,
-                borderRadius:12, padding: preview ? 0 : "36px 20px",
-                textAlign:"center", cursor: preview ? "default" : "pointer",
-                background: dragging ? `${collection.color}08` : T.bg3,
-                overflow:"hidden", marginBottom:14,
-                transition:"all 0.2s" }}>
-              {preview ? (
-                <div style={{ position:"relative" }}>
-                  <img src={preview} alt="Preview"
-                    style={{ width:"100%", maxHeight:260,
-                      objectFit:"cover", display:"block", borderRadius:10 }} />
-                  <button onClick={e => { e.stopPropagation(); setFile(null); setPreview(null); setStatus(null); }}
-                    style={{ position:"absolute", top:8, right:8,
-                      background:"rgba(0,0,0,0.6)", border:"none",
-                      borderRadius:6, color:"#fff", padding:"4px 8px",
-                      fontSize:11, cursor:"pointer" }}>
-                    Change
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div style={{ fontSize:36, marginBottom:8, opacity:0.3 }}>
-                    {collection.icon}
-                  </div>
-                  <div style={{ fontSize:13, color:T.muted, marginBottom:4 }}>
-                    Drag & drop or tap to upload
-                  </div>
-                  <div style={{ fontSize:10, color:T.dim }}>
-                    JPG, PNG, WEBP · Max 10MB
-                  </div>
-                </>
-              )}
+          <input ref={inputRef} type="file" accept="image/*" capture="environment"
+            onChange={e=>handleFile(e.target.files?.[0])}
+            style={{ display:"none" }} />
+
+          {/* Status message */}
+          {message && (
+            <div style={{ marginBottom:14, padding:"10px 14px", borderRadius:10, fontSize:13,
+              background:status==="done"?"rgba(125,200,50,0.08)":"rgba(230,80,80,0.08)",
+              border:`1px solid ${status==="done"?V2.borderGreen:"rgba(230,80,80,0.3)"}`,
+              color:status==="done"?V2.grassGreen:"#e05050" }}>
+              {status==="verifying" && "⏳ "}{message}
             </div>
-            <input ref={fileRef} type="file" accept="image/*"
-              style={{ display:"none" }}
-              onChange={e => handleFile(e.target.files[0])} />
+          )}
 
-            {/* Hint */}
-            <div style={{ fontSize:10, color:T.dim, lineHeight:1.6,
-              marginBottom:14, padding:"8px 12px",
-              background:T.bg, borderRadius:8, border:`1px solid ${T.border}` }}>
-              💡 {collection.hint}
-            </div>
-
-            {/* Existing labels shown to user */}
-            {existingLabels.length > 0 && (
-              <div style={{ marginBottom:14 }}>
-                <div style={{ fontSize:10, color:T.dim, marginBottom:6,
-                  textTransform:"uppercase", letterSpacing:"0.1em" }}>
-                  Your existing entries (new photo must be different):
-                </div>
-                <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
-                  {existingLabels.map((l, i) => (
-                    <span key={i} style={{ fontSize:10, color:T.muted,
-                      background:T.bg3, border:`1px solid ${T.border}`,
-                      borderRadius:20, padding:"2px 8px" }}>{l}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {errMsg && (
-              <div style={{ fontSize:11, color:"#ef4444", marginBottom:10 }}>{errMsg}</div>
-            )}
-
+          {/* CTA */}
+          {status !== "done" && (
             <button onClick={handleSubmit}
-              disabled={!file || status === "classifying" || status === "uploading"}
-              style={{ width:"100%",
-                background: file ? collection.color : T.bg3,
-                color: file ? "#0a0c08" : T.dim,
-                border:"none", borderRadius:10, padding:"13px",
-                fontSize:13, fontWeight:700, cursor: file ? "pointer" : "default",
-                opacity: status === "classifying" || status === "uploading" ? 0.7 : 1,
-                transition:"all 0.2s" }}>
-              {status === "classifying" ? "🔍 Claude is reviewing your photo…"
-                : status === "uploading"  ? "Saving entry…"
-                : "Submit for Review"}
+              disabled={!file||status==="uploading"||status==="verifying"}
+              style={{ ...V2Styles.btnPrimary, width:"100%", justifyContent:"center",
+                fontSize:15, opacity:(!file||status==="uploading"||status==="verifying")?0.6:1,
+                cursor:(!file||status==="uploading"||status==="verifying")?"default":"pointer" }}>
+              {status==="uploading"?"Uploading…":status==="verifying"?"Verifying…":"Submit Find 🌿"}
             </button>
-
-            {(status === "classifying" || status === "uploading") && (
-              <div style={{ fontSize:11, color:T.dim, textAlign:"center",
-                marginTop:8, lineHeight:1.5 }}>
-                {status === "classifying"
-                  ? "Claude Vision is checking your photo qualifies and is unique."
-                  : "Uploading your photo…"}
-              </div>
-            )}
-          </>
-        )}
+          )}
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
-export default function FieldGuidePage() {
-  const [username,    setUsername]    = useState("");
-  const [entries,     setEntries]     = useState({}); // { slug: [...] }
-  const [progress,    setProgress]    = useState({}); // { slug: {...} }
-  const [communityFeed, setCommunityFeed] = useState([]);
-  const [masteryUsers,  setMasteryUsers]  = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [modal,       setModal]       = useState(null); // { collection, slotNumber }
-  const [profileData, setProfileData] = useState(null);
+// ── Slot detail modal ─────────────────────────────────────────────────────────
+function SlotDetailModal({ entry, onClose }) {
+  if (!entry) return null;
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:300,
+      background:"rgba(0,0,0,0.6)", backdropFilter:"blur(10px)",
+      display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
+      onClick={onClose}>
+      <div style={{ background:"white", borderRadius:24, overflow:"hidden",
+        maxWidth:480, width:"100%", boxShadow:"0 20px 60px rgba(26,74,10,0.2)" }}
+        onClick={e=>e.stopPropagation()}>
+        <img src={entry.image_url} alt="" style={{ width:"100%", maxHeight:320, objectFit:"cover" }} />
+        <div style={{ padding:"20px 24px" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:V2.forestGreen, marginBottom:3 }}>
+                Slot #{entry.slot_number}
+              </div>
+              <div style={{ fontSize:12, color:V2.midGray }}>
+                {entry.submitted_at
+                  ? new Date(entry.submitted_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})
+                  : ""}
+              </div>
+            </div>
+            <div style={{ fontSize:12, fontWeight:700, color:V2.grassGreen,
+              background:"rgba(125,200,50,0.1)", borderRadius:20, padding:"4px 12px" }}>
+              {entry.verified ? "✓ Verified" : "⏳ Pending"}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ ...V2Styles.btnSecondary, width:"100%",
+            justifyContent:"center", fontSize:13 }}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  const isOwner = !!username;
+// ── Recent find card ──────────────────────────────────────────────────────────
+function RecentFindCard({ find }) {
+  const col = COLLECTIONS.find(c => c.id === find.collection_id);
+  return (
+    <div style={{ borderRadius:16, overflow:"hidden", position:"relative",
+      aspectRatio:"1/1", background:"rgba(200,220,190,0.2)",
+      boxShadow:"0 2px 12px rgba(26,74,10,0.1)", cursor:"pointer" }}>
+      <img src={find.image_url} alt="" loading="lazy"
+        style={{ width:"100%", height:"100%", objectFit:"cover" }}
+        onError={e=>{e.currentTarget.style.display="none";}} />
+      <div style={{ position:"absolute", inset:0,
+        background:"linear-gradient(180deg,transparent 50%,rgba(0,0,0,0.7) 100%)" }} />
+      <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"10px 12px" }}>
+        <div style={{ fontSize:11, fontWeight:700, color:V2.grassLime, marginBottom:2 }}>
+          {col?.icon} {col?.name || find.collection_id}
+        </div>
+        <div style={{ fontSize:12, fontWeight:600, color:"white" }}>@{find.username}</div>
+        <div style={{ fontSize:10, color:"rgba(255,255,255,0.65)" }}>outdoor nature photo</div>
+      </div>
+    </div>
+  );
+}
 
-  const load = useCallback(async (u) => {
-    setLoading(true);
-    const slugs = COLLECTIONS.map(c => c.slug);
-
-    const promises = [
-      // Community feed — recent approved entries
-      supabase.from("FieldGuideEntries")
-        .select("username,collection_slug,photo_url,ai_label,submitted_at")
-        .eq("status","approved")
-        .order("submitted_at", { ascending:false })
-        .limit(20),
-      // Mastery holders
-      supabase.from("Profiles")
-        .select("username,field_guide_mastery_at")
-        .eq("field_guide_mastery", true)
-        .order("field_guide_mastery_at", { ascending:false })
-        .limit(10),
-    ];
-
-    if (u) {
-      promises.push(
-        supabase.from("FieldGuideEntries")
-          .select("*")
-          .eq("username", u)
-          .in("collection_slug", slugs)
-          .order("slot_number", { ascending:true }),
-        supabase.from("FieldGuideProgress")
-          .select("*")
-          .eq("username", u),
-        supabase.from("Profiles")
-          .select("field_guide_mastery,field_guide_collections_complete")
-          .eq("username", u)
-          .maybeSingle(),
-      );
-    }
-
-    const results = await Promise.all(promises);
-    const [feedRes, masteryRes, entriesRes, progressRes, profileRes] = results;
-
-    setCommunityFeed(feedRes.data || []);
-    setMasteryUsers(masteryRes.data || []);
-
-    if (u && entriesRes) {
-      const bySlug = {};
-      slugs.forEach(s => { bySlug[s] = []; });
-      (entriesRes.data || []).forEach(e => {
-        if (!bySlug[e.collection_slug]) bySlug[e.collection_slug] = [];
-        bySlug[e.collection_slug].push(e);
-      });
-      setEntries(bySlug);
-
-      const bySlugP = {};
-      (progressRes?.data || []).forEach(p => { bySlugP[p.collection_slug] = p; });
-      setProgress(bySlugP);
-
-      setProfileData(profileRes?.data || null);
-    }
-
-    setLoading(false);
-  }, []);
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function FieldGuide() {
+  const [username,     setUsername]     = useState("");
+  const [allEntries,   setAllEntries]   = useState({});
+  const [recentFinds,  setRecentFinds]  = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [uploadModal,  setUploadModal]  = useState(null); // {collection, slotNum}
+  const [detailModal,  setDetailModal]  = useState(null); // entry
+  const [error,        setError]        = useState("");
 
   useEffect(() => {
-    const u = getUsername();
-    setUsername(u);
-    load(u);
-  }, [load]);
+    const saved = typeof window !== "undefined" ? localStorage.getItem("pog_username") : null;
+    if (saved) setUsername(norm(saved));
+  }, []);
 
-  const handleAddEntry = (collection, slotNumber) => {
-    setModal({ collection, slotNumber });
-  };
+  const loadEntries = useCallback(async () => {
+    setLoading(true); setError("");
+    try {
+      // Load user entries for all collections
+      if (username) {
+        const { data } = await supabase
+          .from("FieldGuideEntries")
+          .select("*")
+          .eq("username", username)
+          .eq("verified", true);
 
-  const handleModalSuccess = () => {
-    // Reload data after successful entry
-    setTimeout(() => {
-      load(username);
-      setModal(null);
-    }, 2000);
-  };
+        const grouped = {};
+        COLLECTIONS.forEach(c => { grouped[c.id] = []; });
+        (data || []).forEach(e => {
+          if (grouped[e.collection_id]) grouped[e.collection_id].push(e);
+        });
+        setAllEntries(grouped);
+      }
 
-  const totalEntriesUser = Object.values(entries).flat().length;
-  const completedCollections = COLLECTIONS.filter(c =>
-    (entries[c.slug]?.length || 0) >= TOTAL_SLOTS
-  ).length;
-  const hasMastery = profileData?.field_guide_mastery || false;
+      // Load recent finds (community)
+      const { data:recent } = await supabase
+        .from("FieldGuideEntries")
+        .select("*")
+        .eq("verified", true)
+        .order("submitted_at", { ascending:false })
+        .limit(8);
+      setRecentFinds(recent || []);
 
-  const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html{overflow-x:hidden;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
-    ::-webkit-scrollbar{width:4px;}
-    ::-webkit-scrollbar-track{background:${T.bg};}
-    ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-    .fade{animation:fadeUp 0.5s ease both;}
-    .feed-card{transition:transform 0.15s,box-shadow 0.15s;}
-    .feed-card:hover{transform:translateY(-2px);}
+    } catch(e) { setError("Couldn't load the Field Guide right now."); }
+    setLoading(false);
+  }, [username]);
+
+  useEffect(() => { loadEntries(); }, [loadEntries]);
+
+  // Progress calculations
+  const totalSlots   = COLLECTIONS.reduce((s,c) => s + c.slots, 0);
+  const filledSlots  = Object.values(allEntries).reduce((s,arr) => s + arr.length, 0);
+  const pctOverall   = totalSlots > 0 ? Math.round((filledSlots/totalSlots)*100) : 0;
+  const colsStarted  = Object.values(allEntries).filter(a=>a.length>0).length;
+
+  const css = V2GlobalCSS + `
+    .fg-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .fg-recent-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+    @media(max-width:768px) {
+      .fg-grid { grid-template-columns:1fr !important; }
+      .fg-recent-grid { grid-template-columns:repeat(2,1fr) !important; }
+    }
+    @media(max-width:480px) {
+      .fg-recent-grid { grid-template-columns:repeat(2,1fr) !important; }
+    }
   `;
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div style={{ minHeight:"100vh", background:T.bg }}>
+      <Head>
+        <title>Field Guide | Proof of Grass</title>
+        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+      </Head>
+      <style dangerouslySetInnerHTML={{ __html:css }} />
 
-        {/* NAV */}
-        <nav style={{ position:"sticky", top:0, zIndex:100,
-          display:"flex", alignItems:"center", justifyContent:"space-between",
-          padding:"0 clamp(14px,4vw,48px)", height:56,
-          background:`${T.bg}ec`, backdropFilter:"blur(18px)",
-          borderBottom:`1px solid ${T.border}` }}>
-          <Link href="/" style={{ display:"flex", alignItems:"center",
-            gap:9, textDecoration:"none" }}>
+      <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>
+
+        {/* ── NAV ────────────────────────────────────────────────────────── */}
+        <nav style={{ position:"sticky", top:0, zIndex:200, height:64,
+          display:"flex", alignItems:"center", padding:"0 clamp(14px,4vw,40px)", gap:20,
+          background:"rgba(255,255,255,0.95)", backdropFilter:"blur(20px)",
+          borderBottom:`1px solid ${V2.borderSoft}`,
+          boxShadow:"0 2px 16px rgba(26,74,10,0.07)" }}>
+          <Link href="/" style={{ display:"flex", alignItems:"center", gap:10,
+            textDecoration:"none", flexShrink:0 }}>
             <img src="/touchgrass-transparent.png" alt=""
-              style={{ width:24, height:24, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:16, fontWeight:700, color:T.white }}>Touch Grass</span>
+              style={{ width:36, height:36, objectFit:"contain" }} />
+            <span style={{ fontFamily:V2.fontSans, fontSize:16, fontWeight:800, color:V2.forestGreen }}>
+              Touch Grass <span style={{ fontWeight:400, opacity:0.5 }}>| Proof of Grass</span>
+            </span>
           </Link>
-          <Link href="/" style={{ fontSize:11, color:T.olive, textDecoration:"none" }}>
-            ← Dashboard
-          </Link>
+          <div style={{ display:"flex", gap:4, flex:1, overflowX:"auto", scrollbarWidth:"none" }}>
+            {[["Dashboard","/"],["Leaderboard","/leaderboard"],["Grass Draw","/grass-draw"],
+              ["Marketplace","/marketplace"],["Field Guide","/field-guide"]].map(([l,h])=>(
+              <Link key={l} href={h} style={{ fontSize:13,
+                fontWeight:l==="Field Guide"?700:500,
+                color:l==="Field Guide"?V2.grassGreen:V2.forestGreen,
+                textDecoration:"none", padding:"6px 12px", borderRadius:20, whiteSpace:"nowrap" }}>{l}</Link>
+            ))}
+          </div>
+          {username && (
+            <Link href={`/u/${username}`} style={{ display:"flex", alignItems:"center", gap:8,
+              background:"white", border:`1px solid ${V2.borderSoft}`, borderRadius:20,
+              padding:"6px 14px", textDecoration:"none", flexShrink:0 }}>
+              <span style={{ fontSize:16 }}>🌿</span>
+              <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{username}</span>
+            </Link>
+          )}
         </nav>
 
-        {/* HERO */}
-        <section style={{ position:"relative",
-          padding:"56px clamp(14px,5vw,64px) 48px",
-          background:"linear-gradient(160deg,#080e06,#0e1a0a 40%,#080a06)",
-          borderBottom:`1px solid ${T.border}`, overflow:"hidden" }}>
+        {/* ── HERO ─────────────────────────────────────────────────────────── */}
+        <div style={{ position:"relative", overflow:"hidden", minHeight:360,
+          background:"linear-gradient(160deg,#c5e3f7 0%,#d8f0e8 60%,#e8f4fd 100%)",
+          padding:"40px clamp(14px,4vw,48px) 48px",
+          display:"flex", alignItems:"center", gap:32, flexWrap:"wrap" }}>
+
+          {/* Banner image */}
+          <div style={{ position:"absolute", inset:0, pointerEvents:"none" }}>
+            <img src="/fg-banner.png" alt=""
+              style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center" }} />
+          </div>
+
+          {/* Overlay */}
           <div style={{ position:"absolute", inset:0, pointerEvents:"none",
-            backgroundImage:"radial-gradient(ellipse at 70% 40%,rgba(147,168,90,0.07),transparent 55%),radial-gradient(ellipse at 20% 70%,rgba(103,232,249,0.05),transparent 50%)" }} />
-          <div style={{ position:"relative", maxWidth:660, margin:"0 auto",
-            textAlign:"center" }} className="fade">
-            <div style={{ fontSize:10, letterSpacing:"0.22em",
-              textTransform:"uppercase", color:T.olive, fontWeight:600, marginBottom:14 }}>
-              Proof of Grass
+            background:"linear-gradient(90deg,rgba(197,227,247,0.95) 0%,rgba(197,227,247,0.80) 55%,rgba(197,227,247,0.15) 100%)" }} />
+
+          {/* Left — headline */}
+          <div style={{ flex:1, minWidth:280, position:"relative" }}>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:8, marginBottom:16,
+              background:"rgba(255,255,255,0.85)", border:`1px solid ${V2.borderGreen}`,
+              borderRadius:20, padding:"6px 16px" }}>
+              <span style={{ fontSize:14 }}>🌿</span>
+              <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em",
+                textTransform:"uppercase", color:V2.grassGreen }}>Proof of Grass</span>
             </div>
-            <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:"clamp(38px,6vw,68px)", fontWeight:700, color:T.white,
-              lineHeight:1, letterSpacing:"-0.02em", marginBottom:16 }}>
-              📖 Field Guide
+
+            <h1 style={{ fontFamily:V2.fontSans, fontWeight:900,
+              fontSize:"clamp(36px,6vw,64px)", color:V2.forestGreen,
+              lineHeight:1, marginBottom:14 }}>
+              Field Guide 📖
             </h1>
-            <p style={{ fontSize:"clamp(13px,1.8vw,15px)", color:T.muted,
-              lineHeight:1.7, maxWidth:500, margin:"0 auto 28px", fontWeight:300 }}>
-              Explore, photograph, and collect the natural world.
+            <p style={{ fontSize:15, color:V2.textBody, lineHeight:1.6, marginBottom:28, maxWidth:440 }}>
+              Explore, photograph, and collect the natural world.<br/>
               Fill every slot in every collection to earn the Field Guide Master badge.
             </p>
 
-            {/* User stats if signed in */}
-            {username && !loading && (
-              <div style={{ display:"inline-flex", gap:24,
-                background:"rgba(255,255,255,0.04)",
-                border:`1px solid ${T.border}`, borderRadius:12,
-                padding:"14px 24px" }}>
-                {[
-                  ["Entries",      totalEntriesUser],
-                  ["Collections",  `${completedCollections}/${COLLECTIONS.length}`],
-                  ["Mastery",      hasMastery ? "✦ Earned" : "Locked"],
-                ].map(([label, val]) => (
-                  <div key={label} style={{ textAlign:"center" }}>
-                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                      fontSize:22, fontWeight:700,
-                      color: label === "Mastery" && hasMastery ? T.gold : T.white }}>
-                      {val}
-                    </div>
-                    <div style={{ fontSize:9, color:T.dim, textTransform:"uppercase",
-                      letterSpacing:"0.1em", marginTop:2 }}>{label}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!username && (
-              <Link href="/" style={{ display:"inline-flex", alignItems:"center",
-                gap:8, background:T.olive, color:"#0a0c08",
-                borderRadius:10, padding:"12px 24px", fontSize:13, fontWeight:700,
-                textDecoration:"none" }}>
+            {username ? (
+              <button onClick={()=>window.scrollTo({top:500,behavior:"smooth"})}
+                style={{ ...V2Styles.btnPrimary, fontSize:15, padding:"14px 28px" }}>
+                Continue Collecting →
+              </button>
+            ) : (
+              <Link href="/" style={{ ...V2Styles.btnPrimary, fontSize:15,
+                padding:"14px 28px", textDecoration:"none",
+                display:"inline-flex", alignItems:"center", gap:8 }}>
                 Sign in to start collecting →
               </Link>
             )}
           </div>
-        </section>
 
-        <div style={{ maxWidth:800, margin:"0 auto",
-          padding:"40px clamp(14px,5vw,32px) 80px" }}>
-
-          {/* Mastery badge — shown if earned */}
-          {hasMastery && (
-            <div className="fade" style={{ marginBottom:32, padding:"20px 24px",
-              background:"linear-gradient(135deg,rgba(200,168,75,0.1),rgba(200,168,75,0.04))",
-              border:`1px solid ${T.borderGold}`, borderRadius:16,
-              display:"flex", alignItems:"center", gap:16,
-              boxShadow:`0 0 40px rgba(200,168,75,0.15)` }}>
-              <div style={{ fontSize:44 }}>🏅</div>
-              <div>
-                <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.16em",
-                  textTransform:"uppercase", color:T.gold, marginBottom:4 }}>
-                  Field Guide Master
-                </div>
-                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                  fontSize:20, fontWeight:700, color:T.white, marginBottom:4 }}>
-                  All collections complete
-                </div>
-                <div style={{ fontSize:12, color:T.dim }}>
-                  You have documented every collection in the Field Guide.
-                </div>
+          {/* Right — progress glass card */}
+          {username && (
+            <div style={{ flexShrink:0, width:"clamp(240px,35%,320px)",
+              background:"rgba(255,255,255,0.88)", backdropFilter:"blur(20px)",
+              borderRadius:20, padding:"24px",
+              border:"1px solid rgba(255,255,255,0.7)",
+              boxShadow:"0 8px 32px rgba(26,74,10,0.12)" }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
+                textTransform:"uppercase", color:V2.grassGreen, marginBottom:12 }}>
+                Collection Progress
               </div>
+              {loading ? <Skel h={40} r={6} /> : (
+                <>
+                  <div style={{ fontFamily:V2.fontSerif, fontSize:36, fontWeight:700,
+                    color:V2.forestGreen, lineHeight:1, marginBottom:4 }}>
+                    {colsStarted} <span style={{ fontSize:20, color:V2.midGray }}>/ {COLLECTIONS.length}</span>
+                  </div>
+                  <div style={{ fontSize:12, color:V2.midGray, marginBottom:16 }}>Collections Started</div>
+                  <div style={{ height:6, background:"rgba(200,220,190,0.3)", borderRadius:3,
+                    overflow:"hidden", marginBottom:16 }}>
+                    <div style={{ height:"100%", borderRadius:3,
+                      width:`${(colsStarted/COLLECTIONS.length)*100}%`,
+                      background:V2.gradientGrassBtn, transition:"width 1s" }} />
+                  </div>
+                  <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
+                    textTransform:"uppercase", color:V2.grassGreen, marginBottom:8 }}>
+                    Overall Progress
+                  </div>
+                  <div style={{ fontFamily:V2.fontSerif, fontSize:32, fontWeight:700,
+                    color:V2.forestGreen, lineHeight:1, marginBottom:4 }}>
+                    {pctOverall}%
+                  </div>
+                  <div style={{ fontSize:12, color:V2.midGray, marginBottom:12 }}>
+                    {filledSlots} / {totalSlots} slots filled
+                  </div>
+                  <button onClick={()=>window.scrollTo({top:500,behavior:"smooth"})}
+                    style={{ width:"100%", padding:"9px", borderRadius:10,
+                      background:"transparent", border:`1.5px solid ${V2.borderGreen}`,
+                      color:V2.grassGreen, fontSize:12, fontWeight:700,
+                      cursor:"pointer", fontFamily:V2.fontSans }}>
+                    View My Progress
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── MAIN CONTENT ─────────────────────────────────────────────────── */}
+        <div style={{ maxWidth:960, margin:"0 auto", padding:"32px clamp(14px,4vw,24px) 80px" }}>
+
+          {/* Error */}
+          {error && (
+            <div style={{ background:"white", borderRadius:16, padding:"32px",
+              textAlign:"center", marginBottom:24,
+              border:"1px solid rgba(230,80,80,0.3)" }}>
+              <div style={{ fontSize:14, color:"#e05050", marginBottom:12 }}>{error}</div>
+              <button onClick={loadEntries} style={{ ...V2Styles.btnPrimary, fontSize:13 }}>
+                Try Again
+              </button>
             </div>
           )}
 
-          {/* COLLECTIONS */}
-          <div style={{ display:"flex", flexDirection:"column", gap:24, marginBottom:48 }}>
-            {COLLECTIONS.map(collection => (
+          {/* ── COLLECTION CARDS ──────────────────────────────────────────── */}
+          <div className="fg-grid" style={{ marginBottom:32 }}>
+            {COLLECTIONS.map(col => (
               <CollectionCard
-                key={collection.slug}
-                collection={collection}
-                entries={entries[collection.slug] || []}
-                progress={progress[collection.slug] || null}
-                onAddEntry={handleAddEntry}
-                isOwner={isOwner}
+                key={col.id}
+                col={col}
+                entries={allEntries[col.id] || []}
+                isOwner={!!username}
+                onTapEmpty={(slotNum) => setUploadModal({ collection:col, slotNum })}
+                onTapFilled={(entry) => setDetailModal(entry)}
               />
             ))}
           </div>
 
-          {/* HOW IT WORKS */}
-          <div style={{ marginBottom:48 }}>
-            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.18em",
-              textTransform:"uppercase", color:T.dim, marginBottom:16 }}>
+          {/* ── HOW IT WORKS ──────────────────────────────────────────────── */}
+          <div style={{ background:"white", borderRadius:20, padding:"28px 24px",
+            boxShadow:"0 2px 16px rgba(26,74,10,0.07)", border:`1px solid ${V2.borderSoft}`,
+            marginBottom:32 }}>
+            <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.14em",
+              textTransform:"uppercase", color:V2.grassGreen, marginBottom:20 }}>
               How It Works
             </div>
-            <div style={{ display:"grid",
-              gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:20 }}>
               {[
-                { n:"01", icon:"📸", label:"Go outside", desc:"Find something that fits a collection — a sky, a plant, wildlife." },
-                { n:"02", icon:"📤", label:"Upload your photo", desc:"Submit it to the collection slot you want to fill." },
-                { n:"03", icon:"🔍", label:"Claude verifies it", desc:"AI checks the photo matches the collection and is visually unique." },
-                { n:"04", icon:"🏅", label:"Earn your badge", desc:"Fill all 10 slots to complete a collection and earn its badge." },
-                { n:"05", icon:"🌿", label:"Earn Grass Score", desc:"25 pts per entry, 500 bonus pts when you complete a collection." },
-              ].map(step => (
-                <div key={step.n} style={{ background:T.bg2,
-                  border:`1px solid ${T.border}`, borderRadius:12,
-                  padding:"16px 14px" }}>
-                  <div style={{ display:"flex", alignItems:"center",
-                    gap:8, marginBottom:8 }}>
-                    <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                      fontSize:20, fontWeight:700, color:`${T.olive}40` }}>{step.n}</span>
-                    <span style={{ fontSize:18 }}>{step.icon}</span>
+                { icon:"📷", title:"Go outside",
+                  desc:"Find something that fits a collection — a sky, plant, wildlife, or other nature category." },
+                { icon:"📤", title:"Upload your photo",
+                  desc:"Submit it to the collection slot you want to fill." },
+                { icon:"🔍", title:"Claude verifies it",
+                  desc:"AI checks the photo to ensure it's real and visually unique." },
+              ].map((s,i) => (
+                <div key={i} style={{ display:"flex", gap:14, alignItems:"flex-start" }}>
+                  <div style={{ width:52, height:52, borderRadius:14, flexShrink:0,
+                    background:"rgba(125,200,50,0.08)", border:`1px solid ${V2.borderGreen}`,
+                    display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>
+                    {s.icon}
                   </div>
-                  <div style={{ fontSize:12, fontWeight:700, color:T.white,
-                    marginBottom:4 }}>{step.label}</div>
-                  <div style={{ fontSize:11, color:T.dim, lineHeight:1.5 }}>{step.desc}</div>
+                  <div>
+                    <div style={{ fontSize:15, fontWeight:700, color:V2.forestGreen, marginBottom:6 }}>
+                      {s.title}
+                    </div>
+                    <div style={{ fontSize:13, color:V2.textMuted, lineHeight:1.5 }}>{s.desc}</div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* MASTERY HOLDERS */}
-          {masteryUsers.length > 0 && (
-            <div style={{ marginBottom:48 }}>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.18em",
-                textTransform:"uppercase", color:T.dim, marginBottom:16 }}>
-                🏅 Field Guide Masters
+          {/* ── RECENT FINDS ──────────────────────────────────────────────── */}
+          <div>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+              marginBottom:16 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:18 }}>🌿</span>
+                <span style={{ fontSize:16, fontWeight:800, color:V2.forestGreen,
+                  textTransform:"uppercase", letterSpacing:"0.08em", fontSize:13 }}>
+                  Recent Finds
+                </span>
               </div>
-              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                {masteryUsers.map((u, i) => (
-                  <Link key={u.username} href={`/u/${u.username}`}
-                    style={{ display:"flex", alignItems:"center", gap:12,
-                      padding:"11px 16px", background:T.bg2,
-                      border:`1px solid ${T.borderGold}`, borderRadius:10,
-                      textDecoration:"none",
-                      boxShadow:"0 0 16px rgba(200,168,75,0.06)" }}>
-                    <span style={{ fontSize:16 }}>🏅</span>
-                    <span style={{ fontSize:13, fontWeight:700, color:T.gold,
-                      flex:1 }}>@{u.username}</span>
-                    <span style={{ fontSize:10, color:T.dim }}>
-                      {fmtDate(u.field_guide_mastery_at)}
-                    </span>
-                  </Link>
-                ))}
+              <button style={{ ...V2Styles.btnSecondary, fontSize:12, padding:"6px 16px" }}>
+                View all finds →
+              </button>
+            </div>
+
+            {recentFinds.length > 0 ? (
+              <div className="fg-recent-grid">
+                {recentFinds.map((f,i) => <RecentFindCard key={i} find={f} />)}
+              </div>
+            ) : (
+              <div style={{ background:"white", borderRadius:16, padding:"48px 24px",
+                textAlign:"center", border:`1px solid ${V2.borderSoft}` }}>
+                <div style={{ fontSize:32, marginBottom:12 }}>🌿</div>
+                <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen, marginBottom:6 }}>
+                  No finds yet
+                </div>
+                <div style={{ fontSize:13, color:V2.midGray }}>
+                  Be the first to submit a nature discovery!
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── MASTER BADGE PROGRESS ─────────────────────────────────────── */}
+          {username && !loading && (
+            <div style={{ marginTop:32, background:filledSlots>=totalSlots
+                ?"rgba(125,200,50,0.1)":"white",
+              borderRadius:20, padding:"24px",
+              boxShadow:"0 2px 16px rgba(26,74,10,0.07)",
+              border:`1.5px solid ${filledSlots>=totalSlots?V2.borderGreen:V2.borderSoft}` }}>
+              <div style={{ display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
+                <div style={{ width:64, height:64, borderRadius:16, flexShrink:0,
+                  background:"rgba(125,200,50,0.1)", border:`2px solid ${V2.borderGreen}`,
+                  display:"flex", alignItems:"center", justifyContent:"center", fontSize:32 }}>
+                  📖
+                </div>
+                <div style={{ flex:1, minWidth:200 }}>
+                  <div style={{ fontSize:15, fontWeight:800, color:V2.forestGreen, marginBottom:4 }}>
+                    Field Guide Master
+                  </div>
+                  <div style={{ fontSize:13, color:V2.textMuted, marginBottom:8 }}>
+                    {filledSlots >= totalSlots
+                      ? "🎉 You completed the natural world collection!"
+                      : `${filledSlots} / ${totalSlots} discoveries — ${totalSlots-filledSlots} remaining`}
+                  </div>
+                  <div style={{ height:6, background:"rgba(200,220,190,0.3)", borderRadius:3, overflow:"hidden" }}>
+                    <div style={{ height:"100%", width:`${pctOverall}%`, borderRadius:3,
+                      background:V2.gradientGrassBtn, transition:"width 1s" }} />
+                  </div>
+                </div>
               </div>
             </div>
           )}
-
-          {/* COMMUNITY FEED */}
-          {communityFeed.length > 0 && (
-            <div>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.18em",
-                textTransform:"uppercase", color:T.dim, marginBottom:16 }}>
-                🌿 Recent Finds
-              </div>
-              <div style={{ display:"grid",
-                gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:10 }}>
-                {communityFeed.map((entry, i) => {
-                  const col = COLLECTIONS.find(c => c.slug === entry.collection_slug);
-                  return (
-                    <Link key={i} href={`/u/${entry.username}`}
-                      className="feed-card"
-                      style={{ display:"block", textDecoration:"none",
-                        borderRadius:12, overflow:"hidden",
-                        border:`1px solid ${T.border}`,
-                        background:"#000",
-                        boxShadow:"0 4px 16px rgba(0,0,0,0.4)" }}>
-                      <div style={{ position:"relative", aspectRatio:"1" }}>
-                        <img src={entry.photo_url} alt={entry.ai_label || ""}
-                          loading="lazy"
-                          style={{ width:"100%", height:"100%",
-                            objectFit:"cover", display:"block" }} />
-                        <div style={{ position:"absolute", inset:0,
-                          background:"linear-gradient(180deg,transparent 50%,rgba(0,0,0,0.8))",
-                          display:"flex", flexDirection:"column",
-                          justifyContent:"flex-end", padding:"8px 8px 7px" }}>
-                          <div style={{ fontSize:9, fontWeight:700,
-                            color: col?.color || T.olive,
-                            letterSpacing:"0.06em" }}>
-                            {col?.icon} {col?.name}
-                          </div>
-                          <div style={{ fontSize:10, fontWeight:600,
-                            color:T.white }}>@{entry.username}</div>
-                          {entry.ai_label && (
-                            <div style={{ fontSize:8, color:"rgba(255,255,255,0.5)",
-                              marginTop:1, overflow:"hidden",
-                              textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                              {entry.ai_label}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
         </div>
       </div>
 
-      {/* UPLOAD MODAL */}
-      {modal && (
+      {/* ── MODALS ───────────────────────────────────────────────────────────── */}
+      {uploadModal && (
         <UploadModal
-          collection={modal.collection}
-          slotNumber={modal.slotNumber}
-          existingLabels={(entries[modal.collection.slug] || []).map(e => e.ai_label).filter(Boolean)}
+          collection={uploadModal.collection}
+          slotNum={uploadModal.slotNum}
           username={username}
-          onClose={() => setModal(null)}
-          onSuccess={handleModalSuccess}
+          onClose={()=>setUploadModal(null)}
+          onSuccess={loadEntries}
         />
       )}
+      {detailModal && (
+        <SlotDetailModal entry={detailModal} onClose={()=>setDetailModal(null)} />
+      )}
+
+      {/* ── BOTTOM NAV ───────────────────────────────────────────────────────── */}
+      <nav style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:150,
+        height:64, display:"flex", alignItems:"stretch",
+        background:"rgba(255,255,255,0.96)", backdropFilter:"blur(20px)",
+        borderTop:`1px solid ${V2.borderSoft}`,
+        boxShadow:"0 -2px 20px rgba(26,74,10,0.08)" }}>
+        <style>{`@media(min-width:768px){.fg-bottom-nav{display:none!important;}}`}</style>
+        {[
+          { href:"/",              label:"Home",       icon:"🏠" },
+          { href:"/#upload",       label:"Log Proof",  icon:"🌿" },
+          { href:`/u/${username||""}`, label:"Profile",icon:"👤" },
+          { href:"/leaderboard",   label:"Leaderboard",icon:"🏆" },
+          { href:"/field-guide",   label:"Field Guide",icon:"📖", active:true },
+        ].map((tab,i)=>(
+          <Link key={i} href={tab.href} style={{ flex:1, display:"flex", flexDirection:"column",
+            alignItems:"center", justifyContent:"center", gap:3, textDecoration:"none",
+            color:tab.active?V2.grassGreen:V2.midGray, fontSize:10,
+            fontWeight:tab.active?700:500, fontFamily:V2.fontSans }}>
+            <span style={{ fontSize:20 }}>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </Link>
+        ))}
+      </nav>
     </>
   );
 }

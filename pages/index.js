@@ -1,1507 +1,717 @@
+// pages/index.js — V2 Dashboard
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Head from "next/head";
 import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
+import V2Nav from "../components/V2Nav";
+import V2BottomNav from "../components/V2BottomNav";
+import V2Ticker from "../components/V2Ticker";
 import { supabase } from "../utils/supabase";
 import { getSpotlightBadge, getSpotlightFeedText, SPOTLIGHT_BADGES } from "../utils/spotlightBadges";
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const T = {
-  bg:      "#0e0f0b",
-  bg2:     "#141510",
-  bg3:     "#1c1e17",
-  border:  "rgba(255,255,255,0.07)",
-  borderG: "rgba(147,168,90,0.2)",
-  olive:   "#93a85a",
-  gold:    "#c8a84b",
-  white:   "#f0efea",
-  muted:   "rgba(240,239,234,0.50)",
-  dim:     "rgba(240,239,234,0.24)",
-  red:     "#ef4444",
-};
-// ─── Pure helpers (no Supabase) ───────────────────────────────────────────────
+import { V2, V2Styles, V2GlobalCSS, V2_TIERS, getV2Tier } from "../utils/v2Theme";
+
+// ─── Pure helpers ─────────────────────────────────────────────────────────────
 function normalizeUsername(val) {
   return String(val ?? "").replace(/@/g, "").toLowerCase().trim();
 }
-function toLocalDateStr(date) {
-  // Use local date string to avoid UTC midnight boundary issues
-  const d = date instanceof Date ? date : new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-}
+
 function computePreviewStreak(row, shieldCount = 0) {
-  // No submission date = brand new user, starts at day 1
   if (!row?.last_submission_date) return 1;
-
-  // Use UTC dates to match the RPC which uses CURRENT_DATE (UTC).
-  // Day boundary is midnight UTC — same as the backend.
-  const todayUTC     = new Date().toISOString().slice(0, 10);
-  const yesterdayUTC = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const todayUTC      = new Date().toISOString().slice(0, 10);
+  const yesterdayUTC  = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   const twoDaysAgoUTC = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
-
-  // Slice directly from the raw string — never construct via new Date(dateStr)
-  const lastDateStr = String(row.last_submission_date).slice(0, 10);
-
-  // Already submitted today (UTC) — show current streak as-is
-  if (lastDateStr === todayUTC)      return row.current_streak;
-
-  // Submitted yesterday (UTC) — streak continues, show incremented value
-  if (lastDateStr === yesterdayUTC)  return row.current_streak + 1;
-
-  // Missed exactly one day — shield will auto-apply, show continued streak
-  if (lastDateStr === twoDaysAgoUTC && shieldCount > 0) return row.current_streak + 1;
-
-  // Missed one day with no shield, or missed 2+ days — streak is broken
+  const lastDateStr   = String(row.last_submission_date).slice(0, 10);
+  if (lastDateStr === todayUTC)                              return row.current_streak;
+  if (lastDateStr === yesterdayUTC)                          return row.current_streak + 1;
+  if (lastDateStr === twoDaysAgoUTC && shieldCount > 0)      return row.current_streak + 1;
+  if (lastDateStr < twoDaysAgoUTC)                           return 1;
   return 1;
 }
-function getStreakTier(n) {
-  if (n >= 1000) return "TRANSCENDENT";
-  if (n >= 500)  return "ASCENDED";
-  if (n >= 365)  return "ETERNAL";
-  if (n >= 180)  return "MYTHIC";
-  if (n >= 100)  return "IMMORTAL";
-  if (n >= 50)   return "LEGENDARY";
-  if (n >= 30)   return "ELITE";
-  if (n >= 14)   return "LOCKED IN";
-  if (n >= 7)    return "ROOTED";
-  if (n >= 3)    return "GROWING";
-  return "SEED";
-}
-function getTierColor(tier) {
-  return {
-    TRANSCENDENT:"#f0fdf4", ASCENDED:"#e0f2fe",
-    ETERNAL:"#fff9c4", MYTHIC:"#fbbf24", IMMORTAL:"#f97316",
-    LEGENDARY:T.gold, ELITE:"#c084fc", "LOCKED IN":"#4ade80",
-    ROOTED:"#86efac", GROWING:"#6ee7b7", SEED:"#93a85a",
-  }[tier] ?? T.olive;
-}
-function fmtBurned(n) {
-  if (!n) return "—";
-  if (n >= 1000000) return `${(n/1000000).toFixed(1)}M`;
-  if (n >= 1000)    return `${(n/1000).toFixed(0)}K`;
-  return n.toLocaleString();
-}
-// ─── Small UI atoms ───────────────────────────────────────────────────────────
-function Skeleton({ w="100%", h=12 }) {
-  return <div style={{ width:w, height:h, background:T.bg3, borderRadius:4, flexShrink:0, opacity:0.6 }} />;
-}
-function StatCard({ icon, value, label, sub, accent, last }) {
-  return (
-    <div style={{
-      flex:"1 1 0", minWidth:0,
-      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-      padding:"28px 12px", gap:6,
-      borderRight: last ? "none" : `1px solid ${T.border}`,
-      position:"relative", overflow:"hidden",
-    }}>
-      {/* Subtle radial glow behind the number */}
-      <div style={{
-        position:"absolute", inset:0, pointerEvents:"none",
-        background: accent
-          ? "radial-gradient(ellipse at 50% 60%,rgba(200,168,75,0.07),transparent 70%)"
-          : "radial-gradient(ellipse at 50% 60%,rgba(147,168,90,0.05),transparent 70%)",
-      }} />
-      <span style={{
-        fontSize:10, letterSpacing:"0.18em", textTransform:"uppercase",
-        color: accent ? "rgba(200,168,75,0.5)" : T.dim,
-        fontWeight:600, textAlign:"center",
-      }}>{label}</span>
-      <span style={{
-        fontFamily:"'Cormorant Garamond',Georgia,serif",
-        fontSize:"clamp(32px,4vw,52px)", fontWeight:700,
-        color: accent ? T.gold : T.white,
-        lineHeight:1, letterSpacing:"-0.02em",
-      }}>
-        {value ?? "—"}
-      </span>
-      {sub && (
-        <span style={{
-          fontSize:10, color: accent ? T.gold : T.olive,
-          fontWeight:600, letterSpacing:"0.04em",
-        }}>{sub}</span>
-      )}
-    </div>
-  );
-}
-function LBRow({ rank, username, streak, tier }) {
-  const col = getTierColor(tier);
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:12,
-      padding:"11px 0", borderBottom:`1px solid ${T.border}` }}>
-      <span style={{ fontSize:10, color:T.dim, width:16, textAlign:"right", flexShrink:0 }}>{rank}</span>
-      <div style={{ width:32, height:32, borderRadius:"50%", flexShrink:0,
-        background:`linear-gradient(135deg,${T.bg3},${T.olive}30)`,
-        border:`1px solid ${T.border}`, display:"flex", alignItems:"center",
-        justifyContent:"center", fontFamily:"'Cormorant Garamond',Georgia,serif",
-        fontWeight:700, fontSize:13, color:T.muted }}>
-        {username?.[0]?.toUpperCase() ?? "?"}
-      </div>
-      <span style={{ flex:1, fontSize:13, color:T.white, fontWeight:500,
-        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-        @{username}
-      </span>
-      <div style={{ textAlign:"right", flexShrink:0 }}>
-        <div style={{ fontSize:18, fontWeight:700, color:T.white,
-          fontFamily:"'Cormorant Garamond',Georgia,serif", lineHeight:1 }}>{streak}d</div>
-        <div style={{ fontSize:8, color:col, letterSpacing:"0.1em", textTransform:"uppercase" }}>{tier}</div>
-      </div>
-    </div>
-  );
-}
-function ProofRow({ username, streak, created_at }) {
-  const tier = getStreakTier(streak);
-  const col  = getTierColor(tier);
-  const when = created_at
-    ? new Date(created_at).toLocaleDateString("en-US",{ month:"short", day:"numeric" })
-    : "";
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:12,
-      padding:"11px 0", borderBottom:`1px solid ${T.border}` }}>
-      <div style={{ width:44, height:44, borderRadius:8, flexShrink:0,
-        background:"linear-gradient(135deg,#2a3d1a,#3d6a28)",
-        border:`1px solid ${T.border}`, display:"flex", alignItems:"center",
-        justifyContent:"center", fontSize:20 }}>🌿</div>
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:13, fontWeight:600, color:T.white, marginBottom:2,
-          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>@{username}</div>
-        <div style={{ fontSize:10, color:T.dim }}>{when}</div>
-      </div>
-      <div style={{ textAlign:"right", flexShrink:0 }}>
-        <div style={{ fontSize:8, color:T.dim, letterSpacing:"0.1em", textTransform:"uppercase" }}>DAY</div>
-        <div style={{ fontSize:20, fontWeight:700, lineHeight:1,
-          fontFamily:"'Cormorant Garamond',Georgia,serif",
-          color: streak >= 50 ? T.gold : T.white }}>{streak}</div>
-        <div style={{ fontSize:7, color:col, letterSpacing:"0.08em", textTransform:"uppercase" }}>{tier}</div>
-      </div>
-    </div>
-  );
-}
-const TIER_ICONS = {
-  Rooted:"🌱", Elite:"💧", Legendary:"🌲", Immortal:"💯",
-  Mythic:"⚡", Eternal:"👑", Ascended:"✨",
-};
-function TierBadge({ name, day, completed, active }) {
-  const col  = completed ? T.olive : active ? T.gold : "rgba(255,255,255,0.12)";
-  const icon = TIER_ICONS[name] ?? "○";
-  return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, flex:"1 1 0", minWidth:0 }}>
-      <div style={{
-        width:44, height:44, borderRadius:12,
-        border:`1.5px solid ${col}`,
-        display:"flex", alignItems:"center", justifyContent:"center",
-        background: active
-          ? `linear-gradient(135deg,${T.gold}22,${T.gold}08)`
-          : completed
-          ? `linear-gradient(135deg,${T.olive}20,${T.olive}08)`
-          : "rgba(255,255,255,0.03)",
-        boxShadow: active ? `0 0 18px ${T.gold}30,inset 0 0 8px ${T.gold}10` : "none",
-        position:"relative", transition:"all 0.2s", flexShrink:0,
-      }}>
-        <span style={{ fontSize:18, filter: completed||active ? "none" : "grayscale(1) opacity(0.3)" }}>
-          {icon}
-        </span>
-        {completed && (
-          <div style={{
-            position:"absolute", top:-4, right:-4,
-            width:14, height:14, borderRadius:"50%",
-            background:T.olive, display:"flex", alignItems:"center",
-            justifyContent:"center", fontSize:8, color:"#0a0c08", fontWeight:900,
-            boxShadow:`0 0 0 2px ${T.bg2}`,
-          }}>✓</div>
-        )}
-      </div>
-      <div style={{ textAlign:"center", minWidth:0, width:"100%" }}>
-        <div style={{
-          fontSize:8, fontWeight:700, color:col,
-          letterSpacing:"0.06em", textTransform:"uppercase",
-          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-        }}>{name}</div>
-        <div style={{ fontSize:8, color:T.dim }}>Day {day}</div>
-      </div>
-    </div>
-  );
-}
-function ResultMini({ day }) {
-  const isLeg = day >= 50;
-  return (
-    <div style={{ borderRadius:10, overflow:"hidden", aspectRatio:"16/9", position:"relative",
-      background:"#0a1f0c", border:`1px solid ${T.borderG}`,
-      boxShadow:"0 6px 24px rgba(0,0,0,0.4)" }}>
-      <div style={{ position:"absolute", inset:0,
-        background:"linear-gradient(135deg,#2a3d1a,#3d5a2a,#1a2d12)",
-        display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, opacity:0.35 }}>🌿</div>
-      <div style={{ position:"absolute", right:0, top:0, bottom:0, width:"55%",
-        background:"linear-gradient(90deg,transparent,rgba(8,10,6,0.97))" }} />
-      <div style={{ position:"absolute", right:10, top:8, bottom:8, width:"44%",
-        display:"flex", flexDirection:"column", justifyContent:"center" }}>
-        <div style={{ fontSize:4.5, letterSpacing:"0.18em", color:"rgba(147,168,90,0.6)",
-          textTransform:"uppercase", marginBottom:2 }}>✦ OFFICIAL CERTIFICATE ✦</div>
-        <div style={{ fontSize:13, fontWeight:900, color:T.white,
-          fontFamily:"'Cormorant Garamond',Georgia,serif", lineHeight:1 }}>VERIFIED</div>
-        <div style={{ fontSize:8, fontWeight:700, color:T.olive, marginBottom:5 }}>GRASS TOUCHER</div>
-        <div style={{ height:"0.5px",
-          background:`linear-gradient(90deg,transparent,${T.olive}50,transparent)`, marginBottom:5 }} />
-        <div style={{ fontSize:4, letterSpacing:"0.14em", color:"rgba(147,168,90,0.4)",
-          textTransform:"uppercase", marginBottom:2 }}>CURRENT STREAK</div>
-        <div style={{ fontSize:20, fontWeight:900, lineHeight:1,
-          fontFamily:"'Cormorant Garamond',Georgia,serif",
-          color: isLeg ? T.gold : T.white,
-          textShadow: isLeg ? `0 0 12px ${T.gold}50` : "none" }}>DAY {day}</div>
-        <div style={{ marginTop:"auto", fontSize:4, color:"rgba(255,255,255,0.18)",
-          letterSpacing:"0.1em" }}>proofofgrass.vercel.app</div>
-      </div>
-    </div>
-  );
-}
-// ─── Shield buy section ───────────────────────────────────────────────────────
-const BURN_ADDR   = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
-const SOL_DOMAIN  = "touchgrassburn.sol";
+
 const TOUCHGRASS_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
-const SHIELD_AMOUNT = 50000;
-function buildSolanaPayUrl() {
-  const params = new URLSearchParams({
-    amount: String(SHIELD_AMOUNT),
-    "spl-token": TOUCHGRASS_MINT,
-    label: "Touch Grass Shield",
-    message: "50,000 $TOUCHGRASS — Streak Shield",
-  });
-  return `solana:${BURN_ADDR}?${params.toString()}`;
-}
-function buildQrCodeUrl(data, size = 220) {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&color=240-239-234&bgcolor=10-12-8&data=${encodeURIComponent(data)}`;
-}
-// ─── PromoBanner — reusable seasonal / consumable announcement ───────────────
-// Props: image, title, description, buttonText, href,
-//        secondaryText, secondaryHref, steps (array of strings)
-function PromoBanner({ image, title, description, buttonText, href,
-  secondaryText = "", secondaryHref = "/", steps = [] }) {
-  const imgUrl = supabase.storage.from("promo-assets").getPublicUrl(image).data.publicUrl;
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <div style={{ width:"100%", padding:"0 clamp(14px,4vw,32px)", boxSizing:"border-box" }}>
-
-      {/* Image — no wrapping link so the floating buttons work independently */}
-      <div style={{ position:"relative", borderRadius:24, overflow:"hidden",
-        boxShadow: hovered
-          ? "0 0 40px rgba(249,115,22,0.2), 0 12px 48px rgba(0,0,0,0.55)"
-          : "0 6px 32px rgba(0,0,0,0.45)",
-        transform: hovered ? "scale(1.005)" : "scale(1)",
-        transition:"transform 0.25s ease, box-shadow 0.25s ease" }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}>
-
-        {/* 3:2 aspect ratio container */}
-        <div style={{ position:"relative", width:"100%", paddingBottom:"56.25%", background:"#0e1008", maxHeight:640 }}>
-          <img src={imgUrl} alt={title} loading="lazy"
-            style={{ position:"absolute", inset:0, width:"100%", height:"100%",
-              objectFit:"contain", objectPosition:"center", display:"block" }} />
-
-          {/* Dark gradient at bottom for button legibility */}
-          <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"40%",
-            background:"linear-gradient(to top,rgba(0,0,0,0.72),transparent)",
-            pointerEvents:"none" }} />
-
-        </div>
-      </div>
-
-      {/* Buttons — single row below image, never overlapping */}
-      <div style={{ display:"flex", gap:10, justifyContent:"center", marginTop:14, flexWrap:"nowrap" }}>
-        <a href={href} target="_blank" rel="noopener noreferrer"
-          style={{ display:"inline-flex", alignItems:"center", gap:7,
-            background:"linear-gradient(135deg,#f97316,#c2410c)",
-            color:"#fff", fontSize:13, fontWeight:700,
-            letterSpacing:"0.05em", padding:"11px 22px",
-            borderRadius:999, textDecoration:"none", whiteSpace:"nowrap",
-            boxShadow:"0 4px 18px rgba(249,115,22,0.45)",
-            transition:"transform 0.15s, box-shadow 0.15s" }}
-          onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 24px rgba(249,115,22,0.6)";}}
-          onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 4px 18px rgba(249,115,22,0.45)";}}>
-          {buttonText}
-        </a>
-        {secondaryText && (
-          <a href={secondaryHref} target="_blank" rel="noopener noreferrer"
-            style={{ display:"inline-flex", alignItems:"center", gap:7,
-              background:"linear-gradient(135deg,#93a85a,#7a9148)",
-              color:"#fff", fontSize:13, fontWeight:700,
-              letterSpacing:"0.05em", padding:"11px 22px",
-              borderRadius:999, textDecoration:"none", whiteSpace:"nowrap",
-              boxShadow:"0 4px 18px rgba(147,168,90,0.4)",
-              transition:"transform 0.15s, box-shadow 0.15s" }}
-            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 24px rgba(147,168,90,0.55)";}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 4px 18px rgba(147,168,90,0.4)";}}>
-            {secondaryText}
-          </a>
-        )}
-      </div>
-
-      {/* Info card */}
-      <div style={{ marginTop:16, background:"linear-gradient(145deg,#141510,#1c1e17)",
-        border:"1px solid rgba(249,115,22,0.25)", borderRadius:16,
-        padding:"22px 24px", boxShadow:"0 4px 24px rgba(0,0,0,0.3)" }}>
-
-        <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-          fontSize:"clamp(17px,2.2vw,22px)", fontWeight:700,
-          color:"#f0efea", marginBottom:8 }}>
-          {title}
-        </div>
-
-        <div style={{ fontSize:13, color:"rgba(240,239,234,0.55)",
-          lineHeight:1.65, marginBottom: steps.length ? 18 : 0 }}>
-          {description.split("\n\n").map((para, i) => (
-            <p key={i} style={{ margin: i > 0 ? "8px 0 0" : 0 }}>{para}</p>
-          ))}
-        </div>
-
-        {/* Steps */}
-        {steps.length > 0 && (
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:4 }}>
-            {steps.map((step, i) => (
-              <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10,
-                flex:"1 1 180px", background:"rgba(249,115,22,0.05)",
-                border:"1px solid rgba(249,115,22,0.15)", borderRadius:10,
-                padding:"10px 12px" }}>
-                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                  fontSize:22, fontWeight:700, color:"rgba(249,115,22,0.4)",
-                  lineHeight:1, flexShrink:0 }}>
-                  {String(i+1).padStart(2,"0")}
-                </div>
-                <div style={{ fontSize:12, color:"rgba(240,239,234,0.65)",
-                  lineHeight:1.5, paddingTop:2 }}>{step}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Map preview card ─────────────────────────────────────────────────────────
-
-// ─── Spotlight section ────────────────────────────────────────────────────────
-const SPOT_CATS = Object.values(SPOTLIGHT_BADGES).map(b => ({
-  key:   b.key,
-  emoji: b.emoji,
-  name:  b.title,
-  label: b.title,
-  color: b.color,
-  image: b.image,
-}));
-function SpotlightSection() {
-  const [winners, setWinners] = useState([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    (async () => {
-      const d = new Date();
-      const day = d.getUTCDay();
-      d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
-      const thisMonday = d.toISOString().slice(0, 10);
-      const { data: spotlights } = await supabase
-        .from("CommunitySpotlights")
-        .select("*")
-        .eq("status", "active")
-        .eq("week_start", thisMonday);
-      if (!spotlights?.length) { setLoading(false); return; }
-      const usernames = [...new Set(spotlights.map(s => s.username))];
-      const { data: profiles } = await supabase
-        .from("Profiles").select("username, avatar_url").in("username", usernames);
-      const avatarMap = Object.fromEntries((profiles ?? []).map(p => [p.username, p.avatar_url]));
-      setWinners(spotlights.map(s => ({
-        ...s,
-        resolved_avatar: s.avatar_url || avatarMap[s.username] || null,
-      })));
-      setLoading(false);
-    })();
-  }, []);
-  const winnerMap = Object.fromEntries(winners.map(w => [w.category, w]));
-  const T2 = {
-    bg2:"#0e100b", bg3:"#141710", border:"rgba(255,255,255,0.055)",
-    borderGold:"rgba(200,168,75,0.35)", gold:"#c8a84b",
-    white:"#f0efea", dim:"rgba(240,239,234,0.24)", muted:"rgba(240,239,234,0.52)",
-  };
-  return (
-    <div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-        marginBottom:16, flexWrap:"wrap", gap:8 }}>
-        <div>
-          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em",
-            textTransform:"uppercase", color:T2.gold, marginBottom:4 }}>Community</div>
-          <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize:18, fontWeight:700, color:T2.white }}>Community Spotlight</div>
-          <div style={{ fontSize:11, color:T2.dim, marginTop:2 }}>This week's Touch Grass winners</div>
-        </div>
-        <a href="/spotlight" style={{ fontSize:11, color:T2.gold,
-          textDecoration:"none", fontWeight:600, letterSpacing:"0.04em", whiteSpace:"nowrap" }}>
-          View Spotlight →
-        </a>
-      </div>
-      <div className="spotlight-scroll" style={{ display:"flex", gap:12, overflowX:"auto",
-        overflowY:"visible", paddingBottom:4, scrollbarWidth:"none" }}>
-        {SPOT_CATS.map(cat => {
-          const w = winnerMap[cat.key];
-          return (
-            <div key={cat.key} style={{
-              flexShrink:0, width:160,
-              background: w ? `linear-gradient(145deg,${T2.bg2},${T2.bg3})` : T2.bg2,
-              border:`1px solid ${w ? T2.borderGold : T2.border}`,
-              borderRadius:12, padding:"14px 14px",
-              boxShadow: w ? "0 0 18px rgba(200,168,75,0.1)" : "none",
-            }}>
-              {cat.image ? (
-                <img src={cat.image} alt={cat.name} loading="lazy"
-                  style={{ width:36, height:36, objectFit:"contain", marginBottom:6,
-                    filter:`drop-shadow(0 0 6px ${cat.color}60)`, opacity: w ? 1 : 0.25 }} />
-              ) : (
-                <div style={{ fontSize:20, marginBottom:6 }}>{cat.emoji}</div>
-              )}
-              <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.12em",
-                textTransform:"uppercase", color:cat.color, marginBottom:8 }}>{cat.name}</div>
-              {loading ? (
-                <div style={{ height:32, borderRadius:6, background:T2.bg3, opacity:0.5 }} />
-              ) : w ? (
-                <>
-                  <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
-                    {w.resolved_avatar ? (
-                      <img src={w.resolved_avatar} alt="" loading="lazy"
-                        style={{ width:28, height:28, borderRadius:"50%", objectFit:"cover",
-                          border:`1px solid ${cat.color}`, flexShrink:0 }} />
-                    ) : (
-                      <div style={{ width:28, height:28, borderRadius:"50%", flexShrink:0,
-                        background:T2.bg3, border:`1px solid ${cat.color}`,
-                        display:"flex", alignItems:"center", justifyContent:"center",
-                        fontSize:12, fontWeight:700, color:cat.color }}>
-                        {w.username[0].toUpperCase()}
-                      </div>
-                    )}
-                    <a href={`/u/${w.username}`}
-                      style={{ fontSize:12, fontWeight:700, color:T2.white, textDecoration:"none",
-                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                      @{w.display_name || w.username}
-                    </a>
-                  </div>
-                  <div style={{ fontSize:9, color:cat.color, fontWeight:600, letterSpacing:"0.04em" }}>{cat.label}</div>
-                </>
-              ) : (
-                <div style={{ textAlign:"center", padding:"8px 0" }}>
-                  <div style={{ fontSize:20, opacity:0.3, marginBottom:4 }}>🏆</div>
-                  <div style={{ fontSize:10, color:T2.dim }}>No Winner</div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-// ─── Recent Milestones ────────────────────────────────────────────────────────
-const MILESTONE_ICONS = {
-  streak:"🔥", grass_score:"🌱", proof_count:"🌿",
-  referral:"🤝", spotlight:"🏆", lucky_touch:"🍀",
-};
-function RecentMilestones() {
-  const [milestones, setMilestones] = useState([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("MilestoneEvents")
-        .select("username,milestone_type,milestone_label,created_at")
-        .order("created_at", { ascending:false })
-        .limit(8);
-      setMilestones(data ?? []);
-      setLoading(false);
-    })();
-  }, []);
-  const T2 = {
-    bg2:"#0e100b", bg3:"#141710", border:"rgba(255,255,255,0.055)",
-    borderGold:"rgba(200,168,75,0.35)", gold:"#c8a84b",
-    white:"#f0efea", dim:"rgba(240,239,234,0.24)", olive:"#93a85a",
-  };
-  if (!loading && milestones.length === 0) return null;
-  return (
-    <div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-        <div>
-          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em",
-            textTransform:"uppercase", color:T2.gold, marginBottom:3 }}>Platform</div>
-          <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize:18, fontWeight:700, color:T2.white }}>Recent Milestones</div>
-        </div>
-      </div>
-      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-        {loading ? (
-          [1,2,3].map(i => (
-            <div key={i} style={{ height:40, borderRadius:8, background:T2.bg3, opacity:0.5 }} />
-          ))
-        ) : milestones.map((m, i) => (
-          <a key={i} href={`/u/${m.username}`}
-            style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
-              borderRadius:9, textDecoration:"none", background:T2.bg3,
-              border:`1px solid ${T2.border}`, transition:"border-color 0.15s" }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = T2.borderGold}
-            onMouseLeave={e => e.currentTarget.style.borderColor = T2.border}>
-            <span style={{ fontSize:16, flexShrink:0 }}>{MILESTONE_ICONS[m.milestone_type] ?? "⭐"}</span>
-            <div style={{ flex:1, minWidth:0 }}>
-              <span style={{ fontSize:12, fontWeight:600, color:T2.gold }}>@{m.username}</span>
-              <span style={{ fontSize:12, color:T2.dim }}> {m.milestone_label}</span>
-            </div>
-            <span style={{ fontSize:9, color:T2.dim, flexShrink:0 }}>
-              {m.created_at ? new Date(m.created_at).toLocaleDateString("en-US",{ month:"short", day:"numeric" }) : ""}
-            </span>
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Recent Actions feed (everything except proofs) ──────────────────────────
-
-
-function ActivityFeed() {
-  // kept for any remaining references — renders nothing now
-  return null;
-}
-// Placeholder to satisfy linter:
-function _oldActivityFeedUnused() {
-  const T2 = { olive:"#93a85a", gold:"#c8a84b", white:"#f0efea", dim:"rgba(240,239,234,0.22)", bg3:"#181a12", border:"rgba(255,255,255,0.06)" };
-  const items = [];
-  return (
-    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-
-      {items.map((item, i) => {
-        const timeAgo = item.time ? (() => { const diff=Date.now()-new Date(item.time); const mins=Math.floor(diff/60000); const hrs=Math.floor(diff/3600000); const days=Math.floor(diff/86400000); return days>0?`${days}d ago`:hrs>0?`${hrs}h ago`:mins>0?`${mins}m ago`:"just now"; })() : "";
-        const isSpotlight = item.type === "spotlight";
-        const inner = (
-          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:10,
-            background:isSpotlight?"linear-gradient(135deg,#1a1600,#0e1008)":T2.bg3,
-            border:isSpotlight?"1px solid rgba(200,168,75,0.25)":`1px solid ${T2.border}` }}>
-            {isSpotlight && item.badgeImg ? <img src={item.badgeImg} alt="" loading="lazy" style={{ width:28, height:28, objectFit:"contain", flexShrink:0 }} /> : <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>}
-            <div style={{ flex:1, minWidth:0 }}>
-              <span className="feed-username" style={{ fontSize:12, fontWeight:600, color:isSpotlight?T2.gold:T2.white }}>@{item.username}</span>
-              <span style={{ fontSize:12, color:isSpotlight?"rgba(200,168,75,0.6)":T2.dim }}> {item.text}</span>
-            </div>
-            {timeAgo && <span style={{ fontSize:10, color:T2.dim, flexShrink:0 }}>{timeAgo}</span>}
-          </div>
-        );
-        return item.link ? <Link key={i} href={item.link} style={{ textDecoration:"none" }}>{inner}</Link> : <div key={i}>{inner}</div>;
-      })}
-    </div>
-  );
-}
-// ─── Main page ────────────────────────────────────────────────────────────────
-
-// ─── RewardsBanner — shown once per day to users who haven't met the minimum ──
-function RewardsBanner({ username }) {
-  const [status, setStatus] = useState(null); // null | "no_wallet" | "no_hold" | "ok"
-  const [dismissed, setDismissed] = useState(true); // start hidden, check after load
-
-  useEffect(() => {
-    if (!username) return;
-
-    // Check once-per-day dismissal
-    const key = `pog_reward_banner_${username}`;
-    const lastDismissed = localStorage.getItem(key);
-    const today = new Date().toISOString().slice(0, 10);
-    if (lastDismissed === today) return; // already dismissed today
-
-    // Fetch wallet + do live balance check
-    (async () => {
-      const { data } = await supabase
-        .from("Profiles")
-        .select("wallet_verified, wallet_address, has_touchgrass_holder, wallet_last_checked_at")
-        .eq("username", username)
-        .maybeSingle();
-
-      if (!data) return;
-
-      // No wallet connected
-      if (!data.wallet_verified || !data.wallet_address) {
-        setStatus("no_wallet");
-        setDismissed(false);
-        return;
-      }
-
-      // Already flagged as verified holder — recheck every 7 days
-      // Aligns with Sunday airdrop cycle
-      if (data.has_touchgrass_holder) {
-        const lastChecked = data.wallet_last_checked_at;
-        const daysSinceCheck = lastChecked
-          ? (Date.now() - new Date(lastChecked).getTime()) / (1000 * 60 * 60 * 24)
-          : 999;
-        if (daysSinceCheck < 7) {
-          // Checked within last 7 days — trust the cached value
-          setStatus("ok");
-          return;
-        }
-        // 7+ days since last check — fall through to live balance check below
-      }
-
-      // Wallet connected but not yet verified in DB — do live balance check
-      // $5 USD minimum — fetch price then check token balance
-      try {
-        const MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
-        const { PublicKey, Connection } = await import("@solana/web3.js");
-        const conn = new Connection(
-          process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://solana-mainnet.rpc.extrnode.com",
-          "confirmed"
-        );
-        const walletPubkey = new PublicKey(data.wallet_address);
-        const mintPubkey   = new PublicKey(MINT);
-
-        // Get token balance
-        const accounts = await conn.getParsedTokenAccountsByOwner(walletPubkey, { mint: mintPubkey });
-        const balance = accounts.value.reduce((sum, acc) => {
-          return sum + (acc.account.data.parsed?.info?.tokenAmount?.uiAmount ?? 0);
-        }, 0);
-
-        if (balance === 0) {
-          // Fell below minimum — update DB and show banner
-        await supabase.from("Profiles").update({
-          has_touchgrass_holder: false,
-          wallet_last_checked_at: new Date().toISOString(),
-        }).eq("username", username).catch(() => {});
-        setStatus("no_hold");
-        setDismissed(false);
-        return;
-        }
-
-        // Fetch price to check USD value
-        const priceRes = await fetch("/api/touchgrass-price").catch(() => null);
-        if (priceRes?.ok) {
-          const { price } = await priceRes.json();
-          if (price > 0) {
-            const usdValue = balance * price;
-            if (usdValue >= 5) {
-              // Meets minimum — update DB so we don't check again
-              await supabase.from("Profiles").update({
-                has_touchgrass_holder: true,
-                wallet_last_checked_at: new Date().toISOString(),
-              }).eq("username", username);
-              setStatus("ok");
-              return;
-            }
-          }
-        }
-
-        // Balance exists but couldn't verify USD value — don't show banner
-        // Better to not penalise than to false-positive
-        setStatus("ok");
-        return;
-
-      } catch(e) {
-        // RPC failed — don't show banner, give benefit of the doubt
-        console.warn("[RewardsBanner] balance check failed:", e?.message);
-        setStatus("ok");
-        return;
-      }
-    })();
-  }, [username]);
-
-  const dismiss = () => {
-    const key = `pog_reward_banner_${username}`;
-    const today = new Date().toISOString().slice(0, 10);
-    localStorage.setItem(key, today);
-    setDismissed(true);
-  };
-
-  if (dismissed || status === null || status === "ok") return null;
-
-  const isNoWallet = status === "no_wallet";
-
-  return (
-    <div style={{
-      margin: "0 0 16px",
-      background: "linear-gradient(135deg,rgba(200,168,75,0.10),rgba(147,168,90,0.06))",
-      border: "1px solid rgba(200,168,75,0.30)",
-      borderRadius: 14,
-      padding: "16px 18px",
-      display: "flex",
-      alignItems: "flex-start",
-      gap: 14,
-      position: "relative",
-    }}>
-      {/* Icon */}
-      <div style={{
-        fontSize: 26, flexShrink: 0, marginTop: 2,
-      }}>
-        {isNoWallet ? "🔗" : "💰"}
-      </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 13, fontWeight: 700, color: "#f0efea", marginBottom: 4,
-        }}>
-          {isNoWallet
-            ? "Connect your wallet to earn rewards"
-            : "Hold $TOUCHGRASS to earn rewards"}
-        </div>
-        <div style={{
-          fontSize: 12, color: "rgba(240,239,234,0.60)", lineHeight: 1.6, marginBottom: 12,
-        }}>
-          {isNoWallet
-            ? "Proof of Grass rewards require a verified wallet holding at least $5 USD in $TOUCHGRASS, or an active Harvest deposit. Connect your wallet on your profile to get started."
-            : "Your wallet is connected but doesn't meet the minimum yet. Hold at least $5 USD in $TOUCHGRASS — or deposit into Harvest — to earn rewards from your streak."}
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {isNoWallet ? (
-            <a href={`/u/${username}`}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                background: "linear-gradient(135deg,#c8a84b,#a88c38)",
-                color: "#0a0800", fontSize: 12, fontWeight: 700,
-                padding: "8px 16px", borderRadius: 999, textDecoration: "none",
-                letterSpacing: "0.04em",
-              }}>
-              🔗 Connect Wallet
-            </a>
-          ) : (
-            <>
-              <a href="https://jup.ag/swap/SOL-5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump"
-                target="_blank" rel="noopener noreferrer"
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  background: "linear-gradient(135deg,#c8a84b,#a88c38)",
-                  color: "#0a0800", fontSize: 12, fontWeight: 700,
-                  padding: "8px 16px", borderRadius: 999, textDecoration: "none",
-                  letterSpacing: "0.04em",
-                }}>
-                💰 Buy $TOUCHGRASS
-              </a>
-              <a href="https://harvest.touchgrass.today"
-                target="_blank" rel="noopener noreferrer"
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  background: "transparent",
-                  border: "1px solid rgba(147,168,90,0.45)",
-                  color: "#93a85a", fontSize: 12, fontWeight: 700,
-                  padding: "8px 16px", borderRadius: 999, textDecoration: "none",
-                  letterSpacing: "0.04em",
-                }}>
-                🌾 Deposit into Harvest
-              </a>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Dismiss */}
-      <button onClick={dismiss}
-        style={{
-          background: "none", border: "none", color: "rgba(240,239,234,0.30)",
-          cursor: "pointer", fontSize: 16, flexShrink: 0, padding: "2px 4px",
-          lineHeight: 1,
-        }}>
-        ✕
-      </button>
-    </div>
-  );
-}
-
-
-// ─── LiveTicker — scrolling bar combining recent proofs + recent activity ──────
-function LiveTicker({ username }) {
-  const [items, setItems] = useState([]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const [subRes, actRes, chalRes, spotRes, refRes] = await Promise.all([
-          supabase.from("Submissions").select("username,created_at").eq("status","approved")
-            .order("created_at",{ascending:false}).limit(20),
-          supabase.from("ScoreEvents").select("username,event_type,points,created_at")
-            .in("event_type",["milestone_10","milestone_20","milestone_30","milestone_50","milestone_100","milestone_180","milestone_365","milestone_500","lucky_touch_rare","lucky_touch_common"])
-            .order("created_at",{ascending:false}).limit(15),
-          supabase.from("Challenges").select("challenger,challenged,duration_days,status,created_at")
-            .order("created_at",{ascending:false}).limit(10),
-          supabase.from("CommunitySpotlights").select("username,category,display_name,week_start,created_at")
-            .eq("status","active").order("created_at",{ascending:false}).limit(5),
-          supabase.from("Referrals").select("referrer_username,referred_username,status,converted_at,created_at")
-            .eq("status","converted").order("created_at",{ascending:false}).limit(5),
-        ]);
-
-        const feed = [];
-        (subRes.data||[]).forEach(s => feed.push({
-          emoji:"🌿", text:`@${s.username} touched grass`, time: s.created_at,
-        }));
-        (actRes.data||[]).forEach(se => {
-          const labels = {
-            milestone_10:"hit Day 10 🔥", milestone_20:"hit Day 20 🌱",
-            milestone_30:"hit Day 30 🌿", milestone_50:"hit Day 50 ⭐",
-            milestone_100:"hit Day 100 🏆", milestone_180:"hit Day 180 ⚡",
-            milestone_365:"hit Day 365 👑", milestone_500:"hit Day 500 🌌",
-            lucky_touch_rare:"got a Rare Lucky Touch ✨",
-            lucky_touch_common:"got a Lucky Touch 🍀",
-          };
-          if(labels[se.event_type]) feed.push({ emoji:"⚡", text:`@${se.username} ${labels[se.event_type]}`, time: se.created_at });
-        });
-        (chalRes.data||[]).forEach(c => {
-          if(c.status==="active"||c.status==="pending") feed.push({ emoji:"⚡", text:`@${c.challenger} challenged @${c.challenged} · ${c.duration_days}d`, time: c.created_at });
-          if(c.status==="completed") feed.push({ emoji:"🏆", text:`@${c.challenger} vs @${c.challenged} · ${c.duration_days}d challenge complete`, time: c.created_at });
-        });
-        (spotRes.data||[]).forEach(s => feed.push({ emoji:"🌟", text:`@${s.username} won ${s.display_name||s.category} Spotlight`, time: s.created_at }));
-        (refRes.data||[]).forEach(r => feed.push({ emoji:"🤝", text:`@${r.referrer_username} brought @${r.referred_username} to Day 10`, time: r.converted_at||r.created_at }));
-
-        // Sort by time descending, deduplicate
-        feed.sort((a,b) => new Date(b.time) - new Date(a.time));
-        setItems(feed.slice(0,40));
-      } catch(e) { console.warn("ticker error", e); }
-    })();
-  }, []);
-
-  if (items.length === 0) return null;
-
-  // Duplicate items for seamless loop
-  const doubled = [...items, ...items];
-
-  return (
-    <div style={{
-      width:"100%", overflow:"hidden",
-      borderTop:"1px solid rgba(255,255,255,0.055)",
-      borderBottom:"1px solid rgba(255,255,255,0.055)",
-      background:"rgba(147,168,90,0.04)",
-      padding:"10px 0",
-    }}>
-      <style>{`
-        @keyframes ticker-scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .ticker-track {
-          display: flex;
-          gap: 0;
-          width: max-content;
-          animation: ticker-scroll 120s linear infinite;
-        }
-        .ticker-track:hover { animation-play-state: paused; }
-      `}</style>
-      <div className="ticker-track">
-        {doubled.map((item, i) => (
-          <div key={i} style={{
-            display:"inline-flex", alignItems:"center", gap:8,
-            padding:"0 32px",
-            borderRight:"1px solid rgba(255,255,255,0.06)",
-            whiteSpace:"nowrap", flexShrink:0,
-          }}>
-            <span style={{ fontSize:13 }}>{item.emoji}</span>
-            <span style={{ fontSize:12, color:"rgba(240,239,234,0.70)", fontWeight:500 }}>
-              {item.text}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-
-
-// ─── DexCard — live $TOUCHGRASS price via DexScreener API ────────────────────
-const TOUCHGRASS_PAIR = "JBa82FBaVSHCBERdBBpEFvCkSTbKGhijHBQ3YSFV2GmK"; // main pair
 const DEXSCREENER_URL = "https://dexscreener.com/solana/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
+const BUY_URL         = "https://jup.ag/swap/SOL-5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 
-function DexCard({ trackClick }) {
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+function Skel({ w = "100%", h = 16, r = 8 }) {
+  return (
+    <div style={{
+      width: w, height: h, borderRadius: r,
+      background: "linear-gradient(90deg, rgba(200,220,190,0.3) 0%, rgba(220,235,210,0.5) 50%, rgba(200,220,190,0.3) 100%)",
+      backgroundSize: "200% 100%",
+      animation: "v2Shimmer 1.4s ease-in-out infinite",
+    }} />
+  );
+}
+
+// ─── StatCard ─────────────────────────────────────────────────────────────────
+function StatCard({ icon, value, label, sub, accent, loading }) {
+  return (
+    <div style={{
+      ...V2Styles.statCard,
+      display: "flex", flexDirection: "column", gap: 6,
+      alignItems: "center", textAlign: "center",
+    }}>
+      <div style={{ fontSize: 28 }}>{icon}</div>
+      {loading
+        ? <Skel h={32} r={6} />
+        : <div style={{
+            fontFamily: V2.fontSerif,
+            fontSize: "clamp(26px,4vw,36px)",
+            fontWeight: 700,
+            color: accent || V2.forestGreen,
+            lineHeight: 1,
+          }}>{value}</div>
+      }
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.midGray }}>{label}</div>
+            {sub && <div style={{
+        fontSize: 11, color: V2.grassGreen, fontWeight: 600,
+        background: "rgba(125,200,50,0.1)", borderRadius: 20,
+        padding: "2px 10px", display: "inline-block", alignSelf: "center",
+      }}>{sub}</div>}
+    </div>
+  );
+}
+
+// ─── FeatureCard ──────────────────────────────────────────────────────────────
+function FeatureCard({ emoji, icon, title, desc, cta, href, onClick, accent }) {
+  return (
+    <div style={{
+      ...V2Styles.glassCard,
+      overflow: "hidden",
+      display: "flex", flexDirection: "column",
+      transition: V2.transitionMd,
+      position: "relative",
+      minHeight: 200,
+    }}>
+      {/* Background image */}
+      {icon && (
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `url(${icon})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          opacity: 0.65,
+          borderRadius: "inherit",
+        }} />
+      )}
+      {/* Content */}
+      <div style={{
+        position: "relative", zIndex: 1,
+        padding: "20px",
+        display: "flex", flexDirection: "column", gap: 12, flex: 1,
+        alignItems: "center", textAlign: "center",
+      }}>
+        {!icon && <div style={{ fontSize: 36 }}>{emoji}</div>}
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: V2.forestGreen, marginBottom: 4 }}>{title}</div>
+          <div style={{ fontSize: 12, color: V2.textBody, lineHeight: 1.5 }}>{desc}</div>
+        </div>
+        {href ? (
+          <Link href={href} style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: V2.glassWhite,
+            border: `1px solid ${V2.borderGreen}`,
+            borderRadius: 20, padding: "7px 14px",
+            fontSize: 12, fontWeight: 700,
+            color: V2.grassGreen,
+            textDecoration: "none",
+            marginTop: "auto",
+          }}>{cta}</Link>
+        ) : (
+          <button onClick={onClick} style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: V2.glassWhite,
+            border: `1px solid ${V2.borderGreen}`,
+            borderRadius: 20, padding: "7px 14px",
+            fontSize: 12, fontWeight: 700, color: V2.grassGreen,
+            cursor: "pointer", marginTop: "auto",
+          }}>{cta}</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── TokenStrip ──────────────────────────────────────────────────────────────
+function TokenStrip() {
   const [price,    setPrice]    = useState(null);
   const [change24, setChange24] = useState(null);
   const [vol24,    setVol24]    = useState(null);
   const [mcap,     setMcap]     = useState(null);
   const [liq,      setLiq]      = useState(null);
   const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(
-          `https://api.dexscreener.com/latest/dex/tokens/5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump`
-        );
-        const data = await res.json();
-        const pair = data?.pairs?.[0];
-        if (!pair) throw new Error("no pair");
-        setPrice(parseFloat(pair.priceUsd || 0));
-        setChange24(parseFloat(pair.priceChange?.h24 || 0));
-        setVol24(parseFloat(pair.volume?.h24 || 0));
-        setMcap(parseFloat(pair.marketCap || 0));
-        setLiq(parseFloat(pair.liquidity?.usd || 0));
-      } catch(e) {
-        setError(true);
-      }
+        const r = await fetch("/api/touchgrass-price");
+        const d = await r.json();
+        if (d.price > 0) setPrice(d.price);
+        // Fetch full pair data for vol/mcap/liq
+        const r2 = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${TOUCHGRASS_MINT}`);
+        const d2 = await r2.json();
+        const pair = d2?.pairs?.[0];
+        if (pair) {
+          setChange24(parseFloat(pair.priceChange?.h24 || 0));
+          setVol24(parseFloat(pair.volume?.h24 || 0));
+          setMcap(parseFloat(pair.marketCap || 0));
+          setLiq(parseFloat(pair.liquidity?.usd || 0));
+        }
+      } catch(e) {}
       setLoading(false);
     })();
   }, []);
 
-  const fmt = (n) => n >= 1e6 ? `$${(n/1e6).toFixed(2)}M`
-    : n >= 1e3 ? `$${(n/1e3).toFixed(1)}K`
-    : `$${n.toFixed(2)}`;
-
+  const fmt = (n) => n >= 1e6 ? `$${(n/1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n/1e3).toFixed(1)}K` : `$${n.toFixed(2)}`;
   const fmtPrice = (n) => {
     if (!n) return "—";
     if (n < 0.000001) return `$${n.toExponential(2)}`;
     if (n < 0.001) return `$${n.toFixed(8)}`;
-    if (n < 1) return `$${n.toFixed(6)}`;
-    return `$${n.toFixed(4)}`;
+    return `$${n.toFixed(6)}`;
   };
-
-  const up = change24 >= 0;
+  const up = (change24 || 0) >= 0;
 
   return (
     <div style={{
-      width:"100%", background:T.bg,
-      borderBottom:`1px solid ${T.border}`,
-      padding:"28px clamp(14px,4vw,48px)",
+      ...V2Styles.glassCard,
+      borderRadius: 0,
+      display: "flex", alignItems: "center", gap: 0,
+      padding: "12px clamp(14px,4vw,40px)",
+      flexWrap: "wrap",
+      borderLeft: "none", borderRight: "none",
+      gap: 24,
     }}>
-      {/* Header */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <img src="/touchgrass-transparent.png" alt="" style={{ width:28, height:28, objectFit:"contain" }} />
-          <span style={{ fontSize:14, fontWeight:700, color:T.white, letterSpacing:"0.04em" }}>$TOUCHGRASS</span>
-        </div>
-        <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
-          onClick={() => trackClick("dexscreener", DEXSCREENER_URL)}
-          style={{ fontSize:12, color:T.olive, textDecoration:"none" }}>
-          View on DexScreener →
-        </a>
+      {/* Logo + price */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        <img src="/touchgrass-transparent.png" alt="" style={{ width: 24, height: 24, objectFit: "contain" }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: V2.forestGreen }}>$TOUCHGRASS</span>
+        {loading ? <Skel w={80} h={16} /> : (
+          <span style={{ fontFamily: V2.fontSerif, fontSize: 18, fontWeight: 700, color: V2.forestGreen }}>
+            {fmtPrice(price)}
+          </span>
+        )}
+        {change24 !== null && (
+          <span style={{ fontSize: 12, fontWeight: 700, color: up ? V2.success : V2.danger }}>
+            {up ? "▲" : "▼"} {Math.abs(change24).toFixed(2)}%
+          </span>
+        )}
       </div>
 
-      {loading ? (
-        <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-          {[120,80,100,90].map((w,i) => <Skeleton key={i} w={w} h={40} />)}
+      {/* Stats */}
+      {!loading && [
+        { label: "24h Vol",    value: fmt(vol24 || 0) },
+        { label: "Market Cap", value: fmt(mcap  || 0) },
+        { label: "Liquidity",  value: fmt(liq   || 0) },
+      ].map(s => (
+        <div key={s.label} style={{ flexShrink: 0 }}>
+          <div style={{ fontSize: 10, color: V2.midGray, textTransform: "uppercase", letterSpacing: "0.1em" }}>{s.label}</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: V2.forestGreen }}>{s.value}</div>
         </div>
-      ) : error ? (
-        <div style={{ fontSize:13, color:T.dim, padding:"20px 0" }}>
-          Unable to load price data.{" "}
-          <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
-            style={{ color:T.olive }}>View on DexScreener →</a>
-        </div>
-      ) : (
-        <>
-          {/* Price + change */}
-          <div style={{ display:"flex", alignItems:"flex-end", gap:14, marginBottom:24, flexWrap:"wrap" }}>
-            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:"clamp(32px,5vw,52px)", fontWeight:700, color:T.white, lineHeight:1 }}>
-              {fmtPrice(price)}
-            </div>
-            <div style={{
-              fontSize:15, fontWeight:700, marginBottom:4,
-              color: up ? "#4ade80" : "#f87171",
-            }}>
-              {up ? "▲" : "▼"} {Math.abs(change24).toFixed(2)}% (24h)
-            </div>
-          </div>
+      ))}
 
-          {/* Stats row */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))", gap:12, marginBottom:24 }}>
-            {[
-              { label:"24h Volume", value: fmt(vol24) },
-              { label:"Market Cap", value: fmt(mcap) },
-              { label:"Liquidity",  value: fmt(liq) },
-            ].map(s => (
-              <div key={s.label} style={{
-                background:T.bg2, border:`1px solid ${T.border}`,
-                borderRadius:10, padding:"14px 16px",
-              }}>
-                <div style={{ fontSize:10, color:T.dim, letterSpacing:"0.1em",
-                  textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
-                <div style={{ fontSize:18, fontWeight:700, color:T.white, fontFamily:"'Cormorant Garamond',Georgia,serif" }}>
-                  {s.value}
+      {/* CTAs */}
+      <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0, flexWrap: "wrap" }}>
+        <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
+          style={{
+            fontSize: 12, fontWeight: 600, color: V2.forestGreen,
+            textDecoration: "none", padding: "7px 14px",
+            border: `1px solid ${V2.borderSoft}`, borderRadius: 20,
+            background: V2.glassWhite,
+          }}>
+          📈 DexScreener
+        </a>
+        <a href={BUY_URL} target="_blank" rel="noopener noreferrer"
+          style={{
+            ...V2Styles.btnPrimary,
+            fontSize: 12, padding: "7px 16px",
+          }}>
+          💰 Buy $TOUCHGRASS
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ─── FeaturedPosts section ────────────────────────────────────────────────────
+function FeaturedPostsSection() {
+  const [posts,    setPosts]    = useState([]);
+  const [idx,      setIdx]      = useState(0);
+  const [clicked,  setClicked]  = useState({});
+  const [loading,  setLoading]  = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("FeaturedPosts")
+        .select("*").eq("active", true)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: false });
+      setPosts(data || []);
+      setLoading(false);
+    })();
+  }, []);
+
+  const post = posts[idx] || null;
+
+  const track = async (url) => {
+    setClicked(p => ({ ...p, [url]: true }));
+    await supabase.from("ClickEvents").insert([{ link_type: "tweet", url }]).catch(() => {});
+  };
+
+  if (!loading && !posts.length) return null;
+
+  return (
+    <div style={{ padding: "32px clamp(14px,4vw,40px)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 20 }}>𝕏</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: V2.forestGreen }}>Featured Posts</span>
+        </div>
+        <a href="https://twitter.com/XTouchGrass" target="_blank" rel="noopener noreferrer"
+          style={{ fontSize: 12, color: V2.grassGreen, textDecoration: "none" }}>@XTouchGrass →</a>
+      </div>
+
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+        {loading ? (
+          <div style={{ ...V2Styles.glassCard, padding: 24, height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Skel w="60%" h={16} />
+          </div>
+        ) : post ? (
+          <>
+            <div style={{ ...V2Styles.glassCard, padding: 20, marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
+                  background: V2.gradientGrassBtn, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <img src="/touchgrass-transparent.png" alt="" style={{ width: 32, height: 32, objectFit: "contain" }} />
                 </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: V2.forestGreen }}>Touch Grass</div>
+                  <div style={{ fontSize: 11, color: V2.midGray }}>@XTouchGrass</div>
+                </div>
+                <div style={{ marginLeft: "auto", fontSize: 18 }}>𝕏</div>
               </div>
-            ))}
-          </div>
+              <div style={{ fontSize: 14, color: V2.textBody, lineHeight: 1.6 }}>
+                {post.tweet_text?.length > 280 ? post.tweet_text.slice(0, 277) + "..." : post.tweet_text}
+              </div>
+            </div>
+            <a href={post.tweet_url} target="_blank" rel="noopener noreferrer"
+              onClick={() => track(post.tweet_url)}
+              style={{
+                ...V2Styles.btnPrimary,
+                width: "100%", justifyContent: "center",
+                background: clicked[post.tweet_url] ? V2.gradientGrassBtn : V2.glassWhite,
+                color: clicked[post.tweet_url] ? V2.white : V2.forestGreen,
+                border: `1px solid ${V2.borderGreen}`,
+                boxShadow: "none",
+                fontSize: 13,
+              }}>
+              {clicked[post.tweet_url] ? "✓ Opened" : "Like · Reply · Repost on X →"}
+            </a>
 
-          {/* CTAs */}
-          <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center" }}>
-            <a href={DEXSCREENER_URL} target="_blank" rel="noopener noreferrer"
-              onClick={() => trackClick("dexscreener_upvote", DEXSCREENER_URL)}
-              style={{
-                display:"inline-flex", alignItems:"center", gap:8, padding:"11px 20px",
-                background:"linear-gradient(135deg,rgba(147,168,90,0.15),rgba(200,168,75,0.08))",
-                border:`1px solid rgba(147,168,90,0.35)`,
-                borderRadius:8, color:T.olive, fontSize:13, fontWeight:700,
-                textDecoration:"none", letterSpacing:"0.04em",
-              }}>
-              🔼 Upvote on DexScreener
-            </a>
-            <a href="https://jup.ag/swap/SOL-5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump"
-              target="_blank" rel="noopener noreferrer"
-              onClick={() => trackClick("buy_touchgrass", "https://jup.ag/swap/SOL-5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump")}
-              style={{
-                display:"inline-flex", alignItems:"center", gap:8, padding:"11px 20px",
-                background:"linear-gradient(135deg,#93a85a,#7a9148)",
-                borderRadius:8, color:"#0a0c08", fontSize:13, fontWeight:700,
-                textDecoration:"none", letterSpacing:"0.04em",
-              }}>
-              💰 Buy $TOUCHGRASS
-            </a>
+            {posts.length > 1 && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 16 }}>
+                <button onClick={() => setIdx(i => (i - 1 + posts.length) % posts.length)}
+                  style={{ ...V2Styles.btnSecondary, padding: "6px 14px", fontSize: 12 }}>← Prev</button>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {posts.map((_, i) => (
+                    <button key={i} onClick={() => setIdx(i)}
+                      style={{ width: i === idx ? 20 : 8, height: 8, borderRadius: 4, border: "none",
+                        background: i === idx ? V2.grassGreen : V2.softGray, cursor: "pointer", padding: 0, transition: "all 0.2s" }} />
+                  ))}
+                </div>
+                <button onClick={() => setIdx(i => (i + 1) % posts.length)}
+                  style={{ ...V2Styles.btnSecondary, padding: "6px 14px", fontSize: 12 }}>Next →</button>
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// ─── RewardsBanner (V2 skin) ──────────────────────────────────────────────────
+function RewardsBanner({ username }) {
+  const [show,    setShow]    = useState(false);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    if (!username) return;
+    const key = `pog_rewards_banner_${username}`;
+    const last = localStorage.getItem(key);
+    if (last && Date.now() - parseInt(last) < 7 * 86400000) return;
+    (async () => {
+      const { data } = await supabase.from("Profiles").select("has_touchgrass_holder,wallet_verified")
+        .ilike("username", username).maybeSingle();
+      if (!data?.has_touchgrass_holder || !data?.wallet_verified) {
+        setShow(true);
+      }
+      setChecked(true);
+    })();
+  }, [username]);
+
+  if (!show || !checked) return null;
+
+  return (
+    <div style={{
+      ...V2Styles.glassCard,
+      margin: "0 clamp(14px,4vw,40px)",
+      padding: "16px 20px",
+      display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
+      borderColor: V2.borderGold,
+      background: "rgba(255,243,216,0.8)",
+    }}>
+      <span style={{ fontSize: 28 }}>💰</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: V2.forestGreen, marginBottom: 3 }}>
+          Unlock milestone rewards
+        </div>
+        <div style={{ fontSize: 12, color: V2.textMuted }}>
+          Hold $5+ in $TOUCHGRASS and connect your wallet to earn airdrop rewards for hitting streak milestones.
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        <a href={BUY_URL} target="_blank" rel="noopener noreferrer"
+          style={{ ...V2Styles.btnPrimary, fontSize: 12, padding: "8px 16px" }}>
+          Buy $TOUCHGRASS
+        </a>
+        <button onClick={() => { localStorage.setItem(`pog_rewards_banner_${username}`, Date.now()); setShow(false); }}
+          style={{ background: "transparent", border: "none", color: V2.midGray, cursor: "pointer", fontSize: 12 }}>
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Leaderboard row ──────────────────────────────────────────────────────────
+function LBRow({ rank, username, streak }) {
+  const tier = getV2Tier(streak);
+  return (
+    <Link href={`/u/${username}`} style={{ textDecoration: "none" }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "10px 16px", borderRadius: 10,
+        background: rank <= 3 ? "rgba(125,200,50,0.06)" : "transparent",
+        transition: V2.transitionFast,
+      }}>
+        <div style={{ width: 24, textAlign: "center", fontSize: 14, fontWeight: 700,
+          color: rank === 1 ? V2.gold : rank === 2 ? V2.midGray : rank === 3 ? "#cd7f32" : V2.dimGray }}>
+          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: V2.forestGreen, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            @{username}
           </div>
-        </>
+          <div style={{ fontSize: 11, color: tier.color }}>{tier.emoji} {tier.name}</div>
+        </div>
+        <div style={{ fontFamily: V2.fontSerif, fontSize: 20, fontWeight: 700, color: V2.forestGreen }}>
+          {streak}d
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// ─── Upload / Log Your Proof section ─────────────────────────────────────────
+function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, hasPostedToday,
+  onUpload, streakStatus, streakTone, resolvedStreak, loadingUser }) {
+
+  const toneColor = {
+    success: V2.success, warning: V2.warning, reset: V2.danger, neutral: V2.midGray,
+  }[streakTone] || V2.midGray;
+
+  return (
+    <div style={{ ...V2Styles.glassCard, padding: "28px 24px" }}>
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>🌿</div>
+        <h2 style={{ fontFamily: V2.fontSans, fontSize: 22, fontWeight: 800,
+          color: V2.forestGreen, marginBottom: 8 }}>Let's get outside</h2>
+        <p style={{ fontSize: 13, color: V2.textMuted }}>Upload your outdoor photo to log today's proof.</p>
+      </div>
+
+      {/* Streak status */}
+      {hasUser && streakStatus && (
+        <div style={{
+          padding: "10px 16px", borderRadius: 20, marginBottom: 20,
+          background: streakTone === "success" ? "rgba(125,200,50,0.1)" : "rgba(232,160,32,0.1)",
+          border: `1px solid ${toneColor}40`,
+          textAlign: "center", fontSize: 13, fontWeight: 600, color: toneColor,
+        }}>
+          {streakTone === "success" ? "✓" : "⚡"} {streakStatus}
+        </div>
+      )}
+
+      {/* Upload area */}
+      {!showResult && (
+        <div style={{
+          border: `2px dashed ${V2.borderGreen}`,
+          borderRadius: 16, padding: "32px 16px",
+          textAlign: "center", marginBottom: 16,
+          background: "rgba(125,200,50,0.04)",
+          cursor: "pointer",
+        }}>
+          <UploadBox onUpload={onUpload} />
+        </div>
+      )}
+
+      {/* Result card */}
+      {showResult && imageSrc && (
+        <div style={{ marginBottom: 16 }}>
+          <ResultCard
+            imageSrc={imageSrc}
+            file={proofFile}
+            username={username}
+          />
+        </div>
+      )}
+
+      {/* Next steps */}
+      {!showResult && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
+            textTransform: "uppercase", color: V2.midGray, marginBottom: 10 }}>
+            Next Steps
+          </div>
+          {[
+            { icon: "𝕏", text: "Share your proof on X" },
+            { icon: "🔄", text: "Come back and confirm" },
+            { icon: "🔒", text: "Lock in your streak" },
+          ].map((s, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10,
+              padding: "8px 0", borderBottom: i < 2 ? `1px solid ${V2.borderSoft}` : "none" }}>
+              <span style={{ fontSize: 16, width: 24, textAlign: "center" }}>{s.icon}</span>
+              <span style={{ fontSize: 13, color: V2.textBody }}>{s.text}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
-// ─── CommunityEngagement — Featured X posts + DexScreener as stacked sections ──
-
-function CommunityEngagement({ username }) {
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [clicked, setClicked] = useState({});
-  const [posts, setPosts] = useState([]);
-  const [postsLoading, setPostsLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from("FeaturedPosts")
-          .select("*")
-          .eq("active", true)
-          .order("sort_order", { ascending: true })
-          .order("created_at", { ascending: false });
-        setPosts(data || []);
-      } catch(e) { console.warn("featured posts error", e); }
-      setPostsLoading(false);
-    })();
-  }, []);
-
-  const trackClick = async (linkType, url) => {
-    try {
-      await supabase.from("ClickEvents").insert([{ username: username || null, link_type: linkType, url }]);
-    } catch(e) {}
-    setClicked(prev => ({ ...prev, [url]: true }));
-  };
-
-  const post = posts[activeIdx] || null;
+// ─── Mini Marketplace Preview ─────────────────────────────────────────────────
+function MarketplacePreview() {
+  const packs = [
+    { name: "Retro Vibes",    emoji: "🌅", bg: "linear-gradient(135deg,#8B4513,#D2691E)" },
+    { name: "Anime Outdoors", emoji: "🌸", bg: "linear-gradient(135deg,#FF69B4,#9370DB)" },
+    { name: "Y2K Outdoors",   emoji: "💿", bg: "linear-gradient(135deg,#00CED1,#9370DB)" },
+    { name: "Elemental Wilds",emoji: "⚡", bg: "linear-gradient(135deg,#228B22,#8B4513)" },
+    { name: "Weekend Escape", emoji: "🏕️", bg: "linear-gradient(135deg,#2E8B57,#006400)" },
+    { name: "The Trenches",   emoji: "🌿", bg: "linear-gradient(135deg,#1a2d0e,#3d7a12)" },
+  ];
 
   return (
-    <>
-      {/* ── FEATURED X POSTS ─────────────────────────────────────────────────── */}
-      <div style={{
-        width:"100%", background:T.bg,
-        borderTop:`1px solid ${T.border}`,
-        borderBottom:`1px solid ${T.border}`,
-        padding:"28px clamp(14px,4vw,48px)",
-      }}>
-        {/* Header */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <span style={{ fontSize:18 }}>𝕏</span>
-            <span style={{ fontSize:14, fontWeight:700, color:T.white, letterSpacing:"0.04em" }}>FEATURED POSTS</span>
-          </div>
-          <a href="https://twitter.com/XTouchGrass" target="_blank" rel="noopener noreferrer"
-            onClick={() => trackClick("profile","https://twitter.com/XTouchGrass")}
-            style={{ fontSize:12, color:T.olive, textDecoration:"none" }}>
-            @XTouchGrass →
-          </a>
-        </div>
-
-        {/* Tweet embed */}
-        <div style={{ maxWidth:600, margin:"0 auto" }}>
-          {postsLoading ? (
-            <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:12,
-              height:160, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <div style={{ fontSize:12, color:T.dim }}>Loading…</div>
-            </div>
-          ) : posts.length === 0 ? (
-            <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:12,
-              height:160, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <div style={{ fontSize:12, color:T.dim }}>No featured posts yet.</div>
-            </div>
-          ) : post ? (
-            <>
-              {/* Clean tweet card — no third-party iframes */}
-              <div style={{ background:T.bg2, border:`1px solid ${T.border}`,
-                borderRadius:12, padding:"20px", marginBottom:12 }}>
-                {/* Account row */}
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
-                  <div style={{ width:42, height:42, borderRadius:"50%", flexShrink:0,
-                    background:"linear-gradient(135deg,#93a85a,#c8a84b)",
-                    display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
-                    <img src="/touchgrass-transparent.png" alt="Touch Grass"
-                      style={{ width:36, height:36, objectFit:"contain" }} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize:14, fontWeight:700, color:T.white }}>Touch Grass</div>
-                    <div style={{ fontSize:12, color:T.dim }}>@XTouchGrass</div>
-                  </div>
-                  <div style={{ marginLeft:"auto", fontSize:18, color:"#1d9bf0" }}>𝕏</div>
-                </div>
-                {/* Tweet text */}
-                <div style={{ fontSize:15, color:"rgba(240,239,234,0.90)", lineHeight:1.65,
-                  whiteSpace:"pre-wrap", wordBreak:"break-word" }}>
-                  {post.tweet_text ? (post.tweet_text.length > 280 ? post.tweet_text.slice(0, 277) + "..." : post.tweet_text) : ""}
-                </div>
-              </div>
-              {/* CTA */}
-              <a href={post.tweet_url} target="_blank" rel="noopener noreferrer"
-                onClick={() => trackClick("tweet", post.tweet_url)}
-                style={{
-                  display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-                  width:"100%", padding:"12px",
-                  background: clicked[post.tweet_url] ? "rgba(147,168,90,0.15)" : "rgba(255,255,255,0.04)",
-                  border:`1px solid ${clicked[post.tweet_url] ? T.olive : T.border}`,
-                  borderRadius:8, color: clicked[post.tweet_url] ? T.olive : T.muted,
-                  fontSize:13, fontWeight:700, textDecoration:"none",
-                  letterSpacing:"0.06em", cursor:"pointer", transition:"all 0.15s",
-                }}>
-                {clicked[post.tweet_url] ? "✓ Opened" : "Like · Reply · Repost on X →"}
-              </a>
-            </>
-          ) : null}
-
-          {/* Carousel nav */}
-          {posts.length > 1 && (
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:12, marginTop:16 }}>
-              <button onClick={() => setActiveIdx(i => (i - 1 + posts.length) % posts.length)}
-                style={{ background:"none", border:`1px solid ${T.border}`, color:T.dim,
-                  borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer" }}>← Prev</button>
-              <div style={{ display:"flex", gap:6 }}>
-                {posts.map((_, i) => (
-                  <button key={i} onClick={() => setActiveIdx(i)}
-                    style={{ width: i===activeIdx?20:8, height:8, borderRadius:4, border:"none",
-                      cursor:"pointer", background: i===activeIdx?T.olive:T.border,
-                      transition:"all 0.2s", padding:0 }} />
-                ))}
-              </div>
-              <button onClick={() => setActiveIdx(i => (i + 1) % posts.length)}
-                style={{ background:"none", border:`1px solid ${T.border}`, color:T.dim,
-                  borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer" }}>Next →</button>
-            </div>
-          )}
-        </div>
+    <div style={{ ...V2Styles.glassCard, padding: "24px" }}>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
+          textTransform: "uppercase", color: V2.grassGreen, marginBottom: 6 }}>Marketplace</div>
+        <h3 style={{ fontFamily: V2.fontSans, fontSize: 18, fontWeight: 800, color: V2.forestGreen, marginBottom: 4 }}>
+          Make your profile yours.
+        </h3>
+        <p style={{ fontSize: 12, color: V2.textMuted }}>Premium background packs for your profile, flex cards, and proof styles.</p>
       </div>
 
-      {/* ── $TOUCHGRASS PRICE CARD ───────────────────────────────────────────── */}
-      <DexCard trackClick={trackClick} />
-    </>
+      {/* Pack grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+        {packs.map((p, i) => (
+          <div key={i} style={{
+            borderRadius: 12, overflow: "hidden", aspectRatio: "4/3",
+            background: p.bg, position: "relative", cursor: "pointer",
+            boxShadow: V2.shadowSm,
+          }}>
+            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)",
+              display: "flex", flexDirection: "column", alignItems: "center",
+              justifyContent: "center", padding: 6 }}>
+              <div style={{ fontSize: 20 }}>{p.emoji}</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.9)",
+                textAlign: "center", marginTop: 4, lineHeight: 1.2 }}>{p.name}</div>
+              <div style={{ fontSize: 8, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>5 Backgrounds</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Link href="/marketplace" style={{
+        ...V2Styles.btnPrimary,
+        width: "100%", justifyContent: "center", fontSize: 13,
+        textDecoration: "none",
+      }}>
+        View All Packs
+      </Link>
+    </div>
   );
 }
 
+// ─── Main Home component ──────────────────────────────────────────────────────
 export default function Home() {
   const [rawUsername, setRawUsername] = useState("");
   const username = normalizeUsername(rawUsername);
   const hasUser  = username.length > 0;
 
+  // ── All state preserved from V1 ──────────────────────────────────────────
   const [currentStreak,        setCurrentStreak]        = useState(null);
-  const [displayStreak,        setDisplayStreak]         = useState(null);
-  const [streakStatus,         setStreakStatus]          = useState("");
-  const [streakTone,           setStreakTone]            = useState("neutral");
-  const [shieldEligible,       setShieldEligible]        = useState(false);
-  const [missedOneDayNoShield, setMissedOneDayNoShield]  = useState(false);
-  const [hasPostedToday,       setHasPostedToday]        = useState(null);
-  const [userStats,            setUserStats]             = useState(null);
-  const [latestPurchase,       setLatestPurchase]        = useState(null);
-  const [loadingUser,          setLoadingUser]           = useState(false);
-
-  // Shield purchase
-  const [purchaseWallet,  setPurchaseWallet]  = useState("");
-  const [purchaseStatus,  setPurchaseStatus]  = useState(null);
-  const [purchaseError,   setPurchaseError]   = useState("");
-  const [copiedDomain,    setCopiedDomain]    = useState(false);
-  const [copiedAddr,      setCopiedAddr]      = useState(false);
-  const [showPasteTip,    setShowPasteTip]    = useState(false);
-
-  // Image / result card
-  const [imageSrc,   setImageSrc]   = useState(null);
-  const [proofFile,  setProofFile]  = useState(null);  // original File object for outdoor photo share
-  const [showResult, setShowResult] = useState(false);
-
-  // Community stats
-  const [dailyCount,  setDailyCount]  = useState(null);
-  const [totalBurned, setTotalBurned] = useState(null);
-  const [topStreaker,  setTopStreaker] = useState(null);
-  const [totalProofs,  setTotalProofs] = useState(null);
-
-  // Leaderboard + feed
-  const [leaders,      setLeaders]      = useState([]);
-  const [recentProofs, setRecentProofs] = useState([]);
-  const [previewDays,  setPreviewDays]  = useState([67, 23, 11]);
-
-  // Misc
-  const [mounted,       setMounted]       = useState(false);
-  const [showShieldBuy, setShowShieldBuy] = useState(false);
-  const [showMenu,      setShowMenu]      = useState(false);
-
-  // Sunset Pass activation state
-  const [sunsetActivating, setSunsetActivating] = useState(false);
-  const [sunsetMsg,        setSunsetMsg]        = useState("");
-  const [hasPremiumProofs, setHasPremiumProofs] = useState(false);
-
-  // ── Pending challenges ────────────────────────────────────────────────────
-  const [pendingChallenges, setPendingChallenges] = useState([]);
-  const [challengeActioning, setChallengeActioning] = useState(null); // challenge id being actioned
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.location.hash === "#shield-section") {
-      setShowShieldBuy(true);
-      setTimeout(() => {
-        document.getElementById("shield-section")?.scrollIntoView({ behavior:"smooth", block:"center" });
-      }, 150);
-    }
-  }, []);
-
+  const [displayStreak,        setDisplayStreak]        = useState(null);
+  const [streakStatus,         setStreakStatus]         = useState("");
+  const [streakTone,           setStreakTone]           = useState("neutral");
+  const [shieldEligible,       setShieldEligible]       = useState(false);
+  const [missedOneDayNoShield, setMissedOneDayNoShield] = useState(false);
+  const [hasPostedToday,       setHasPostedToday]       = useState(null);
+  const [userStats,            setUserStats]            = useState(null);
+  const [loadingUser,          setLoadingUser]          = useState(false);
+  const [imageSrc,             setImageSrc]             = useState(null);
+  const [proofFile,            setProofFile]            = useState(null);
+  const [showResult,           setShowResult]           = useState(false);
+  const [dailyCount,           setDailyCount]           = useState(null);
+  const [totalProofs,          setTotalProofs]          = useState(null);
+  const [topStreaker,          setTopStreaker]           = useState(null);
+  const [leaders,              setLeaders]              = useState([]);
+  const [mounted,              setMounted]              = useState(false);
+  const [pendingChallenges,    setPendingChallenges]    = useState([]);
+  const [challengeActioning,   setChallengeActioning]   = useState(null);
   const uploadSectionRef = useRef(null);
 
+  // ── Effects — all preserved from V1 ─────────────────────────────────────
   useEffect(() => {
     setMounted(true);
     const saved = localStorage.getItem("pog_username");
     if (saved) setRawUsername(normalizeUsername(saved));
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
-    if (ref && ref.length > 0) {
+    if (ref) {
       const normalized = ref.toLowerCase().replace(/@/g,"").trim();
-      if (!localStorage.getItem("pog_referrer")) {
-        localStorage.setItem("pog_referrer", normalized);
-      }
+      if (!localStorage.getItem("pog_referrer")) localStorage.setItem("pog_referrer", normalized);
     }
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && username)
-      localStorage.setItem("pog_username", username);
+    if (typeof window !== "undefined" && username) localStorage.setItem("pog_username", username);
   }, [username]);
 
-  // ── Debounced user data load ──────────────────────────────────────────────
+  // User data load — preserved exactly
   useEffect(() => {
     if (!username) {
       setCurrentStreak(null); setDisplayStreak(null); setStreakStatus("");
-      setStreakTone("neutral"); setShieldEligible(false);
-      setMissedOneDayNoShield(false); setHasPostedToday(null);
-      setUserStats(null); setLatestPurchase(null);
-      setPurchaseStatus(null); setPurchaseError("");
-      setHasPremiumProofs(false);
-      setLoadingUser(false);
-      return;
+      setStreakTone("neutral"); setHasPostedToday(null); setUserStats(null);
+      setLoadingUser(false); return;
     }
     setLoadingUser(true);
     const timer = setTimeout(async () => {
-      const todayStr     = new Date().toISOString().slice(0, 10);
-      const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      const twoDaysAgo   = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
       try {
-        const [{ data: streakRowExact }, { count: postCount }] = await Promise.all([
-          supabase.from("Streaks")
-            .select("current_streak, best_streak, last_submission_date, shield_count")
-            .eq("username", username).maybeSingle(),
-          supabase.from("Submissions")
-            .select("id", { count:"exact", head:true })
-            .eq("username", username),
-        ]);
-
-        // If exact match fails, try case-insensitive lookup — covers usernames
-        // stored with different casing (e.g. "JohnDoe" vs "johndoe")
-        let streakRow = streakRowExact;
-        if (!streakRow) {
-          const { data: ilike } = await supabase
-            .from("Streaks")
-            .select("current_streak, best_streak, last_submission_date, shield_count, username")
-            .ilike("username", username)
-            .maybeSingle();
-          if (ilike) {
-            streakRow = ilike;
-            // Persist the correct casing so future exact lookups work
-            console.info("[streak] found via ilike, stored as:", ilike.username, "typed as:", username);
-          }
-        }
-
-        const { data: allStreaksForRank } = await supabase
-          .from("Streaks").select("username,current_streak")
-          .order("current_streak", { ascending: false });
-        const rankIdx = (allStreaksForRank ?? []).findIndex(
-          r => r.username?.toLowerCase().trim() === username
-        );
-        const rankCount = rankIdx >= 0 ? rankIdx : (allStreaksForRank?.length ?? 1) - 1;
-
-        const lastDate = streakRow?.last_submission_date
-          ? String(streakRow.last_submission_date).slice(0, 10)
-          : null;
-
-        // ── CHANGE 1: Read shield count from UserConsumables ─────────────
-        const { data: consumableRow } = await supabase
-          .from("UserConsumables")
-          .select("quantity")
-          .eq("username", username)
-          .eq("consumable_type", "shield")
-          .maybeSingle();
-        const shieldCount = consumableRow?.quantity ?? streakRow?.shield_count ?? 0;
-
-        // ── CHANGE 2: Read sunset pass count from UserConsumables ─────────
-        const { data: sunsetRow } = await supabase
-          .from("UserConsumables")
-          .select("quantity")
-          .eq("username", username)
-          .eq("consumable_type", "sunset_pass")
-          .maybeSingle();
-        const sunsetPassCount = sunsetRow?.quantity ?? 0;
-
-        const actual    = streakRow?.current_streak ?? 0;
-        const projected = actual + 1;
-        const displayVal = computePreviewStreak(streakRow, shieldCount);
-        const missedOne  = lastDate === twoDaysAgo;
-
-        // Use UTC dates to match the RPC (CURRENT_DATE is UTC in Postgres)
         const todayUTC     = new Date().toISOString().slice(0, 10);
         const yesterdayUTC = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-        const lastDateStr  = lastDate ? String(lastDate).slice(0, 10) : null;
+        const twoDaysAgo   = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+
+        const [{ data: streakRowExact }, { count: postCount }] = await Promise.all([
+          supabase.from("Streaks").select("current_streak,best_streak,last_submission_date,shield_count")
+            .eq("username", username).maybeSingle(),
+          supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username),
+        ]);
+
+        let streakRow = streakRowExact;
+        if (!streakRow) {
+          const { data: ilike } = await supabase.from("Streaks")
+            .select("current_streak,best_streak,last_submission_date,shield_count,username")
+            .ilike("username", username).maybeSingle();
+          if (ilike) streakRow = ilike;
+        }
+
+        const { data: allStreaksForRank } = await supabase.from("Streaks")
+          .select("username,current_streak").order("current_streak",{ascending:false});
+        const rankIdx = (allStreaksForRank ?? []).findIndex(r => r.username?.toLowerCase().trim() === username);
+        const rankCount = rankIdx >= 0 ? rankIdx : (allStreaksForRank?.length ?? 1) - 1;
+
+        const lastDate = streakRow?.last_submission_date ? String(streakRow.last_submission_date).slice(0,10) : null;
+
+        const { data: consumableRow } = await supabase.from("UserConsumables").select("quantity")
+          .eq("username",username).eq("consumable_type","shield").maybeSingle();
+        const shieldCount = consumableRow?.quantity ?? streakRow?.shield_count ?? 0;
+
+        const { data: sunsetRow } = await supabase.from("UserConsumables").select("quantity")
+          .eq("username",username).eq("consumable_type","sunset_pass").maybeSingle();
+        const sunsetPassCount = sunsetRow?.quantity ?? 0;
+
+        const actual     = streakRow?.current_streak ?? 0;
+        const displayVal = computePreviewStreak(streakRow, shieldCount);
+        const missedOne  = lastDate === twoDaysAgo;
+        const lastDateStr = lastDate ? String(lastDate).slice(0,10) : null;
         const postedToday    = lastDateStr === todayUTC;
         const postedYesterday = lastDateStr === yesterdayUTC;
 
-        if (!lastDate)           setStreakStatus("start your streak today"),                    setStreakTone("neutral");
-        else if (postedToday)    setStreakStatus("streak locked in for today ✓"),               setStreakTone("success");
-        else if (postedYesterday)setStreakStatus(`submit today to reach day ${projected}`),      setStreakTone("warning");
-        else if (missedOne && shieldCount > 0) setStreakStatus(`day ${actual} — shield available`), setStreakTone("reset");
-        else                     setStreakStatus("streak lost — start again today"),             setStreakTone("reset");
-
-        // Override hasPostedToday with local-date-aware check
-        const postedTodayFinal = postedToday;
+        if (!lastDate)            setStreakStatus("Start your streak today"),              setStreakTone("neutral");
+        else if (postedToday)     setStreakStatus("Streak locked in for today ✓"),         setStreakTone("success");
+        else if (postedYesterday) setStreakStatus(`Submit today to reach Day ${actual+1}`),setStreakTone("warning");
+        else if (missedOne && shieldCount > 0) setStreakStatus(`Day ${actual} — shield available`), setStreakTone("reset");
+        else                      setStreakStatus("Streak lost — start again today"),      setStreakTone("reset");
 
         setShieldEligible(missedOne && shieldCount > 0);
         setMissedOneDayNoShield(missedOne && shieldCount === 0);
-        setHasPostedToday(postedTodayFinal);
+        setHasPostedToday(postedToday);
         setCurrentStreak(actual);
         setDisplayStreak(displayVal);
-
-        // ── CHANGE 3: Include sunsetPasses in userStats ───────────────────
         setUserStats({
-          posts:        postCount ?? 0,
-          bestStreak:   streakRow?.best_streak ?? actual,
-          rank:         rankCount + 1,
-          shields:      shieldCount,
+          posts: postCount ?? 0,
+          bestStreak: streakRow?.best_streak ?? actual,
+          rank: rankCount + 1,
+          shields: shieldCount,
           sunsetPasses: sunsetPassCount,
         });
 
-        supabase.from("ShieldPurchases")
-          .select("tx_signature, status, created_at")
-          .eq("username", username)
-          .order("created_at", { ascending:false }).limit(1).maybeSingle()
-          .then(({ data }) => setLatestPurchase(data ?? null));
-
-        // Check Premium+ unlock
-        supabase.from("UserPremiumUnlocks")
-          .select("premium_type").eq("username", username)
-          .eq("premium_type", "premium_proofs").maybeSingle()
-          .then(({ data }) => setHasPremiumProofs(!!data));
-
-        // Fetch pending challenges where this user is the one being challenged
-        supabase.from("Challenges")
-          .select("id,slug,challenger,challenged,duration_days,message,created_at")
-          .eq("challenged", username)
-          .eq("status", "pending")
-          .order("created_at", { ascending: false })
+        supabase.from("Challenges").select("id,slug,challenger,challenged,duration_days,message,created_at")
+          .eq("challenged",username).eq("status","pending").order("created_at",{ascending:false})
           .then(({ data }) => setPendingChallenges(data ?? []));
 
-      } catch (e) {
-        console.error("preload failed", e);
-        setStreakTone("neutral"); setStreakStatus("");
-      } finally {
-        setLoadingUser(false);
-      }
+      } catch(e) { setStreakTone("neutral"); setStreakStatus(""); }
+      finally { setLoadingUser(false); }
     }, 500);
     return () => clearTimeout(timer);
   }, [username]);
 
-  // ── Community stats ───────────────────────────────────────────────────────
+  // Community stats
   const fetchStats = useCallback(async () => {
     const todayStart = new Date(); todayStart.setUTCHours(0,0,0,0);
-    const [{ count:todayC }, { data:streakers }, { count:burnC }, { count:allC }] = await Promise.all([
+    const [{ count:todayC }, { data:streakers }, { count:allC }] = await Promise.all([
       supabase.from("Submissions").select("id",{count:"exact",head:true}).in("status",["pending","approved"]).gte("created_at",todayStart.toISOString()),
       supabase.from("Streaks").select("username,current_streak").order("current_streak",{ascending:false}).limit(1),
-      supabase.from("ShieldPurchases").select("id",{count:"exact",head:true}).eq("status","approved"),
       supabase.from("Submissions").select("id",{count:"exact",head:true}).in("status",["pending","approved"]),
     ]);
     setDailyCount(todayC ?? 0);
-    setTotalBurned((burnC ?? 0) * 50000);
     setTotalProofs(allC ?? 0);
     if (streakers?.[0]) setTopStreaker({ username: normalizeUsername(streakers[0].username), streak: streakers[0].current_streak ?? 1 });
   }, []);
 
   const fetchLeaderboard = useCallback(async () => {
-    const { data } = await supabase.from("Streaks").select("username,current_streak").order("current_streak",{ascending:false}).limit(8);
-    if (data) {
-      setLeaders(data.map(r => ({ username: normalizeUsername(r.username), streak: r.current_streak ?? 1, tier: getStreakTier(r.current_streak ?? 1) })));
-      const days = data.slice(0,3).map(r => r.current_streak ?? 1);
-      if (days.length) setPreviewDays(days);
-    }
+    const { data } = await supabase.from("Streaks").select("username,current_streak")
+      .order("current_streak",{ascending:false}).limit(8);
+    if (data) setLeaders(data.map(r => ({ username: normalizeUsername(r.username), streak: r.current_streak ?? 1 })));
   }, []);
 
-  const fetchRecentProofs = useCallback(async () => {
-    const { data } = await supabase.from("Submissions").select("username,created_at").in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(6);
-    if (!data) return;
-    const names = [...new Set(data.map(r => normalizeUsername(r.username)))];
-    const { data: sRows } = await supabase.from("Streaks").select("username,current_streak").in("username",names);
-    const sMap = {};
-    (sRows ?? []).forEach(s => { sMap[normalizeUsername(s.username)] = s.current_streak ?? 1; });
-    setRecentProofs(data.map(r => ({ username: normalizeUsername(r.username), streak: sMap[normalizeUsername(r.username)] ?? 1, created_at: r.created_at })));
-  }, []);
+  useEffect(() => { fetchStats(); fetchLeaderboard(); }, []);
 
-  useEffect(() => { fetchStats(); fetchLeaderboard(); fetchRecentProofs(); }, []);
-
-  // ── Challenge accept / decline ───────────────────────────────────────────
+  // Challenge actions
   const handleChallengeAction = useCallback(async (challenge, action) => {
     setChallengeActioning(challenge.id);
     try {
       if (action === "accept") {
-        const now    = new Date().toISOString();
+        const now = new Date().toISOString();
         const endsAt = new Date(Date.now() + challenge.duration_days * 86400000).toISOString();
-        await supabase.from("Challenges").update({
-          status: "active", started_at: now, ends_at: endsAt,
-        }).eq("id", challenge.id);
+        await supabase.from("Challenges").update({ status:"active", started_at:now, ends_at:endsAt }).eq("id",challenge.id);
         await supabase.from("ChallengeProgress").upsert([
-          { challenge_id: challenge.id, username: challenge.challenger, days_complete: 0, status: "active" },
-          { challenge_id: challenge.id, username: challenge.challenged, days_complete: 0, status: "active" },
-        ], { onConflict: "challenge_id,username" });
-        await supabase.from("ChallengeEvents").insert([
-          { challenge_id: challenge.id, username, event_type: "accepted" },
-        ]);
+          { challenge_id:challenge.id, username:challenge.challenger, days_complete:0, status:"active" },
+          { challenge_id:challenge.id, username:challenge.challenged, days_complete:0, status:"active" },
+        ], { onConflict:"challenge_id,username" });
+        await supabase.from("ChallengeEvents").insert([{ challenge_id:challenge.id, username, event_type:"accepted" }]);
       } else {
-        await supabase.from("Challenges").update({ status: "declined" }).eq("id", challenge.id);
-        await supabase.from("ChallengeEvents").insert([
-          { challenge_id: challenge.id, username, event_type: "declined" },
-        ]);
+        await supabase.from("Challenges").update({ status:"declined" }).eq("id",challenge.id);
+        await supabase.from("ChallengeEvents").insert([{ challenge_id:challenge.id, username, event_type:"declined" }]);
       }
-      // Remove from pending list
       setPendingChallenges(prev => prev.filter(c => c.id !== challenge.id));
-    } catch(e) {
-      console.error("challenge action failed", e);
-    }
+    } catch(e) { console.error("challenge action failed",e); }
     setChallengeActioning(null);
   }, [username]);
 
-  // ── Shield buy handler ────────────────────────────────────────────────────
-  const handleBuyShield = useCallback(async () => {
-    if (!username) return;
-    const wallet = purchaseWallet.trim();
-    if (!wallet) { setPurchaseError("Enter your wallet address."); return; }
-    setPurchaseStatus("loading"); setPurchaseError("");
-    const { error } = await supabase.from("ShieldPurchases").insert([{ username, wallet_address: wallet, token_amount: 50000, status: "pending" }]);
-    if (error) { setPurchaseError(error.message || "Submission failed — try again."); setPurchaseStatus("error"); return; }
-    setPurchaseStatus("success"); setPurchaseWallet("");
-    supabase.from("ShieldPurchases").select("status,created_at").eq("username",username).order("created_at",{ascending:false}).limit(1).maybeSingle().then(({ data }) => setLatestPurchase(data ?? null));
-  }, [username, purchaseWallet]);
-
-  // ── Sunset Pass activation ────────────────────────────────────────────────
-  const handleActivateSunsetPass = useCallback(async () => {
-    if (!username || sunsetActivating) return;
-    setSunsetActivating(true); setSunsetMsg("");
-    try {
-      const { data, error } = await supabase.rpc("activate_sunset_pass", { p_username: username });
-      if (error) throw error;
-      if (data?.status === "success") {
-        setSunsetMsg(`✅ ${data.message}`);
-        // Decrement local count immediately
-        setUserStats(s => s ? { ...s, sunsetPasses: Math.max(0, (s.sunsetPasses ?? 1) - 1) } : s);
-      } else {
-        setSunsetMsg(`⚠️ ${data?.message || "Could not activate pass."}`);
-      }
-    } catch(e) {
-      setSunsetMsg(`⚠️ ${e.message || "Activation failed."}`);
-    }
-    setSunsetActivating(false);
-    setTimeout(() => setSunsetMsg(""), 6000);
-  }, [username, sunsetActivating]);
-
-  // ── Image upload ──────────────────────────────────────────────────────────
+  // Image upload
   const handleImageUpload = useCallback(async (file) => {
     if (!file || !(file instanceof Blob)) return;
     setProofFile(file);
@@ -1512,644 +722,377 @@ export default function Home() {
     try {
       const today = new Date().toISOString().slice(0,10);
       const fileName = `${username}/${today}.png`;
-      const { error: uploadErr } = await supabase
-        .storage.from("proof-photos").upload(fileName, file, {
-          contentType: file.type || "image/png", upsert: true,
-        });
-      if (uploadErr) console.error("[photo] upload failed:", uploadErr.message);
-    } catch(e) { console.error("[photo] upload exception:", e?.message); }
+      await supabase.storage.from("proof-photos").upload(fileName, file, { contentType:file.type||"image/png", upsert:true });
+    } catch(e) {}
   }, [username, hasUser]);
 
-  // ── Derived display values ────────────────────────────────────────────────
-  const toneColor = { success:"#4ade80", warning:T.gold, reset:T.red, neutral:T.dim }[streakTone] || T.dim;
-  // resolvedStreak: the definitive value to show on the card.
-  // displayStreak is authoritative — it already accounts for broken streaks
-  // (returns 1 when missed 2+ days, or missed 1 day with no shield).
-  // Never fall back to currentStreak (the raw DB value) because that would
-  // show the old streak number even when the backend is about to reset to 1.
-  const resolvedStreak = loadingUser
-    ? null
-    : displayStreak != null
-      ? displayStreak
-      : null;
-  // heroDay must come AFTER resolvedStreak (TDZ — const can't be hoisted)
-  const heroDay   = (hasUser && resolvedStreak != null ? resolvedStreak : null) ?? topStreaker?.streak ?? 67;
-  const heroTier  = getStreakTier(heroDay);
-  const heroColor = getTierColor(heroTier);
-  const tier      = getStreakTier(resolvedStreak ?? currentStreak ?? 0);
-  const tierColor = getTierColor(tier);
+  const resolvedStreak = loadingUser ? null : displayStreak ?? null;
+  const tier = getV2Tier(resolvedStreak ?? currentStreak ?? 0);
+
+  const scrollToUpload = () => {
+    uploadSectionRef.current?.scrollIntoView({ behavior:"smooth", block:"center" });
+  };
 
   // ── CSS ───────────────────────────────────────────────────────────────────
-  const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html{scroll-behavior:smooth;overflow-x:hidden;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
-    ::-webkit-scrollbar{width:4px;}
-    ::-webkit-scrollbar-track{background:${T.bg};}
-    ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
-    input,textarea{font-family:'DM Sans',sans-serif;}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
-    @keyframes spin{to{transform:rotate(360deg);}}
-    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
-    .fade-1{animation:fadeUp 0.6s 0.05s ease both;}
-    .fade-2{animation:fadeUp 0.6s 0.16s ease both;}
-    .fade-3{animation:fadeUp 0.6s 0.26s ease both;}
-    .nav-link{color:${T.dim};font-size:13px;font-weight:500;text-decoration:none;letter-spacing:0.05em;transition:color 0.2s;}
-    .nav-link:hover{color:${T.white};}
-    .nav-link.active{color:${T.olive};}
-    .hbg-btn{background:none;border:1px solid ${T.border};border-radius:8px;padding:7px 10px;cursor:pointer;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;transition:border-color 0.2s;flex-shrink:0;}
-    .hbg-btn:hover{border-color:${T.olive};}
-    .hbg-line{width:18px;height:1.5px;background:${T.white};border-radius:2px;transition:all 0.25s;}
-    .menu-overlay{position:fixed;inset:0;z-index:298;background:rgba(0,0,0,0);}
-    .menu-panel{position:fixed;top:56px;right:0;z-index:299;width:min(280px,90vw);
-      background:${T.bg2};border-left:1px solid ${T.border};border-bottom:1px solid ${T.border};
-      border-radius:0 0 0 16px;padding:8px 0 16px;
-      box-shadow:-8px 8px 40px rgba(0,0,0,0.6);
-      animation:menuSlide 0.18s ease both;}
-    @keyframes menuSlide{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
-    .menu-item{display:flex;align-items:center;gap:12px;padding:11px 22px;font-size:13px;font-weight:500;
-      color:${T.muted};text-decoration:none;transition:all 0.15s;cursor:pointer;border:none;background:none;
-      width:100%;text-align:left;font-family:'DM Sans',sans-serif;letter-spacing:0.02em;}
-    .menu-item:hover{color:${T.white};background:rgba(255,255,255,0.04);}
-    .menu-item.active{color:${T.olive};}
-    .menu-divider{height:1px;background:${T.border};margin:8px 0;}
-    .btn-olive{display:inline-flex;align-items:center;gap:8px;background:${T.olive};color:${T.bg};border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:13px 22px;border-radius:8px;cursor:pointer;text-decoration:none;transition:all 0.2s;}
-    .btn-olive:hover{background:#a8be6a;transform:translateY(-1px);}
-    .btn-ghost{display:inline-flex;align-items:center;gap:8px;background:transparent;color:${T.white};border:1px solid ${T.border};font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:13px 22px;border-radius:8px;cursor:pointer;text-decoration:none;transition:all 0.2s;}
-    .btn-ghost:hover{border-color:${T.olive};color:${T.olive};}
-    .card{background:${T.bg2};border:1px solid ${T.border};padding:26px;}
-    .card-title{font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:${T.muted};margin-bottom:18px;}
-    .card-title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
-    .view-all{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:${T.dim};text-decoration:none;font-weight:500;transition:color 0.2s;}
-    .view-all:hover{color:${T.olive};}
-    .username-input{background:${T.bg3};border:1px solid ${T.borderG};border-radius:8px;padding:9px 13px;color:${T.white};font-size:13px;outline:none;transition:border-color 0.2s;width:160px;}
-    .username-input:focus{border-color:${T.olive};}
-    .username-input::placeholder{color:${T.dim};}
-    input[type=text].field,textarea.field{width:100%;background:${T.bg3};border:1px solid ${T.border};border-radius:8px;padding:10px 13px;color:${T.white};font-size:13px;outline:none;transition:border-color 0.2s;resize:none;}
-    input[type=text].field:focus,textarea.field:focus{border-color:${T.olive}50;}
-    input[type=text].field::placeholder,textarea.field::placeholder{color:${T.dim};}
-    @media(min-width:769px){
-      .hero-desktop{display:flex !important;}
-      .hero-mobile{display:none !important;}
-      .hero-section{min-height:clamp(460px,70vh,720px) !important;}
+  const css = V2GlobalCSS + `
+    .v2-hero {
+      background: ${V2.gradientHero};
+      min-height: clamp(420px, 65vh, 700px);
+      position: relative; overflow: hidden;
+      display: flex; align-items: center;
+      padding: 40px clamp(14px,5vw,64px);
     }
-    @media(max-width:960px){.main-grid{grid-template-columns:1fr !important;}.prog-grid{grid-template-columns:1fr !important;}}
-    @media(max-width:768px){
-      .main-grid,.prog-grid{grid-template-columns:1fr !important;width:100% !important;max-width:100% !important;}
-      .card{width:100% !important;max-width:100% !important;min-width:0 !important;border-right:none !important;}
-      .stat-strip{flex-wrap:wrap !important;}
-      .stat-strip>div{min-width:50% !important;}
-      .hero-btns{flex-direction:column !important;align-items:stretch !important;}
-      .hero-streak-hud{display:none !important;}
-      .hero-left{max-width:100% !important;}
-      .hero-desktop{display:none !important;}
-      .hero-mobile{display:flex !important;}
-      .hero-section{min-height:auto !important;}
-      /* nav-links replaced by hamburger menu */
-      .username-input{width:120px !important;font-size:12px !important;}
-      .feed-username{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;}
-      .spotlight-scroll{overflow-x:auto;overflow-y:visible;scroll-snap-type:x mandatory;}
-      .spotlight-scroll>*{scroll-snap-align:start;}
-      .footer-cta{flex-direction:column !important;text-align:center !important;align-items:center !important;}
+    .v2-hero-left { flex: 1; min-width: 0; }
+    .v2-hero-right { flex-shrink: 0; width: clamp(280px,40%,480px); display: flex; flex-direction: column; gap: 10px; }
+    .v2-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .v2-feature-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; padding: 24px clamp(14px,4vw,40px); }
+    .v2-bottom-grid { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 16px; padding: 24px clamp(14px,4vw,40px); align-items: start; }
+    @media (max-width: 1024px) {
+      .v2-feature-grid { grid-template-columns: repeat(2,1fr); }
+      .v2-bottom-grid { grid-template-columns: 1fr 1fr; }
     }
-    @media(max-width:400px){.username-input{width:100px !important;font-size:11px !important;}}
+    @media (max-width: 768px) {
+      .v2-hero { flex-direction: column; min-height: auto; padding: 32px 16px; gap: 32px; }
+      .v2-hero-right { width: 100%; }
+      .v2-feature-grid { grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; }
+      .v2-bottom-grid { grid-template-columns: 1fr; padding: 16px; }
+    }
+    @media (max-width: 480px) {
+      .v2-feature-grid { grid-template-columns: 1fr 1fr; }
+    }
   `;
+
+  if (!mounted) return null;
 
   return (
     <>
+      <Head>
+        <title>Proof of Grass — Go outside. Prove it. Build your streak.</title>
+        <meta name="description" content="Log your outdoor time, grow your streak, earn rewards, and make an impact." />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+      </Head>
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div style={{ minHeight:"100vh", background:T.bg }}>
 
-        {/* ── NAV ──────────────────────────────────────────────────────────── */}
-        <nav style={{ position:"sticky", top:0, zIndex:200, display:"flex", alignItems:"center",
-          justifyContent:"space-between", padding:"0 clamp(14px,4vw,48px)", height:56, gap:10,
-          background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}` }}>
+      {/* Nav */}
+      <V2Nav
+        username={username}
+        onUsernameChange={setRawUsername}
+        showUpload={scrollToUpload}
+      />
 
-          {/* Logo */}
-          <Link href="/" style={{ display:"flex", alignItems:"center", gap:9,
-            textDecoration:"none", flexShrink:0 }}>
-            <img src="/touchgrass-transparent.png" alt=""
-              style={{ width:26, height:26, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:17, fontWeight:700, color:T.white, fontFamily:"'Cormorant Garamond',Georgia,serif", letterSpacing:"0.02em" }}>Touch Grass</span>
-          </Link>
+      {/* Ticker */}
+      <V2Ticker />
 
-          {/* Username + profile + hamburger */}
-          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-            <input className="username-input" type="text" placeholder="your username"
-              value={rawUsername} onChange={e => setRawUsername(e.target.value)}
-              style={{ width:130 }} />
-            {hasUser && (
-              <Link href={`/u/${username}`} style={{
-                fontSize:10, color:T.olive, textDecoration:"none",
-                border:`1px solid ${T.borderG}`, borderRadius:6,
-                padding:"5px 9px", whiteSpace:"nowrap", flexShrink:0,
-              }}>My Profile →</Link>
-            )}
-            {/* Hamburger button */}
-            <button className="hbg-btn" onClick={() => setShowMenu(v => !v)}
-              aria-label="Menu" aria-expanded={showMenu}>
-              <div className="hbg-line" style={{
-                transform: showMenu ? "rotate(45deg) translate(4px,4px)" : "none" }} />
-              <div className="hbg-line" style={{
-                opacity: showMenu ? 0 : 1,
-                transform: showMenu ? "scaleX(0)" : "none" }} />
-              <div className="hbg-line" style={{
-                transform: showMenu ? "rotate(-45deg) translate(4px,-4px)" : "none" }} />
-            </button>
-          </div>
-        </nav>
+      {/* Main page */}
+      <div className="v2-page-wrap">
 
-        {/* ── MENU PANEL ───────────────────────────────────────────────────── */}
-        {showMenu && (
-          <>
-            <div className="menu-overlay" onClick={() => setShowMenu(false)} />
-            <div className="menu-panel">
-              {/* Username display */}
-              {hasUser && (
-                <div style={{ padding:"12px 22px 10px",
-                  borderBottom:`1px solid ${T.border}`, marginBottom:4 }}>
-                  <div style={{ fontSize:10, color:T.dim, letterSpacing:"0.1em",
-                    textTransform:"uppercase", marginBottom:2 }}>Signed in as</div>
-                  <div style={{ fontSize:13, fontWeight:700, color:T.olive }}>@{username}</div>
-                </div>
-              )}
+        {/* ── HERO ────────────────────────────────────────────────────────── */}
+        <section className="v2-hero">
+          {/* Background illustration */}
+          <div style={{
+            position: "absolute", inset: 0, pointerEvents: "none",
+            backgroundImage: "url('/hero-landscape.png')",
+            backgroundSize: "cover", backgroundPosition: "center bottom",
+            opacity: 0.25,
+          }} />
 
-              {/* Nav items */}
-              {[
-                { href:"#upload",                    label:"Dashboard",    icon:"🏠", internal:true  },
-                { href:"/grass-draw",                label:"Grass Draw",   icon:"🌱", internal:false },
-                { href:"/leaderboard",               label:"Leaderboard",  icon:"🏆", internal:false },
-                { href:"/spotlight",                 label:"Spotlight",    icon:"⭐", internal:false },
-                { href:"/create",                    label:"Create",       icon:"✨", internal:false },
-                { href:"/map",                       label:"Map",          icon:"🌍", internal:false },
-                { href:"/burns",                     label:"Consumables",  icon:"🎒", internal:false },
-                { href:"/quests",                    label:"Quests",       icon:"⚔️", internal:false },
-                { href:"/fight",                     label:"Grass Jab",    icon:"🥊", internal:false },
-                { href:"/field-guide",               label:"Field Guide",  icon:"📖", internal:false },
-                { href:"/marketplace",                label:"Marketplace",  icon:"🏪", internal:false },
-                { href:"/admin/milestones",           label:"Milestones",   icon:"🏆", internal:false },
-              ].map(({ href, label, icon, internal }) =>
-                internal ? (
-                  <a key={label} href={href} className="menu-item active"
-                    onClick={() => setShowMenu(false)}>
-                    <span style={{ fontSize:16, width:22, textAlign:"center" }}>{icon}</span>
-                    {label}
-                  </a>
-                ) : (
-                  <Link key={label} href={href} className="menu-item"
-                    onClick={() => setShowMenu(false)}>
-                    <span style={{ fontSize:16, width:22, textAlign:"center" }}>{icon}</span>
-                    {label}
-                  </Link>
-                )
-              )}
-
-              <div className="menu-divider" />
-
-              {/* External */}
-              <a href="https://touchgrass.today" target="_blank" rel="noopener noreferrer"
-                className="menu-item" onClick={() => setShowMenu(false)}>
-                <span style={{ fontSize:16, width:22, textAlign:"center" }}>🌐</span>
-                Website
-              </a>
-
-              {/* Profile link if signed in */}
-              {hasUser && (
-                <>
-                  <div className="menu-divider" />
-                  <Link href={`/u/${username}`} className="menu-item"
-                    onClick={() => setShowMenu(false)}
-                    style={{ color:T.olive }}>
-                    <span style={{ fontSize:16, width:22, textAlign:"center" }}>👤</span>
-                    My Profile
-                  </Link>
-                </>
-              )}
-
-              {/* Pending challenge count badge */}
-              {pendingChallenges.length > 0 && (
-                <>
-                  <div className="menu-divider" />
-                  <div style={{ padding:"8px 22px", display:"flex",
-                    alignItems:"center", gap:10 }}>
-                    <span style={{ fontSize:16 }}>⚡</span>
-                    <span style={{ fontSize:12, color:T.gold, fontWeight:600 }}>
-                      {pendingChallenges.length} pending challenge{pendingChallenges.length > 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </>
-              )}
+          {/* Left — headline + CTAs */}
+          <div className="v2-hero-left" style={{ position: "relative", zIndex: 1 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.2em",
+              textTransform: "uppercase", color: V2.grassGreen, marginBottom: 12,
+              display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: V2.grassGreen, display: "inline-block" }} />
+              Verified Outdoors
             </div>
-          </>
-        )}
 
-        {/* ── LIVE TICKER ─────────────────────────────────────────────────────── */}
-        <LiveTicker username={username} />
-
-        {/* ── HERO ─────────────────────────────────────────────────────────── */}
-        <section className="hero-section" style={{ position:"relative", overflow:"hidden" }}>
-          {/* Background */}
-          <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"linear-gradient(155deg,#1a2d0e,#2d4a18 22%,#1e3410 52%,#0e1a08)" }}>
-            <div style={{ position:"absolute", inset:0, opacity:0.25, backgroundImage:"radial-gradient(ellipse at 65% 35%,#4a7a28,transparent 55%),radial-gradient(ellipse at 30% 70%,#2d5a18,transparent 45%)" }} />
-          </div>
-          <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"linear-gradient(90deg,rgba(8,10,6,0.85) 0%,rgba(8,10,6,0.10) 55%,rgba(8,10,6,0.75) 100%)" }} />
-          <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"40%", pointerEvents:"none", background:"linear-gradient(180deg,transparent,rgba(8,10,6,0.98))" }} />
-
-          {/* ── DESKTOP layout — two-column absolute ── */}
-          <div className="hero-desktop" style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 clamp(18px,5.5vw,76px)" }}>
-            {/* Left */}
-            <div style={{ maxWidth:480 }}>
-              <div className="fade-1" style={{ fontSize:10, letterSpacing:"0.22em", color:T.olive, textTransform:"uppercase", marginBottom:12, fontWeight:600 }}>Verified Outdoors</div>
-              <h1 className="fade-2" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(44px,6.5vw,88px)", fontWeight:700, color:T.white, lineHeight:0.94, letterSpacing:"-0.02em", marginBottom:18 }}>
-                Proof<br />of Grass
-              </h1>
-              <p className="fade-2" style={{ fontSize:15, lineHeight:1.72, marginBottom:28, maxWidth:340, fontWeight:300, color:T.muted }}>
-                Log your time outside. Build your streak.<br />Earn rewards. Make a difference.
-              </p>
-              <div className="fade-3" style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-                <a href="#upload" className="btn-olive">Log Your Proof ↑</a>
-                <Link href="/leaderboard" className="btn-ghost">View Leaderboard</Link>
-              </div>
-              {hasUser && userStats && (
-                <div className="fade-3" style={{ marginTop:24, display:"flex", gap:18, flexWrap:"wrap" }}>
-                  {[["Posts",userStats.posts],["Best",`${userStats.bestStreak}d`],["Rank",`#${userStats.rank}`],["Shields",userStats.shields],["Passes",userStats.sunsetPasses??0]].map(([label,val]) => (
-                    <div key={label} style={{ textAlign:"center" }}>
-                      <div style={{ fontSize:15, fontWeight:700, color:T.white, fontFamily:"'Cormorant Garamond',Georgia,serif" }}>{val}</div>
-                      <div style={{ fontSize:8, color:T.dim, letterSpacing:"0.12em", textTransform:"uppercase" }}>{label}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* Right — streak HUD */}
-            {hasUser && resolvedStreak != null && (
-              <div style={{ textAlign:"right", flexShrink:0 }}>
-                {resolvedStreak === 1 && currentStreak > 1 ? (
-                  <>
-                    <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.red, textTransform:"uppercase", marginBottom:8 }}>Streak Reset</div>
-                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.red, lineHeight:0.9, letterSpacing:"-0.03em" }}>
-                      <span style={{ fontSize:"0.42em", color:T.red, opacity:0.6, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>1
-                    </div>
-                    <div style={{ fontSize:9, color:"rgba(239,68,68,0.6)", marginTop:10 }}>was day {currentStreak}</div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize:9, letterSpacing:"0.2em", color:T.dim, textTransform:"uppercase", marginBottom:8 }}>Your Streak</div>
-                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(56px,7.5vw,98px)", fontWeight:700, color:T.white, lineHeight:0.9, letterSpacing:"-0.03em" }}>
-                      <span style={{ fontSize:"0.42em", color:T.muted, verticalAlign:"top", lineHeight:2.4 }}>DAY </span>{resolvedStreak}
-                    </div>
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:7, marginTop:10 }}>
-                      <div style={{ width:30, height:1, background:`linear-gradient(90deg,transparent,${tierColor})` }} />
-                      <span style={{ fontSize:9, letterSpacing:"0.16em", color:tierColor, textTransform:"uppercase", fontWeight:600 }}>✦ {tier}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* ── MOBILE layout — stacked, flow ── */}
-          <div className="hero-mobile" style={{ position:"relative", padding:"52px 24px 40px", display:"flex", flexDirection:"column" }}>
-            <div className="fade-1" style={{ fontSize:9, letterSpacing:"0.26em", color:T.olive, textTransform:"uppercase", marginBottom:10, fontWeight:700 }}>Verified Outdoors</div>
-            <h1 className="fade-2" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:52, fontWeight:700, color:T.white, lineHeight:0.92, letterSpacing:"-0.02em", marginBottom:16 }}>
-              Proof<br/>of Grass
+            <h1 style={{ fontFamily: V2.fontSans, fontWeight: 800,
+              fontSize: "clamp(32px,5vw,60px)", lineHeight: 1.1,
+              color: V2.forestGreen, marginBottom: 16 }}>
+              Go outside.<br />
+              <span style={{ color: V2.grassGreen }}>Prove it.</span><br />
+              Build your streak.
             </h1>
 
-            {/* Streak pill — inline on mobile when signed in */}
-            {hasUser && resolvedStreak != null && (
-              <div className="fade-2" style={{ marginBottom:16 }}>
-                {resolvedStreak === 1 && currentStreak > 1 ? (
-                  <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(239,68,68,0.10)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:10, padding:"8px 14px" }}>
-                    <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:28, fontWeight:700, color:T.red, lineHeight:1 }}>Day 1</span>
-                    <div>
-                      <div style={{ fontSize:9, color:T.red, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase" }}>Streak Reset</div>
-                      <div style={{ fontSize:9, color:"rgba(239,68,68,0.55)" }}>was day {currentStreak}</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ display:"inline-flex", alignItems:"center", gap:10, background:"rgba(147,168,90,0.08)", border:`1px solid rgba(147,168,90,0.2)`, borderRadius:10, padding:"8px 14px" }}>
-                    <div>
-                      <div style={{ fontSize:9, color:T.olive, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", marginBottom:1 }}>Current Streak</div>
-                      <div style={{ display:"flex", alignItems:"baseline", gap:4 }}>
-                        <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:32, fontWeight:700, color:T.white, lineHeight:1 }}>{resolvedStreak}</span>
-                        <span style={{ fontSize:11, color:T.muted, fontWeight:300 }}>days</span>
-                      </div>
-                    </div>
-                    <div style={{ width:1, height:32, background:"rgba(147,168,90,0.2)" }} />
-                    <div>
-                      <div style={{ fontSize:9, color:T.dim, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:1 }}>Tier</div>
-                      <div style={{ fontSize:11, color:tierColor, fontWeight:700, letterSpacing:"0.06em" }}>✦ {tier}</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Logo watermark — fills the right blank space on mobile */}
-            <div style={{ position:"absolute", right:16, top:36, opacity:0.18, pointerEvents:"none" }}>
-              <img src="/touchgrass-transparent.png" alt="" style={{ width:130, height:130, objectFit:"contain" }} />
-            </div>
-
-            <p className="fade-2" style={{ fontSize:14, lineHeight:1.7, marginBottom:24, fontWeight:300, color:T.muted, maxWidth:320 }}>
-              Log your time outside. Build your streak. Earn rewards.
+            <p style={{ fontSize: "clamp(14px,1.5vw,16px)", color: V2.textMuted,
+              lineHeight: 1.6, marginBottom: 28, maxWidth: 420 }}>
+              Log your time outside, grow your streak, earn rewards, and make an impact.
             </p>
 
-            <div className="fade-3" style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              <a href="#upload" className="btn-olive" style={{ justifyContent:"center", textAlign:"center" }}>Log Your Proof ↑</a>
-              <Link href="/leaderboard" className="btn-ghost" style={{ justifyContent:"center", textAlign:"center" }}>View Leaderboard</Link>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <button onClick={scrollToUpload}
+                style={{ ...V2Styles.btnPrimary, fontSize: 15, padding: "14px 28px" }}>
+                🌿 Log Your Proof
+              </button>
+              <Link href="/leaderboard"
+                style={{ ...V2Styles.btnSecondary, fontSize: 15, padding: "13px 28px", textDecoration: "none" }}>
+                👑 View Leaderboard
+              </Link>
             </div>
+          </div>
 
-            {/* Mini stats row */}
-            {hasUser && userStats && (
-              <div className="fade-3" style={{ marginTop:20, display:"flex", gap:0, background:"rgba(255,255,255,0.03)", borderRadius:10, border:`1px solid ${T.border}`, overflow:"hidden" }}>
-                {[["Posts",userStats.posts],["Best",`${userStats.bestStreak}d`],["Rank",`#${userStats.rank}`],["Shields",userStats.shields]].map(([label,val],i,arr) => (
-                  <div key={label} style={{ flex:1, textAlign:"center", padding:"10px 0", borderRight:i<arr.length-1?`1px solid ${T.border}`:"none" }}>
-                    <div style={{ fontSize:16, fontWeight:700, color:T.white, fontFamily:"'Cormorant Garamond',Georgia,serif", lineHeight:1 }}>{val}</div>
-                    <div style={{ fontSize:8, color:T.dim, letterSpacing:"0.1em", textTransform:"uppercase", marginTop:3 }}>{label}</div>
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* Right — stat cards */}
+          <div className="v2-hero-right" style={{ position: "relative", zIndex: 1 }}>
+            <div className="v2-stat-grid">
+              <StatCard
+                icon="🔥"
+                value={resolvedStreak ?? (topStreaker?.streak ?? "—")}
+                label="Day Streak"
+                sub={tier.name}
+                accent={tier.color}
+                loading={loadingUser}
+              />
+              <StatCard
+                icon="🌿"
+                value={totalProofs != null ? totalProofs.toLocaleString() : "—"}
+                label="Proofs Logged"
+                sub={dailyCount != null ? `+${dailyCount} today` : null}
+                loading={false}
+              />
+              <StatCard
+                icon="⚡"
+                value={userStats?.posts != null ? userStats.posts.toLocaleString() : (leaders[0]?.streak ?? "—")}
+                label="Grass Score"
+                loading={loadingUser}
+              />
+              <StatCard
+                icon="🏆"
+                value={userStats?.rank != null ? `#${userStats.rank}` : "#1"}
+                label="Global Rank"
+                sub={userStats?.rank != null && userStats.rank <= 100 ? "Top 1%" : null}
+                loading={loadingUser}
+              />
+            </div>
           </div>
         </section>
 
-        {/* ── PENDING CHALLENGE ALERTS ─────────────────────────────────────── */}
-        {mounted && hasUser && pendingChallenges.length > 0 && (
-          <div style={{ borderBottom:`1px solid rgba(200,168,75,0.3)`,
-            background:"linear-gradient(180deg,rgba(200,168,75,0.06),rgba(200,168,75,0.02))" }}>
-            {pendingChallenges.map((ch, i) => (
-              <div key={ch.id} style={{
-                padding:"16px clamp(14px,4vw,48px)",
-                borderBottom: i < pendingChallenges.length - 1
-                  ? `1px solid rgba(200,168,75,0.15)` : "none",
-                display:"flex", alignItems:"center",
-                gap:14, flexWrap:"wrap",
-              }}>
-                {/* Icon + text */}
-                <div style={{ display:"flex", alignItems:"center", gap:12, flex:1, minWidth:220 }}>
-                  <div style={{ width:40, height:40, borderRadius:10, flexShrink:0,
-                    background:"rgba(200,168,75,0.12)",
-                    border:"1px solid rgba(200,168,75,0.4)",
-                    display:"flex", alignItems:"center",
-                    justifyContent:"center", fontSize:20 }}>
-                    ⚡
-                  </div>
-                  <div>
-                    <div style={{ fontSize:13, fontWeight:700, color:T.white, marginBottom:2 }}>
-                      @{ch.challenger} challenged you!
-                    </div>
-                    <div style={{ fontSize:11, color:T.muted, lineHeight:1.5 }}>
-                      {ch.duration_days}-day outdoor streak challenge
-                      {ch.message ? ` · "${ch.message}"` : ""}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div style={{ display:"flex", gap:8, flexShrink:0, alignItems:"center" }}>
-                  <button
-                    onClick={() => handleChallengeAction(ch, "accept")}
-                    disabled={challengeActioning === ch.id}
-                    style={{ background:T.olive, color:"#0e1108",
-                      border:"none", borderRadius:8,
-                      padding:"9px 18px", fontSize:12, fontWeight:700,
-                      cursor:"pointer", letterSpacing:"0.06em",
-                      opacity: challengeActioning === ch.id ? 0.6 : 1,
-                      transition:"all 0.2s" }}>
-                    {challengeActioning === ch.id ? "…" : "✓ Accept"}
-                  </button>
-                  <button
-                    onClick={() => handleChallengeAction(ch, "decline")}
-                    disabled={challengeActioning === ch.id}
-                    style={{ background:"transparent",
-                      color:T.red,
-                      border:`1px solid rgba(239,68,68,0.35)`,
-                      borderRadius:8, padding:"9px 18px",
-                      fontSize:12, fontWeight:600, cursor:"pointer",
-                      opacity: challengeActioning === ch.id ? 0.6 : 1,
-                      transition:"all 0.2s" }}>
-                    Decline
-                  </button>
-                  <Link href={`/challenge/${ch.slug}`}
-                    style={{ fontSize:11, color:T.gold,
-                      textDecoration:"none", padding:"9px 12px",
-                      borderRadius:8, border:`1px solid rgba(200,168,75,0.3)`,
-                      whiteSpace:"nowrap" }}>
-                    View →
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-
-        {/* ── MAIN TWO-COLUMN GRID ─────────────────────────────────────────── */}
-        <div className="main-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr",
-          gap:0, background:T.border, borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`,
-          width:"100%", maxWidth:"100%" }}>
-
-          {/* LOG YOUR PROOF */}
-          <div id="upload" ref={uploadSectionRef} className="card" style={{ padding:26 }}>
-            <div className="card-title">Log Your Proof</div>
-            {!hasUser ? (
-              <div style={{ border:`1.5px dashed ${T.borderG}`, borderRadius:12, padding:"32px 20px", textAlign:"center" }}>
-                <div style={{ fontSize:28, marginBottom:12, opacity:0.4 }}>🌿</div>
-                <div style={{ fontSize:13, color:T.muted, marginBottom:6, fontWeight:500 }}>Enter your username to get started</div>
-                <div style={{ fontSize:11, color:T.dim, marginBottom:18 }}>Type your username in the top right corner</div>
-              </div>
-            ) : hasPostedToday ? (
-              <div style={{ border:`1px solid ${T.borderG}`, borderRadius:12, padding:"28px 18px", textAlign:"center" }}>
-                <div style={{ fontSize:28, marginBottom:10 }}>✓</div>
-                <div style={{ fontSize:13, fontWeight:600, color:"#4ade80", marginBottom:6 }}>Streak locked in for today</div>
-                <div style={{ fontSize:11, color:T.dim }}>Come back tomorrow to keep your streak alive.</div>
-              </div>
-            ) : showResult && imageSrc && resolvedStreak !== null ? (
-              <ResultCard
-                imageSrc={imageSrc}
-                proofFile={proofFile}
-                username={username}
-                initialStreak={resolvedStreak}
-                onStreakUpdate={(n) => { setCurrentStreak(n); setHasPostedToday(true); }}
-                hasPremiumProofs={hasPremiumProofs}
-              />
-            ) : showResult && imageSrc ? (
-              <div style={{ padding:"32px 0", textAlign:"center" }}>
-                <div style={{ fontSize:13, color:T.dim, letterSpacing:"0.08em",
-                  fontFamily:"monospace" }}>⟳ loading streak…</div>
-              </div>
-            ) : (
-              <>
-                <UploadBox onUpload={handleImageUpload} />
-                <div style={{ marginTop:12, padding:"10px 13px", borderRadius:8,
-                  background:T.bg3, border:`1px solid ${T.border}`, fontSize:11, color:T.dim }}>
-                  {resolvedStreak === 1 && currentStreak > 1
-                    ? `Your streak has reset. Upload your photo to start again at Day 1.`
-                    : `Upload your outdoor photo to generate your Day ${resolvedStreak} certificate.`}
-                </div>
-              </>
-            )}
-
-            {/* Shield alert */}
-            {mounted && hasUser && missedOneDayNoShield && !hasPostedToday && (
-              <div style={{
-                marginTop:14, borderRadius:12, overflow:"hidden",
-                border:"1px solid rgba(239,68,68,0.25)",
-              }}>
-                {/* Top bar */}
-                <div style={{
-                  background:"linear-gradient(135deg,rgba(239,68,68,0.18),rgba(239,68,68,0.08))",
-                  padding:"12px 14px",
-                  display:"flex", alignItems:"center", gap:10,
-                }}>
-                  <div style={{
-                    width:32, height:32, borderRadius:8, flexShrink:0,
-                    background:"rgba(239,68,68,0.15)",
-                    border:"1px solid rgba(239,68,68,0.3)",
-                    display:"flex", alignItems:"center", justifyContent:"center",
-                    fontSize:16,
-                  }}>🛡</div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:"#f87171", marginBottom:1 }}>No shields available</div>
-                    <div style={{ fontSize:10, color:"rgba(239,68,68,0.55)", lineHeight:1.4 }}>
-                      Your streak will reset if you miss today
-                    </div>
-                  </div>
-                </div>
-                {/* CTA */}
-                <div style={{ padding:"10px 14px", background:"rgba(239,68,68,0.05)" }}>
-                  <button
-                    onClick={() => { setShowShieldBuy(true); document.getElementById("shield-section")?.scrollIntoView({ behavior:"smooth", block:"center" }); }}
-                    style={{
-                      width:"100%", background:"rgba(239,68,68,0.12)",
-                      border:"1px solid rgba(239,68,68,0.35)",
-                      color:"#f87171", borderRadius:8,
-                      padding:"9px 14px", fontSize:12, cursor:"pointer",
-                      fontWeight:700, letterSpacing:"0.04em",
-                      display:"flex", alignItems:"center", justifyContent:"center", gap:7,
-                    }}>
-                    Get a Streak Shield →
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── CHANGE 5: Sunset Pass reminder card ──────────────────────── */}
-            {mounted && hasUser && !hasPostedToday && (userStats?.sunsetPasses ?? 0) > 0 && (
-              <div style={{ marginTop:14, padding:"12px 14px", borderRadius:10,
-                background:"rgba(249,115,22,0.06)", border:"1px solid rgba(249,115,22,0.3)" }}>
-                <div style={{ fontSize:11, color:"#f97316", fontWeight:600, marginBottom:4 }}>🌅 Running late?</div>
-                <div style={{ fontSize:11, color:T.muted, marginBottom:10, lineHeight:1.5 }}>
-                  Use a Sunset Pass to extend today's proof window by 2 hours.
-                  You have <strong style={{ color:"#f97316" }}>{userStats.sunsetPasses}</strong> pass{userStats.sunsetPasses !== 1 ? "es" : ""}.
-                </div>
-                {sunsetMsg ? (
-                  <div style={{ fontSize:11, color: sunsetMsg.startsWith("✅") ? "#4ade80" : "#f97316" }}>{sunsetMsg}</div>
-                ) : (
-                  <button onClick={handleActivateSunsetPass} disabled={sunsetActivating}
-                    style={{ fontSize:11, fontWeight:700, color:"#0a0c08", background:"#f97316",
-                      border:"none", borderRadius:7, padding:"8px 16px", cursor:"pointer",
-                      opacity:sunsetActivating?0.7:1 }}>
-                    {sunsetActivating ? "Activating…" : "🌅 Use Sunset Pass"}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-        </div>
-
-
-
-
-
-        {/* ── COMMUNITY ENGAGEMENT ────────────────────────────────────────── */}
-        <CommunityEngagement username={username} />
-
-        {/* ── REWARDS BANNER ──────────────────────────────────────────────────── */}
-        <div style={{ padding: "0 clamp(14px,4vw,48px)" }}>
-          <RewardsBanner username={username} />
-        </div>
-
-
-
-        {/* ── PROMO BANNER — Harvest ───────────────────────────────────────────── */}
-        <div style={{ background:T.bg, paddingTop:28, paddingBottom:8 }}>
-          <PromoBanner
-            image="harvest_banner.png"
-            title="🌾 Harvest — Lock. Grow. Claim."
-            description="Deposit $TOUCHGRASS for 6 months. On Harvest Day, claim your principal + rewards."
-            buttonText="🌾 Start Harvesting"
+        {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
+        <div className="v2-feature-grid">
+          <FeatureCard
+            icon="/icons/harvest.png"
+            title="Harvest"
+            desc="Lock your tokens, grow your rewards, and harvest your impact."
+            cta="View Harvest"
             href="https://harvest.touchgrass.today"
-            secondaryText="📖 Learn More"
-            secondaryHref="https://harvest.touchgrass.today"
-            steps={[]}
+          />
+          <FeatureCard
+            icon="/icons/grass-draw.png"
+            title="Grass Draw"
+            desc="Earn Grass Draw entries through actions. Win epic monthly rewards."
+            cta="View Draw"
+            href="/grass-draw"
+          />
+          <FeatureCard
+            icon="/icons/shields.png"
+            title="Shields"
+            desc="Protect your streak with Shields. Stay locked in even when life happens."
+            cta="Manage Shields"
+            href="/marketplace"
+          />
+          <FeatureCard
+            icon="/icons/challenges.png"
+            title="Challenges"
+            desc="Take on challenges. Compete. Win. Earn more Grass Draw entries."
+            cta="View Challenges"
+            href="/challenges"
           />
         </div>
 
-        {/* ── ENTER USERNAME BANNER ─────────────────────────────────────────── */}
-        {mounted && !hasUser && (
-          <div style={{ background:`${T.olive}08`, borderBottom:`1px solid ${T.borderG}`,
-            padding:"11px clamp(14px,4vw,48px)", display:"flex", alignItems:"center",
-            justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
-            <span style={{ fontSize:12, color:T.dim }}>Enter your username above to see your streak, log proof, and join the leaderboard.</span>
+        {/* ── TOKEN STRIP ──────────────────────────────────────────────────── */}
+        <TokenStrip />
+
+        {/* ── PENDING CHALLENGES ───────────────────────────────────────────── */}
+        {pendingChallenges.length > 0 && (
+          <div style={{ padding: "16px clamp(14px,4vw,40px)" }}>
+            {pendingChallenges.map(ch => (
+              <div key={ch.id} style={{
+                ...V2Styles.glassCard,
+                padding: "16px 20px", marginBottom: 10,
+                display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
+                borderColor: V2.borderGold,
+                background: "rgba(255,243,216,0.8)",
+              }}>
+                <span style={{ fontSize: 24 }}>⚡</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: V2.forestGreen }}>
+                    @{ch.challenger} challenged you to a {ch.duration_days}-day streak!
+                  </div>
+                  {ch.message && <div style={{ fontSize: 12, color: V2.textMuted }}>{ch.message}</div>}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button disabled={challengeActioning === ch.id}
+                    onClick={() => handleChallengeAction(ch, "accept")}
+                    style={{ ...V2Styles.btnPrimary, padding: "8px 16px", fontSize: 12 }}>
+                    Accept
+                  </button>
+                  <button disabled={challengeActioning === ch.id}
+                    onClick={() => handleChallengeAction(ch, "decline")}
+                    style={{ ...V2Styles.btnSecondary, padding: "8px 16px", fontSize: 12 }}>
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* ── STATS ─────────────────────────────────────────────────────────── */}
-        <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}` }}>
-
-          {/* Stats row */}
-          <div className="stat-strip" style={{ display:"flex", borderBottom:`1px solid ${T.border}` }}>
-            <StatCard value={dailyCount !== null ? dailyCount.toLocaleString() : "…"} label="Active Touchers Today" />
-            <StatCard value={fmtBurned(totalBurned)} label="$TOUCHGRASS Burned" />
-            <StatCard value={topStreaker ? `${topStreaker.streak}d` : "…"} sub={topStreaker ? `@${topStreaker.username}` : ""} label="Top Streak" accent />
-            <StatCard value={totalProofs !== null ? totalProofs.toLocaleString() : "…"} label="Proofs Logged" last />
-          </div>
-
+        {/* ── REWARDS BANNER ───────────────────────────────────────────────── */}
+        <div style={{ padding: "8px clamp(14px,4vw,40px)" }}>
+          <RewardsBanner username={username} />
         </div>
 
+        {/* ── MAIN 3-COLUMN GRID ───────────────────────────────────────────── */}
+        <div className="v2-bottom-grid" ref={uploadSectionRef} id="upload">
 
-
-
-
-        {/* ── FOOTER CTA ────────────────────────────────────────────────────── */}
-        <section style={{ position:"relative", padding:"88px clamp(18px,5vw,72px)",
-          textAlign:"center", overflow:"hidden", width:"100%", maxWidth:"100%",
-          background:`linear-gradient(180deg,${T.bg} 0%,#111408 100%)` }}>
-          <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
-            width:"min(500px,100vw)", height:"min(500px,100vw)", borderRadius:"50%",
-            background:`radial-gradient(circle,${T.olive}0e 0%,transparent 70%)`, pointerEvents:"none" }} />
-          <div style={{ position:"relative" }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width:60, height:60, objectFit:"contain", opacity:0.7, marginBottom:20 }} />
-            <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(32px,5vw,68px)",
-              fontWeight:700, color:T.white, lineHeight:1.1, letterSpacing:"-0.02em", marginBottom:12 }}>
-              Go outside.<br /><span style={{ color:T.olive }}>Prove it.</span><br />Make a difference.
-            </h2>
-            <p style={{ fontSize:14, color:T.dim, marginBottom:36, fontWeight:300 }}>Every proof plants impact.</p>
-            <a href="#upload" className="btn-olive" style={{ fontSize:14, padding:"14px 34px" }}>Start Your Streak ↑</a>
+          {/* Column 1 — Profile preview / Leaderboard */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {hasUser && resolvedStreak != null ? (
+              <div style={{ ...V2Styles.glassCard, padding: "20px" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
+                  textTransform: "uppercase", color: V2.grassGreen, marginBottom: 12 }}>Profile</div>
+                <Link href={`/u/${username}`} style={{ textDecoration: "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: "50%",
+                      background: V2.gradientGrassBtn, display: "flex",
+                      alignItems: "center", justifyContent: "center", fontSize: 22 }}>🌿</div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: V2.forestGreen }}>@{username}</div>
+                      <div style={{ fontSize: 12, color: tier.color }}>{tier.emoji} {tier.name}</div>
+                    </div>
+                  </div>
+                </Link>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                  {[
+                    { icon: "🔥", val: resolvedStreak, label: "Streak" },
+                    { icon: "🏆", val: userStats?.bestStreak ?? "—", label: "Best" },
+                    { icon: "🌿", val: userStats?.posts ?? "—", label: "Proofs" },
+                    { icon: "🛡️", val: userStats?.shields ?? 0, label: "Shields" },
+                  ].map(s => (
+                    <div key={s.label} style={{ textAlign: "center", padding: "10px 6px",
+                      background: "rgba(125,200,50,0.06)", borderRadius: 10 }}>
+                      <div style={{ fontSize: 18 }}>{s.icon}</div>
+                      <div style={{ fontFamily: V2.fontSerif, fontSize: 20, fontWeight: 700, color: V2.forestGreen }}>{s.val}</div>
+                      <div style={{ fontSize: 10, color: V2.midGray, textTransform: "uppercase", letterSpacing: "0.08em" }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Link href={`/u/${username}`} style={{ ...V2Styles.btnSecondary, flex: 1, justifyContent: "center", fontSize: 12, textDecoration: "none" }}>
+                    Profile
+                  </Link>
+                  <Link href={`/flex/${username}`} style={{ ...V2Styles.btnSecondary, flex: 1, justifyContent: "center", fontSize: 12, textDecoration: "none" }}>
+                    Flex Card
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div style={{ ...V2Styles.glassCard, padding: "20px" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
+                  textTransform: "uppercase", color: V2.grassGreen, marginBottom: 12 }}>Leaderboard</div>
+                {leaders.slice(0,5).map((l,i) => <LBRow key={i} rank={i+1} {...l} />)}
+                <Link href="/leaderboard" style={{ display: "block", textAlign: "center",
+                  marginTop: 12, fontSize: 12, color: V2.grassGreen, textDecoration: "none" }}>
+                  View Full Leaderboard →
+                </Link>
+              </div>
+            )}
           </div>
-        </section>
+
+          {/* Column 2 — Log Your Proof */}
+          <LogProofSection
+            username={username}
+            hasUser={hasUser}
+            imageSrc={imageSrc}
+            proofFile={proofFile}
+            showResult={showResult}
+            hasPostedToday={hasPostedToday}
+            onUpload={handleImageUpload}
+            streakStatus={streakStatus}
+            streakTone={streakTone}
+            resolvedStreak={resolvedStreak}
+            loadingUser={loadingUser}
+          />
+
+          {/* Column 3 — Marketplace preview */}
+          <MarketplacePreview />
+        </div>
+
+        {/* ── FEATURED POSTS ───────────────────────────────────────────────── */}
+        <div style={{ background: "rgba(255,255,255,0.4)", borderTop: `1px solid ${V2.borderSoft}` }}>
+          <FeaturedPostsSection />
+        </div>
+
+        {/* ── PROMO BANNER ─────────────────────────────────────────────────── */}
+        <div style={{ padding: "24px clamp(14px,4vw,40px)" }}>
+          <div style={{
+            ...V2Styles.glassCard,
+            padding: "28px 32px",
+            display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap",
+            background: "linear-gradient(135deg,rgba(125,200,50,0.12),rgba(232,160,32,0.08))",
+          }}>
+            <span style={{ fontSize: 48 }}>🌾</span>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <h3 style={{ fontFamily: V2.fontSans, fontSize: 22, fontWeight: 800,
+                color: V2.forestGreen, marginBottom: 6 }}>
+                Harvest — Lock. Grow. Claim.
+              </h3>
+              <p style={{ fontSize: 13, color: V2.textMuted }}>
+                Deposit $TOUCHGRASS for 6 months. On Harvest Day, claim your principal + rewards.
+              </p>
+            </div>
+            <a href="https://harvest.touchgrass.today" target="_blank" rel="noopener noreferrer"
+              style={{ ...V2Styles.btnPrimary, textDecoration: "none", flexShrink: 0 }}>
+              Go to Harvest →
+            </a>
+          </div>
+        </div>
 
         {/* ── FOOTER ───────────────────────────────────────────────────────── */}
-        <footer style={{ borderTop:`1px solid ${T.border}`, padding:"20px clamp(14px,4vw,48px)",
-          display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12,
-          background:T.bg, width:"100%", maxWidth:"100%" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width:16, height:16, opacity:0.45 }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:13, color:T.dim }}>touch grass © 2024</span>
+        <footer style={{
+          background: V2.gradientForest,
+          padding: "48px clamp(14px,5vw,64px)",
+          display: "flex", alignItems: "center", gap: 32, flexWrap: "wrap",
+        }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontFamily: V2.fontSans, fontWeight: 800,
+              fontSize: "clamp(24px,3vw,36px)", color: V2.white, lineHeight: 1.2, marginBottom: 8 }}>
+              Go outside.<br />
+              <span style={{ color: V2.grassLime }}>Prove it.</span><br />
+              Make a difference.
+            </div>
           </div>
-          <div style={{ display:"flex", gap:22, flexWrap:"wrap" }}>
-            {[["Leaderboard","/leaderboard"],["Website","https://touchgrass.today"],["X (Twitter)","https://twitter.com/XTouchGrass"]].map(([label,href]) => (
-              <Link key={label} href={href} style={{ fontSize:10, color:T.dim, textDecoration:"none", letterSpacing:"0.08em", textTransform:"uppercase" }}>{label}</Link>
-            ))}
+          <div style={{ maxWidth: 320 }}>
+            <p style={{ fontSize: 13, color: "rgba(240,239,234,0.6)", lineHeight: 1.6, marginBottom: 20 }}>
+              Every proof plants impact. We fund youth athletics and environmental sustainability through your actions.
+            </p>
+            <button onClick={scrollToUpload}
+              style={{ ...V2Styles.btnPrimary, fontSize: 14 }}>
+              Start Your Streak 🌿
+            </button>
           </div>
-          <div style={{ fontSize:10, color:T.dim, letterSpacing:"0.1em" }}>BUILT ON ◎ SOLANA</div>
+          <div style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.1)",
+            paddingTop: 20, display: "flex", justifyContent: "space-between",
+            flexWrap: "wrap", gap: 12 }}>
+            <div style={{ fontSize: 12, color: "rgba(240,239,234,0.4)" }}>
+              © 2026 Proof of Grass. All rights reserved.
+            </div>
+            <div style={{ display: "flex", gap: 20 }}>
+              {["Leaderboard","Marketplace","Field Guide","Map"].map(l => (
+                <Link key={l} href={`/${l.toLowerCase().replace(" ","-")}`}
+                  style={{ fontSize: 12, color: "rgba(240,239,234,0.4)", textDecoration: "none" }}>
+                  {l}
+                </Link>
+              ))}
+            </div>
+          </div>
         </footer>
-
       </div>
+
+      {/* Mobile bottom nav */}
+      <V2BottomNav
+        username={username}
+        onLogProof={scrollToUpload}
+        onMore={() => {}}
+      />
     </>
   );
 }

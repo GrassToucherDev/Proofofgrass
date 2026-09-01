@@ -776,11 +776,8 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
   const [shareHint, setShareHint] = useState(false);
 
   const buildShareText = useCallback(() => {
-    const refLine = referralLink
-      ? `\nJoin me:\n${referralLink}`
-      : "\nproofofgrass.app";
-    return `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE}${refLine}`;
-  }, [caption, currentStreak, referralLink]);
+    return `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE}`;
+  }, [caption, currentStreak]);
 
   const lockInStreak = useCallback(async () => {
     if (!username) return;
@@ -1268,29 +1265,252 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
     img.src = imageSrc;
   }, [imageSrc, dateStr, currentStreak, selectedTheme]);
 
+  // ── V2 step labels ──────────────────────────────────────────────────────────
+  const V2_STEPS = [
+    { num:1, label:"Your Proof",      icon:"🌿" },
+    { num:2, label:"Card Type",       icon:"🎴" },
+    { num:3, label:"Location",        icon:"📍" },
+    { num:4, label:"Caption Preview", icon:"✏️"  },
+    { num:5, label:"Card Skin",       icon:"🎨" },
+  ];
+  const V2G = {
+    bg:"white", border:"rgba(200,220,190,0.5)", green:"#5ba622",
+    darkGreen:"#1a4a0a", midGray:"#6b7d60", lightBg:"rgba(125,200,50,0.06)",
+    btnPrimary:{ background:"linear-gradient(135deg,#7dc832,#5ba622)", color:"white",
+      border:"none", borderRadius:12, padding:"16px", width:"100%",
+      fontSize:16, fontWeight:700, cursor:"pointer",
+      boxShadow:"0 4px 16px rgba(125,200,50,0.35)", fontFamily:"DM Sans,sans-serif",
+      display:"flex", alignItems:"center", justifyContent:"center", gap:10 },
+  };
+
   return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:24,width:"100%"}}>
+    <div style={{ display:"flex", flexDirection:"column", gap:0, width:"100%",
+      background:"white", borderRadius:16,
+      border:`1px solid ${V2G.border}`,
+      boxShadow:"0 2px 20px rgba(26,74,10,0.08)", overflow:"hidden" }}>
 
       <canvas ref={canvasRef} style={{display:"none"}} />
 
-      <div style={{width:"100%"}}>
-        <div style={{width:"100%",overflow:"hidden",borderRadius:6,border:"1px solid #1a3a1e",boxShadow:"0 0 80px rgba(74,222,128,0.08)"}}>
-          {downloadUrl ? (
-            <img src={downloadUrl} alt="Proof of Grass Certificate" style={{width:"100%",height:"auto",display:"block",maxWidth:"100%"}} />
+      {/* ── Step 1: Your Proof ────────────────────────────────────────────── */}
+      <div style={{ padding:"20px 20px 0" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+          <div style={{ width:24, height:24, borderRadius:"50%",
+            background:V2G.green, color:"white", fontSize:11, fontWeight:800,
+            display:"flex", alignItems:"center", justifyContent:"center" }}>1</div>
+          <span style={{ fontSize:14, fontWeight:700, color:V2G.darkGreen }}>Your Proof 🌿</span>
+          <button style={{ marginLeft:"auto", background:"transparent", border:`1px solid ${V2G.border}`,
+            borderRadius:20, padding:"4px 12px", fontSize:11, color:V2G.midGray,
+            cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>Retake</button>
+        </div>
+
+        {/* Proof image */}
+        <div style={{ borderRadius:12, overflow:"hidden", marginBottom:12,
+          background:"rgba(200,220,190,0.2)", minHeight:200,
+          display:"flex", alignItems:"center", justifyContent:"center" }}>
+          {imageSrc ? (
+            <img src={imageSrc} alt="Your proof" style={{ width:"100%", objectFit:"cover", maxHeight:300 }} />
           ) : (
-            <div style={{width:"100%",aspectRatio:"1/1",background:"#0a140b",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <span style={{fontFamily:"monospace",color:"#2a4a2d",fontSize:11,letterSpacing:"0.3em"}}>generating…</span>
+            <div style={{ padding:40, textAlign:"center", color:V2G.midGray }}>
+              <div style={{ fontSize:40, marginBottom:8 }}>🌿</div>
+              <div style={{ fontSize:13 }}>Upload your outdoor photo</div>
             </div>
           )}
         </div>
+
+        {/* Generating indicator */}
+        {imageSrc && !downloadUrl && (
+          <div style={{ textAlign:"center", fontSize:11, color:V2G.midGray, marginBottom:8, padding:"8px" }}>
+            ⏳ Building your result card…
+          </div>
+        )}
       </div>
 
       {downloadUrl && (
-        <a href={downloadUrl} download="proof-of-grass.png"
-          
-          style={{display:"inline-flex",alignItems:"center",gap:10,padding:"12px 32px",fontFamily:"monospace",fontSize:13,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",color:"#0e1108",background:"#93a85a",borderRadius:3,textDecoration:"none",boxShadow:"0 0 20px rgba(147,168,90,0.3)"}}>
-          ↓ Download Certificate
-        </a>
+        <div style={{ padding:"0 20px" }}>
+          {/* ── Step 2: Card Type ──────────────────────────────────────────── */}
+          <div style={{ margin:"16px 0" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+              <div style={{ width:24, height:24, borderRadius:"50%",
+                background:V2G.green, color:"white", fontSize:11, fontWeight:800,
+                display:"flex", alignItems:"center", justifyContent:"center" }}>2</div>
+              <span style={{ fontSize:14, fontWeight:700, color:V2G.darkGreen }}>Card Type 🎴</span>
+              <span style={{ fontSize:11, color:V2G.midGray, marginLeft:4 }}>What would you like to share?</span>
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              {/* Outdoor Photo */}
+              <button onClick={()=>selectShareStyle("outdoor_photo")}
+                style={{ flex:1, padding:"14px 12px", borderRadius:12, cursor:"pointer",
+                  border:`2px solid ${shareStyle==="outdoor_photo"?V2G.green:V2G.border}`,
+                  background:shareStyle==="outdoor_photo"?"rgba(125,200,50,0.08)":"white",
+                  display:"flex", flexDirection:"column", gap:6, textAlign:"left",
+                  fontFamily:"DM Sans,sans-serif" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <span style={{ fontSize:20 }}>📸</span>
+                  {shareStyle==="outdoor_photo" && (
+                    <div style={{ width:20, height:20, borderRadius:"50%", background:V2G.green,
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:10, color:"white" }}>✓</div>
+                  )}
+                </div>
+                <div style={{ fontSize:12, fontWeight:700, color:V2G.darkGreen }}>Outdoor Photo</div>
+                <div style={{ fontSize:10, color:V2G.midGray }}>+ Proof Details</div>
+              </button>
+              {/* Result Card */}
+              <button onClick={()=>selectShareStyle("result_card")}
+                style={{ flex:1, padding:"14px 12px", borderRadius:12, cursor:"pointer",
+                  border:`2px solid ${shareStyle==="result_card"?V2G.green:V2G.border}`,
+                  background:shareStyle==="result_card"?"rgba(125,200,50,0.08)":"white",
+                  display:"flex", flexDirection:"column", gap:6, textAlign:"left",
+                  fontFamily:"DM Sans,sans-serif" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <span style={{ fontSize:20 }}>✨</span>
+                  {shareStyle==="result_card" && (
+                    <div style={{ width:20, height:20, borderRadius:"50%", background:V2G.green,
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:10, color:"white" }}>✓</div>
+                  )}
+                </div>
+                <div style={{ fontSize:12, fontWeight:700, color:V2G.darkGreen }}>Result Card</div>
+                <div style={{ fontSize:10, color:V2G.midGray }}>Styled Share</div>
+              </button>
+            </div>
+          </div>
+
+          {/* ── Step 3: Location ───────────────────────────────────────────── */}
+          <div style={{ margin:"16px 0" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+              <div style={{ width:24, height:24, borderRadius:"50%",
+                background:V2G.green, color:"white", fontSize:11, fontWeight:800,
+                display:"flex", alignItems:"center", justifyContent:"center" }}>3</div>
+              <span style={{ fontSize:14, fontWeight:700, color:V2G.darkGreen }}>Location 📍</span>
+              <span style={{ fontSize:11, color:V2G.midGray, marginLeft:4 }}>Display location</span>
+            </div>
+            {locationMode === null ? (
+              <div>
+                <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+                  <button onClick={requestGpsLocation} disabled={gpsRequesting}
+                    style={{ flex:1, padding:"10px 8px", borderRadius:20, cursor:"pointer",
+                      border:`1.5px solid ${V2G.green}`, background:"rgba(125,200,50,0.08)",
+                      color:V2G.green, fontSize:12, fontWeight:600, fontFamily:"DM Sans,sans-serif" }}>
+                    📍 {gpsRequesting?"Locating…":"Use My Location"}
+                  </button>
+                  <button onClick={()=>setLocationMode("manual")}
+                    style={{ flex:1, padding:"10px 8px", borderRadius:20, cursor:"pointer",
+                      border:`1.5px solid ${V2G.border}`, background:"white",
+                      color:V2G.darkGreen, fontSize:12, fontWeight:600, fontFamily:"DM Sans,sans-serif" }}>
+                    ✏️ Enter City
+                  </button>
+                  <button onClick={()=>setLocationMode("none")}
+                    style={{ flex:1, padding:"10px 8px", borderRadius:20, cursor:"pointer",
+                      border:`1.5px solid ${V2G.border}`, background:"white",
+                      color:V2G.midGray, fontSize:12, fontWeight:600, fontFamily:"DM Sans,sans-serif" }}>
+                    Skip
+                  </button>
+                </div>
+                {gpsError && <div style={{ fontSize:11, color:"#e05050", marginTop:4 }}>{gpsError}</div>}
+              </div>
+            ) : locationMode === "manual" ? (
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                <input value={locationCity} onChange={e=>setLocationCity(e.target.value)}
+                  placeholder="City (e.g. Tampa)"
+                  style={{ padding:"10px 14px", borderRadius:10, border:`1.5px solid ${V2G.border}`,
+                    fontSize:13, color:V2G.darkGreen, outline:"none", fontFamily:"DM Sans,sans-serif" }} />
+                <div style={{ display:"flex", gap:8 }}>
+                  <input value={locationRegion} onChange={e=>setLocationRegion(e.target.value)}
+                    placeholder="State/Region" style={{ flex:1, padding:"10px 14px", borderRadius:10,
+                      border:`1.5px solid ${V2G.border}`, fontSize:13, color:V2G.darkGreen,
+                      outline:"none", fontFamily:"DM Sans,sans-serif" }} />
+                  <input value={locationCountry} onChange={e=>setLocationCountry(e.target.value)}
+                    placeholder="Country" style={{ flex:1, padding:"10px 14px", borderRadius:10,
+                      border:`1.5px solid ${V2G.border}`, fontSize:13, color:V2G.darkGreen,
+                      outline:"none", fontFamily:"DM Sans,sans-serif" }} />
+                </div>
+                <button onClick={()=>setLocationMode(null)}
+                  style={{ fontSize:11, color:V2G.midGray, background:"none", border:"none",
+                    cursor:"pointer", textAlign:"left", textDecoration:"underline", fontFamily:"DM Sans,sans-serif" }}>
+                  ← Back
+                </button>
+              </div>
+            ) : locationMode === "gps" ? (
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                padding:"10px 14px", borderRadius:10, background:"rgba(125,200,50,0.08)",
+                border:`1px solid ${V2G.green}` }}>
+                <span style={{ fontSize:12, color:V2G.green }}>📍 Approximate location added</span>
+                <button onClick={()=>{setLocationMode(null);setGpsLat(null);setGpsLng(null);}}
+                  style={{ fontSize:11, color:V2G.midGray, background:"none", border:"none",
+                    cursor:"pointer", textDecoration:"underline", fontFamily:"DM Sans,sans-serif" }}>
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                padding:"10px 14px", borderRadius:10, background:"rgba(200,220,190,0.15)",
+                border:`1px solid ${V2G.border}` }}>
+                <span style={{ fontSize:12, color:V2G.midGray }}>No location</span>
+                <button onClick={()=>setLocationMode(null)}
+                  style={{ fontSize:11, color:V2G.green, background:"none", border:"none",
+                    cursor:"pointer", textDecoration:"underline", fontFamily:"DM Sans,sans-serif" }}>
+                  Add location
+                </button>
+              </div>
+            )}
+            {(locationCity||gpsLat) && (
+              <div style={{ fontSize:11, color:V2G.midGray, marginTop:6 }}>
+                📍 {locationMode==="gps"?"Nearby Region (approx.)":[locationCity,locationRegion,locationCountry].filter(Boolean).join(", ")}
+              </div>
+            )}
+          </div>
+
+          {/* ── Step 4: Caption Preview ────────────────────────────────────── */}
+          <div style={{ margin:"16px 0" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+              <div style={{ width:24, height:24, borderRadius:"50%",
+                background:V2G.green, color:"white", fontSize:11, fontWeight:800,
+                display:"flex", alignItems:"center", justifyContent:"center" }}>4</div>
+              <span style={{ fontSize:14, fontWeight:700, color:V2G.darkGreen }}>Caption Preview ✏️</span>
+            </div>
+            <div style={{ position:"relative", padding:"12px 14px", borderRadius:10,
+              border:`1.5px solid ${V2G.border}`, background:"rgba(125,200,50,0.03)" }}>
+              <p style={{ fontSize:12, color:V2G.darkGreen, lineHeight:1.6, margin:0 }}>
+                {caption}
+              </p>
+              <p style={{ fontSize:11, color:V2G.green, margin:"6px 0 0", lineHeight:1.6 }}>
+                {TAGS}<br/>@TouchGrass #GrassTouchers
+              </p>
+              <button onClick={handleNewCaption}
+                style={{ position:"absolute", top:10, right:10, background:"none",
+                  border:`1px solid ${V2G.border}`, borderRadius:20, padding:"3px 10px",
+                  fontSize:10, color:V2G.midGray, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
+                ✏️ Edit
+              </button>
+            </div>
+          </div>
+
+          {/* ── Step 5: Card Skin ──────────────────────────────────────────── */}
+          {hasPremiumProofs && (
+            <div style={{ margin:"16px 0" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                <div style={{ width:24, height:24, borderRadius:"50%",
+                  background:V2G.green, color:"white", fontSize:11, fontWeight:800,
+                  display:"flex", alignItems:"center", justifyContent:"center" }}>5</div>
+                <span style={{ fontSize:14, fontWeight:700, color:V2G.darkGreen }}>Card Skin 🎨</span>
+                <span style={{ fontSize:11, color:V2G.midGray }}>Choose a background skin</span>
+              </div>
+              <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:6, scrollbarWidth:"none" }}>
+                {Object.entries(THEMES).map(([key,theme])=>(
+                  <button key={key} onClick={()=>setSelectedTheme(key)}
+                    style={{ flexShrink:0, width:72, padding:0, border:`2px solid ${selectedTheme===key?V2G.green:V2G.border}`,
+                      borderRadius:10, overflow:"hidden", cursor:"pointer", background:"white",
+                      display:"flex", flexDirection:"column", alignItems:"center" }}>
+                    <div style={{ width:"100%", height:48, background:theme.panelTint||"linear-gradient(135deg,#1a4a0a,#2d7a1a)" }} />
+                    <div style={{ fontSize:9, fontWeight:600, color:V2G.darkGreen, padding:"4px 2px",
+                      textAlign:"center", lineHeight:1.2 }}>{theme.name}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {isInAppBrowser && !inAppBrowserMode && (
@@ -1425,33 +1645,90 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
         </div>
       )}
 
-      {/* ── SHARE TO X ──────────────────────────────────────────────────── */}
+      {/* ── V2 SHARE CTA ─────────────────────────────────────────────────── */}
       {downloadUrl && !inAppBrowserMode && submitStatus !== "success" && (
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,width:"100%"}}>
+        <div style={{ padding:"0 20px 20px", display:"flex", flexDirection:"column", gap:10 }}>
+          {/* Sunset pass warning */}
+          {sunsetWarning && !sunsetActivated && (
+            <div style={{ padding:"12px 14px", borderRadius:10, marginBottom:4,
+              background:"rgba(232,160,32,0.08)", border:"1px solid rgba(232,160,32,0.3)",
+              display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#c8a84b", marginBottom:2 }}>⏰ Deadline in ~1 hour</div>
+                <div style={{ fontSize:11, color:"rgba(200,168,75,0.7)" }}>
+                  {sunsetPasses>0
+                    ? `You have ${sunsetPasses} Sunset Pass${sunsetPasses>1?"es":""}. Activate to extend to 2:00 AM UTC.`
+                    : "No Sunset Passes. Purchase one in the Marketplace."}
+                </div>
+              </div>
+              {sunsetPasses>0 && (
+                <button onClick={activateSunsetPass} disabled={activatingSunset}
+                  style={{ background:"rgba(200,168,75,0.15)", border:"1px solid rgba(200,168,75,0.4)",
+                    borderRadius:8, padding:"8px 14px", color:"#c8a84b", fontSize:12, fontWeight:700,
+                    cursor:"pointer", flexShrink:0, opacity:activatingSunset?0.6:1, fontFamily:"DM Sans,sans-serif" }}>
+                  {activatingSunset?"Activating…":"🌅 Activate Pass"}
+                </button>
+              )}
+            </div>
+          )}
+          {sunsetActivated && (
+            <div style={{ fontSize:12, color:"#5ba622", padding:"8px 12px", borderRadius:8,
+              background:"rgba(125,200,50,0.08)", border:"1px solid rgba(125,200,50,0.2)" }}>
+              🌅 Sunset Pass active — deadline extended to 2:00 AM UTC
+            </div>
+          )}
+
+          {/* Primary: Lock In Streak directly — most reliable path */}
           <button
-            onClick={() => setShowStylePicker(true)}
-            disabled={submitStatus==="loading"}
-            aria-label="Share to X and lock in streak"
+            onClick={lockInStreak}
+            disabled={submitStatus==="loading"||submitStatus==="success"}
             style={{
-              display:"inline-flex",alignItems:"center",gap:10,
-              padding:"13px 32px",width:"100%",justifyContent:"center",
-              fontFamily:"monospace",fontSize:13,fontWeight:700,
-              letterSpacing:"0.15em",textTransform:"uppercase",
-              borderRadius:3,cursor:"pointer",border:"1px solid #93a85a",
-              background:submitStatus==="loading" ? "#1e2410" : "transparent",
-              color:"#93a85a",
-              opacity:submitStatus==="loading" ? 0.7 : 1,
+              background:submitStatus==="success"
+                ?"rgba(125,200,50,0.3)"
+                :submitStatus==="loading"
+                  ?"rgba(125,200,50,0.5)"
+                  :"linear-gradient(135deg,#7dc832,#5ba622)",
+              color:"white", border:"none", borderRadius:12,
+              padding:"18px", width:"100%",
+              fontSize:17, fontWeight:800, cursor:(submitStatus==="loading"||submitStatus==="success")?"default":"pointer",
+              boxShadow:"0 4px 20px rgba(125,200,50,0.4)", fontFamily:"DM Sans,sans-serif",
+              display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+              letterSpacing:"0.02em", marginBottom:8,
             }}>
-            {submitStatus==="loading" ? "posting…" : "📤 share to x + lock in streak"}
+            {submitStatus==="loading"
+              ? "⏳ Locking in…"
+              : submitStatus==="success"
+                ? "✅ Streak Locked In!"
+                : "🔒 Lock In My Streak"}
           </button>
+
+          {/* Secondary: Share to X (optional, doesn't block lock-in) */}
+          {submitStatus !== "success" && (
+            <button
+              onClick={() => setShowStylePicker(true)}
+              disabled={submitStatus==="loading"}
+              style={{
+                background:"white",
+                color:V2G.darkGreen, border:`1.5px solid ${V2G.border}`,
+                borderRadius:12, padding:"13px", width:"100%",
+                fontSize:14, fontWeight:700, cursor:submitStatus==="loading"?"default":"pointer",
+                fontFamily:"DM Sans,sans-serif",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+              }}>
+              🚀 Share to X
+            </button>
+          )}
           {shareHint && (
-            <p style={{fontFamily:"monospace",fontSize:11,color:"#93a85a",letterSpacing:"0.08em",margin:0}}>
-              select x from the share sheet, then post
+            <p style={{ fontSize:11, color:"#5ba622", textAlign:"center", margin:0 }}>
+              Select X from the share sheet, then post
             </p>
           )}
           {submitStatus==="error" && submitError && (
-            <p style={{fontFamily:"monospace",fontSize:10,color:"#ef4444",textAlign:"center",margin:0}}>{submitError}</p>
+            <p style={{ fontSize:11, color:"#e05050", textAlign:"center", margin:0 }}>{submitError}</p>
           )}
+          <p style={{ fontSize:11, color:"#6b7d60", textAlign:"center", margin:0 }}>
+            Tap <strong>Lock In My Streak</strong> first, then share to X separately.
+          </p>
         </div>
       )}
 
@@ -1468,59 +1745,32 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
       )}
 
       {submitStatus === "success" && (
-        <div style={{width:"100%",borderRadius:14,overflow:"hidden",border:"1px solid rgba(147,168,90,0.3)"}}>
-          {/* Confirmation bar */}
-          <div style={{
-            background:"linear-gradient(135deg,rgba(147,168,90,0.18),rgba(147,168,90,0.06))",
-            padding:"14px 16px",
-            display:"flex",alignItems:"center",gap:12,
-          }}>
-            <div style={{
-              width:38,height:38,borderRadius:10,flexShrink:0,
-              background:"rgba(147,168,90,0.2)",border:"1px solid rgba(147,168,90,0.4)",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,
-            }}>✓</div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#93a85a",marginBottom:1}}>
-                Day {currentStreak} Locked In
+        <div style={{ margin:"0 20px 20px", borderRadius:14, overflow:"hidden",
+          border:"1px solid rgba(125,200,50,0.3)", background:"rgba(125,200,50,0.05)" }}>
+          <div style={{ padding:"16px", display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:44, height:44, borderRadius:12, flexShrink:0,
+              background:"rgba(125,200,50,0.15)", border:"1.5px solid rgba(125,200,50,0.4)",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>✓</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:15, fontWeight:700, color:"#1a4a0a", marginBottom:2 }}>
+                Day {currentStreak} Locked In! 🎉
               </div>
-              <div style={{fontSize:10,color:"rgba(147,168,90,0.6)"}}>
-                Your streak is saved for today.
-              </div>
+              <div style={{ fontSize:12, color:"#5ba622" }}>Your streak is saved for today.</div>
             </div>
           </div>
-          {/* Share again + download — card stays live */}
-          <div style={{
-            background:"rgba(14,16,11,0.9)",
-            borderTop:"1px solid rgba(147,168,90,0.12)",
-            padding:"12px 14px",
-            display:"flex",gap:8,
-          }}>
-            <button
-              onClick={() => setShowStylePicker(true)}
-              aria-label="Share your card again"
-              style={{
-                flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,
-                padding:"10px 14px",borderRadius:9,cursor:"pointer",
-                background:"rgba(147,168,90,0.12)",
-                border:"1px solid rgba(147,168,90,0.3)",
-                color:"#93a85a",fontSize:12,fontWeight:700,letterSpacing:"0.04em",
-              }}>
+          <div style={{ padding:"0 16px 16px", display:"flex", gap:8 }}>
+            <button onClick={()=>setShowStylePicker(true)}
+              style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer",
+                background:"rgba(125,200,50,0.12)", border:"1.5px solid rgba(125,200,50,0.3)",
+                color:"#5ba622", fontSize:13, fontWeight:700, fontFamily:"DM Sans,sans-serif" }}>
               📤 Share Again
             </button>
-            <a
-              href={downloadUrl}
-              download={`proof-of-grass-day-${currentStreak}.png`}
-              aria-label="Download your result card"
-              style={{
-                flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,
-                padding:"10px 14px",borderRadius:9,cursor:"pointer",
-                background:"transparent",
-                border:"1px solid rgba(255,255,255,0.1)",
-                color:"rgba(240,239,234,0.55)",fontSize:12,fontWeight:600,
-                textDecoration:"none",letterSpacing:"0.04em",
-              }}>
-              ↓ Save Card
+            <a href={downloadUrl} download={`proof-of-grass-day-${currentStreak}.png`}
+              style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer",
+                background:"white", border:"1.5px solid rgba(200,220,190,0.5)",
+                color:"#1a4a0a", fontSize:13, fontWeight:600, textDecoration:"none",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              ↓ Download Result Card
             </a>
           </div>
         </div>
