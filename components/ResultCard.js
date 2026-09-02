@@ -2007,6 +2007,594 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
 
 
 
+      {submitStatus === "success" && (
+        <div style={{ margin:"0 20px 20px", borderRadius:14, overflow:"hidden",
+          border:"1px solid rgba(125,200,50,0.3)", background:"rgba(125,200,50,0.05)" }}>
+          <div style={{ padding:"16px", display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:44, height:44, borderRadius:12, flexShrink:0,
+              background:"rgba(125,200,50,0.15)", border:"1.5px solid rgba(125,200,50,0.4)",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>✓</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:15, fontWeight:700, color:"#1a4a0a", marginBottom:2 }}>
+                Day {currentStreak} Locked In! 🎉
+              </div>
+              <div style={{ fontSize:12, color:"#5ba622" }}>Your streak is saved for today.</div>
+            </div>
+          </div>
+          <div style={{ padding:"0 16px 16px", display:"flex", gap:8 }}>
+            <button onClick={()=>setShowStylePicker(true)}
+              style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer",
+                background:"rgba(125,200,50,0.12)", border:"1.5px solid rgba(125,200,50,0.3)",
+                color:"#5ba622", fontSize:13, fontWeight:700, fontFamily:"DM Sans,sans-serif" }}>
+              📤 Share Again
+            </button>
+            <a href={downloadUrl} download={`proof-of-grass-day-${currentStreak}.png`}
+              style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer",
+                background:"white", border:"1.5px solid rgba(200,220,190,0.5)",
+                color:"#1a4a0a", fontSize:13, fontWeight:600, textDecoration:"none",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              ↓ Download Result Card
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* ── STYLE PICKER MODAL ───────────────────────────────────────── */}
+      {showStylePicker && (() => {
+        const cardStyle = (style) => ({
+          flex:"1 1 0",minWidth:0,
+          border:`2px solid ${shareStyle===style ? "#93a85a" : "rgba(255,255,255,0.1)"}`,
+          borderRadius:12,padding:"14px 12px",cursor:"pointer",
+          background:shareStyle===style ? "rgba(147,168,90,0.08)" : "rgba(255,255,255,0.02)",
+          display:"flex",flexDirection:"column",gap:8,
+          transition:"all 0.15s",
+          outline:"none",
+        });
+        return (
+          <>
+            {/* Backdrop */}
+            <div
+              onClick={() => setShowStylePicker(false)}
+              role="button"
+              aria-label="Close style picker"
+              style={{position:"fixed",inset:0,zIndex:997,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(3px)"}}
+            />
+            {/* Sheet */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Choose Your Proof Style"
+              onKeyDown={e => { if(e.key==="Escape") setShowStylePicker(false); }}
+              tabIndex={-1}
+              style={{
+                position:"fixed",left:0,right:0,bottom:0,zIndex:998,
+                background:"#0e100b",borderTop:"1px solid rgba(255,255,255,0.1)",
+                borderRadius:"20px 20px 0 0",
+                padding:"24px 20px clamp(24px,env(safe-area-inset-bottom,24px)+24px,48px)",
+                maxHeight:"90vh",overflowY:"auto",
+              }}>
+              {/* Handle */}
+              <div style={{width:40,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"0 auto 20px"}} />
+              <div style={{fontSize:15,fontWeight:700,color:"#f0efea",textAlign:"center",marginBottom:18,letterSpacing:"0.04em"}}>
+                Choose Your Proof Style
+              </div>
+
+              <div style={{display:"flex",gap:12,marginBottom:20}}>
+                {/* Outdoor Photo */}
+                <button
+                  style={cardStyle("outdoor_photo")}
+                  onClick={() => selectShareStyle("outdoor_photo")}
+                  aria-pressed={shareStyle==="outdoor_photo"}
+                  aria-label="Outdoor Photo — Recommended">
+                  {/* Preview */}
+                  <div style={{width:"100%",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",background:"#0a140b",flexShrink:0}}>
+                    {imageSrc && (
+                      <img src={imageSrc} alt="Your outdoor proof photo" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                    )}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#f0efea"}}>Outdoor Photo</div>
+                      <div style={{fontSize:10,color:"rgba(240,239,234,0.5)"}}>Authentic and simple</div>
+                    </div>
+                    {shareStyle==="outdoor_photo" && <span style={{fontSize:16}}>✓</span>}
+                  </div>
+                  <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:"#93a85a",background:"rgba(147,168,90,0.12)",borderRadius:20,padding:"2px 10px",alignSelf:"flex-start"}}>
+                    Recommended
+                  </div>
+                </button>
+
+                {/* Result Card */}
+                <button
+                  style={cardStyle("result_card")}
+                  onClick={() => selectShareStyle("result_card")}
+                  aria-pressed={shareStyle==="result_card"}
+                  aria-label="Result Card — Branded">
+                  {/* Preview */}
+                  <div style={{width:"100%",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",background:"#0a140b",flexShrink:0}}>
+                    {downloadUrl && (
+                      <img src={downloadUrl} alt="Proof of Grass branded result card" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                    )}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#f0efea"}}>Result Card</div>
+                      <div style={{fontSize:10,color:"rgba(240,239,234,0.5)"}}>Branded and streak-focused</div>
+                    </div>
+                    {shareStyle==="result_card" && <span style={{fontSize:16}}>✓</span>}
+                  </div>
+                </button>
+              </div>
+
+              {/* Caption preview */}
+              <div style={{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:"rgba(240,239,234,0.6)",lineHeight:1.7,fontFamily:"monospace",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>
+                {buildShareText()}
+              </div>
+
+              <div style={{display:"flex",gap:8}}>
+                <button
+                  onClick={() => setShowStylePicker(false)}
+                  aria-label="Cancel"
+                  style={{flex:"0 0 auto",padding:"12px 18px",borderRadius:8,border:"1px solid rgba(255,255,255,0.12)",background:"transparent",color:"rgba(240,239,234,0.5)",fontSize:13,cursor:"pointer"}}>
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowStylePicker(false);
+                    const text = buildShareText();
+                    const isAndroid = /Android/i.test(navigator.userAgent ?? "");
+                    const isIOS     = /iPhone|iPad|iPod/i.test(navigator.userAgent ?? "");
+                    const file = shareStyle === "outdoor_photo"
+                      ? outdoorFileRef.current
+                      : sharableFileRef.current;
+                    let cancelled = false;
+
+                    // Lock streak immediately on all platforms — before share opens
+                    setShareInitiated(true);
+                    lockInStreak();
+
+                    if (isIOS) {
+                      // ── iOS: native share sheet ────────────────────────────
+                      const canShare = !isInAppBrowser
+                        && typeof navigator.share === "function"
+                        && typeof navigator.canShare === "function";
+                      if (canShare && file && navigator.canShare({ files:[file] })) {
+                        setShareHint(true);
+                        navigator.share({ files:[file], text })
+                          .then(() => { setShareHint(false); })
+                          .catch(err => {
+                            setShareHint(false);
+                            if (err?.name !== "AbortError") {
+                              navigator.clipboard.writeText(text).catch(()=>{});
+                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                            }
+                          });
+                      } else {
+                        navigator.clipboard.writeText(text).catch(()=>{});
+                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                      }
+                    } else if (isAndroid) {
+                      // ── Android: download image + open X ──────────────────
+                      try {
+                        if (file) {
+                          const url = URL.createObjectURL(file);
+                          const a = document.createElement("a");
+                          a.href = url; a.download = file.name; a.click();
+                          setTimeout(() => URL.revokeObjectURL(url), 5000);
+                        }
+                      } catch(e) {}
+                      navigator.clipboard.writeText(text).catch(()=>{});
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                    } else {
+                      // ── Desktop: open X compose ────────────────────────────
+                      navigator.clipboard.writeText(text).catch(()=>{});
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                    }
+                  }}
+                  aria-label="Continue to X"
+                  style={{flex:1,padding:"13px",borderRadius:8,border:"none",background:"#93a85a",color:"#0e1108",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:"0.08em"}}>
+                  Continue to X →
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
+
+
+
+      {submitStatus === "success" && (
+        <div style={{ margin:"0 20px 20px", borderRadius:14, overflow:"hidden",
+          border:"1px solid rgba(125,200,50,0.3)", background:"rgba(125,200,50,0.05)" }}>
+          <div style={{ padding:"16px", display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:44, height:44, borderRadius:12, flexShrink:0,
+              background:"rgba(125,200,50,0.15)", border:"1.5px solid rgba(125,200,50,0.4)",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>✓</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:15, fontWeight:700, color:"#1a4a0a", marginBottom:2 }}>
+                Day {currentStreak} Locked In! 🎉
+              </div>
+              <div style={{ fontSize:12, color:"#5ba622" }}>Your streak is saved for today.</div>
+            </div>
+          </div>
+          <div style={{ padding:"0 16px 16px", display:"flex", gap:8 }}>
+            <button onClick={()=>setShowStylePicker(true)}
+              style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer",
+                background:"rgba(125,200,50,0.12)", border:"1.5px solid rgba(125,200,50,0.3)",
+                color:"#5ba622", fontSize:13, fontWeight:700, fontFamily:"DM Sans,sans-serif" }}>
+              📤 Share Again
+            </button>
+            <a href={downloadUrl} download={`proof-of-grass-day-${currentStreak}.png`}
+              style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer",
+                background:"white", border:"1.5px solid rgba(200,220,190,0.5)",
+                color:"#1a4a0a", fontSize:13, fontWeight:600, textDecoration:"none",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              ↓ Download Result Card
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* ── STYLE PICKER MODAL ───────────────────────────────────────── */}
+      {showStylePicker && (() => {
+        const cardStyle = (style) => ({
+          flex:"1 1 0",minWidth:0,
+          border:`2px solid ${shareStyle===style ? "#93a85a" : "rgba(255,255,255,0.1)"}`,
+          borderRadius:12,padding:"14px 12px",cursor:"pointer",
+          background:shareStyle===style ? "rgba(147,168,90,0.08)" : "rgba(255,255,255,0.02)",
+          display:"flex",flexDirection:"column",gap:8,
+          transition:"all 0.15s",
+          outline:"none",
+        });
+        return (
+          <>
+            {/* Backdrop */}
+            <div
+              onClick={() => setShowStylePicker(false)}
+              role="button"
+              aria-label="Close style picker"
+              style={{position:"fixed",inset:0,zIndex:997,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(3px)"}}
+            />
+            {/* Sheet */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Choose Your Proof Style"
+              onKeyDown={e => { if(e.key==="Escape") setShowStylePicker(false); }}
+              tabIndex={-1}
+              style={{
+                position:"fixed",left:0,right:0,bottom:0,zIndex:998,
+                background:"#0e100b",borderTop:"1px solid rgba(255,255,255,0.1)",
+                borderRadius:"20px 20px 0 0",
+                padding:"24px 20px clamp(24px,env(safe-area-inset-bottom,24px)+24px,48px)",
+                maxHeight:"90vh",overflowY:"auto",
+              }}>
+              {/* Handle */}
+              <div style={{width:40,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"0 auto 20px"}} />
+              <div style={{fontSize:15,fontWeight:700,color:"#f0efea",textAlign:"center",marginBottom:18,letterSpacing:"0.04em"}}>
+                Choose Your Proof Style
+              </div>
+
+              <div style={{display:"flex",gap:12,marginBottom:20}}>
+                {/* Outdoor Photo */}
+                <button
+                  style={cardStyle("outdoor_photo")}
+                  onClick={() => selectShareStyle("outdoor_photo")}
+                  aria-pressed={shareStyle==="outdoor_photo"}
+                  aria-label="Outdoor Photo — Recommended">
+                  {/* Preview */}
+                  <div style={{width:"100%",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",background:"#0a140b",flexShrink:0}}>
+                    {imageSrc && (
+                      <img src={imageSrc} alt="Your outdoor proof photo" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                    )}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#f0efea"}}>Outdoor Photo</div>
+                      <div style={{fontSize:10,color:"rgba(240,239,234,0.5)"}}>Authentic and simple</div>
+                    </div>
+                    {shareStyle==="outdoor_photo" && <span style={{fontSize:16}}>✓</span>}
+                  </div>
+                  <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:"#93a85a",background:"rgba(147,168,90,0.12)",borderRadius:20,padding:"2px 10px",alignSelf:"flex-start"}}>
+                    Recommended
+                  </div>
+                </button>
+
+                {/* Result Card */}
+                <button
+                  style={cardStyle("result_card")}
+                  onClick={() => selectShareStyle("result_card")}
+                  aria-pressed={shareStyle==="result_card"}
+                  aria-label="Result Card — Branded">
+                  {/* Preview */}
+                  <div style={{width:"100%",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",background:"#0a140b",flexShrink:0}}>
+                    {downloadUrl && (
+                      <img src={downloadUrl} alt="Proof of Grass branded result card" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                    )}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#f0efea"}}>Result Card</div>
+                      <div style={{fontSize:10,color:"rgba(240,239,234,0.5)"}}>Branded and streak-focused</div>
+                    </div>
+                    {shareStyle==="result_card" && <span style={{fontSize:16}}>✓</span>}
+                  </div>
+                </button>
+              </div>
+
+              {/* Caption preview */}
+              <div style={{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:"rgba(240,239,234,0.6)",lineHeight:1.7,fontFamily:"monospace",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>
+                {buildShareText()}
+              </div>
+
+              <div style={{display:"flex",gap:8}}>
+                <button
+                  onClick={() => setShowStylePicker(false)}
+                  aria-label="Cancel"
+                  style={{flex:"0 0 auto",padding:"12px 18px",borderRadius:8,border:"1px solid rgba(255,255,255,0.12)",background:"transparent",color:"rgba(240,239,234,0.5)",fontSize:13,cursor:"pointer"}}>
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowStylePicker(false);
+                    const text = buildShareText();
+                    const isAndroid = /Android/i.test(navigator.userAgent ?? "");
+                    const isIOS     = /iPhone|iPad|iPod/i.test(navigator.userAgent ?? "");
+                    const file = shareStyle === "outdoor_photo"
+                      ? outdoorFileRef.current
+                      : sharableFileRef.current;
+                    let cancelled = false;
+
+                    // Lock streak immediately on all platforms — before share opens
+                    setShareInitiated(true);
+                    lockInStreak();
+
+                    if (isIOS) {
+                      // ── iOS: native share sheet ────────────────────────────
+                      const canShare = !isInAppBrowser
+                        && typeof navigator.share === "function"
+                        && typeof navigator.canShare === "function";
+                      if (canShare && file && navigator.canShare({ files:[file] })) {
+                        setShareHint(true);
+                        navigator.share({ files:[file], text })
+                          .then(() => { setShareHint(false); })
+                          .catch(err => {
+                            setShareHint(false);
+                            if (err?.name !== "AbortError") {
+                              navigator.clipboard.writeText(text).catch(()=>{});
+                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                            }
+                          });
+                      } else {
+                        navigator.clipboard.writeText(text).catch(()=>{});
+                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                      }
+                    } else if (isAndroid) {
+                      // ── Android: download image + open X ──────────────────
+                      try {
+                        if (file) {
+                          const url = URL.createObjectURL(file);
+                          const a = document.createElement("a");
+                          a.href = url; a.download = file.name; a.click();
+                          setTimeout(() => URL.revokeObjectURL(url), 5000);
+                        }
+                      } catch(e) {}
+                      navigator.clipboard.writeText(text).catch(()=>{});
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                    } else {
+                      // ── Desktop: open X compose ────────────────────────────
+                      navigator.clipboard.writeText(text).catch(()=>{});
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                    }
+                  }}
+                  aria-label="Continue to X"
+                  style={{flex:1,padding:"13px",borderRadius:8,border:"none",background:"#93a85a",color:"#0e1108",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:"0.08em"}}>
+                  Continue to X →
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
+
+
+
+      {submitStatus === "success" && (
+        <div style={{ margin:"0 20px 20px", borderRadius:14, overflow:"hidden",
+          border:"1px solid rgba(125,200,50,0.3)", background:"rgba(125,200,50,0.05)" }}>
+          <div style={{ padding:"16px", display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:44, height:44, borderRadius:12, flexShrink:0,
+              background:"rgba(125,200,50,0.15)", border:"1.5px solid rgba(125,200,50,0.4)",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>✓</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:15, fontWeight:700, color:"#1a4a0a", marginBottom:2 }}>
+                Day {currentStreak} Locked In! 🎉
+              </div>
+              <div style={{ fontSize:12, color:"#5ba622" }}>Your streak is saved for today.</div>
+            </div>
+          </div>
+          <div style={{ padding:"0 16px 16px", display:"flex", gap:8 }}>
+            <button onClick={()=>setShowStylePicker(true)}
+              style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer",
+                background:"rgba(125,200,50,0.12)", border:"1.5px solid rgba(125,200,50,0.3)",
+                color:"#5ba622", fontSize:13, fontWeight:700, fontFamily:"DM Sans,sans-serif" }}>
+              📤 Share Again
+            </button>
+            <a href={downloadUrl} download={`proof-of-grass-day-${currentStreak}.png`}
+              style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer",
+                background:"white", border:"1.5px solid rgba(200,220,190,0.5)",
+                color:"#1a4a0a", fontSize:13, fontWeight:600, textDecoration:"none",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              ↓ Download Result Card
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* ── STYLE PICKER MODAL ───────────────────────────────────────── */}
+      {showStylePicker && (() => {
+        const cardStyle = (style) => ({
+          flex:"1 1 0",minWidth:0,
+          border:`2px solid ${shareStyle===style ? "#93a85a" : "rgba(255,255,255,0.1)"}`,
+          borderRadius:12,padding:"14px 12px",cursor:"pointer",
+          background:shareStyle===style ? "rgba(147,168,90,0.08)" : "rgba(255,255,255,0.02)",
+          display:"flex",flexDirection:"column",gap:8,
+          transition:"all 0.15s",
+          outline:"none",
+        });
+        return (
+          <>
+            {/* Backdrop */}
+            <div
+              onClick={() => setShowStylePicker(false)}
+              role="button"
+              aria-label="Close style picker"
+              style={{position:"fixed",inset:0,zIndex:997,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(3px)"}}
+            />
+            {/* Sheet */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Choose Your Proof Style"
+              onKeyDown={e => { if(e.key==="Escape") setShowStylePicker(false); }}
+              tabIndex={-1}
+              style={{
+                position:"fixed",left:0,right:0,bottom:0,zIndex:998,
+                background:"#0e100b",borderTop:"1px solid rgba(255,255,255,0.1)",
+                borderRadius:"20px 20px 0 0",
+                padding:"24px 20px clamp(24px,env(safe-area-inset-bottom,24px)+24px,48px)",
+                maxHeight:"90vh",overflowY:"auto",
+              }}>
+              {/* Handle */}
+              <div style={{width:40,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"0 auto 20px"}} />
+              <div style={{fontSize:15,fontWeight:700,color:"#f0efea",textAlign:"center",marginBottom:18,letterSpacing:"0.04em"}}>
+                Choose Your Proof Style
+              </div>
+
+              <div style={{display:"flex",gap:12,marginBottom:20}}>
+                {/* Outdoor Photo */}
+                <button
+                  style={cardStyle("outdoor_photo")}
+                  onClick={() => selectShareStyle("outdoor_photo")}
+                  aria-pressed={shareStyle==="outdoor_photo"}
+                  aria-label="Outdoor Photo — Recommended">
+                  {/* Preview */}
+                  <div style={{width:"100%",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",background:"#0a140b",flexShrink:0}}>
+                    {imageSrc && (
+                      <img src={imageSrc} alt="Your outdoor proof photo" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                    )}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#f0efea"}}>Outdoor Photo</div>
+                      <div style={{fontSize:10,color:"rgba(240,239,234,0.5)"}}>Authentic and simple</div>
+                    </div>
+                    {shareStyle==="outdoor_photo" && <span style={{fontSize:16}}>✓</span>}
+                  </div>
+                  <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:"#93a85a",background:"rgba(147,168,90,0.12)",borderRadius:20,padding:"2px 10px",alignSelf:"flex-start"}}>
+                    Recommended
+                  </div>
+                </button>
+
+                {/* Result Card */}
+                <button
+                  style={cardStyle("result_card")}
+                  onClick={() => selectShareStyle("result_card")}
+                  aria-pressed={shareStyle==="result_card"}
+                  aria-label="Result Card — Branded">
+                  {/* Preview */}
+                  <div style={{width:"100%",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",background:"#0a140b",flexShrink:0}}>
+                    {downloadUrl && (
+                      <img src={downloadUrl} alt="Proof of Grass branded result card" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                    )}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#f0efea"}}>Result Card</div>
+                      <div style={{fontSize:10,color:"rgba(240,239,234,0.5)"}}>Branded and streak-focused</div>
+                    </div>
+                    {shareStyle==="result_card" && <span style={{fontSize:16}}>✓</span>}
+                  </div>
+                </button>
+              </div>
+
+              {/* Caption preview */}
+              <div style={{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:"rgba(240,239,234,0.6)",lineHeight:1.7,fontFamily:"monospace",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>
+                {buildShareText()}
+              </div>
+
+              <div style={{display:"flex",gap:8}}>
+                <button
+                  onClick={() => setShowStylePicker(false)}
+                  aria-label="Cancel"
+                  style={{flex:"0 0 auto",padding:"12px 18px",borderRadius:8,border:"1px solid rgba(255,255,255,0.12)",background:"transparent",color:"rgba(240,239,234,0.5)",fontSize:13,cursor:"pointer"}}>
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowStylePicker(false);
+                    const text = buildShareText();
+                    const isAndroid = /Android/i.test(navigator.userAgent ?? "");
+                    const isIOS     = /iPhone|iPad|iPod/i.test(navigator.userAgent ?? "");
+                    const file = shareStyle === "outdoor_photo"
+                      ? outdoorFileRef.current
+                      : sharableFileRef.current;
+                    let cancelled = false;
+
+                    // Lock streak immediately on all platforms — before share opens
+                    setShareInitiated(true);
+                    lockInStreak();
+
+                    if (isIOS) {
+                      // ── iOS: native share sheet ────────────────────────────
+                      const canShare = !isInAppBrowser
+                        && typeof navigator.share === "function"
+                        && typeof navigator.canShare === "function";
+                      if (canShare && file && navigator.canShare({ files:[file] })) {
+                        setShareHint(true);
+                        navigator.share({ files:[file], text })
+                          .then(() => { setShareHint(false); })
+                          .catch(err => {
+                            setShareHint(false);
+                            if (err?.name !== "AbortError") {
+                              navigator.clipboard.writeText(text).catch(()=>{});
+                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                            }
+                          });
+                      } else {
+                        navigator.clipboard.writeText(text).catch(()=>{});
+                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                      }
+                    } else if (isAndroid) {
+                      // ── Android: download image + open X ──────────────────
+                      try {
+                        if (file) {
+                          const url = URL.createObjectURL(file);
+                          const a = document.createElement("a");
+                          a.href = url; a.download = file.name; a.click();
+                          setTimeout(() => URL.revokeObjectURL(url), 5000);
+                        }
+                      } catch(e) {}
+                      navigator.clipboard.writeText(text).catch(()=>{});
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                    } else {
+                      // ── Desktop: open X compose ────────────────────────────
+                      navigator.clipboard.writeText(text).catch(()=>{});
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+                    }
+                  }}
+                  aria-label="Continue to X"
+                  style={{flex:1,padding:"13px",borderRadius:8,border:"none",background:"#93a85a",color:"#0e1108",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:"0.08em"}}>
+                  Continue to X →
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
+
+
+
       {/* Share to Instagram — uses feed format, no streak lock */}
       {downloadUrl && !inAppBrowserMode && (
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,width:"100%"}}>
