@@ -776,8 +776,11 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
   const [shareHint, setShareHint] = useState(false);
 
   const buildShareText = useCallback(() => {
-    return `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE}`;
-  }, [caption, currentStreak]);
+    const refLine = referralLink
+      ? `\nJoin me:\n${referralLink}`
+      : "\nproofofgrass.app";
+    return `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE}${refLine}`;
+  }, [caption, currentStreak, referralLink]);
 
   const lockInStreak = useCallback(async () => {
     if (!username) return;
@@ -1578,72 +1581,6 @@ export default function ResultCard({ imageSrc, proofFile = null, username, initi
         </div>
       )}
 
-      {downloadUrl && !inAppBrowserMode && submitStatus !== "success" && (
-        <div style={{width:"100%",maxWidth:420}}>
-          {locationMode === null ? (
-            <div style={{display:"flex",flexDirection:"column",gap:8,background:"rgba(147,168,90,0.06)",border:"1px solid rgba(147,168,90,0.2)",borderRadius:10,padding:14}}>
-              <div style={{fontSize:11,fontWeight:600,color:"#93a85a",letterSpacing:"0.04em"}}>📍 Add Location <span style={{color:"rgba(240,239,234,0.4)",fontWeight:400}}>(optional)</span></div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                <button onClick={requestGpsLocation} disabled={gpsRequesting} style={{flex:"1 1 auto",fontSize:11,fontWeight:600,padding:"8px 12px",borderRadius:7,border:"1px solid rgba(147,168,90,0.35)",background:"rgba(147,168,90,0.1)",color:"#93a85a",cursor:"pointer",opacity:gpsRequesting?0.6:1}}>{gpsRequesting?"Locating…":"📍 Use My Location"}</button>
-                <button onClick={()=>setLocationMode("manual")} style={{flex:"1 1 auto",fontSize:11,fontWeight:600,padding:"8px 12px",borderRadius:7,border:"1px solid rgba(255,255,255,0.12)",background:"rgba(255,255,255,0.04)",color:"rgba(240,239,234,0.7)",cursor:"pointer"}}>✏️ Enter City</button>
-                <button onClick={()=>setLocationMode("none")} style={{flex:"1 1 auto",fontSize:11,fontWeight:600,padding:"8px 12px",borderRadius:7,border:"1px solid rgba(255,255,255,0.08)",background:"transparent",color:"rgba(240,239,234,0.4)",cursor:"pointer"}}>Skip</button>
-              </div>
-              {gpsError && <div style={{fontSize:10,color:"#f87171"}}>{gpsError}</div>}
-              <div style={{fontSize:9.5,color:"rgba(240,239,234,0.35)",lineHeight:1.5}}>We only show approximate locations. Exact location is never displayed.</div>
-            </div>
-          ) : locationMode === "manual" ? (
-            <div style={{display:"flex",flexDirection:"column",gap:8,background:"rgba(147,168,90,0.06)",border:"1px solid rgba(147,168,90,0.2)",borderRadius:10,padding:14}}>
-              <div style={{fontSize:11,fontWeight:600,color:"#93a85a"}}>📍 Enter Your City</div>
-              <input value={locationCity} onChange={e=>setLocationCity(e.target.value)} placeholder="City (e.g. Margate)" style={{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,padding:"8px 10px",fontSize:12,color:"#f0efea",outline:"none"}} />
-              <div style={{display:"flex",gap:6}}>
-                <input value={locationRegion} onChange={e=>setLocationRegion(e.target.value)} placeholder="State/Region" style={{flex:1,background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,padding:"8px 10px",fontSize:12,color:"#f0efea",outline:"none"}} />
-                <input value={locationCountry} onChange={e=>setLocationCountry(e.target.value)} placeholder="Country" style={{flex:1,background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,padding:"8px 10px",fontSize:12,color:"#f0efea",outline:"none"}} />
-              </div>
-              <button onClick={()=>{if(!locationCity.trim())setLocationMode(null);}} style={{fontSize:10,color:"rgba(240,239,234,0.4)",background:"none",border:"none",cursor:"pointer",textAlign:"left",textDecoration:"underline"}}>← Back</button>
-            </div>
-          ) : locationMode === "gps" ? (
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,background:"rgba(147,168,90,0.08)",border:"1px solid rgba(147,168,90,0.25)",borderRadius:10,padding:"10px 14px"}}>
-              <span style={{fontSize:11,color:"#93a85a"}}>📍 Approximate location added</span>
-              <button onClick={()=>{setLocationMode(null);setGpsLat(null);setGpsLng(null);}} style={{fontSize:10,color:"rgba(240,239,234,0.4)",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Remove</button>
-            </div>
-          ) : (
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"10px 14px"}}>
-              <span style={{fontSize:11,color:"rgba(240,239,234,0.4)"}}>No location added</span>
-              <button onClick={()=>setLocationMode(null)} style={{fontSize:10,color:"#93a85a",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Add location</button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Theme Selector — only shown if user has Premium Proofs */}
-      {downloadUrl && !inAppBrowserMode && submitStatus !== "success" && hasPremiumProofs && (
-        <div style={{ width:"100%", marginBottom:4 }}>
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.14em",
-            textTransform:"uppercase", color:"rgba(167,139,250,0.7)",
-            marginBottom:8 }}>✨ Premium+ Theme</div>
-          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-            {Object.entries(THEMES).map(([key, theme]) => (
-              <button key={key} onClick={() => setSelectedTheme(key)}
-                style={{
-                  padding:"6px 12px", borderRadius:20, fontSize:11,
-                  fontWeight:600, cursor:"pointer",
-                  background: selectedTheme===key
-                    ? key==="classic" ? "#93a85a" : "rgba(167,139,250,0.25)"
-                    : "rgba(255,255,255,0.05)",
-                  color: selectedTheme===key
-                    ? key==="classic" ? "#0e1108" : "#a78bfa"
-                    : "rgba(240,239,234,0.45)",
-                  border: selectedTheme===key
-                    ? `1px solid ${key==="classic" ? "#93a85a" : "rgba(167,139,250,0.6)"}`
-                    : "1px solid rgba(255,255,255,0.1)",
-                  transition:"all 0.15s",
-                }}>
-                {theme.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── V2 SHARE CTA ─────────────────────────────────────────────────── */}
       {downloadUrl && !inAppBrowserMode && submitStatus !== "success" && (
