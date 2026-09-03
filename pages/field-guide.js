@@ -152,38 +152,109 @@ function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
     if (!file || !username) return;
     setStatus("uploading"); setMessage("");
     try {
-      // Upload to Supabase storage
-      const ext  = file.name.split(".").pop() || "jpg";
-      const path = `${username}/${collection.id}/slot_${slotNum}_${Date.now()}.${ext}`;
-      const { error:upErr } = await supabase.storage
-        .from("field-guide-photos").upload(path, file, { upsert:true });
-      if (upErr) throw upErr;
-
-      const { data:urlData } = supabase.storage.from("field-guide-photos").getPublicUrl(path);
-      const imageUrl = urlData?.publicUrl;
+      // Convert to base64 for Claude vision
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
       setStatus("verifying"); setMessage("AI is verifying your photo…");
 
-      // Submit to API for verification
-      const res  = await fetch("/api/field-guide/submit", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
+      // Get existing labels for this collection to check uniqueness
+      const { data: existingEntries } = await supabase
+        .from("FieldGuideEntries")
+        .select("label")
+        .eq("username", username)
+        .eq("collection_id", collection.id);
+      const existingLabels = (existingEntries || []).map(e => e.label).filter(Boolean);
+
+      // Call classify API
+      const classifyRes = await fetch("/api/field-guide/classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username, collection_id:collection.id,
-          slot_number:slotNum, image_url:imageUrl,
+          imageBase64: base64,
+          mimeType: file.type || "image/jpeg",
+          collectionSlug: collection.id,
+          existingLabels,
         }),
       });
-      const data = await res.json();
 
-      if (data.success) {
+      const result = await classifyRes.json();
+
+      if (!classifyRes.ok) {
+        setStatus("error");
+        setMessage("Verification service unavailable. Please try again.");
+        return;
+      }
+
+      if (result.approved) {
+        // Upload to Supabase storage
+        const ext  = file.name.split(".").pop() || "jpg";
+        const path = `${username}/${collection.id}/slot_${slotNum}_${Date.now()}.${ext}`;
+        const { error:upErr } = await supabase.storage
+          .from("field-guide-photos").upload(path, file, { upsert:true });
+        if (upErr) throw upErr;
+
+        const { data:urlData } = supabase.storage.from("field-guide-photos").getPublicUrl(path);
+        const imageUrl = urlData?.publicUrl;
+
+        // Check for duplicate slot
+        const { data:existing } = await supabase
+          .from("FieldGuideEntries")
+          .select("id")
+          .eq("username", username)
+          .eq("collection_id", collection.id)
+          .eq("slot_number", slotNum)
+          .maybeSingle();
+
+        if (existing) {
+          setStatus("error");
+          setMessage("This slot is already filled.");
+          return;
+        }
+
+        // Save entry
+        const { error:insertErr } = await supabase
+          .from("FieldGuideEntries")
+          .insert([{
+            username,
+            collection_id: collection.id,
+            slot_number: slotNum,
+            image_url: imageUrl,
+            label: result.label || "outdoor nature photo",
+            verified: true,
+            verification_method: "claude_vision",
+            submitted_at: new Date().toISOString(),
+          }]);
+
+        if (insertErr) {
+          setStatus("error");
+          setMessage("Failed to save entry. Please try again.");
+          return;
+        }
+
+        // Award Grass Draw bonus
+        try {
+          await fetch("/api/grass-draw/award-bonus", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, bonus_type: "field_guide" }),
+          });
+        } catch(e) { console.warn("[field-guide] bonus non-fatal:", e?.message); }
+
         setStatus("done");
-        setMessage("Verified! Your find has been added to your collection.");
-        setTimeout(() => { onSuccess(); onClose(); }, 1500);
+        setMessage(`Verified! "${result.label}" added to your ${collection.name} collection.`);
+        setTimeout(() => { onSuccess(); onClose(); }, 1800);
+
       } else {
         setStatus("error");
-        setMessage(data.message || "This photo doesn't appear to match the collection or may be too similar to an existing submission.");
+        setMessage(result.reason || `This photo doesn't match the ${collection.name} collection. Try a photo where the subject is clearer.`);
       }
     } catch(e) {
+      console.error("[field-guide] submit error:", e);
       setStatus("error");
       setMessage("Something went wrong. Please try again.");
     }
@@ -441,15 +512,12 @@ export default function FieldGuide() {
           padding:"40px clamp(14px,4vw,48px) 48px",
           display:"flex", alignItems:"center", gap:32, flexWrap:"wrap" }}>
 
-          {/* Banner image */}
-          <div style={{ position:"absolute", inset:0, pointerEvents:"none" }}>
-            <img src="/fg-banner.png" alt=""
-              style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center" }} />
+          {/* Background illustration */}
+          <div style={{ position:"absolute", inset:0, pointerEvents:"none", opacity:0.15 }}>
+            <div style={{ position:"absolute", fontSize:200, bottom:-20, right:80, lineHeight:1 }}>🌲</div>
+            <div style={{ position:"absolute", fontSize:120, bottom:10, right:260, lineHeight:1 }}>🦋</div>
+            <div style={{ position:"absolute", fontSize:80, top:20, right:180, lineHeight:1 }}>🌸</div>
           </div>
-
-          {/* Overlay */}
-          <div style={{ position:"absolute", inset:0, pointerEvents:"none",
-            background:"linear-gradient(90deg,rgba(197,227,247,0.95) 0%,rgba(197,227,247,0.80) 55%,rgba(197,227,247,0.15) 100%)" }} />
 
           {/* Left — headline */}
           <div style={{ flex:1, minWidth:280, position:"relative" }}>
