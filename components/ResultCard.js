@@ -803,34 +803,34 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       {showStylePicker && (()=>{
         const cardStyle=(style)=>({
           flex:"1 1 0", minWidth:0,
-          border:`2px solid ${shareStyle===style?"#93a85a":"rgba(255,255,255,0.1)"}`,
+          border:`2px solid ${shareStyle===style?"#5ba622":"rgba(200,220,190,0.5)"}`,
           borderRadius:12, padding:"14px 12px", cursor:"pointer",
-          background:shareStyle===style?"rgba(147,168,90,0.08)":"rgba(255,255,255,0.02)",
+          background:shareStyle===style?"rgba(125,200,50,0.08)":"white",
           display:"flex", flexDirection:"column", gap:8, transition:"all 0.15s", outline:"none",
         });
         return (
           <>
             <div onClick={()=>setShowStylePicker(false)} role="button"
-              style={{position:"fixed",inset:0,zIndex:997,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(3px)"}} />
+              style={{position:"fixed",inset:0,zIndex:997,background:"rgba(26,74,10,0.4)",backdropFilter:"blur(4px)"}} />
             <div role="dialog" aria-modal="true"
               onKeyDown={e=>{if(e.key==="Escape")setShowStylePicker(false);}} tabIndex={-1}
-              style={{position:"fixed",left:0,right:0,bottom:0,zIndex:998,background:"#0e100b",
-                borderTop:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",
+              style={{position:"fixed",left:0,right:0,bottom:0,zIndex:998,background:"white",
+                borderTop:"1px solid rgba(200,220,190,0.5)",borderRadius:"20px 20px 0 0",
                 padding:"24px 20px clamp(24px,env(safe-area-inset-bottom,24px)+24px,48px)",
-                maxHeight:"90vh",overflowY:"auto"}}>
-              <div style={{width:40,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"0 auto 20px"}} />
-              <div style={{fontSize:15,fontWeight:700,color:"#f0efea",textAlign:"center",marginBottom:18,letterSpacing:"0.04em"}}>
+                maxHeight:"85vh",overflowY:"auto",boxShadow:"0 -8px 40px rgba(26,74,10,0.12)"}}>
+              <div style={{width:40,height:4,borderRadius:2,background:"rgba(200,220,190,0.5)",margin:"0 auto 20px"}} />
+              <div style={{fontSize:15,fontWeight:700,color:"#1a4a0a",textAlign:"center",marginBottom:18}}>
                 Choose Your Proof Style
               </div>
               <div style={{display:"flex",gap:12,marginBottom:20}}>
                 <button style={cardStyle("outdoor_photo")} onClick={()=>selectShareStyle("outdoor_photo")}>
-                  <div style={{width:"100%",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",background:"#0a140b",flexShrink:0}}>
+                  <div style={{width:"100%",height:140,borderRadius:8,overflow:"hidden",background:"rgba(200,220,190,0.2)",flexShrink:0}}>
                     {imageSrc&&<img src={imageSrc} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />}
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"#f0efea"}}>Outdoor Photo</div>
-                      <div style={{fontSize:10,color:"rgba(240,239,234,0.5)"}}>Authentic and simple</div>
+                      <div style={{fontSize:12,fontWeight:700,color:"#1a4a0a"}}>Outdoor Photo</div>
+                      <div style={{fontSize:10,color:"#6b7d60"}}>Authentic and simple</div>
                     </div>
                     {shareStyle==="outdoor_photo"&&<span style={{fontSize:16}}>✓</span>}
                   </div>
@@ -839,24 +839,24 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                   </div>
                 </button>
                 <button style={cardStyle("result_card")} onClick={()=>selectShareStyle("result_card")}>
-                  <div style={{width:"100%",aspectRatio:"4/3",borderRadius:8,overflow:"hidden",background:"#0a140b",flexShrink:0}}>
+                  <div style={{width:"100%",height:140,borderRadius:8,overflow:"hidden",background:"rgba(200,220,190,0.2)",flexShrink:0}}>
                     {downloadUrl&&<img src={downloadUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />}
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"#f0efea"}}>Result Card</div>
-                      <div style={{fontSize:10,color:"rgba(240,239,234,0.5)"}}>Branded and streak-focused</div>
+                      <div style={{fontSize:12,fontWeight:700,color:"#1a4a0a"}}>Result Card</div>
+                      <div style={{fontSize:10,color:"#6b7d60"}}>Branded and streak-focused</div>
                     </div>
                     {shareStyle==="result_card"&&<span style={{fontSize:16}}>✓</span>}
                   </div>
                 </button>
               </div>
-              <div style={{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:"rgba(240,239,234,0.6)",lineHeight:1.7,fontFamily:"monospace",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>
+              <div style={{background:"rgba(125,200,50,0.04)",border:"1px solid rgba(200,220,190,0.5)",borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#1a4a0a",lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>
                 {buildShareText()}
               </div>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={()=>setShowStylePicker(false)}
-                  style={{flex:"0 0 auto",padding:"12px 18px",borderRadius:8,border:"1px solid rgba(255,255,255,0.12)",background:"transparent",color:"rgba(240,239,234,0.5)",fontSize:13,cursor:"pointer"}}>
+                  style={{flex:"0 0 auto",padding:"12px 18px",borderRadius:8,border:"1px solid rgba(200,220,190,0.5)",background:"white",color:"#6b7d60",fontSize:13,cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>
                   Cancel
                 </button>
                 <button
