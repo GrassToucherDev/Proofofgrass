@@ -51,7 +51,6 @@ function StatCard({ icon, value, label, sub, accent, loading }) {
     <div style={{
       ...V2Styles.statCard,
       display: "flex", flexDirection: "column", gap: 6,
-      alignItems: "center", textAlign: "center",
     }}>
       <div style={{ fontSize: 28 }}>{icon}</div>
       {loading
@@ -65,10 +64,10 @@ function StatCard({ icon, value, label, sub, accent, loading }) {
           }}>{value}</div>
       }
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.midGray }}>{label}</div>
-            {sub && <div style={{
+      {sub && <div style={{
         fontSize: 11, color: V2.grassGreen, fontWeight: 600,
         background: "rgba(125,200,50,0.1)", borderRadius: 20,
-        padding: "2px 10px", display: "inline-block", alignSelf: "center",
+        padding: "2px 10px", display: "inline-block", alignSelf: "flex-start",
       }}>{sub}</div>}
     </div>
   );
@@ -92,7 +91,7 @@ function FeatureCard({ emoji, icon, title, desc, cta, href, onClick, accent }) {
           backgroundImage: `url(${icon})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          opacity: 0.65,
+          opacity: 0.35,
           borderRadius: "inherit",
         }} />
       )}
@@ -101,7 +100,6 @@ function FeatureCard({ emoji, icon, title, desc, cta, href, onClick, accent }) {
         position: "relative", zIndex: 1,
         padding: "20px",
         display: "flex", flexDirection: "column", gap: 12, flex: 1,
-        alignItems: "center", textAlign: "center",
       }}>
         {!icon && <div style={{ fontSize: 36 }}>{emoji}</div>}
         <div>
@@ -463,7 +461,7 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
             imageSrc={imageSrc}
             file={proofFile}
             username={username}
-            initialStreak={resolvedStreak ?? currentStreak ?? 1}
+            initialStreak={resolvedStreak ?? 1}
           />
         </div>
       )}
