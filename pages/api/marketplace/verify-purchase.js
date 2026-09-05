@@ -159,6 +159,7 @@ export default async function handler(req, res) {
       item_id:      itemId,
       owned:        true,
       equipped:     false,
+      tokens_spent: actualAmount,
       purchased_at: new Date().toISOString(),
     }], { onConflict: "username,item_id" });
 
