@@ -257,7 +257,10 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
 
   // ── Lock In Streak ────────────────────────────────────────────────────────
   const lockInStreak = useCallback(async()=>{
-    if(!username) return;
+    // Fallback to localStorage if username prop is empty
+    const effectiveUsername = username ||
+      (typeof localStorage !== "undefined" ? localStorage.getItem("pog_username")?.replace(/@/g,"").toLowerCase().trim() : null);
+    if(!effectiveUsername) return;
     if(submitStatus==="success") return;
     setSubmitStatus("loading");setSubmitError("");
     const rpcWithRetry = async(retries=5)=>{
@@ -268,7 +271,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             :locationMode==="manual"&&locationCity.trim()
               ?{p_location_city:locationCity.trim()||null,p_location_region:locationRegion.trim()||null,p_location_country:locationCountry.trim()||null,p_location_label:[locationCity.trim(),locationRegion.trim()].filter(Boolean).join(", ")||null,p_location_source:"manual"}
               :{p_location_source:"none"};
-          const res = await supabase.rpc("lock_in_streak",{p_username:username?.toLowerCase().trim(),p_tweet_url:null,p_verification:"self_attested",...locationPayload});
+          const res = await supabase.rpc("lock_in_streak",{p_username:effectiveUsername,p_tweet_url:null,p_verification:"self_attested",...locationPayload});
           return res;
         }catch(e){
           console.warn(`lock_in_streak attempt ${attempt+1} failed:`,e?.message);
@@ -282,7 +285,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       if(rpcError){
         try{
           const todayUTC=new Date().toISOString().slice(0,10);
-          const{data:streakCheck}=await supabase.from("Streaks").select("current_streak,last_submission_date").ilike("username",username).maybeSingle();
+          const{data:streakCheck}=await supabase.from("Streaks").select("current_streak,last_submission_date").ilike("username",effectiveUsername).maybeSingle();
           if(streakCheck?.last_submission_date&&String(streakCheck.last_submission_date).slice(0,10)===todayUTC){
             setCurrentStreak(streakCheck.current_streak??currentStreak);
             onStreakUpdate?.(streakCheck.current_streak??currentStreak);
@@ -298,12 +301,12 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       // Referral handling
       try{
         const referrer=typeof localStorage!=="undefined"?localStorage.getItem("pog_referrer"):null;
-        if(referrer&&referrer!==username){
-          const{data:existing}=await supabase.from("Referrals").select("id").eq("referred_username",username).maybeSingle();
+        if(referrer&&referrer!==effectiveUsername){
+          const{data:existing}=await supabase.from("Referrals").select("id").eq("referred_username",effectiveUsername).maybeSingle();
           if(!existing){
             const{data:refExists}=await supabase.from("Streaks").select("username").eq("username",referrer).maybeSingle();
             if(refExists){
-              await supabase.from("Referrals").insert([{referrer_username:referrer,referred_username:username,status:"pending",source_url:typeof window!=="undefined"?window.location.href:null}]);
+              await supabase.from("Referrals").insert([{referrer_username:referrer,referred_username:effectiveUsername,status:"pending",source_url:typeof window!=="undefined"?window.location.href:null}]);
               const{data:rp}=await supabase.from("Profiles").select("referral_count_pending").eq("username",referrer).maybeSingle();
               await supabase.from("Profiles").update({referral_count_pending:(rp?.referral_count_pending??0)+1}).eq("username",referrer);
             }
@@ -469,7 +472,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
     <div style={{ display:"flex", flexDirection:"column", gap:0, width:"100%",
       background:"white", borderRadius:16,
       border:`1px solid ${V2G.border}`,
-      boxShadow:"0 2px 20px rgba(26,74,10,0.08)", overflow:"hidden" }}>
+      boxShadow:"0 2px 20px rgba(26,74,10,0.08)" }}>
 
       <canvas ref={canvasRef} style={{display:"none"}} />
 
@@ -735,6 +738,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               cursor:(submitStatus==="loading"||submitStatus==="success")?"default":"pointer",
               boxShadow:"0 4px 20px rgba(125,200,50,0.4)", fontFamily:"DM Sans,sans-serif",
               display:"flex", alignItems:"center", justifyContent:"center", gap:10, letterSpacing:"0.02em",
+              WebkitAppearance:"none", touchAction:"manipulation", userSelect:"none",
             }}>
             {submitStatus==="loading"?"⏳ Locking in…":"🔒 Lock In My Streak"}
           </button>
@@ -748,6 +752,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               cursor:submitStatus==="loading"?"default":"pointer",
               fontFamily:"DM Sans,sans-serif",
               display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+              WebkitAppearance:"none", touchAction:"manipulation", userSelect:"none",
             }}>
             🚀 Share to X
           </button>
