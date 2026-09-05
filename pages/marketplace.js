@@ -472,11 +472,11 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
 
 // ── Burn Stats ────────────────────────────────────────────────────────────────
 function BurnStats() {
-  const [totalSpent,  setTotalSpent]  = React.useState(null);
-  const [totalOrders, setTotalOrders] = React.useState(null);
-  const [loading,     setLoading]     = React.useState(true);
+  const [totalSpent,  setTotalSpent]  = useState(null);
+  const [totalOrders, setTotalOrders] = useState(null);
+  const [loading,     setLoading]     = useState(true);
 
-  React.useEffect(()=>{
+  useEffect(()=>{
     supabase.from('UserInventory')
       .select('tokens_spent', { count: 'exact' })
       .eq('owned', true)
