@@ -469,6 +469,70 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
 }
 
 // ── Main Marketplace ───────────────────────────────────────────────────────────
+
+// ── Burn Stats ────────────────────────────────────────────────────────────────
+function BurnStats() {
+  const [totalSpent,  setTotalSpent]  = React.useState(null);
+  const [totalOrders, setTotalOrders] = React.useState(null);
+  const [loading,     setLoading]     = React.useState(true);
+
+  React.useEffect(()=>{
+    supabase.from('UserInventory')
+      .select('tokens_spent', { count: 'exact' })
+      .eq('owned', true)
+      .then(({ data, count }) => {
+        const total = (data||[]).reduce((s,r)=>s+(parseFloat(r.tokens_spent)||0), 0);
+        setTotalSpent(total);
+        setTotalOrders(count||0);
+        setLoading(false);
+      }).catch(()=>setLoading(false));
+  },[]);
+
+  const fmt = (n) => {
+    if (n == null) return '—';
+    if (n >= 1000000) return (n/1000000).toFixed(2) + 'M';
+    if (n >= 1000)    return (n/1000).toFixed(1) + 'K';
+    return Math.round(n).toLocaleString();
+  };
+
+  return (
+    <div style={{ background:'rgba(125,200,50,0.06)', border:'1px solid rgba(125,200,50,0.2)',
+      borderRadius:16, padding:'20px 24px', marginTop:32,
+      display:'flex', alignItems:'center', gap:24, flexWrap:'wrap' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+        <img src='/touchgrass-transparent.png' alt='' style={{ width:28, height:28, objectFit:'contain' }} />
+        <div>
+          <div style={{ fontSize:13, fontWeight:700, color:'#5ba622' }}>
+            $TOUCHGRASS Used for Purchases
+          </div>
+          <div style={{ fontSize:11, color:'#6b7d60' }}>All-time marketplace activity</div>
+        </div>
+      </div>
+      <div style={{ display:'flex', gap:24, flexWrap:'wrap', marginLeft:'auto' }}>
+        <div style={{ textAlign:'center' }}>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:'0.12em',
+            textTransform:'uppercase', color:'#6b7d60', marginBottom:4 }}>
+            Total $TOUCHGRASS Spent
+          </div>
+          <div style={{ fontFamily:'Georgia,serif', fontSize:24, fontWeight:700, color:'#1a4a0a' }}>
+            {loading ? '…' : fmt(totalSpent)}
+          </div>
+        </div>
+        <div style={{ width:1, background:'rgba(200,220,190,0.4)', alignSelf:'stretch' }} />
+        <div style={{ textAlign:'center' }}>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:'0.12em',
+            textTransform:'uppercase', color:'#6b7d60', marginBottom:4 }}>
+            Total Orders
+          </div>
+          <div style={{ fontFamily:'Georgia,serif', fontSize:24, fontWeight:700, color:'#1a4a0a' }}>
+            {loading ? '…' : totalOrders ?? '—'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Marketplace() {
   const [tab,          setTab]          = useState("featured");
   const [username,     setUsername]     = useState(null);
@@ -653,6 +717,9 @@ export default function Marketplace() {
 
               {/* Your Flex */}
               <YourFlexPanel username={username} inventory={inventory} />
+
+              {/* Burn Stats */}
+              <BurnStats />
             </>
           )}
 
