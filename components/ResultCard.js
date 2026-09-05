@@ -452,7 +452,10 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       const logo=new Image();
       const cacheForPreview=(dataUrl)=>{
         setDownloadUrl(dataUrl);
-        try{fetch(dataUrl).then(res=>res.blob()).then(blob=>{sharableFileRef.current=new File([blob],"proof-of-grass.png",{type:"image/png"});});}catch(e){console.warn("[photo] preview cache failed:",e?.message);}
+        // Pre-build result card file for sharing
+        try{fetch(dataUrl).then(res=>res.blob()).then(blob=>{
+          sharableFileRef.current=new File([blob],"proof-of-grass.png",{type:"image/png"});
+        });}catch(e){console.warn("[photo] preview cache failed:",e?.message);}
       };
       logo.onload=()=>{ctx.save();ctx.globalAlpha=0.55;ctx.drawImage(logo,BL_X-4,BL_BASE-72,36,36);ctx.restore();cacheForPreview(canvas.toDataURL("image/png"));};
       logo.onerror=()=>cacheForPreview(canvas.toDataURL("image/png"));
@@ -870,22 +873,57 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                     const text=buildShareText();
                     const isAndroid=/Android/i.test(navigator.userAgent??"");
                     const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent??"");
-                    const file=shareStyle==="outdoor_photo"?outdoorFileRef.current:sharableFileRef.current;
                     setShareInitiated(true);
                     lockInStreak();
-                    if(isIOS){
-                      const canShare=!isInAppBrowser&&typeof navigator.share==="function"&&typeof navigator.canShare==="function";
-                      if(canShare&&file&&navigator.canShare({files:[file]})){
-                        setShareHint(true);
-                        navigator.share({files:[file],text}).then(()=>setShareHint(false)).catch(err=>{setShareHint(false);if(err?.name!=="AbortError"){navigator.clipboard.writeText(text).catch(()=>{});window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");}});
-                      }else{navigator.clipboard.writeText(text).catch(()=>{});window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");}
-                    }else if(isAndroid){
-                      try{if(file){const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}}catch{}
-                      navigator.clipboard.writeText(text).catch(()=>{});
-                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");
-                    }else{
-                      navigator.clipboard.writeText(text).catch(()=>{});
-                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");
+
+                    const doShare = (file) => {
+                      if(isIOS){
+                        const canShare=!isInAppBrowser&&typeof navigator.share==="function"&&typeof navigator.canShare==="function";
+                        if(canShare&&file&&navigator.canShare({files:[file]})){
+                          setShareHint(true);
+                          navigator.share({files:[file],text})
+                            .then(()=>setShareHint(false))
+                            .catch(err=>{
+                              setShareHint(false);
+                              if(err?.name!=="AbortError"){
+                                navigator.clipboard.writeText(text).catch(()=>{});
+                                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");
+                              }
+                            });
+                        }else{
+                          navigator.clipboard.writeText(text).catch(()=>{});
+                          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");
+                        }
+                      }else if(isAndroid){
+                        try{if(file){const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}}catch{}
+                        navigator.clipboard.writeText(text).catch(()=>{});
+                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");
+                      }else{
+                        navigator.clipboard.writeText(text).catch(()=>{});
+                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");
+                      }
+                    };
+
+                    // Get file — use cached ref first, rebuild if missing
+                    const cachedFile = shareStyle==="outdoor_photo" ? outdoorFileRef.current : sharableFileRef.current;
+                    if(cachedFile){
+                      doShare(cachedFile);
+                    } else if(shareStyle==="outdoor_photo" && imageSrc){
+                      // Rebuild outdoor file from blob URL
+                      fetch(imageSrc).then(r=>r.blob()).then(blob=>{
+                        const f=new File([blob],"proof-of-grass-outdoor.png",{type:"image/png"});
+                        outdoorFileRef.current=f;
+                        doShare(f);
+                      }).catch(()=>doShare(null));
+                    } else if(shareStyle==="result_card" && downloadUrl){
+                      // Rebuild result card file from data URL
+                      fetch(downloadUrl).then(r=>r.blob()).then(blob=>{
+                        const f=new File([blob],"proof-of-grass.png",{type:"image/png"});
+                        sharableFileRef.current=f;
+                        doShare(f);
+                      }).catch(()=>doShare(null));
+                    } else {
+                      doShare(null);
                     }
                   }}
                   style={{flex:1,padding:"13px",borderRadius:8,border:"none",background:"#93a85a",color:"#0e1108",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:"0.08em"}}>
