@@ -6,12 +6,10 @@ import Link from "next/link";
 import Head from "next/head";
 import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
-
 const BURN_ADDR       = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const TOUCHGRASS_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const SUPABASE_URL    = "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public";
-
-// ── Catalogue — preserved exactly ─────────────────────────────────────────────
+// ── Catalogue ─────────────────────────────────────────────────────────────────
 const CATALOGUE = [
   {
     id:"retro_covers_pack", name:"Retro Vibes Pack", category:"cosmetics",
@@ -58,10 +56,10 @@ const CATALOGUE = [
     description:"Five covers for the battle-hardened crypto survivalist. From ATH highs to bear market lows.",
     covers:[
       { slug:"marketplace_ath_overlook",         name:"ATH Overlook",         emoji:"🚀", imageUrl:`${SUPABASE_URL}/covers/ath_overlook.png`,         fallback:"linear-gradient(135deg,#0a1400,#142800,#a8ff4440)" },
-      { slug:"marketplace_rug_pull_ravine",      name:"Rug Pull Ravine",      emoji:"📉", imageUrl:`${SUPABASE_URL}/covers/rug_pull_ravine.png`,     fallback:"linear-gradient(135deg,#140000,#280000,#ff444440)" },
+      { slug:"marketplace_rug_pull_ravine",      name:"Rug Pull Ravine",      emoji:"📉", imageUrl:`${SUPABASE_URL}/covers/rug_pull_ravine.png`,      fallback:"linear-gradient(135deg,#140000,#280000,#ff444440)" },
       { slug:"marketplace_bear_market_blizzard", name:"Bear Market Blizzard", emoji:"🐻", imageUrl:`${SUPABASE_URL}/covers/bear_market_blizzard.png`, fallback:"linear-gradient(135deg,#060810,#0c1020,#7799ff40)" },
-      { slug:"marketplace_moonbag_camp",         name:"Moonbag Camp",         emoji:"🌕", imageUrl:`${SUPABASE_URL}/covers/moonbag_camp.png`,        fallback:"linear-gradient(135deg,#0a0800,#1e1400,#ffd70040)" },
-      { slug:"marketplace_liquidity_lagoon",     name:"Liquidity Lagoon",     emoji:"💧", imageUrl:`${SUPABASE_URL}/covers/liquidity_lagoon.png`,    fallback:"linear-gradient(135deg,#001418,#002830,#00ddcc40)" },
+      { slug:"marketplace_moonbag_camp",         name:"Moonbag Camp",         emoji:"🌕", imageUrl:`${SUPABASE_URL}/covers/moonbag_camp.png`,         fallback:"linear-gradient(135deg,#0a0800,#1e1400,#ffd70040)" },
+      { slug:"marketplace_liquidity_lagoon",     name:"Liquidity Lagoon",     emoji:"💧", imageUrl:`${SUPABASE_URL}/covers/liquidity_lagoon.png`,     fallback:"linear-gradient(135deg,#001418,#002830,#00ddcc40)" },
     ],
     tags:["ATH Overlook","Rug Pull Ravine","Bear Market Blizzard","Moonbag Camp","Liquidity Lagoon"],
   },
@@ -80,26 +78,22 @@ const CATALOGUE = [
     emoji:"🌅", consumable:true, consumable_type:"sunset_pass", quantity:1,
   },
 ];
-
 const CATEGORIES = [
-  { id:"featured",  label:"⭐ Featured",     icon:"⭐" },
-  { id:"cosmetics", label:"🎨 Cosmetics",    icon:"🎨" },
-  { id:"utility",   label:"⚡ Utility",      icon:"⚡" },
-  { id:"proofstyle",label:"🎭 Proof Styles", icon:"🎭", comingSoon:true },
-  { id:"limited",   label:"💎 Collectibles", icon:"💎", comingSoon:true },
+  { id:"featured",   label:"⭐ Featured",     icon:"⭐" },
+  { id:"cosmetics",  label:"🎨 Cosmetics",    icon:"🎨" },
+  { id:"utility",    label:"⚡ Utility",      icon:"⚡" },
+  { id:"proofstyle", label:"🎭 Proof Styles", icon:"🎭", comingSoon:true },
+  { id:"limited",    label:"💎 Collectibles", icon:"💎", comingSoon:true },
 ];
-
 function getUsername() {
   if (typeof window === "undefined") return null;
   try { return localStorage.getItem("pog_username")?.replace(/@/g,"").toLowerCase().trim()||null; }
   catch { return null; }
 }
-
 function buildSolanaPayUrl(amount) {
   const params = new URLSearchParams({ amount:String(Math.round(amount)), "spl-token":TOUCHGRASS_MINT, label:"Proof of Grass Marketplace", memo:"marketplace" });
   return `solana:${BURN_ADDR}?${params.toString()}`;
 }
-
 // ── Price hook ─────────────────────────────────────────────────────────────────
 function useTouchgrassPrice() {
   const [price,   setPrice]   = useState(null);
@@ -121,15 +115,14 @@ function useTouchgrassPrice() {
   const tokensFor = (usd)=>price>0?Math.round(usd/price):null;
   return { price, loading, tokensFor };
 }
-
 // ── Activity ticker ────────────────────────────────────────────────────────────
 function ActivityTicker() {
   const items = [
-    { avatar:"🌿", name:"MeadowMind",    action:"bought",  item:"Retro Vibes Pack",  time:"2m ago" },
-    { avatar:"☀️",  name:"SunWalker",     action:"applied", item:"Retro Mountain",    time:"5m ago" },
-    { avatar:"🏔️", name:"TrailBlazer",   action:"bought",  item:"Anime Outdoors",    time:"8m ago" },
-    { avatar:"🌱", name:"GrassRunner",   action:"bought",  item:"Streak Shield",     time:"12m ago"},
-    { avatar:"💧", name:"StreamSeeker",  action:"applied", item:"Cherry Blossom",    time:"15m ago"},
+    { avatar:"🌿", name:"MeadowMind",   action:"bought",  item:"Retro Vibes Pack", time:"2m ago"  },
+    { avatar:"☀️",  name:"SunWalker",    action:"applied", item:"Retro Mountain",   time:"5m ago"  },
+    { avatar:"🏔️", name:"TrailBlazer",  action:"bought",  item:"Anime Outdoors",   time:"8m ago"  },
+    { avatar:"🌱", name:"GrassRunner",  action:"bought",  item:"Streak Shield",    time:"12m ago" },
+    { avatar:"💧", name:"StreamSeeker", action:"applied", item:"Cherry Blossom",   time:"15m ago" },
   ];
   return (
     <div style={{ background:"white", borderBottom:`1px solid ${V2.borderSoft}`,
@@ -137,7 +130,7 @@ function ActivityTicker() {
       overflowX:"auto", scrollbarWidth:"none" }}>
       <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
         <div style={{ width:8, height:8, borderRadius:"50%", background:V2.grassGreen,
-          boxShadow:`0 0 8px ${V2.grassGreen}`, animation:"v2Shimmer 2s ease-in-out infinite" }} />
+          boxShadow:`0 0 8px ${V2.grassGreen}` }} />
         <span style={{ fontSize:11, fontWeight:700, color:V2.grassGreen, whiteSpace:"nowrap" }}>Live Activity</span>
       </div>
       {items.map((item,i)=>(
@@ -156,24 +149,19 @@ function ActivityTicker() {
     </div>
   );
 }
-
-// ── Featured pack card (large hero) ───────────────────────────────────────────
+// ── Featured pack card ─────────────────────────────────────────────────────────
 function FeaturedPackCard({ item, tokensFor, owned, onBuy, onPreview }) {
   const tokens = tokensFor(item.usdPrice);
   return (
     <div style={{ background:"white", borderRadius:20, overflow:"hidden",
       boxShadow:"0 4px 24px rgba(26,74,10,0.10)", border:`1px solid ${V2.borderSoft}`,
       marginBottom:24, position:"relative" }}>
-
-      {/* Featured badge */}
       <div style={{ position:"absolute", top:16, left:16, zIndex:10,
         background:V2.grassGreen, color:"white", fontSize:10, fontWeight:800,
         letterSpacing:"0.12em", textTransform:"uppercase",
         borderRadius:20, padding:"4px 12px", boxShadow:"0 2px 8px rgba(125,200,50,0.4)" }}>
         ✦ FEATURED
       </div>
-
-      {/* Cover strip */}
       <div style={{ display:"grid", gridTemplateColumns:`repeat(${item.covers.length},1fr)`, height:220 }}>
         {item.covers.map((cover,i)=>(
           <div key={i} style={{ position:"relative", background:cover.fallback, overflow:"hidden" }}>
@@ -183,23 +171,15 @@ function FeaturedPackCard({ item, tokensFor, owned, onBuy, onPreview }) {
           </div>
         ))}
       </div>
-
-      {/* Info */}
       <div style={{ padding:"20px 24px" }}>
         <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between",
           gap:16, flexWrap:"wrap", marginBottom:12 }}>
           <div>
             <h2 style={{ fontFamily:V2.fontSans, fontSize:22, fontWeight:800,
-              color:V2.forestGreen, marginBottom:6 }}>
-              {item.name} ✨
-            </h2>
-            <p style={{ fontSize:13, color:V2.textMuted, lineHeight:1.6, maxWidth:420 }}>
-              {item.description}
-            </p>
+              color:V2.forestGreen, marginBottom:6 }}>{item.name} ✨</h2>
+            <p style={{ fontSize:13, color:V2.textMuted, lineHeight:1.6, maxWidth:420 }}>{item.description}</p>
           </div>
         </div>
-
-        {/* Tags */}
         <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:20 }}>
           {item.tags.map(t=>(
             <span key={t} style={{ fontSize:11, color:V2.forestGreen,
@@ -207,8 +187,6 @@ function FeaturedPackCard({ item, tokensFor, owned, onBuy, onPreview }) {
               borderRadius:20, padding:"3px 12px" }}>{t}</span>
           ))}
         </div>
-
-        {/* Price + buy row */}
         <div style={{ display:"flex", alignItems:"center", gap:20, flexWrap:"wrap",
           paddingTop:16, borderTop:`1px solid ${V2.borderSoft}` }}>
           <div>
@@ -230,15 +208,12 @@ function FeaturedPackCard({ item, tokensFor, owned, onBuy, onPreview }) {
             <button onClick={()=>onPreview(item)}
               style={{ padding:"12px 20px", borderRadius:12, border:`1.5px solid ${V2.borderSoft}`,
                 background:"transparent", color:V2.forestGreen, fontSize:13, fontWeight:600,
-                cursor:"pointer", fontFamily:V2.fontSans }}>
-              Preview
-            </button>
+                cursor:"pointer", fontFamily:V2.fontSans }}>Preview</button>
             {owned ? (
               <div style={{ padding:"12px 24px", borderRadius:12,
                 background:"rgba(125,200,50,0.1)", border:`1.5px solid ${V2.borderGreen}`,
-                color:V2.grassGreen, fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6 }}>
-                ✓ Owned
-              </div>
+                color:V2.grassGreen, fontSize:13, fontWeight:700,
+                display:"flex", alignItems:"center", gap:6 }}>✓ Owned</div>
             ) : (
               <button onClick={()=>onBuy(item)}
                 style={{ ...V2Styles.btnPrimary, fontSize:14, padding:"12px 28px", borderRadius:12 }}>
@@ -251,13 +226,11 @@ function FeaturedPackCard({ item, tokensFor, owned, onBuy, onPreview }) {
     </div>
   );
 }
-
-// ── Pack grid card (smaller) ───────────────────────────────────────────────────
+// ── Pack grid card ─────────────────────────────────────────────────────────────
 function PackCard({ item, tokensFor, owned, onBuy, onPreview, isNew }) {
   const tokens = tokensFor(item.usdPrice);
   const heroImg = item.covers?.[0];
   const isConsumable = !!item.consumable;
-
   return (
     <div style={{ background:"white", borderRadius:16, overflow:"hidden",
       boxShadow:"0 2px 16px rgba(26,74,10,0.08)", border:`1px solid ${V2.borderSoft}`,
@@ -265,19 +238,16 @@ function PackCard({ item, tokensFor, owned, onBuy, onPreview, isNew }) {
       onClick={()=>!isConsumable&&onPreview(item)}
       onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 8px 32px rgba(26,74,10,0.14)";}}
       onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 2px 16px rgba(26,74,10,0.08)";}}>
-
-      {/* NEW badge */}
       {isNew && (
         <div style={{ position:"absolute", top:10, left:10, zIndex:10,
           background:V2.grassGreen, color:"white", fontSize:9, fontWeight:800,
           letterSpacing:"0.1em", borderRadius:20, padding:"3px 10px" }}>NEW</div>
       )}
-
-      {/* Hero image */}
       {isConsumable ? (
         <div style={{ height:160, display:"flex", alignItems:"center", justifyContent:"center",
-          background:`linear-gradient(135deg,${V2.skyBlue},${V2.cloudSoft})`,
-          fontSize:64 }}>{item.emoji}</div>
+          background:`linear-gradient(135deg,${V2.skyBlue},${V2.cloudSoft})`, fontSize:64 }}>
+          {item.emoji}
+        </div>
       ) : (
         <div style={{ height:160, background:heroImg?.fallback||V2.gradientHero, overflow:"hidden" }}>
           {heroImg?.imageUrl && (
@@ -287,9 +257,8 @@ function PackCard({ item, tokensFor, owned, onBuy, onPreview, isNew }) {
           )}
         </div>
       )}
-
-      {/* Card body */}
-      <div style={{ padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+      <div style={{ padding:"14px 16px", display:"flex", alignItems:"center",
+        justifyContent:"space-between", gap:8 }}>
         <div style={{ minWidth:0 }}>
           <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen,
             overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginBottom:2 }}>
@@ -302,12 +271,9 @@ function PackCard({ item, tokensFor, owned, onBuy, onPreview, isNew }) {
         <div style={{ flexShrink:0 }}>
           {owned ? (
             <div style={{ fontSize:11, fontWeight:700, color:V2.grassGreen,
-              background:"rgba(125,200,50,0.1)", borderRadius:20, padding:"4px 12px" }}>
-              Owned ✓
-            </div>
+              background:"rgba(125,200,50,0.1)", borderRadius:20, padding:"4px 12px" }}>Owned ✓</div>
           ) : (
-            <button
-              onClick={e=>{e.stopPropagation(); onBuy(item);}}
+            <button onClick={e=>{e.stopPropagation();onBuy(item);}}
               style={{ fontSize:13, fontWeight:700, color:V2.grassGreen,
                 background:"rgba(125,200,50,0.1)", border:`1.5px solid ${V2.borderGreen}`,
                 borderRadius:20, padding:"6px 14px", cursor:"pointer", fontFamily:V2.fontSans,
@@ -320,13 +286,11 @@ function PackCard({ item, tokensFor, owned, onBuy, onPreview, isNew }) {
     </div>
   );
 }
-
-// ── Your Flex / owned assets panel ────────────────────────────────────────────
+// ── Your Flex panel ────────────────────────────────────────────────────────────
 function YourFlexPanel({ username, inventory }) {
   if (!username || !inventory.length) return null;
   const ownedPacks = CATALOGUE.filter(c=>inventory.includes(c.id)&&!c.consumable);
   if (!ownedPacks.length) return null;
-
   return (
     <div style={{ background:"white", borderRadius:16, border:`1px solid ${V2.borderSoft}`,
       boxShadow:"0 2px 16px rgba(26,74,10,0.08)", padding:"20px 24px", marginTop:32 }}>
@@ -369,7 +333,6 @@ function YourFlexPanel({ username, inventory }) {
     </div>
   );
 }
-
 // ── Preview modal ──────────────────────────────────────────────────────────────
 function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
   const [idx, setIdx] = useState(0);
@@ -377,7 +340,6 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
   if (!item) return null;
   const covers = item.covers||[];
   const current = covers[idx];
-
   return (
     <div style={{ position:"fixed", inset:0, zIndex:300,
       background:"rgba(0,0,0,0.55)", backdropFilter:"blur(10px)",
@@ -387,8 +349,6 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
         maxWidth:560, width:"100%", maxHeight:"90vh", overflowY:"auto",
         boxShadow:"0 20px 60px rgba(26,74,10,0.2)" }}
         onClick={e=>e.stopPropagation()}>
-
-        {/* Hero */}
         <div style={{ height:280, position:"relative", background:current?.fallback||V2.gradientHero }}>
           {current?.imageUrl && (
             <img src={current.imageUrl} alt={current?.name||item.name}
@@ -397,18 +357,14 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
           <button onClick={onClose}
             style={{ position:"absolute", top:12, right:12, width:36, height:36,
               borderRadius:"50%", border:"none", background:"rgba(255,255,255,0.92)",
-              cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center",
-              boxShadow:"0 2px 8px rgba(0,0,0,0.1)" }}>×</button>
+              cursor:"pointer", fontSize:18, display:"flex", alignItems:"center",
+              justifyContent:"center", boxShadow:"0 2px 8px rgba(0,0,0,0.1)" }}>×</button>
           {current?.name && (
             <div style={{ position:"absolute", bottom:12, left:12,
               background:"rgba(255,255,255,0.9)", borderRadius:20, padding:"4px 12px",
-              fontSize:11, fontWeight:700, color:V2.forestGreen }}>
-              {current.name}
-            </div>
+              fontSize:11, fontWeight:700, color:V2.forestGreen }}>{current.name}</div>
           )}
         </div>
-
-        {/* Thumbnails */}
         {covers.length>1 && (
           <div style={{ display:"flex", gap:8, padding:"12px 16px",
             overflowX:"auto", borderBottom:`1px solid ${V2.borderSoft}`, scrollbarWidth:"none" }}>
@@ -423,8 +379,6 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
             ))}
           </div>
         )}
-
-        {/* Info */}
         <div style={{ padding:"20px 24px" }}>
           <div style={{ fontSize:20, fontWeight:800, color:V2.forestGreen, marginBottom:6 }}>
             {item.name} ✨
@@ -452,13 +406,11 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
           {owned ? (
             <div style={{ width:"100%", padding:"13px", borderRadius:12, textAlign:"center",
               background:"rgba(125,200,50,0.1)", border:`1.5px solid ${V2.borderGreen}`,
-              color:V2.grassGreen, fontSize:13, fontWeight:700 }}>
-              ✓ Already in your collection
-            </div>
+              color:V2.grassGreen, fontSize:13, fontWeight:700 }}>✓ Already in your collection</div>
           ) : (
             <button onClick={()=>{onClose();onBuy(item);}}
-              style={{ ...V2Styles.btnPrimary, width:"100%", justifyContent:"center", fontSize:14,
-                padding:"14px", borderRadius:12 }}>
+              style={{ ...V2Styles.btnPrimary, width:"100%", justifyContent:"center",
+                fontSize:14, padding:"14px", borderRadius:12 }}>
               🛍 Buy Pack — ${item.usdPrice.toFixed(2)} USD →
             </button>
           )}
@@ -467,19 +419,15 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
     </div>
   );
 }
-
-// ── Main Marketplace ───────────────────────────────────────────────────────────
-
-// ── Burn Stats ────────────────────────────────────────────────────────────────
+// ── Burn Stats ─────────────────────────────────────────────────────────────────
 function BurnStats() {
   const [totalSpent,  setTotalSpent]  = useState(null);
   const [totalOrders, setTotalOrders] = useState(null);
   const [loading,     setLoading]     = useState(true);
-
   useEffect(()=>{
-    supabase.from('UserInventory')
-      .select('tokens_spent', { count: 'exact' })
-      .eq('owned', true)
+    supabase.from("UserInventory")
+      .select("tokens_spent", { count:"exact" })
+      .eq("owned", true)
       .then(({ data, count }) => {
         const total = (data||[]).reduce((s,r)=>s+(parseFloat(r.tokens_spent)||0), 0);
         setTotalSpent(total);
@@ -487,52 +435,50 @@ function BurnStats() {
         setLoading(false);
       }).catch(()=>setLoading(false));
   },[]);
-
   const fmt = (n) => {
-    if (n == null) return '—';
-    if (n >= 1000000) return (n/1000000).toFixed(2) + 'M';
-    if (n >= 1000)    return (n/1000).toFixed(1) + 'K';
+    if (n == null) return "—";
+    if (n >= 1000000) return (n/1000000).toFixed(2)+"M";
+    if (n >= 1000)    return (n/1000).toFixed(1)+"K";
     return Math.round(n).toLocaleString();
   };
-
   return (
-    <div style={{ background:'rgba(125,200,50,0.06)', border:'1px solid rgba(125,200,50,0.2)',
-      borderRadius:16, padding:'20px 24px', marginTop:32,
-      display:'flex', alignItems:'center', gap:24, flexWrap:'wrap' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
-        <img src='/touchgrass-transparent.png' alt='' style={{ width:28, height:28, objectFit:'contain' }} />
+    <div style={{ background:"rgba(125,200,50,0.06)", border:"1px solid rgba(125,200,50,0.2)",
+      borderRadius:16, padding:"20px 24px", marginTop:32,
+      display:"flex", alignItems:"center", gap:24, flexWrap:"wrap" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+        <img src="/touchgrass-transparent.png" alt="" style={{ width:28, height:28, objectFit:"contain" }} />
         <div>
-          <div style={{ fontSize:13, fontWeight:700, color:'#5ba622' }}>
+          <div style={{ fontSize:13, fontWeight:700, color:V2.grassGreen }}>
             $TOUCHGRASS Used for Purchases
           </div>
-          <div style={{ fontSize:11, color:'#6b7d60' }}>All-time marketplace activity</div>
+          <div style={{ fontSize:11, color:V2.midGray }}>All-time marketplace activity</div>
         </div>
       </div>
-      <div style={{ display:'flex', gap:24, flexWrap:'wrap', marginLeft:'auto' }}>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:9, fontWeight:700, letterSpacing:'0.12em',
-            textTransform:'uppercase', color:'#6b7d60', marginBottom:4 }}>
+      <div style={{ display:"flex", gap:24, flexWrap:"wrap", marginLeft:"auto" }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
+            textTransform:"uppercase", color:V2.midGray, marginBottom:4 }}>
             Total $TOUCHGRASS Spent
           </div>
-          <div style={{ fontFamily:'Georgia,serif', fontSize:24, fontWeight:700, color:'#1a4a0a' }}>
-            {loading ? '…' : fmt(totalSpent)}
+          <div style={{ fontFamily:V2.fontSerif, fontSize:24, fontWeight:700, color:V2.forestGreen }}>
+            {loading ? "…" : fmt(totalSpent)}
           </div>
         </div>
-        <div style={{ width:1, background:'rgba(200,220,190,0.4)', alignSelf:'stretch' }} />
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:9, fontWeight:700, letterSpacing:'0.12em',
-            textTransform:'uppercase', color:'#6b7d60', marginBottom:4 }}>
+        <div style={{ width:1, background:"rgba(200,220,190,0.4)", alignSelf:"stretch" }} />
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
+            textTransform:"uppercase", color:V2.midGray, marginBottom:4 }}>
             Total Orders
           </div>
-          <div style={{ fontFamily:'Georgia,serif', fontSize:24, fontWeight:700, color:'#1a4a0a' }}>
-            {loading ? '…' : totalOrders ?? '—'}
+          <div style={{ fontFamily:V2.fontSerif, fontSize:24, fontWeight:700, color:V2.forestGreen }}>
+            {loading ? "…" : totalOrders ?? "—"}
           </div>
         </div>
       </div>
     </div>
   );
 }
-
+// ── Main Marketplace ───────────────────────────────────────────────────────────
 export default function Marketplace() {
   const [tab,          setTab]          = useState("featured");
   const [username,     setUsername]     = useState(null);
@@ -542,7 +488,6 @@ export default function Marketplace() {
   const [purchased,    setPurchased]    = useState(false);
   const [walletSuccess,setWalletSuccess]= useState(null);
   const { price, loading:priceLoading, tokensFor } = useTouchgrassPrice();
-
   useEffect(()=>{
     const u = getUsername();
     setUsername(u);
@@ -551,23 +496,19 @@ export default function Marketplace() {
         .then(({data})=>setInventory((data??[]).map(r=>r.item_id)));
     }
   },[]);
-
   const isOwned = (itemId)=>{
     const item = CATALOGUE.find(c=>c.id===itemId);
     if(item?.consumable) return false;
     return inventory.includes(itemId);
   };
-
-  const featuredPack  = CATALOGUE.find(c=>c.featured&&c.status==="live"&&!c.consumable);
+  const featuredPack   = CATALOGUE.find(c=>c.featured&&c.status==="live"&&!c.consumable);
   const otherCosmetics = CATALOGUE.filter(c=>c.category==="cosmetics"&&c.status==="live"&&c.id!==featuredPack?.id);
-  const utilityItems  = CATALOGUE.filter(c=>c.category==="utility"&&c.status==="live");
-
-  const filteredItems = tab==="featured"
+  const utilityItems   = CATALOGUE.filter(c=>c.category==="utility"&&c.status==="live");
+  const filteredItems  = tab==="featured"
     ? CATALOGUE.filter(c=>c.status==="live")
     : tab==="owned"
       ? CATALOGUE.filter(c=>isOwned(c.id))
       : CATALOGUE.filter(c=>c.category===tab&&c.status==="live");
-
   const css = V2GlobalCSS + `
     .mp-tab { padding:10px 18px; border-radius:20px; border:1.5px solid ${V2.borderSoft};
       font-family:${V2.fontSans}; font-size:13px; font-weight:600; cursor:pointer;
@@ -580,15 +521,12 @@ export default function Marketplace() {
     @media(max-width:900px) { .mp-pack-grid { grid-template-columns:repeat(2,1fr) !important; } }
     @media(max-width:560px) { .mp-pack-grid { grid-template-columns:1fr !important; } }
   `;
-
   return (
     <>
       <Head><title>Marketplace | Proof of Grass</title></Head>
       <style dangerouslySetInnerHTML={{ __html:css }} />
-
       <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>
-
-        {/* ── NAV ──────────────────────────────────────────────────────────── */}
+        {/* NAV */}
         <nav style={{ position:"sticky", top:0, zIndex:200, height:64,
           display:"flex", alignItems:"center", padding:"0 clamp(14px,4vw,40px)", gap:20,
           background:"rgba(255,255,255,0.95)", backdropFilter:"blur(20px)",
@@ -617,21 +555,17 @@ export default function Marketplace() {
               justifyContent:"center", cursor:"pointer", fontSize:18 }}>☰</div>
           </div>
         </nav>
-
         {/* Activity ticker */}
         <ActivityTicker />
-
-        {/* ── HERO ─────────────────────────────────────────────────────────── */}
+        {/* HERO */}
         <div style={{ position:"relative", overflow:"hidden", padding:"40px clamp(14px,4vw,48px) 48px",
           background:"linear-gradient(160deg,#c5e3f7 0%,#d8f0e8 50%,#e8f4fd 100%)" }}>
-          {/* Banner image */}
           <div style={{ position:"absolute", inset:0, pointerEvents:"none" }}>
             <img src="/marketplace-banner.png" alt=""
               style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center" }} />
           </div>
           <div style={{ position:"absolute", inset:0, pointerEvents:"none",
             background:"linear-gradient(90deg,rgba(197,227,247,0.95) 0%,rgba(197,227,247,0.80) 55%,rgba(197,227,247,0.15) 100%)" }} />
-
           <div style={{ position:"relative", maxWidth:560 }}>
             <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.2em",
               textTransform:"uppercase", color:V2.grassGreen, marginBottom:10 }}>
@@ -643,12 +577,12 @@ export default function Marketplace() {
             <p style={{ fontSize:15, color:V2.textBody, lineHeight:1.6, marginBottom:24, maxWidth:420 }}>
               Get exclusive cosmetics, proof styles, utilities,<br/>and collectibles using $TOUCHGRASS.
             </p>
-
             {/* Price pill */}
             <div style={{ display:"inline-flex", alignItems:"center", gap:10,
               background:"rgba(255,255,255,0.85)", borderRadius:20,
               padding:"10px 18px", border:`1px solid ${V2.borderSoft}`,
-              boxShadow:"0 2px 10px rgba(26,74,10,0.08)", backdropFilter:"blur(8px)" }}>
+              boxShadow:"0 2px 10px rgba(26,74,10,0.08)", backdropFilter:"blur(8px)",
+              marginBottom:10 }}>
               <img src="/touchgrass-transparent.png" alt="" style={{ width:20, height:20, objectFit:"contain" }} />
               <span style={{ fontSize:13, fontWeight:700, color:V2.forestGreen }}>
                 {priceLoading?"Loading…":price?`1 $TOUCHGRASS = $${price.toFixed(8)}`:"Price unavailable"}
@@ -658,8 +592,7 @@ export default function Marketplace() {
             </div>
           </div>
         </div>
-
-        {/* ── TABS ─────────────────────────────────────────────────────────── */}
+        {/* TABS */}
         <div style={{ background:"white", borderBottom:`1px solid ${V2.borderSoft}`,
           padding:"16px clamp(14px,4vw,48px)",
           display:"flex", gap:8, overflowX:"auto", scrollbarWidth:"none" }}>
@@ -671,35 +604,22 @@ export default function Marketplace() {
             </button>
           ))}
         </div>
-
-        {/* ── CONTENT ──────────────────────────────────────────────────────── */}
+        {/* CONTENT */}
         <div style={{ maxWidth:960, margin:"0 auto", padding:"32px clamp(14px,4vw,48px) 80px" }}>
-
           {tab==="featured" && (
             <>
-              {/* Featured hero pack */}
               {featuredPack && (
-                <FeaturedPackCard
-                  item={featuredPack}
-                  tokensFor={tokensFor}
-                  owned={isOwned(featuredPack.id)}
-                  onBuy={setBuyingItem}
-                  onPreview={setPreviewItem}
-                />
+                <FeaturedPackCard item={featuredPack} tokensFor={tokensFor}
+                  owned={isOwned(featuredPack.id)} onBuy={setBuyingItem} onPreview={setPreviewItem} />
               )}
-
-              {/* Other cosmetics grid */}
               {otherCosmetics.length>0 && (
                 <div className="mp-pack-grid" style={{ marginBottom:32 }}>
                   {otherCosmetics.map((item,i)=>(
                     <PackCard key={item.id} item={item} tokensFor={tokensFor}
-                      owned={isOwned(item.id)} onBuy={setBuyingItem} onPreview={setPreviewItem}
-                      isNew={i<2} />
+                      owned={isOwned(item.id)} onBuy={setBuyingItem} onPreview={setPreviewItem} isNew={i<2} />
                   ))}
                 </div>
               )}
-
-              {/* Utility items */}
               {utilityItems.length>0 && (
                 <>
                   <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen,
@@ -714,23 +634,17 @@ export default function Marketplace() {
                   </div>
                 </>
               )}
-
-              {/* Your Flex */}
               <YourFlexPanel username={username} inventory={inventory} />
-
-              {/* Burn Stats */}
               <BurnStats />
             </>
           )}
-
           {tab!=="featured" && (
             <>
               {filteredItems.length>0 ? (
                 <div className="mp-pack-grid">
                   {filteredItems.map((item,i)=>(
                     <PackCard key={item.id} item={item} tokensFor={tokensFor}
-                      owned={isOwned(item.id)} onBuy={setBuyingItem} onPreview={setPreviewItem}
-                      isNew={i<2} />
+                      owned={isOwned(item.id)} onBuy={setBuyingItem} onPreview={setPreviewItem} isNew={i<2} />
                   ))}
                 </div>
               ) : (
@@ -750,11 +664,12 @@ export default function Marketplace() {
               )}
             </>
           )}
-
           {/* More coming */}
           <div style={{ marginTop:40, padding:"24px 28px", background:"white",
-            borderRadius:16, border:`1px solid ${V2.borderSoft}`, boxShadow:"0 2px 12px rgba(26,74,10,0.06)",
-            display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, flexWrap:"wrap" }}>
+            borderRadius:16, border:`1px solid ${V2.borderSoft}`,
+            boxShadow:"0 2px 12px rgba(26,74,10,0.06)",
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            gap:16, flexWrap:"wrap" }}>
             <div>
               <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen, marginBottom:4 }}>
                 More coming to the Marketplace
@@ -770,8 +685,7 @@ export default function Marketplace() {
           </div>
         </div>
       </div>
-
-      {/* ── MODALS ───────────────────────────────────────────────────────────── */}
+      {/* MODALS */}
       {buyingItem && (
         <WalletPurchaseModal
           item={buyingItem}
@@ -788,12 +702,13 @@ export default function Marketplace() {
           }}
         />
       )}
-
       {walletSuccess && (
         <div style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(0,0,0,0.5)",
-          backdropFilter:"blur(10px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          backdropFilter:"blur(10px)", display:"flex", alignItems:"center",
+          justifyContent:"center", padding:20 }}>
           <div style={{ background:"white", borderRadius:24, padding:"40px 32px",
-            maxWidth:400, width:"100%", textAlign:"center", boxShadow:"0 20px 60px rgba(26,74,10,0.2)" }}>
+            maxWidth:400, width:"100%", textAlign:"center",
+            boxShadow:"0 20px 60px rgba(26,74,10,0.2)" }}>
             <div style={{ fontSize:56, marginBottom:16 }}>🎉</div>
             <h2 style={{ fontFamily:V2.fontSans, fontSize:22, fontWeight:800,
               color:V2.forestGreen, marginBottom:8 }}>Pack Unlocked!</h2>
@@ -816,15 +731,11 @@ export default function Marketplace() {
           </div>
         </div>
       )}
-
       {previewItem && (
-        <PreviewModal
-          item={previewItem}
-          tokensFor={tokensFor}
+        <PreviewModal item={previewItem} tokensFor={tokensFor}
           owned={isOwned(previewItem.id)}
           onClose={()=>setPreviewItem(null)}
-          onBuy={(item)=>{ setPreviewItem(null); setBuyingItem(item); }}
-        />
+          onBuy={(item)=>{ setPreviewItem(null); setBuyingItem(item); }} />
       )}
     </>
   );
