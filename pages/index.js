@@ -832,12 +832,11 @@ export default function Home() {
           {/* Right — stat cards */}
           <div className="v2-hero-right" style={{ position: "relative", zIndex: 1 }}>
             <div className="v2-stat-grid">
-              <StatCard
-                icon="🔥"
-                value={resolvedStreak ?? (topStreaker?.streak ?? "—")}
-                label="Day Streak"
-                sub={tier.name}
-                accent={tier.color}
+                <StatCard
+                icon="🌿"
+                value={userStats?.posts != null ? userStats.posts.toLocaleString() : "—"}
+                label="Proofs Logged"
+                sub={userStats?.posts != null ? `+${dailyCount ?? 0} today` : null}
                 loading={loadingUser}
               />
               <StatCard
