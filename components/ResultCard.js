@@ -298,6 +298,14 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       const newStreak=result?.current_streak??currentStreak;
       setCurrentStreak(newStreak);onStreakUpdate?.(newStreak);setSubmitStatus("success");
       if(result?.lucky_touch?.triggered) setLuckyTouch(result.lucky_touch);
+      // Fire WAGO roll after streak locked — non-blocking
+      try {
+        fetch("/api/wago/roll",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({ username:effectiveUsername, streak_day:newStreak, submission_id:null }),
+        }).catch(()=>{});
+      } catch(e) { console.warn("[wago] roll non-fatal:",e?.message); }
       // Referral handling
       try{
         const referrer=typeof localStorage!=="undefined"?localStorage.getItem("pog_referrer"):null;

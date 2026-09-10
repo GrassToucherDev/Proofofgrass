@@ -8,6 +8,7 @@ import V2Nav from "../components/V2Nav";
 import V2BottomNav from "../components/V2BottomNav";
 import V2Ticker from "../components/V2Ticker";
 import { supabase } from "../utils/supabase";
+import WagoCard from "../components/WagoCard";
 import { getSpotlightBadge, getSpotlightFeedText, SPOTLIGHT_BADGES } from "../utils/spotlightBadges";
 import { V2, V2Styles, V2GlobalCSS, V2_TIERS, getV2Tier } from "../utils/v2Theme";
 
@@ -829,14 +830,18 @@ export default function Home() {
             </div>
           </div>
 
+          {/* WAGO Drops card */}
+          <WagoCard username={username} />
+
           {/* Right — stat cards */}
           <div className="v2-hero-right" style={{ position: "relative", zIndex: 1 }}>
             <div className="v2-stat-grid">
-                <StatCard
-                icon="🌿"
-                value={userStats?.posts != null ? userStats.posts.toLocaleString() : "—"}
-                label="Proofs Logged"
-                sub={userStats?.posts != null ? `+${dailyCount ?? 0} today` : null}
+              <StatCard
+                icon="🔥"
+                value={resolvedStreak ?? (topStreaker?.streak ?? "—")}
+                label="Day Streak"
+                sub={tier.name}
+                accent={tier.color}
                 loading={loadingUser}
               />
               <StatCard
