@@ -22,6 +22,8 @@ const MENU_LINKS = [
   { href: "/marketplace",  label: "Marketplace",  icon: "🏪" },
   { href: "/map",          label: "World Map",    icon: "🗺️" },
   { href: "/field-guide",  label: "Field Guide",  icon: "📖" },
+  { href: "/spotlight",    label: "Spotlight",    icon: "🌟" },
+  { href: "/challenges",   label: "Challenges",   icon: "⚡" },
   { href: "https://harvest.touchgrass.today", label: "Harvest", icon: "🌾", external: true },
 ];
 
@@ -38,6 +40,11 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const lockIn = () => {
+    const u = raw.trim().replace(/@/g, "").toLowerCase();
+    if (u) { localStorage.setItem("pog_username", u); onUsernameChange?.(u); }
+  };
 
   const handleProfile = () => {
     const u = raw.trim().replace(/@/g, "").toLowerCase();
@@ -196,10 +203,22 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
               placeholder="your username"
               value={raw}
               onChange={e => setRaw(e.target.value.replace(/@/g, "").toLowerCase())}
-              onKeyDown={e => { if (e.key === "Enter") handleProfile(); }}
+              onKeyDown={e => {
+                if (e.key === "Enter") lockIn();
+              }}
+              onBlur={lockIn}
             />
-            {raw && (
-              <button className="v2nav-profile-btn" onClick={handleProfile}>
+            {raw && !username && (
+              <button className="v2nav-profile-btn" onClick={lockIn}
+                style={{ background:"linear-gradient(135deg,#7dc832,#5ba622)", color:"white",
+                  border:"none", borderRadius:20, padding:"6px 14px", fontSize:12,
+                  fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"DM Sans,sans-serif" }}>
+                ✓ Go
+              </button>
+            )}
+            {username && (
+              <button className="v2nav-profile-btn" onClick={handleProfile}
+                style={{ whiteSpace:"nowrap" }}>
                 My Profile →
               </button>
             )}
@@ -247,7 +266,10 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
                 </Link>
               );
             })}
-
+            <div className="v2menu-divider" />
+            <Link href="/spotlight" className="v2menu-item" onClick={() => setMenu(false)}>
+              <span className="icon">🏆</span>Weekly Spotlight
+            </Link>
           </div>
         </>
       )}
