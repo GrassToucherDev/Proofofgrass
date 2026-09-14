@@ -99,12 +99,12 @@ function ProofCard({ proof }) {
   const [failed, setFailed] = useState(false);
   return (
     <div style={{ borderRadius:12, overflow:"hidden", flexShrink:0,
-      width:"clamp(120px,30vw,180px)", background:"#e8f4ee",
+      width:"clamp(100px,28vw,160px)", background:"#e8f4ee",
       border:`1px solid ${V2.borderSoft}`, boxShadow:V2.shadowSm }}>
       {proof.photo_url && !failed
         ? <img src={proof.photo_url} alt="" loading="lazy" onError={()=>setFailed(true)}
-            style={{ width:"100%", height:260, objectFit:"cover" }} />
-        : <div style={{ height:260, display:"flex", alignItems:"center",
+            style={{ width:"100%", height:110, objectFit:"cover" }} />
+        : <div style={{ height:110, display:"flex", alignItems:"center",
             justifyContent:"center", fontSize:32 }}>🌿</div>
       }
       <div style={{ padding:"6px 8px", background:"rgba(255,255,255,0.9)" }}>
@@ -728,7 +728,7 @@ export default function ProfilePage() {
                 {loading
                   ? [1,2,3].map(i=><div key={i} className="skel" style={{ width:110, height:140, borderRadius:12, flexShrink:0 }} />)
                   : recentProofs.length>0
-                    ? recentProofs.slice(0,3).map((p,i)=><ProofCard key={i} proof={p} />)
+                    ? recentProofs.slice(0,4).map((p,i)=><ProofCard key={i} proof={p} />)
                     : <div style={{ color:V2.midGray, fontSize:12, padding:"20px 0" }}>No proofs yet.</div>
                 }
               </div>
@@ -829,17 +829,50 @@ export default function ProfilePage() {
                   </button>
                 ))}
                 {isOwner && walletVerified && walletAddr && (
-                  <div style={{ marginTop:10, padding:"10px 12px", borderRadius:10,
+                  <div style={{ marginTop:10, padding:"12px 14px", borderRadius:10,
                     background:"rgba(125,200,50,0.06)", border:`1px solid ${V2.borderGreen}` }}>
-                    <div style={{ fontSize:11, fontWeight:600, color:V2.grassGreen, marginBottom:2 }}>◎ Wallet Connected</div>
-                    <div style={{ fontSize:11, color:V2.midGray, fontFamily:"monospace" }}>{walletAddr.slice(0,4)}...{walletAddr.slice(-4)}</div>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:2 }}>
+                      <div style={{ fontSize:11, fontWeight:600, color:V2.grassGreen }}>◎ Wallet Connected</div>
+                      <button onClick={()=>setDisconnectConfirm(true)}
+                        style={{ fontSize:10, color:V2.midGray, background:"none", border:"none",
+                          cursor:"pointer", textDecoration:"underline", fontFamily:V2.fontSans }}>
+                        Change
+                      </button>
+                    </div>
+                    <div style={{ fontSize:11, color:V2.midGray, fontFamily:"monospace", marginBottom:disconnectConfirm?10:0 }}>
+                      {walletAddr.slice(0,6)}...{walletAddr.slice(-4)}
+                    </div>
+                    {disconnectConfirm && (
+                      <div style={{ marginTop:8, padding:"10px 12px", borderRadius:8,
+                        background:"rgba(230,80,80,0.06)", border:"1px solid rgba(230,80,80,0.2)" }}>
+                        <div style={{ fontSize:11, color:"#e05050", marginBottom:8, lineHeight:1.5 }}>
+                          Disconnect this wallet? You will need to re-verify a new one.
+                          This will affect WAGO Drops eligibility.
+                        </div>
+                        <div style={{ display:"flex", gap:8 }}>
+                          <button onClick={disconnectWallet} disabled={disconnecting}
+                            style={{ flex:1, padding:"7px", borderRadius:8, border:"none",
+                              background:"#e05050", color:"white", fontSize:11, fontWeight:700,
+                              cursor:disconnecting?"default":"pointer", fontFamily:V2.fontSans }}>
+                            {disconnecting?"Disconnecting…":"Disconnect"}
+                          </button>
+                          <button onClick={()=>setDisconnectConfirm(false)}
+                            style={{ flex:1, padding:"7px", borderRadius:8,
+                              border:`1px solid ${V2.borderSoft}`, background:"white",
+                              color:V2.forestGreen, fontSize:11, fontWeight:600,
+                              cursor:"pointer", fontFamily:V2.fontSans }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Wallet section for owners without wallet */}
+          {/* Wallet section — show connect UI when not verified */}
           {isOwner && !walletVerified && (
             <div className="pf-card" id="wallet-section">
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray, marginBottom:16 }}>Solana Wallet</div>
