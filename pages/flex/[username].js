@@ -196,8 +196,10 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
 
   // ── Font loading ──────────────────────────────────────────────────────────
   try {
-    const f = new FontFace("Bebas Neue","url(https://fonts.gstatic.com/s/bebasneuepro/v3/2V0FKg2vH0NRXP81hDDSSXVeI0g.woff2)");
-    await f.load(); document.fonts.add(f);
+    const f1 = new FontFace("Fredoka One","url(https://fonts.gstatic.com/s/fredokaone/v14/k3kUo8kEI-tA1RRcTZGmTlHGCaen8wf-.woff2)",{style:"normal",weight:"400"});
+    const f2 = new FontFace("Plus Jakarta Sans","url(https://fonts.gstatic.com/s/plusjakartasans/v8/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_KU7NShXUEKi4Rw.woff2)");
+    await Promise.allSettled([f1.load(), f2.load()]);
+    document.fonts.add(f1); document.fonts.add(f2);
   } catch {}
 
   // ── Accent color from theme ───────────────────────────────────────────────
@@ -245,11 +247,12 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // ─────────────────────────────────────────────────────────────────────────
   const TOP_Y = 40, TOP_H = 260;
 
-  // Identity — no background panel
+  // Identity glass panel — left side
   const ID_X = 36, ID_Y = TOP_Y, ID_W = 580, ID_H = TOP_H;
+  glassPanel(ID_X, ID_Y, ID_W, ID_H, 20, 0.80);
 
   // Avatar
-  const AV = 160, AV_X = ID_X, AV_Y = ID_Y - 20;
+  const AV = 160, AV_X = ID_X, AV_Y = ID_Y + 20;
   ctx.save();
   ctx.beginPath(); ctx.arc(AV_X+AV/2, AV_Y+AV/2, AV/2, 0, Math.PI*2); ctx.clip();
   try {
@@ -275,26 +278,36 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.fillText("✓", AV_X+AV-8, AV_Y+AV-4); ctx.textAlign = "left";
 
   // Username
-  const NX = AV_X + AV + 16;
+  const NX = AV_X + AV + 22;
   const uSz = username.length>14 ? 52 : username.length>11 ? 62 : 72;
   const NY = ID_Y + 68;
   ctx.font = `700 ${uSz}px 'Playfair Display',Georgia,serif`;
-  ctx.fillStyle = "#ffffff";
-  ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 16;
-  ctx.shadowOffsetY = 2;
-  ctx.fillText(`@${username}`, NX, NY);
-  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.fillStyle = "#1a4a0a";
+  ctx.shadowColor = "rgba(255,255,255,0.6)"; ctx.shadowBlur = 8;
+  ctx.fillText(`@${username}`, NX, NY); ctx.shadowBlur = 0;
+
+  // "VERIFIED OUTDOORS" chip
+  const V_Y = NY + 10;
+  const V_TXT = "✦ VERIFIED OUTDOORS";
+  ctx.font = "700 13px 'Plus Jakarta Sans',sans-serif";
+  const V_W = ctx.measureText(V_TXT).width + 28;
+  ctx.fillStyle = "rgba(125,200,50,0.18)";
+  roundRect(ctx, NX, V_Y, V_W, 28, 14); ctx.fill();
+  ctx.strokeStyle = "rgba(125,200,50,0.5)"; ctx.lineWidth = 1.5;
+  roundRect(ctx, NX, V_Y, V_W, 28, 14); ctx.stroke();
+  ctx.fillStyle = "#1a4a0a";
+  ctx.textAlign = "left"; ctx.fillText(V_TXT, NX+14, V_Y+19);
 
   // Tier chip
-  const T_Y = NY + 10;
+  const T_Y = V_Y + 36;
   const T_TXT = `✦ ${tierTitle.toUpperCase()}`;
-  ctx.font = "700 13px 'DM Sans',sans-serif";
+  ctx.font = "700 13px 'Plus Jakarta Sans',sans-serif";
   const T_W = ctx.measureText(T_TXT).width + 28;
   ctx.fillStyle = accent + "22";
   roundRect(ctx, NX, T_Y, T_W, 28, 14); ctx.fill();
   ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
   roundRect(ctx, NX, T_Y, T_W, 28, 14); ctx.stroke();
-  ctx.fillStyle = "#0a2005"; ctx.fillText(T_TXT, NX+14, T_Y+19);
+  ctx.fillStyle = "#1a4a0a"; ctx.fillText(T_TXT, NX+14, T_Y+19);
 
   // Skin chip (if has active cover)
   if (theme.name) {
@@ -309,13 +322,13 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       theme.name.includes("Rug")?"📉":theme.name.includes("Bear")?"🐻":
       theme.name.includes("Moon")?"🌕":theme.name.includes("Lagoon")?"💧":"🎨";
     const S_TXT = `${skinEmoji} ${theme.name.toUpperCase()}`;
-    ctx.font = "700 13px 'DM Sans',sans-serif";
+    ctx.font = "700 13px 'Plus Jakarta Sans',sans-serif";
     const S_W = ctx.measureText(S_TXT).width + 28;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
     roundRect(ctx, NX, S_Y, S_W, 28, 14); ctx.fill();
-    ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(200,220,190,0.6)"; ctx.lineWidth = 1.5;
     roundRect(ctx, NX, S_Y, S_W, 28, 14); ctx.stroke();
-    ctx.fillStyle = "#ffffff"; ctx.fillText(S_TXT, NX+14, S_Y+19);
+    ctx.fillStyle = "#1a4a0a"; ctx.fillText(S_TXT, NX+14, S_Y+19);
   }
 
   // ── STREAK CARD — top right ───────────────────────────────────────────────
@@ -332,20 +345,21 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   roundRect(ctx,SC_X,SC_Y,SC_W,5,3); ctx.fill();
 
   // "CURRENT STREAK" label
-  ctx.font = "700 14px 'DM Sans',sans-serif";
+  ctx.font = "700 14px 'Plus Jakarta Sans',sans-serif";
   ctx.fillStyle = accent; ctx.textAlign = "center";
   ctx.fillText("— CURRENT STREAK —", SC_X+SC_W/2, SC_Y+38);
 
   // Big streak number — serif, theme-accented
   const nSz = streak>=1000?130:streak>=100?160:190;
-  ctx.font = `400 ${nSz}px 'Fredoka One',cursive`;
+  await document.fonts.load(`400 ${nSz}px 'Fredoka One'`);
+  ctx.font = `400 ${nSz}px 'Fredoka One',sans-serif`;
   ctx.fillStyle = "#1a4a0a";
   ctx.shadowColor = accent+"60"; ctx.shadowBlur = 32;
   ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+46+nSz*0.85);
   ctx.shadowBlur = 0;
 
   // "DAYS" label
-  ctx.font = "700 18px 'DM Sans',sans-serif";
+  ctx.font = "700 18px 'Plus Jakarta Sans',sans-serif";
   ctx.fillStyle = accent;
   ctx.fillText("DAYS", SC_X+SC_W/2, SC_Y+SC_H-36);
 
@@ -366,7 +380,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // ─────────────────────────────────────────────────────────────────────────
   // SECTION 3 — STATS PANEL (4 stats horizontal)
   // ─────────────────────────────────────────────────────────────────────────
-  const SP_Y = 780, SP_H = 160, SP_X = 36, SP_W = W - 72;
+  const SP_Y = 720, SP_H = 140, SP_X = 36, SP_W = W - 72;
   ctx.shadowColor = "rgba(26,74,10,0.12)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 4;
   glassPanel(SP_X, SP_Y, SP_W, SP_H, 20, 0.88);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
@@ -406,7 +420,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     // Value
     const valSz = s.value.length>5 ? 32 : 40;
     ctx.font = `700 ${valSz}px 'Playfair Display',Georgia,serif`;
-    ctx.fillStyle = "#050f02";
+    ctx.fillStyle = "#1a4a0a";
     ctx.fillText(s.value, cx, cy+48);
   });
   ctx.textAlign = "left";
@@ -414,7 +428,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // ─────────────────────────────────────────────────────────────────────────
   // SECTION 4 — MILESTONE PROGRESS BAR
   // ─────────────────────────────────────────────────────────────────────────
-  const MP_Y = SP_Y + SP_H + 16, MP_H = 100, MP_X = 36, MP_W = W - 72;
+  const MP_Y = SP_Y + SP_H + 12, MP_H = 68, MP_X = 36, MP_W = W - 72;
   ctx.shadowColor = "rgba(26,74,10,0.10)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 3;
   glassPanel(MP_X, MP_Y, MP_W, MP_H, 16, 0.88);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
@@ -437,9 +451,9 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.fillText(nxtEmoji, MC_CX, MC_CY+8);
 
   // Label row
-  ctx.font = "700 14px 'DM Sans',sans-serif"; ctx.fillStyle = "#1a4a0a"; ctx.textAlign = "left";
+  ctx.font = "700 14px 'Plus Jakarta Sans',sans-serif"; ctx.fillStyle = "#1a4a0a"; ctx.textAlign = "left";
   ctx.fillText(`${nxtL} · DAY ${nxt}`, MP_X+68, MP_Y+22);
-  ctx.font = "600 13px 'DM Sans',sans-serif"; ctx.fillStyle = accent; ctx.textAlign = "right";
+  ctx.font = "600 13px 'Plus Jakarta Sans',sans-serif"; ctx.fillStyle = accent; ctx.textAlign = "right";
   ctx.fillText(`${streak} / ${nxt}`, MP_X+MP_W-16, MP_Y+22);
 
   // Progress bar track
@@ -456,7 +470,29 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.shadowBlur = 0;
   ctx.textAlign = "left";
 
-  // Footer removed
+  // ─────────────────────────────────────────────────────────────────────────
+  // SECTION 5 — FOOTER
+  // ─────────────────────────────────────────────────────────────────────────
+  const FT_Y = H - 56;
+
+  // Touch Grass logo + wordmark — centered
+  try {
+    const lg = await loadImage("/touchgrass-transparent.png");
+    ctx.drawImage(lg, W/2-110, FT_Y-4, 38, 38);
+  } catch {}
+  ctx.font = "700 28px 'Playfair Display',Georgia,serif"; ctx.fillStyle = "#1a4a0a"; ctx.textAlign = "left";
+  ctx.fillText("TOUCH GRASS", W/2-65, FT_Y+26);
+  ctx.font = "500 11px 'Plus Jakarta Sans',sans-serif"; ctx.fillStyle = accent;
+  ctx.textAlign = "center"; ctx.fillText("✦ Real life is the ultimate reward. ✦", W/2+52, FT_Y+40);
+
+  // Left — proofofgrass.app
+  ctx.font = "600 11px 'Plus Jakarta Sans',sans-serif"; ctx.fillStyle = "#1a4a0a88"; ctx.textAlign = "left";
+  ctx.fillText("PROOFOFGRASS.APP", 52, FT_Y+28);
+
+  // Right — Built on Solana
+  ctx.fillStyle = "#9945ff"; ctx.textAlign = "right";
+  ctx.fillText("BUILT ON SOLANA ◎", W-52, FT_Y+28);
+  ctx.textAlign = "left";
 
   try { return canvas.toDataURL("image/png"); }
   catch(e) { throw new Error("canvas_tainted: "+e.message); }
@@ -762,6 +798,17 @@ export default function FlexCardPage() {
       ],
     },
     {
+      id:"blockchain_trails_pack", name:"Blockchain Trails", emoji:"⛓️",
+      bg:"linear-gradient(135deg,#1a0a00,#9945ff44)",
+      covers:[
+        { slug:"marketplace_bitcoin_bay",     name:"Bitcoin Bay",     imageUrl:`${SUPABASE_URL}/covers/bitcoin_bay.png`,     fallback:"linear-gradient(135deg,#1a0a00,#3d1a00)" },
+        { slug:"marketplace_ethereum_lake",   name:"Ethereum Lake",   imageUrl:`${SUPABASE_URL}/covers/ethereum_lake.png`,   fallback:"linear-gradient(135deg,#0a0a1a,#1a1a3d)" },
+        { slug:"marketplace_bnb_dunes",       name:"BNB Dunes",       imageUrl:`${SUPABASE_URL}/covers/bnb_dunes.png`,       fallback:"linear-gradient(135deg,#1a1200,#3d2e00)" },
+        { slug:"marketplace_robinhood_range", name:"Robinhood Range", imageUrl:`${SUPABASE_URL}/covers/robinhood_range.png`, fallback:"linear-gradient(135deg,#00140a,#00281a)" },
+        { slug:"marketplace_solana_springs",  name:"Solana Springs",  imageUrl:`${SUPABASE_URL}/covers/solana_springs.png`,  fallback:"linear-gradient(135deg,#0a0014,#140028)" },
+      ],
+    },
+    {
       id:"trenches_pack", name:"The Trenches", emoji:"🌿",
       bg:"linear-gradient(135deg,#1a2d0e,#3d7a12)",
       covers:[
@@ -786,9 +833,9 @@ export default function FlexCardPage() {
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600;700;800&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{background:#e8f4fd;font-family:'DM Sans',sans-serif;}
+    body{background:#e8f4fd;font-family:'Plus Jakarta Sans',sans-serif;}
     .fcs-tab{padding:10px 18px;border-radius:20px;border:1.5px solid rgba(200,220,190,0.5);
-      font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
+      font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
       transition:all 0.15s;white-space:nowrap;background:white;color:#1a4a0a;}
     .fcs-tab:hover{border-color:#5ba622;color:#5ba622;}
     .fcs-tab.active{background:#5ba622;color:white;border-color:#5ba622;

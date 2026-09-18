@@ -64,6 +64,19 @@ const CATALOGUE = [
     tags:["ATH Overlook","Rug Pull Ravine","Bear Market Blizzard","Moonbag Camp","Liquidity Lagoon"],
   },
   {
+    id:"blockchain_trails_pack", name:"Blockchain Trails", category:"cosmetics",
+    status:"live", featured:false, usdPrice:5.00,
+    description:"Five covers inspired by the landscapes of the blockchain world — from Bitcoin Bay to Solana Springs.",
+    covers:[
+      { slug:"marketplace_bitcoin_bay",     name:"Bitcoin Bay",     emoji:"₿",  imageUrl:`${SUPABASE_URL}/covers/bitcoin_bay.png`,     fallback:"linear-gradient(135deg,#1a0a00,#3d1a00,#f7931a40)" },
+      { slug:"marketplace_ethereum_lake",   name:"Ethereum Lake",   emoji:"◈",  imageUrl:`${SUPABASE_URL}/covers/ethereum_lake.png`,   fallback:"linear-gradient(135deg,#0a0a1a,#1a1a3d,#627eea40)" },
+      { slug:"marketplace_bnb_dunes",       name:"BNB Dunes",       emoji:"🌅", imageUrl:`${SUPABASE_URL}/covers/bnb_dunes.png`,       fallback:"linear-gradient(135deg,#1a1200,#3d2e00,#f3ba2f40)" },
+      { slug:"marketplace_robinhood_range", name:"Robinhood Range", emoji:"🏹", imageUrl:`${SUPABASE_URL}/covers/robinhood_range.png`, fallback:"linear-gradient(135deg,#00140a,#00281a,#00c80040)" },
+      { slug:"marketplace_solana_springs",  name:"Solana Springs",  emoji:"◎",  imageUrl:`${SUPABASE_URL}/covers/solana_springs.png`,  fallback:"linear-gradient(135deg,#0a0014,#140028,#9945ff40)" },
+    ],
+    tags:["Bitcoin Bay","Ethereum Lake","BNB Dunes","Robinhood Range","Solana Springs"],
+  },
+  {
     id:"streak_shield", name:"Streak Shield", category:"utility",
     status:"live", featured:false, usdPrice:5.00,
     description:"Miss a day without breaking your streak. Shields are stackable — stock up.",
@@ -419,6 +432,20 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
     </div>
   );
 }
+// ── Burn Total (inline hero pill) ─────────────────────────────────────────────
+function BurnTotal() {
+  const [total, setTotal] = useState(null);
+  useEffect(()=>{
+    supabase.from("UserInventory").select("tokens_spent").eq("owned", true)
+      .then(({data})=>{
+        const t = (data||[]).reduce((s,r)=>s+(parseFloat(r.tokens_spent)||0), 0);
+        const fmt = t >= 1000000 ? (t/1000000).toFixed(2)+"M" : t >= 1000 ? (t/1000).toFixed(1)+"K" : Math.round(t).toLocaleString();
+        setTotal(fmt);
+      }).catch(()=>{});
+  },[]);
+  return <span>{total ?? "—"}</span>;
+}
+
 // ── Burn Stats ─────────────────────────────────────────────────────────────────
 function BurnStats() {
   const [totalSpent,  setTotalSpent]  = useState(null);
@@ -577,18 +604,28 @@ export default function Marketplace() {
             <p style={{ fontSize:15, color:V2.textBody, lineHeight:1.6, marginBottom:24, maxWidth:420 }}>
               Get exclusive cosmetics, proof styles, utilities,<br/>and collectibles using $TOUCHGRASS.
             </p>
-            {/* Price pill */}
-            <div style={{ display:"inline-flex", alignItems:"center", gap:10,
-              background:"rgba(255,255,255,0.85)", borderRadius:20,
-              padding:"10px 18px", border:`1px solid ${V2.borderSoft}`,
-              boxShadow:"0 2px 10px rgba(26,74,10,0.08)", backdropFilter:"blur(8px)",
-              marginBottom:10 }}>
-              <img src="/touchgrass-transparent.png" alt="" style={{ width:20, height:20, objectFit:"contain" }} />
-              <span style={{ fontSize:13, fontWeight:700, color:V2.forestGreen }}>
-                {priceLoading?"Loading…":price?`1 $TOUCHGRASS = $${price.toFixed(8)}`:"Price unavailable"}
-              </span>
-              <button onClick={()=>{}} style={{ background:"none", border:"none", cursor:"pointer",
-                fontSize:14, color:V2.midGray }}>↻</button>
+            {/* Price + spent pills */}
+            <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+              <div style={{ display:"inline-flex", alignItems:"center", gap:10,
+                background:"rgba(255,255,255,0.85)", borderRadius:20,
+                padding:"10px 18px", border:`1px solid ${V2.borderSoft}`,
+                boxShadow:"0 2px 10px rgba(26,74,10,0.08)", backdropFilter:"blur(8px)" }}>
+                <img src="/touchgrass-transparent.png" alt="" style={{ width:20, height:20, objectFit:"contain" }} />
+                <span style={{ fontSize:13, fontWeight:700, color:V2.forestGreen }}>
+                  {priceLoading?"Loading…":price?`1 $TOUCHGRASS = $${price.toFixed(8)}`:"Price unavailable"}
+                </span>
+                <button onClick={()=>{}} style={{ background:"none", border:"none", cursor:"pointer",
+                  fontSize:14, color:V2.midGray }}>↻</button>
+              </div>
+              <div style={{ display:"inline-flex", alignItems:"center", gap:10,
+                background:"rgba(255,255,255,0.85)", borderRadius:20,
+                padding:"10px 18px", border:`1px solid ${V2.borderSoft}`,
+                boxShadow:"0 2px 10px rgba(26,74,10,0.08)", backdropFilter:"blur(8px)" }}>
+                <span style={{ fontSize:16 }}>🔥</span>
+                <span style={{ fontSize:13, fontWeight:700, color:V2.forestGreen }}>
+                  <BurnTotal /> $TOUCHGRASS spent all-time
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -635,7 +672,6 @@ export default function Marketplace() {
                 </>
               )}
               <YourFlexPanel username={username} inventory={inventory} />
-              <BurnStats />
             </>
           )}
           {tab!=="featured" && (
