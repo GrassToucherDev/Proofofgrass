@@ -210,7 +210,7 @@ export default function Leaderboard() {
       let query;
       if (lbType === "grass_score") {
         query = supabase.from("Profiles")
-          .select("username,grass_score,avatar_url,avatar_emoji,referral_count_successful")
+          .select("username,grass_score,avatar_url,avatar_emoji,referral_count_successful,current_streak,best_streak")
           .order("grass_score", { ascending:false })
           .range(offset, offset + PAGE_SIZE - 1);
       } else if (lbType === "streaks") {
@@ -228,8 +228,21 @@ export default function Leaderboard() {
       const { data, error: err } = await query;
       if (err) throw err;
 
-      // For streaks, join grass_score from Profiles
       let enriched = data || [];
+      // For grass_score tab — join streak data from Streaks table
+      if (lbType === "grass_score" && enriched.length > 0) {
+        const usernames = enriched.map(r => r.username);
+        const { data: streaks } = await supabase.from("Streaks")
+          .select("username,current_streak,best_streak")
+          .in("username", usernames);
+        const streakMap = Object.fromEntries((streaks||[]).map(s=>[norm(s.username),s]));
+        enriched = enriched.map(r => ({
+          ...r,
+          current_streak: streakMap[norm(r.username)]?.current_streak ?? 0,
+          best_streak: streakMap[norm(r.username)]?.best_streak ?? 0,
+        }));
+      }
+      // For streaks, join grass_score from Profiles
       if (lbType === "streaks" && enriched.length > 0) {
         const usernames = enriched.map(r => r.username);
         const { data: profiles } = await supabase.from("Profiles")
@@ -348,7 +361,7 @@ export default function Leaderboard() {
         </nav>
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
-        <div style={{ position:"relative", overflow:"hidden", minHeight:500,
+        <div style={{ position:"relative", overflow:"hidden", minHeight:420,
           background:"linear-gradient(160deg,#c5e3f7 0%,#d8f0e8 60%,#e8f4fd 100%)",
           padding:"40px clamp(14px,4vw,48px) 32px" }}>
 
