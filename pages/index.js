@@ -858,7 +858,7 @@ export default function Home() {
 
         {/* ── REWARDS BANNER ───────────────────────────────────────────────── */}
         <div style={{ padding: "8px clamp(14px,4vw,40px)" }}>
-          <RewardsBanner username={username} />
+          
         </div>
 
         {/* ── MAIN 3-COLUMN GRID ───────────────────────────────────────────── */}
