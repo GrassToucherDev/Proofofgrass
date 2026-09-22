@@ -459,7 +459,19 @@ export default function ProfilePage() {
     setProfileRow(prev=>({...prev,[field]:value}));
     await supabase.from("Profiles").upsert({username,[field]:value},{onConflict:"username"});
   };
-  const equipCover=(slug)=>saveField("active_cover_id",slug);
+  const disconnectWallet = async () => {
+    setDisconnecting(true);
+    try {
+      await supabase.from('Profiles').update({
+        wallet_address: null, wallet_verified: false,
+        wallet_verified_at: null, wallet_last_checked_at: null,
+      }).ilike('username', username);
+      setWalletAddr(null); setWalletVerified(false); setDisconnectConfirm(false);
+    } catch(e) { console.error('[wallet] disconnect failed:', e); }
+    setDisconnecting(false);
+  };
+
+  const equipCover=(slug)=>saveField('active_cover_id',slug);
   const copyProfile=()=>{
     if(typeof window!=="undefined") navigator.clipboard.writeText(window.location.href).catch(()=>{});
     setCopied(true); setTimeout(()=>setCopied(false),1800);
