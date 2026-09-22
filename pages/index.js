@@ -909,7 +909,16 @@ export default function Home() {
               <div style={{ ...V2Styles.glassCard, padding: "20px" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
                   textTransform: "uppercase", color: V2.grassGreen, marginBottom: 12 }}>Leaderboard</div>
-                {leaders.slice(0,5).map((l,i) => <LBRow key={i} rank={i+1} {...l} />)}
+                {leaders.slice(0,5).map((l,i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0",
+                  borderBottom:i<4?"1px solid rgba(200,220,190,0.4)":"none" }}>
+                  <div style={{ width:28, textAlign:"center", fontWeight:700, color:"#6b7d60", fontSize:14 }}>
+                    {i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}
+                  </div>
+                  <div style={{ flex:1, fontSize:13, fontWeight:600, color:"#1a4a0a" }}>{"@"+l.username}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#5ba622" }}>{(l.grass_score||l.current_streak||0).toLocaleString()}</div>
+                </div>
+              ))}
                 <Link href="/leaderboard" style={{ display: "block", textAlign: "center",
                   marginTop: 12, fontSize: 12, color: V2.grassGreen, textDecoration: "none" }}>
                   View Full Leaderboard →
