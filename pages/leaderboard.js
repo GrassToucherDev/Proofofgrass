@@ -210,7 +210,7 @@ export default function Leaderboard() {
       let query;
       if (lbType === "grass_score") {
         query = supabase.from("Profiles")
-          .select("username,grass_score,avatar_url,avatar_emoji,referral_count_successful,current_streak,best_streak")
+          .select("username,grass_score,avatar_url,avatar_emoji,referral_count_successful")
           .order("grass_score", { ascending:false })
           .range(offset, offset + PAGE_SIZE - 1);
       } else if (lbType === "streaks") {
