@@ -330,13 +330,6 @@ function FeaturedPostsSection() {
   );
 }
 
-// ─── RewardsBanner (V2 skin) ──────────────────────────────────────────────────
-function RewardsBanner({ username }) {
-  const [show,    setShow]    = useState(false);
-  const [checked, setChecked] = useState(false);
-
-  useEffect(() => {
-    if (!username) return;
 function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, hasPostedToday,
   onUpload, streakStatus, streakTone, resolvedStreak, loadingUser }) {
 
