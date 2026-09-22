@@ -360,6 +360,8 @@ export default function ProfilePage() {
   const [challengesSent,  setChallengesSent]    = useState(0);
   const [loading,         setLoading]           = useState(true);
   const [walletAddr,      setWalletAddr]        = useState(null);
+  const [disconnecting,   setDisconnecting]   = useState(false);
+  const [disconnectConfirm, setDisconnectConfirm] = useState(false);
   const [walletVerified,  setWalletVerified]    = useState(false);
   const [copied,          setCopied]            = useState(false);
   const [editMode,        setEditMode]          = useState(false);
