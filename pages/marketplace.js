@@ -129,14 +129,30 @@ function useTouchgrassPrice() {
   return { price, loading, tokensFor };
 }
 // ── Activity ticker ────────────────────────────────────────────────────────────
+function timeAgo(ts) {
+  const diff = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (diff < 60)   return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400)return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
+}
+
 function ActivityTicker() {
-  const items = [
-    { avatar:"🌿", name:"MeadowMind",   action:"bought",  item:"Retro Vibes Pack", time:"2m ago"  },
-    { avatar:"☀️",  name:"SunWalker",    action:"applied", item:"Retro Mountain",   time:"5m ago"  },
-    { avatar:"🏔️", name:"TrailBlazer",  action:"bought",  item:"Anime Outdoors",   time:"8m ago"  },
-    { avatar:"🌱", name:"GrassRunner",  action:"bought",  item:"Streak Shield",    time:"12m ago" },
-    { avatar:"💧", name:"StreamSeeker", action:"applied", item:"Cherry Blossom",   time:"15m ago" },
-  ];
+  const [items, setItems] = useState([]);
+
+  useEffect(()=>{
+    supabase.from("MarketplacePurchases")
+      .select("username, item_name, created_at")
+      .eq("status", "approved")
+      .order("created_at", { ascending:false })
+      .limit(10)
+      .then(({data})=>{
+        setItems(data||[]);
+      }).catch(()=>{});
+  },[]);
+
+  if (!items.length) return null;
+
   return (
     <div style={{ background:"white", borderBottom:`1px solid ${V2.borderSoft}`,
       padding:"10px clamp(14px,4vw,40px)", display:"flex", alignItems:"center", gap:16,
@@ -150,13 +166,13 @@ function ActivityTicker() {
         <div key={i} style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0,
           padding:"6px 12px", background:"rgba(125,200,50,0.06)", borderRadius:20,
           border:`1px solid ${V2.borderSoft}` }}>
-          <span style={{ fontSize:16 }}>{item.avatar}</span>
+          <span style={{ fontSize:16 }}>🌿</span>
           <div>
-            <span style={{ fontSize:11, fontWeight:700, color:V2.forestGreen }}>{item.name}</span>
-            <span style={{ fontSize:11, color:V2.midGray }}> {item.action} </span>
-            <span style={{ fontSize:11, fontWeight:600, color:V2.grassGreen }}>{item.item}</span>
+            <span style={{ fontSize:11, fontWeight:700, color:V2.forestGreen }}>@{item.username}</span>
+            <span style={{ fontSize:11, color:V2.midGray }}> bought </span>
+            <span style={{ fontSize:11, fontWeight:600, color:V2.grassGreen }}>{item.item_name}</span>
           </div>
-          <span style={{ fontSize:10, color:V2.midGray, marginLeft:4 }}>{item.time}</span>
+          <span style={{ fontSize:10, color:V2.midGray, marginLeft:4 }}>{timeAgo(item.created_at)}</span>
         </div>
       ))}
     </div>
@@ -436,9 +452,11 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
 function BurnTotal() {
   const [total, setTotal] = useState(null);
   useEffect(()=>{
-    supabase.from("UserInventory").select("tokens_spent").eq("owned", true)
+    supabase.from("MarketplacePurchases")
+      .select("touchgrass_paid")
+      .eq("status", "approved")
       .then(({data})=>{
-        const t = (data||[]).reduce((s,r)=>s+(parseFloat(r.tokens_spent)||0), 0);
+        const t = (data||[]).reduce((s,r)=>s+(parseFloat(r.touchgrass_paid)||0), 0);
         const fmt = t >= 1000000 ? (t/1000000).toFixed(2)+"M" : t >= 1000 ? (t/1000).toFixed(1)+"K" : Math.round(t).toLocaleString();
         setTotal(fmt);
       }).catch(()=>{});
@@ -452,11 +470,11 @@ function BurnStats() {
   const [totalOrders, setTotalOrders] = useState(null);
   const [loading,     setLoading]     = useState(true);
   useEffect(()=>{
-    supabase.from("UserInventory")
-      .select("tokens_spent", { count:"exact" })
-      .eq("owned", true)
+    supabase.from("MarketplacePurchases")
+      .select("touchgrass_paid", { count:"exact" })
+      .eq("status", "approved")
       .then(({ data, count }) => {
-        const total = (data||[]).reduce((s,r)=>s+(parseFloat(r.tokens_spent)||0), 0);
+        const total = (data||[]).reduce((s,r)=>s+(parseFloat(r.touchgrass_paid)||0), 0);
         setTotalSpent(total);
         setTotalOrders(count||0);
         setLoading(false);
