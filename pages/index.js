@@ -341,7 +341,7 @@ function RewardsBanner({ username }) {
     const last = localStorage.getItem(key);
     if (last && Date.now() - parseInt(last) < 7 * 86400000) return;
     (async () => {
-      const { data } = await supabase.from("Profiles").select("has_touchgrass_holder,wallet_verified")
+      const { data } = await supabase.from("Profiles").select("has_touchgrass_holder,wallet_verified,grass_score")
         .ilike("username", username).maybeSingle();
       if (!data?.has_touchgrass_holder || !data?.wallet_verified) {
         setShow(true);
@@ -603,10 +603,11 @@ export default function Home() {
         const yesterdayUTC = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
         const twoDaysAgo   = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
 
-        const [{ data: streakRowExact }, { count: postCount }] = await Promise.all([
+        const [{ data: streakRowExact }, { count: postCount }, { data: profileData }] = await Promise.all([
           supabase.from("Streaks").select("current_streak,best_streak,last_submission_date,shield_count")
             .eq("username", username).maybeSingle(),
           supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username),
+          supabase.from("Profiles").select("grass_score").ilike("username", username).maybeSingle(),
         ]);
 
         let streakRow = streakRowExact;
@@ -652,6 +653,7 @@ export default function Home() {
         setDisplayStreak(displayVal);
         setUserStats({
           posts: postCount ?? 0,
+          grass_score: profileData?.grass_score ?? 0,
           bestStreak: streakRow?.best_streak ?? actual,
           rank: rankCount + 1,
           shields: shieldCount,
@@ -853,7 +855,7 @@ export default function Home() {
               />
               <StatCard
                 icon="⚡"
-                value={userStats?.posts != null ? userStats.posts.toLocaleString() : (leaders[0]?.streak ?? "—")}
+                value={userStats?.grass_score != null ? userStats.grass_score.toLocaleString() : "—"}
                 label="Grass Score"
                 loading={loadingUser}
               />
