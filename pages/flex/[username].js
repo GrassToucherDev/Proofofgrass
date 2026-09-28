@@ -343,7 +343,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   });
 
   // Mini stats row — fills the lower space
-  const MS_Y = C_Y + 70;
+  const MS_Y = C_Y + 80;
   const miniStats = [
     { label:"STREAK",     value:`${streak}d`,                    color:accent },
     { label:"GRASS SCORE",value:grassScore>=1000?(grassScore/1000).toFixed(1)+"K":String(grassScore), color:"#2d7a1a" },
