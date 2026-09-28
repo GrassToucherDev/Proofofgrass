@@ -170,6 +170,18 @@ export default function GrassDraw() {
     setLoading(false); setSearched(true);
   }, [username, cycle]);
 
+  useEffect(()=>{
+    if(!cycle || !cycle.id) return;
+    setLbLoading(true);
+    supabase.from('grass_draw_user_totals')
+      .select('username,total_active_entries,proof_entries,active_bonus_entries')
+      .eq('cycle_id', cycle.id)
+      .order('total_active_entries', { ascending:false })
+      .limit(20)
+      .then(({data})=>{ setLbData(data||[]); setLbLoading(false); })
+      .catch(()=>setLbLoading(false));
+  },[cycle]);
+
   // Load leaderboard whenever cycle is available
   useEffect(()=>{
     setLbLoading(true);
