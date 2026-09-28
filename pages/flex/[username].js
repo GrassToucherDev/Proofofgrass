@@ -366,7 +366,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.font = `400 ${nSz}px 'Fredoka One',sans-serif`;
   ctx.fillStyle = "#1a4a0a";
   ctx.shadowColor = accent+"60"; ctx.shadowBlur = 32;
-  ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+90+nSz*0.85);
+  ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+60+nSz*0.85);
   ctx.shadowBlur = 0;
 
   // "DAYS" label
@@ -392,16 +392,20 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // SECTION 3 — STATS PANEL (4 stats horizontal)
   // ─────────────────────────────────────────────────────────────────────────
   const SP_Y = 820, SP_H = 140, SP_X = 36, SP_W = W - 72;
-  ctx.shadowColor = "rgba(26,74,10,0.12)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 4;
-  glassPanel(SP_X, SP_Y, SP_W, SP_H, 20, 0.88);
+  ctx.shadowColor = "rgba(26,74,10,0.25)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 8;
+  // Vivid panel — deeper green tint
+  ctx.fillStyle = "rgba(240,250,235,0.97)";
+  roundRect(ctx,SP_X,SP_Y,SP_W,SP_H,20); ctx.fill();
+  ctx.strokeStyle = "rgba(125,200,50,0.6)"; ctx.lineWidth = 2;
+  roundRect(ctx,SP_X,SP_Y,SP_W,SP_H,20); ctx.stroke();
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
   const gsVal = grassScore>=1000 ? (grassScore/1000).toFixed(1)+"K" : String(grassScore);
   const statsData = [
-    { icon:"🌿", label:"GRASS SCORE",   value:gsVal,                 color:"#1a4a0a" },
-    { icon:"🔥", label:"BEST STREAK",   value:`${best}d`,            color:"#e05050" },
-    { icon:"👑", label:"GLOBAL RANK",   value:rank?`#${rank}`:"—",   color:"#c8a84b" },
-    { icon:"🏅", label:"BADGES EARNED", value:String(badges.length), color:"#7b5ea7" },
+    { icon:"🌿", label:"GRASS SCORE",   value:gsVal,                 color:"#2d7a1a", bg:"rgba(125,200,50,0.15)",  border:"rgba(125,200,50,0.5)"  },
+    { icon:"🔥", label:"BEST STREAK",   value:`${best}d`,            color:"#c8351a", bg:"rgba(232,80,50,0.12)",   border:"rgba(232,80,50,0.4)"   },
+    { icon:"👑", label:"GLOBAL RANK",   value:rank?`#${rank}`:"—",   color:"#a07820", bg:"rgba(200,168,75,0.15)",  border:"rgba(200,168,75,0.5)"  },
+    { icon:"🏅", label:"BADGES EARNED", value:String(badges.length), color:"#6040a0", bg:"rgba(123,94,167,0.12)",  border:"rgba(123,94,167,0.4)"  },
   ];
 
   const colW4 = SP_W / statsData.length;
@@ -415,24 +419,27 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       ctx.beginPath(); ctx.moveTo(SP_X+colW4*i, SP_Y+20); ctx.lineTo(SP_X+colW4*i, SP_Y+SP_H-20); ctx.stroke();
     }
 
-    // Icon circle
-    ctx.fillStyle = s.color + "18";
-    ctx.beginPath(); ctx.arc(cx, cy-24, 22, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = s.color+"40"; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(cx, cy-24, 22, 0, Math.PI*2); ctx.stroke();
-    ctx.font = "22px sans-serif"; ctx.textAlign = "center";
-    ctx.fillText(s.icon, cx, cy-17);
+    // Icon circle — vivid with per-stat color
+    ctx.fillStyle = s.bg;
+    ctx.beginPath(); ctx.arc(cx, cy-26, 26, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = s.border; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy-26, 26, 0, Math.PI*2); ctx.stroke();
+    ctx.font = "24px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(s.icon, cx, cy-18);
 
     // Label
-    ctx.font = "700 11px 'Plus Jakarta Sans',sans-serif";
+    ctx.font = "800 11px 'Plus Jakarta Sans',sans-serif";
     ctx.fillStyle = s.color; ctx.textAlign = "center";
-    ctx.fillText(s.label, cx, cy+8);
+    ctx.letterSpacing = "0.08em";
+    ctx.fillText(s.label, cx, cy+10);
 
-    // Value
-    const valSz = s.value.length>5 ? 32 : 40;
-    ctx.font = `700 ${valSz}px 'Playfair Display',Georgia,serif`;
-    ctx.fillStyle = "#1a4a0a";
-    ctx.fillText(s.value, cx, cy+48);
+    // Value — larger and bolder
+    const valSz = s.value.length>5 ? 34 : 42;
+    ctx.font = `800 ${valSz}px 'Playfair Display',Georgia,serif`;
+    ctx.fillStyle = s.color;
+    ctx.shadowColor = s.color+"44"; ctx.shadowBlur = 8;
+    ctx.fillText(s.value, cx, cy+52);
+    ctx.shadowBlur = 0;
   });
   ctx.textAlign = "left";
 
