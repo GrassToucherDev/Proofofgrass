@@ -170,6 +170,18 @@ export default function GrassDraw() {
     setLoading(false); setSearched(true);
   }, [username, cycle]);
 
+  // Load leaderboard whenever cycle is available
+  useEffect(()=>{
+    setLbLoading(true);
+    supabase.from('grass_draw_user_totals')
+      .select('username,total_active_entries,proof_entries,active_bonus_entries')
+      .eq('cycle_id', cycle.id)
+      .order('total_active_entries', { ascending:false })
+      .limit(20)
+      .then(({data})=>{ setLbData(data||[]); setLbLoading(false); })
+      .catch(()=>setLbLoading(false));
+  },[cycle]);
+
   const daysRemaining = cycle
     ? Math.max(0, Math.ceil((new Date(cycle.ends_at) - new Date()) / 86400000))
     : 0;
