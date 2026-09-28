@@ -406,7 +406,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.font = `400 ${nSz}px 'Fredoka One',sans-serif`;
   ctx.fillStyle = "#1a4a0a";
   ctx.shadowColor = accent+"60"; ctx.shadowBlur = 32;
-  ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+60+nSz*0.85);
+  ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+100+nSz*0.85);
   ctx.shadowBlur = 0;
 
   // "DAYS" label
