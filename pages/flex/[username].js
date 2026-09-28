@@ -349,27 +349,27 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     { label:"GRASS SCORE",value:grassScore>=1000?(grassScore/1000).toFixed(1)+"K":String(grassScore), color:"#2d7a1a" },
     { label:"RANK",       value:rank?`#${rank}`:"—",             color:"#a07820" },
   ];
-  ctx.font = "800 11px 'Plus Jakarta Sans',sans-serif";
+  ctx.font = "800 13px 'Plus Jakarta Sans',sans-serif";
   const msColW = maxNW / miniStats.length;
   miniStats.forEach((ms, i) => {
     const mx = NX + msColW * i;
     // Divider
     if(i > 0) {
-      ctx.save(); ctx.globalAlpha = 0.2;
-      ctx.strokeStyle = accent; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(mx, MS_Y-8); ctx.lineTo(mx, MS_Y+44); ctx.stroke();
+      ctx.save(); ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(mx, MS_Y-10); ctx.lineTo(mx, MS_Y+56); ctx.stroke();
       ctx.restore();
     }
     // Label
+    ctx.font = "700 12px 'Plus Jakarta Sans',sans-serif";
     ctx.fillStyle = "#6b7d60"; ctx.textAlign = "left";
-    ctx.fillText(ms.label, mx + (i>0?12:0), MS_Y+12);
-    // Value
-    ctx.font = "800 28px 'Playfair Display',Georgia,serif";
+    ctx.fillText(ms.label, mx + (i>0?14:0), MS_Y+14);
+    // Value — bigger
+    ctx.font = "800 36px 'Playfair Display',Georgia,serif";
     ctx.fillStyle = ms.color;
-    ctx.shadowColor = ms.color+"44"; ctx.shadowBlur = 6;
-    ctx.fillText(ms.value, mx + (i>0?12:0), MS_Y+42);
+    ctx.shadowColor = ms.color+"55"; ctx.shadowBlur = 10;
+    ctx.fillText(ms.value, mx + (i>0?14:0), MS_Y+52);
     ctx.shadowBlur = 0;
-    ctx.font = "800 11px 'Plus Jakarta Sans',sans-serif";
   });
   ctx.textAlign = "left";
 
@@ -429,66 +429,14 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // No panel — the cosmetic background is the hero
 
   // ─────────────────────────────────────────────────────────────────────────
-  // SECTION 3 — STATS PANEL (4 stats horizontal)
+  // SECTION 3 — MILESTONE PROGRESS BAR (stats panel removed)
   // ─────────────────────────────────────────────────────────────────────────
-  const SP_Y = 820, SP_H = 140, SP_X = 36, SP_W = W - 72;
-  ctx.shadowColor = "rgba(26,74,10,0.25)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 8;
-  // Vivid panel — deeper green tint
+  const MP_Y = 840, MP_H = 80, MP_X = 36, MP_W = W - 72;
+  ctx.shadowColor = "rgba(26,74,10,0.20)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6;
   ctx.fillStyle = "rgba(240,250,235,0.97)";
-  roundRect(ctx,SP_X,SP_Y,SP_W,SP_H,20); ctx.fill();
-  ctx.strokeStyle = "rgba(125,200,50,0.6)"; ctx.lineWidth = 2;
-  roundRect(ctx,SP_X,SP_Y,SP_W,SP_H,20); ctx.stroke();
-  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-
-  const gsVal = grassScore>=1000 ? (grassScore/1000).toFixed(1)+"K" : String(grassScore);
-  const statsData = [
-    { icon:"🌿", label:"GRASS SCORE",   value:gsVal,                 color:"#2d7a1a", bg:"rgba(125,200,50,0.15)",  border:"rgba(125,200,50,0.5)"  },
-    { icon:"🔥", label:"BEST STREAK",   value:`${best}d`,            color:"#c8351a", bg:"rgba(232,80,50,0.12)",   border:"rgba(232,80,50,0.4)"   },
-    { icon:"👑", label:"GLOBAL RANK",   value:rank?`#${rank}`:"—",   color:"#a07820", bg:"rgba(200,168,75,0.15)",  border:"rgba(200,168,75,0.5)"  },
-    { icon:"🏅", label:"BADGES EARNED", value:String(badges.length), color:"#6040a0", bg:"rgba(123,94,167,0.12)",  border:"rgba(123,94,167,0.4)"  },
-  ];
-
-  const colW4 = SP_W / statsData.length;
-  statsData.forEach((s, i) => {
-    const cx = SP_X + colW4*i + colW4/2;
-    const cy = SP_Y + SP_H/2;
-
-    // Divider (not first)
-    if (i > 0) {
-      ctx.strokeStyle = "rgba(200,220,190,0.6)"; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(SP_X+colW4*i, SP_Y+20); ctx.lineTo(SP_X+colW4*i, SP_Y+SP_H-20); ctx.stroke();
-    }
-
-    // Icon circle — vivid with per-stat color
-    ctx.fillStyle = s.bg;
-    ctx.beginPath(); ctx.arc(cx, cy-26, 26, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = s.border; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(cx, cy-26, 26, 0, Math.PI*2); ctx.stroke();
-    ctx.font = "24px sans-serif"; ctx.textAlign = "center";
-    ctx.fillText(s.icon, cx, cy-18);
-
-    // Label
-    ctx.font = "800 11px 'Plus Jakarta Sans',sans-serif";
-    ctx.fillStyle = s.color; ctx.textAlign = "center";
-    ctx.letterSpacing = "0.08em";
-    ctx.fillText(s.label, cx, cy+10);
-
-    // Value — larger and bolder
-    const valSz = s.value.length>5 ? 34 : 42;
-    ctx.font = `800 ${valSz}px 'Playfair Display',Georgia,serif`;
-    ctx.fillStyle = s.color;
-    ctx.shadowColor = s.color+"44"; ctx.shadowBlur = 8;
-    ctx.fillText(s.value, cx, cy+52);
-    ctx.shadowBlur = 0;
-  });
-  ctx.textAlign = "left";
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // SECTION 4 — MILESTONE PROGRESS BAR
-  // ─────────────────────────────────────────────────────────────────────────
-  const MP_Y = SP_Y + SP_H + 12, MP_H = 68, MP_X = 36, MP_W = W - 72;
-  ctx.shadowColor = "rgba(26,74,10,0.10)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 3;
-  glassPanel(MP_X, MP_Y, MP_W, MP_H, 16, 0.88);
+  roundRect(ctx,MP_X,MP_Y,MP_W,MP_H,20); ctx.fill();
+  ctx.strokeStyle = "rgba(125,200,50,0.55)"; ctx.lineWidth = 2;
+  roundRect(ctx,MP_X,MP_Y,MP_W,MP_H,20); ctx.stroke();
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
   const ths = [7,14,30,50,100,180,365,500,1000];
@@ -509,23 +457,35 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.fillText(nxtEmoji, MC_CX, MC_CY+8);
 
   // Label row
-  ctx.font = "700 14px 'Plus Jakarta Sans',sans-serif"; ctx.fillStyle = "#1a4a0a"; ctx.textAlign = "left";
-  ctx.fillText(`${nxtL} · DAY ${nxt}`, MP_X+68, MP_Y+22);
-  ctx.font = "600 13px 'Plus Jakarta Sans',sans-serif"; ctx.fillStyle = accent; ctx.textAlign = "right";
-  ctx.fillText(`${streak} / ${nxt}`, MP_X+MP_W-16, MP_Y+22);
+  ctx.font = "800 15px 'Plus Jakarta Sans',sans-serif"; ctx.fillStyle = "#1a4a0a"; ctx.textAlign = "left";
+  ctx.fillText(`${nxtL} · DAY ${nxt}`, MP_X+68, MP_Y+26);
+  ctx.font = "700 14px 'Plus Jakarta Sans',sans-serif"; ctx.fillStyle = accent; ctx.textAlign = "right";
+  ctx.fillText(`${streak} / ${nxt}`, MP_X+MP_W-16, MP_Y+26);
 
   // Progress bar track
-  const BX = MP_X+68, BY = MP_Y+32, BW = MP_W-84, BH = 14;
-  ctx.fillStyle = "rgba(200,220,190,0.5)";
-  roundRect(ctx,BX,BY,BW,BH,7); ctx.fill();
+  const BX = MP_X+68, BY = MP_Y+36, BW = MP_W-84, BH = 18;
+  ctx.fillStyle = "rgba(200,220,190,0.35)";
+  roundRect(ctx,BX,BY,BW,BH,9); ctx.fill();
+  ctx.strokeStyle = "rgba(125,200,50,0.2)"; ctx.lineWidth = 1;
+  roundRect(ctx,BX,BY,BW,BH,9); ctx.stroke();
 
-  // Progress fill
+  // Progress fill — vivid gradient with glow
   const pg = ctx.createLinearGradient(BX,0,BX+BW*fp,0);
-  pg.addColorStop(0, accent); pg.addColorStop(1, accent2);
+  pg.addColorStop(0, accent+"ee"); pg.addColorStop(0.5, accent); pg.addColorStop(1, accent2);
   ctx.fillStyle = pg;
-  ctx.shadowColor = glow; ctx.shadowBlur = 10;
-  roundRect(ctx,BX,BY,BW*fp,BH,7); ctx.fill();
+  ctx.shadowColor = glow; ctx.shadowBlur = 18;
+  roundRect(ctx,BX,BY,BW*fp,BH,9); ctx.fill();
   ctx.shadowBlur = 0;
+
+  // Shine highlight on bar
+  if(fp > 0.05) {
+    ctx.save(); ctx.globalAlpha = 0.3;
+    const shine = ctx.createLinearGradient(BX,BY,BX,BY+BH/2);
+    shine.addColorStop(0,"rgba(255,255,255,0.8)"); shine.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.fillStyle = shine;
+    roundRect(ctx,BX,BY,BW*fp,BH/2,9); ctx.fill();
+    ctx.restore();
+  }
   ctx.textAlign = "left";
 
   // ─────────────────────────────────────────────────────────────────────────
