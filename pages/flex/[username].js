@@ -343,7 +343,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   });
 
   // Mini stats row — fills the lower space
-  const MS_Y = C_Y + 42;
+  const MS_Y = C_Y + 58;
   const miniStats = [
     { label:"STREAK",     value:`${streak}d`,                    color:accent },
     { label:"GRASS SCORE",value:grassScore>=1000?(grassScore/1000).toFixed(1)+"K":String(grassScore), color:"#2d7a1a" },
@@ -357,7 +357,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     if(i > 0) {
       ctx.save(); ctx.globalAlpha = 0.25;
       ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(mx, MS_Y-10); ctx.lineTo(mx, MS_Y+56); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx, MS_Y-10); ctx.lineTo(mx, MS_Y+68); ctx.stroke();
       ctx.restore();
     }
     // Label
@@ -365,7 +365,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     ctx.fillStyle = "#6b7d60"; ctx.textAlign = "left";
     ctx.fillText(ms.label, mx + (i>0?14:0), MS_Y+14);
     // Value — bigger
-    ctx.font = "800 36px 'Playfair Display',Georgia,serif";
+    ctx.font = "800 46px 'Playfair Display',Georgia,serif";
     ctx.fillStyle = ms.color;
     ctx.shadowColor = ms.color+"55"; ctx.shadowBlur = 10;
     ctx.fillText(ms.value, mx + (i>0?14:0), MS_Y+52);
@@ -431,7 +431,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // ─────────────────────────────────────────────────────────────────────────
   // SECTION 3 — MILESTONE PROGRESS BAR (stats panel removed)
   // ─────────────────────────────────────────────────────────────────────────
-  const MP_Y = 840, MP_H = 80, MP_X = 36, MP_W = W - 72;
+  const MP_Y = H - 104, MP_H = 88, MP_X = 36, MP_W = W - 72;
   ctx.shadowColor = "rgba(26,74,10,0.20)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6;
   ctx.fillStyle = "rgba(240,250,235,0.97)";
   roundRect(ctx,MP_X,MP_Y,MP_W,MP_H,20); ctx.fill();
