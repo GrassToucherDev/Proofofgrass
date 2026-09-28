@@ -96,6 +96,8 @@ export default function GrassDraw() {
   const [totals,      setTotals]      = useState(null);
   const [streak,      setStreak]      = useState(0);
   const [entries,     setEntries]     = useState([]);
+  const [lbData,      setLbData]      = useState([]);
+  const [lbLoading,   setLbLoading]   = useState(false);
   const [loading,     setLoading]     = useState(false);
   const [searched,    setSearched]    = useState(false);
   const [error,       setError]       = useState("");
@@ -151,6 +153,17 @@ export default function GrassDraw() {
         setTotals(totalsRes.data || null);
         setStreak(streakRes.data?.current_streak || 0);
         setEntries(entriesRes.data || []);
+
+        // Fetch leaderboard — top 20 by total entries this cycle
+        setLbLoading(true);
+        const { data: lbRes } = await supabase
+          .from("grass_draw_user_totals")
+          .select("username,total_active_entries,proof_entries,active_bonus_entries")
+          .eq("cycle_id", cycle.id)
+          .order("total_active_entries", { ascending: false })
+          .limit(20);
+        setLbData(lbRes || []);
+        setLbLoading(false);
         setWalletOk(!!(profileRes.data?.wallet_verified && profileRes.data?.wallet_address));
       }
     } catch(e) { setError("Failed to load data. Try again."); }
@@ -473,6 +486,96 @@ export default function GrassDraw() {
           <div style={{ background:"white", borderRadius:20, padding:"28px 24px",
             boxShadow:"0 2px 16px rgba(26,74,10,0.07)", border:`1px solid ${V2.borderSoft}`,
             marginBottom:20 }}>
+            {/* Entry Leaderboard */}
+            <div style={{ background:"white", borderRadius:20,
+              border:`1px solid ${V2.borderSoft}`,
+              boxShadow:"0 2px 16px rgba(26,74,10,0.07)",
+              overflow:"hidden", marginBottom:24 }}>
+              <div style={{ padding:"20px 24px", borderBottom:`1px solid ${V2.borderSoft}`,
+                display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
+                    textTransform:"uppercase", color:V2.grassGreen, marginBottom:4 }}>
+                    This Cycle
+                  </div>
+                  <div style={{ fontSize:18, fontWeight:800, color:V2.forestGreen }}>
+                    🏆 Entry Leaderboard
+                  </div>
+                </div>
+                <div style={{ fontSize:11, color:V2.midGray }}>Ranked by entries</div>
+              </div>
+              {lbLoading ? (
+                <div style={{ padding:"24px" }}>
+                  {[1,2,3,4,5].map(i=>(
+                    <div key={i} style={{ display:"flex", gap:12, alignItems:"center",
+                      padding:"10px 0", borderBottom:i<5?`1px solid ${V2.borderSoft}`:"none" }}>
+                      <div style={{ width:28, height:16, borderRadius:4, background:"rgba(200,220,190,0.3)", animation:"v2Shimmer 1.4s infinite" }} />
+                      <div style={{ flex:1, height:14, borderRadius:4, background:"rgba(200,220,190,0.3)", animation:"v2Shimmer 1.4s infinite" }} />
+                      <div style={{ width:50, height:14, borderRadius:4, background:"rgba(200,220,190,0.3)", animation:"v2Shimmer 1.4s infinite" }} />
+                    </div>
+                  ))}
+                </div>
+              ) : lbData.length === 0 ? (
+                <div style={{ padding:"40px 24px", textAlign:"center" }}>
+                  <div style={{ fontSize:32, marginBottom:8 }}>🌱</div>
+                  <div style={{ fontSize:14, color:V2.midGray }}>No entries yet this cycle.</div>
+                </div>
+              ) : (
+                <div style={{ padding:"0 24px" }}>
+                  {lbData.map((row, i) => {
+                    const isMe = username && row.username?.toLowerCase() === username?.toLowerCase();
+                    const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+                    const total = parseFloat(row.total_active_entries||0).toFixed(1);
+                    const proof = parseFloat(row.proof_entries||0).toFixed(1);
+                    const bonus = parseFloat(row.active_bonus_entries||0).toFixed(1);
+                    return (
+                      <div key={row.username} style={{
+                        display:"flex", alignItems:"center", gap:12,
+                        padding:"12px 0",
+                        borderBottom:i<lbData.length-1?`1px solid ${V2.borderSoft}`:"none",
+                        background:isMe?"rgba(125,200,50,0.04)":"transparent",
+                      }}>
+                        <div style={{ width:32, textAlign:"center", flexShrink:0 }}>
+                          {medal
+                            ? <span style={{ fontSize:18 }}>{medal}</span>
+                            : <span style={{ fontSize:13, fontWeight:700, color:V2.midGray }}>{i+1}</span>
+                          }
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:isMe?700:600,
+                            color:isMe?V2.grassGreen:V2.forestGreen,
+                            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                            @{row.username}{isMe?" (you)":""}
+                          </div>
+                          <div style={{ fontSize:10, color:V2.midGray, marginTop:2 }}>
+                            {proof} proof · {bonus} bonus
+                          </div>
+                        </div>
+                        <div style={{ textAlign:"right", flexShrink:0 }}>
+                          <div style={{ fontSize:14, fontWeight:700,
+                            color:i===0?"#c8a84b":V2.forestGreen }}>
+                            {total}
+                          </div>
+                          <div style={{ fontSize:9, color:V2.midGray, textTransform:"uppercase",
+                            letterSpacing:"0.08em" }}>entries</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {username && totals && !lbData.find(r=>r.username?.toLowerCase()===username?.toLowerCase()) && (
+                <div style={{ padding:"12px 24px", borderTop:`1px solid ${V2.borderSoft}`,
+                  background:"rgba(125,200,50,0.04)",
+                  display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ fontSize:13, color:V2.midGray, flex:1 }}>Your position (not in top 20)</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:V2.grassGreen }}>
+                    {parseFloat(totals.total_active_entries||0).toFixed(1)} entries
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
               <span style={{ fontSize:20 }}>🌿</span>
               <h2 style={{ fontFamily:V2.fontSans, fontSize:18, fontWeight:800, color:V2.forestGreen }}>
