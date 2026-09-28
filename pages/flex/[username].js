@@ -380,7 +380,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // ─────────────────────────────────────────────────────────────────────────
   // SECTION 3 — STATS PANEL (4 stats horizontal)
   // ─────────────────────────────────────────────────────────────────────────
-  const SP_Y = 720, SP_H = 140, SP_X = 36, SP_W = W - 72;
+  const SP_Y = 820, SP_H = 140, SP_X = 36, SP_W = W - 72;
   ctx.shadowColor = "rgba(26,74,10,0.12)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 4;
   glassPanel(SP_X, SP_Y, SP_W, SP_H, 20, 0.88);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
@@ -471,27 +471,13 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.textAlign = "left";
 
   // ─────────────────────────────────────────────────────────────────────────
-  // SECTION 5 — FOOTER
+  // SECTION 5 — SMALL FOOTER TAG (no logo)
   // ─────────────────────────────────────────────────────────────────────────
-  const FT_Y = H - 56;
-
-  // Touch Grass logo + wordmark — centered
-  try {
-    const lg = await loadImage("/touchgrass-transparent.png");
-    ctx.drawImage(lg, W/2-110, FT_Y-4, 38, 38);
-  } catch {}
-  ctx.font = "700 28px 'Playfair Display',Georgia,serif"; ctx.fillStyle = "#1a4a0a"; ctx.textAlign = "left";
-  ctx.fillText("TOUCH GRASS", W/2-65, FT_Y+26);
-  ctx.font = "500 11px 'Plus Jakarta Sans',sans-serif"; ctx.fillStyle = accent;
-  ctx.textAlign = "center"; ctx.fillText("✦ Real life is the ultimate reward. ✦", W/2+52, FT_Y+40);
-
-  // Left — proofofgrass.app
-  ctx.font = "600 11px 'Plus Jakarta Sans',sans-serif"; ctx.fillStyle = "#1a4a0a88"; ctx.textAlign = "left";
-  ctx.fillText("PROOFOFGRASS.APP", 52, FT_Y+28);
-
-  // Right — Built on Solana
-  ctx.fillStyle = "#9945ff"; ctx.textAlign = "right";
-  ctx.fillText("BUILT ON SOLANA ◎", W-52, FT_Y+28);
+  const FT_Y = H - 22;
+  ctx.font = "600 11px 'Plus Jakarta Sans',sans-serif"; ctx.fillStyle = "#1a4a0a66"; ctx.textAlign = "left";
+  ctx.fillText("PROOFOFGRASS.APP", 52, FT_Y);
+  ctx.fillStyle = "#9945ff99"; ctx.textAlign = "right";
+  ctx.fillText("BUILT ON SOLANA ◎", W-52, FT_Y);
   ctx.textAlign = "left";
 
   try { return canvas.toDataURL("image/png"); }
