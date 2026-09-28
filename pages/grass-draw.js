@@ -184,6 +184,7 @@ export default function GrassDraw() {
 
   // Load leaderboard whenever cycle is available
   useEffect(()=>{
+    if(!cycle || !cycle.id){ setLbLoading(false); return; }
     setLbLoading(true);
     supabase.from('grass_draw_user_totals')
       .select('username,total_active_entries,proof_entries,active_bonus_entries')
