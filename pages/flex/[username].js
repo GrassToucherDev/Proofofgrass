@@ -251,8 +251,15 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   const ID_X = 36, ID_Y = TOP_Y, ID_W = 580, ID_H = TOP_H;
   glassPanel(ID_X, ID_Y, ID_W, ID_H, 20, 0.80);
 
-  // Avatar
-  const AV = 160, AV_X = ID_X, AV_Y = ID_Y + 20;
+  // ── Avatar — centered vertically in panel ────────────────────────────────
+  const AV = 200, AV_X = ID_X + 20, AV_Y = ID_Y + (ID_H - AV) / 2;
+  // Avatar glow
+  ctx.save();
+  ctx.shadowColor = accent + "66"; ctx.shadowBlur = 28;
+  ctx.beginPath(); ctx.arc(AV_X+AV/2, AV_Y+AV/2, AV/2+6, 0, Math.PI*2);
+  ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 5; ctx.stroke();
+  ctx.restore();
+  // Avatar clip
   ctx.save();
   ctx.beginPath(); ctx.arc(AV_X+AV/2, AV_Y+AV/2, AV/2, 0, Math.PI*2); ctx.clip();
   try {
@@ -263,66 +270,53 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     const ag = ctx.createLinearGradient(AV_X,AV_Y,AV_X+AV,AV_Y+AV);
     ag.addColorStop(0,accent+"44"); ag.addColorStop(1,accent+"22");
     ctx.fillStyle=ag; ctx.fill();
-    ctx.font="700 48px Georgia,serif"; ctx.fillStyle=accent; ctx.textAlign="center";
-    ctx.fillText((username[0]||"?").toUpperCase(), AV_X+AV/2, AV_Y+AV/2+17);
+    ctx.font="700 60px Georgia,serif"; ctx.fillStyle=accent; ctx.textAlign="center";
+    ctx.fillText((username[0]||"?").toUpperCase(), AV_X+AV/2, AV_Y+AV/2+20);
   }
   ctx.restore();
-  // Avatar ring
-  ctx.strokeStyle = avatarFrame==="crown" ? "#c8a84b" : "rgba(255,255,255,0.95)";
-  ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.arc(AV_X+AV/2, AV_Y+AV/2, AV/2+5, 0, Math.PI*2); ctx.stroke();
   // Verified dot
   ctx.fillStyle = "#5ba622";
-  ctx.beginPath(); ctx.arc(AV_X+AV-8, AV_Y+AV-8, 14, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = "white"; ctx.font = "bold 14px sans-serif"; ctx.textAlign = "center";
-  ctx.fillText("✓", AV_X+AV-8, AV_Y+AV-4); ctx.textAlign = "left";
+  ctx.shadowColor = "rgba(91,166,34,0.6)"; ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.arc(AV_X+AV-12, AV_Y+AV-12, 16, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "white"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("✓", AV_X+AV-12, AV_Y+AV-7); ctx.textAlign = "left";
 
-  // Username — clipped to fit identity panel
-  const NX = AV_X + AV + 22;
-  const maxNW = ID_W - AV - 22 - 16; // available width inside panel
-  const NY = ID_Y + 62;
-  const uSz = username.length>18 ? 36 : username.length>14 ? 44 : username.length>11 ? 54 : 64;
+  // ── Right side content ────────────────────────────────────────────────────
+  const NX = AV_X + AV + 24;
+  const maxNW = ID_X + ID_W - NX - 16;
+
+  // Username
+  const uSz = username.length>18 ? 36 : username.length>14 ? 44 : username.length>11 ? 52 : 60;
+  const NY = ID_Y + 52;
   ctx.font = `700 ${uSz}px 'Playfair Display',Georgia,serif`;
   ctx.fillStyle = "#1a4a0a";
-  ctx.shadowColor = "rgba(255,255,255,0.6)"; ctx.shadowBlur = 8;
+  ctx.shadowColor = "rgba(255,255,255,0.8)"; ctx.shadowBlur = 10;
   ctx.save();
-  ctx.rect(NX, ID_Y, maxNW, ID_H); ctx.clip();
-  // Truncate if still too wide
+  ctx.beginPath(); ctx.rect(NX, ID_Y, maxNW, ID_H); ctx.clip();
   let uText = "@" + username;
-  while(ctx.measureText(uText).width > maxNW && uText.length > 4) {
-    uText = uText.slice(0, -1);
-  }
+  while(ctx.measureText(uText).width > maxNW && uText.length > 4) uText = uText.slice(0,-1);
   if(uText.length < ("@"+username).length) uText = uText.slice(0,-1) + "…";
   ctx.fillText(uText, NX, NY);
   ctx.restore();
   ctx.shadowBlur = 0;
 
-  // "VERIFIED OUTDOORS" chip
-  const V_Y = NY + 10;
-  const V_TXT = "✦ VERIFIED OUTDOORS";
-  ctx.font = "700 13px 'Plus Jakarta Sans',sans-serif";
-  const V_W = ctx.measureText(V_TXT).width + 28;
-  ctx.fillStyle = "rgba(125,200,50,0.18)";
-  roundRect(ctx, NX, V_Y, V_W, 28, 14); ctx.fill();
-  ctx.strokeStyle = "rgba(125,200,50,0.5)"; ctx.lineWidth = 1.5;
-  roundRect(ctx, NX, V_Y, V_W, 28, 14); ctx.stroke();
-  ctx.fillStyle = "#1a4a0a";
-  ctx.textAlign = "left"; ctx.fillText(V_TXT, NX+14, V_Y+19);
+  // Thin accent rule under username
+  ctx.save();
+  ctx.globalAlpha = 0.3;
+  const ur = ctx.createLinearGradient(NX,0,NX+maxNW,0);
+  ur.addColorStop(0,accent); ur.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.strokeStyle=ur; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(NX,NY+10); ctx.lineTo(NX+maxNW,NY+10); ctx.stroke();
+  ctx.restore();
 
-  // Tier chip
-  const T_Y = V_Y + 34;
-  const T_TXT = `✦ ${tierTitle.toUpperCase()}`;
-  ctx.font = "700 13px 'Plus Jakarta Sans',sans-serif";
-  const T_W = ctx.measureText(T_TXT).width + 28;
-  ctx.fillStyle = accent + "22";
-  roundRect(ctx, NX, T_Y, T_W, 28, 14); ctx.fill();
-  ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
-  roundRect(ctx, NX, T_Y, T_W, 28, 14); ctx.stroke();
-  ctx.fillStyle = "#1a4a0a"; ctx.fillText(T_TXT, NX+14, T_Y+19);
-
-  // Skin chip (if has active cover)
+  // Chips row — horizontal layout to fill width
+  const C_Y = NY + 24;
+  const chips = [
+    { txt:"✦ VERIFIED OUTDOORS", bg:"rgba(125,200,50,0.18)", border:"rgba(125,200,50,0.5)", color:"#1a4a0a" },
+    { txt:`✦ ${tierTitle.toUpperCase()}`,  bg:accent+"22",             border:accent,                color:"#1a4a0a" },
+  ];
   if (theme.name) {
-    const S_Y = T_Y + 34;
     const skinEmoji = theme.name.includes("Blossom")?"🌸":theme.name.includes("Beach")?"🏖":
       theme.name.includes("Mountain")?"⛰":theme.name.includes("Sunflower")?"🌻":
       theme.name.includes("Night")?"🌙":theme.name.includes("Torii")?"⛩":
@@ -332,62 +326,61 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       theme.name.includes("Garden")?"🌿":theme.name.includes("ATH")?"🚀":
       theme.name.includes("Rug")?"📉":theme.name.includes("Bear")?"🐻":
       theme.name.includes("Moon")?"🌕":theme.name.includes("Lagoon")?"💧":"🎨";
-    const S_TXT = `${skinEmoji} ${theme.name.toUpperCase()}`;
-    ctx.font = "700 13px 'Plus Jakarta Sans',sans-serif";
-    const S_W = ctx.measureText(S_TXT).width + 28;
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    roundRect(ctx, NX, S_Y, S_W, 28, 14); ctx.fill();
-    ctx.strokeStyle = "rgba(200,220,190,0.6)"; ctx.lineWidth = 1.5;
-    roundRect(ctx, NX, S_Y, S_W, 28, 14); ctx.stroke();
-    ctx.fillStyle = "#1a4a0a"; ctx.fillText(S_TXT, NX+14, S_Y+19);
+    chips.push({ txt:`${skinEmoji} ${theme.name.toUpperCase()}`, bg:"rgba(255,255,255,0.75)", border:"rgba(200,220,190,0.6)", color:"#1a4a0a" });
   }
+  ctx.font = "700 12px 'Plus Jakarta Sans',sans-serif";
+  let chipX = NX;
+  chips.forEach(chip => {
+    const cw = ctx.measureText(chip.txt).width + 24;
+    if(chipX + cw > ID_X + ID_W - 12) return; // skip if overflow
+    ctx.fillStyle = chip.bg;
+    roundRect(ctx, chipX, C_Y, cw, 26, 13); ctx.fill();
+    ctx.strokeStyle = chip.border; ctx.lineWidth = 1.5;
+    roundRect(ctx, chipX, C_Y, cw, 26, 13); ctx.stroke();
+    ctx.fillStyle = chip.color;
+    ctx.fillText(chip.txt, chipX+12, C_Y+18);
+    chipX += cw + 8;
+  });
 
-  // ── DECORATIVE ELEMENTS in identity panel ────────────────────────────────
-  // Subtle dot grid pattern in empty space
-  ctx.save();
-  ctx.globalAlpha = 0.08;
-  ctx.fillStyle = accent;
-  for (let dx = NX; dx < ID_X + ID_W - 20; dx += 18) {
-    for (let dy = ID_Y + ID_H - 80; dy < ID_Y + ID_H - 10; dy += 18) {
-      ctx.beginPath(); ctx.arc(dx, dy, 2.5, 0, Math.PI*2); ctx.fill();
+  // Mini stats row — fills the lower space
+  const MS_Y = C_Y + 42;
+  const miniStats = [
+    { label:"STREAK",     value:`${streak}d`,                    color:accent },
+    { label:"GRASS SCORE",value:grassScore>=1000?(grassScore/1000).toFixed(1)+"K":String(grassScore), color:"#2d7a1a" },
+    { label:"RANK",       value:rank?`#${rank}`:"—",             color:"#a07820" },
+  ];
+  ctx.font = "800 11px 'Plus Jakarta Sans',sans-serif";
+  const msColW = maxNW / miniStats.length;
+  miniStats.forEach((ms, i) => {
+    const mx = NX + msColW * i;
+    // Divider
+    if(i > 0) {
+      ctx.save(); ctx.globalAlpha = 0.2;
+      ctx.strokeStyle = accent; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(mx, MS_Y-8); ctx.lineTo(mx, MS_Y+44); ctx.stroke();
+      ctx.restore();
     }
-  }
-  ctx.restore();
-
-  // Accent rule under chips
-  ctx.save();
-  ctx.globalAlpha = 0.18;
-  const ruleGrad = ctx.createLinearGradient(NX, 0, NX + 300, 0);
-  ruleGrad.addColorStop(0, accent);
-  ruleGrad.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.strokeStyle = ruleGrad;
-  ctx.lineWidth = 1.5;
-  const ruleY = ID_Y + ID_H - 24;
-  ctx.beginPath(); ctx.moveTo(NX, ruleY); ctx.lineTo(NX + 280, ruleY); ctx.stroke();
-  ctx.restore();
-
-  // Small ✦ accent marks in corners of identity panel
-  ctx.save();
-  ctx.font = "700 14px sans-serif";
-  ctx.fillStyle = accent;
-  ctx.globalAlpha = 0.25;
+    // Label
+    ctx.fillStyle = "#6b7d60"; ctx.textAlign = "left";
+    ctx.fillText(ms.label, mx + (i>0?12:0), MS_Y+12);
+    // Value
+    ctx.font = "800 28px 'Playfair Display',Georgia,serif";
+    ctx.fillStyle = ms.color;
+    ctx.shadowColor = ms.color+"44"; ctx.shadowBlur = 6;
+    ctx.fillText(ms.value, mx + (i>0?12:0), MS_Y+42);
+    ctx.shadowBlur = 0;
+    ctx.font = "800 11px 'Plus Jakarta Sans',sans-serif";
+  });
   ctx.textAlign = "left";
-  ctx.fillText("✦", ID_X + ID_W - 28, ID_Y + 22);
-  ctx.fillText("✦", ID_X + ID_W - 28, ID_Y + ID_H - 10);
-  ctx.restore();
 
-  // Subtle arc decoration behind avatar
+  // Decorative ✦ corner marks
   ctx.save();
-  ctx.globalAlpha = 0.10;
-  ctx.strokeStyle = accent;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(AV_X + AV/2, AV_Y + AV/2, AV/2 + 28, Math.PI * 0.6, Math.PI * 1.4);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(AV_X + AV/2, AV_Y + AV/2, AV/2 + 44, Math.PI * 0.7, Math.PI * 1.3);
-  ctx.stroke();
+  ctx.globalAlpha = 0.2; ctx.fillStyle = accent;
+  ctx.font = "700 16px sans-serif"; ctx.textAlign = "right";
+  ctx.fillText("✦", ID_X+ID_W-14, ID_Y+20);
+  ctx.fillText("✦", ID_X+ID_W-14, ID_Y+ID_H-8);
   ctx.restore();
+  ctx.textAlign = "left";
 
   // ── STREAK CARD — top right ───────────────────────────────────────────────
   const SC_W = 340, SC_H = TOP_H + 30, SC_X = W - SC_W - 36, SC_Y = TOP_Y - 10;
@@ -413,7 +406,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.font = `400 ${nSz}px 'Fredoka One',sans-serif`;
   ctx.fillStyle = "#1a4a0a";
   ctx.shadowColor = accent+"60"; ctx.shadowBlur = 32;
-  ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+100+nSz*0.85);
+  ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+60+nSz*0.85);
   ctx.shadowBlur = 0;
 
   // "DAYS" label
