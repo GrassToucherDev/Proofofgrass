@@ -159,7 +159,7 @@ export default function GrassDraw() {
         const { data: lbRes } = await supabase
           .from("grass_draw_user_totals")
           .select("username,total_active_entries,proof_entries,active_bonus_entries")
-          .eq("cycle_id", cycle.id)
+          .eq("cycle_id", cycleData.id)
           .order("total_active_entries", { ascending: false })
           .limit(20);
         setLbData(lbRes || []);
