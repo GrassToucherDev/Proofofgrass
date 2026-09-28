@@ -245,7 +245,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // ─────────────────────────────────────────────────────────────────────────
   // SECTION 1 — TOP IDENTITY + STREAK CARD
   // ─────────────────────────────────────────────────────────────────────────
-  const TOP_Y = 40, TOP_H = 260;
+  const TOP_Y = 40, TOP_H = 300;
 
   // Identity glass panel — left side
   const ID_X = 36, ID_Y = TOP_Y, ID_W = 580, ID_H = TOP_H;
@@ -280,7 +280,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   // Username
   const NX = AV_X + AV + 22;
   const uSz = username.length>14 ? 52 : username.length>11 ? 62 : 72;
-  const NY = ID_Y + 68;
+  const NY = ID_Y + 62;
   ctx.font = `700 ${uSz}px 'Playfair Display',Georgia,serif`;
   ctx.fillStyle = "#1a4a0a";
   ctx.shadowColor = "rgba(255,255,255,0.6)"; ctx.shadowBlur = 8;
@@ -299,7 +299,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.textAlign = "left"; ctx.fillText(V_TXT, NX+14, V_Y+19);
 
   // Tier chip
-  const T_Y = V_Y + 36;
+  const T_Y = V_Y + 34;
   const T_TXT = `✦ ${tierTitle.toUpperCase()}`;
   ctx.font = "700 13px 'Plus Jakarta Sans',sans-serif";
   const T_W = ctx.measureText(T_TXT).width + 28;
@@ -311,7 +311,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
 
   // Skin chip (if has active cover)
   if (theme.name) {
-    const S_Y = T_Y + 36;
+    const S_Y = T_Y + 34;
     const skinEmoji = theme.name.includes("Blossom")?"🌸":theme.name.includes("Beach")?"🏖":
       theme.name.includes("Mountain")?"⛰":theme.name.includes("Sunflower")?"🌻":
       theme.name.includes("Night")?"🌙":theme.name.includes("Torii")?"⛩":
@@ -355,16 +355,16 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.font = `400 ${nSz}px 'Fredoka One',sans-serif`;
   ctx.fillStyle = "#1a4a0a";
   ctx.shadowColor = accent+"60"; ctx.shadowBlur = 32;
-  ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+46+nSz*0.85);
+  ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+60+nSz*0.85);
   ctx.shadowBlur = 0;
 
   // "DAYS" label
   ctx.font = "700 18px 'Plus Jakarta Sans',sans-serif";
   ctx.fillStyle = accent;
-  ctx.fillText("DAYS", SC_X+SC_W/2, SC_Y+SC_H-36);
+  ctx.fillText("DAYS", SC_X+SC_W/2, SC_Y+SC_H-28);
 
   // Decorative lines flanking DAYS
-  const daysY = SC_Y+SC_H-36;
+  const daysY = SC_Y+SC_H-28;
   const lineW = 60;
   const daysW = ctx.measureText("DAYS").width;
   ctx.strokeStyle = accent+"60"; ctx.lineWidth = 1.5;
