@@ -277,14 +277,25 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.fillStyle = "white"; ctx.font = "bold 14px sans-serif"; ctx.textAlign = "center";
   ctx.fillText("✓", AV_X+AV-8, AV_Y+AV-4); ctx.textAlign = "left";
 
-  // Username
+  // Username — clipped to fit identity panel
   const NX = AV_X + AV + 22;
-  const uSz = username.length>14 ? 52 : username.length>11 ? 62 : 72;
+  const maxNW = ID_W - AV - 22 - 16; // available width inside panel
   const NY = ID_Y + 62;
+  const uSz = username.length>18 ? 36 : username.length>14 ? 44 : username.length>11 ? 54 : 64;
   ctx.font = `700 ${uSz}px 'Playfair Display',Georgia,serif`;
   ctx.fillStyle = "#1a4a0a";
   ctx.shadowColor = "rgba(255,255,255,0.6)"; ctx.shadowBlur = 8;
-  ctx.fillText(`@${username}`, NX, NY); ctx.shadowBlur = 0;
+  ctx.save();
+  ctx.rect(NX, ID_Y, maxNW, ID_H); ctx.clip();
+  // Truncate if still too wide
+  let uText = "@" + username;
+  while(ctx.measureText(uText).width > maxNW && uText.length > 4) {
+    uText = uText.slice(0, -1);
+  }
+  if(uText.length < ("@"+username).length) uText = uText.slice(0,-1) + "…";
+  ctx.fillText(uText, NX, NY);
+  ctx.restore();
+  ctx.shadowBlur = 0;
 
   // "VERIFIED OUTDOORS" chip
   const V_Y = NY + 10;
