@@ -342,6 +342,53 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     ctx.fillStyle = "#1a4a0a"; ctx.fillText(S_TXT, NX+14, S_Y+19);
   }
 
+  // ── DECORATIVE ELEMENTS in identity panel ────────────────────────────────
+  // Subtle dot grid pattern in empty space
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  ctx.fillStyle = accent;
+  for (let dx = NX; dx < ID_X + ID_W - 20; dx += 18) {
+    for (let dy = ID_Y + ID_H - 80; dy < ID_Y + ID_H - 10; dy += 18) {
+      ctx.beginPath(); ctx.arc(dx, dy, 2.5, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  // Accent rule under chips
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  const ruleGrad = ctx.createLinearGradient(NX, 0, NX + 300, 0);
+  ruleGrad.addColorStop(0, accent);
+  ruleGrad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.strokeStyle = ruleGrad;
+  ctx.lineWidth = 1.5;
+  const ruleY = ID_Y + ID_H - 24;
+  ctx.beginPath(); ctx.moveTo(NX, ruleY); ctx.lineTo(NX + 280, ruleY); ctx.stroke();
+  ctx.restore();
+
+  // Small ✦ accent marks in corners of identity panel
+  ctx.save();
+  ctx.font = "700 14px sans-serif";
+  ctx.fillStyle = accent;
+  ctx.globalAlpha = 0.25;
+  ctx.textAlign = "left";
+  ctx.fillText("✦", ID_X + ID_W - 28, ID_Y + 22);
+  ctx.fillText("✦", ID_X + ID_W - 28, ID_Y + ID_H - 10);
+  ctx.restore();
+
+  // Subtle arc decoration behind avatar
+  ctx.save();
+  ctx.globalAlpha = 0.10;
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(AV_X + AV/2, AV_Y + AV/2, AV/2 + 28, Math.PI * 0.6, Math.PI * 1.4);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(AV_X + AV/2, AV_Y + AV/2, AV/2 + 44, Math.PI * 0.7, Math.PI * 1.3);
+  ctx.stroke();
+  ctx.restore();
+
   // ── STREAK CARD — top right ───────────────────────────────────────────────
   const SC_W = 340, SC_H = TOP_H + 30, SC_X = W - SC_W - 36, SC_Y = TOP_Y - 10;
   // White glass card with soft shadow
@@ -366,7 +413,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.font = `400 ${nSz}px 'Fredoka One',sans-serif`;
   ctx.fillStyle = "#1a4a0a";
   ctx.shadowColor = accent+"60"; ctx.shadowBlur = 32;
-  ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+100+nSz*0.85);
+  ctx.fillText(`${streak}`, SC_X+SC_W/2, SC_Y+60+nSz*0.85);
   ctx.shadowBlur = 0;
 
   // "DAYS" label
