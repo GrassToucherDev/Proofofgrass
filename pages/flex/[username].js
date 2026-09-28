@@ -350,7 +350,7 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     { label:"RANK",       value:rank?`#${rank}`:"—",             color:"#a07820" },
   ];
   ctx.font = "800 13px 'Plus Jakarta Sans',sans-serif";
-  const msColW = maxNW / miniStats.length;
+  const msColW = (maxNW + 60) / miniStats.length;
   miniStats.forEach((ms, i) => {
     const mx = NX + msColW * i;
     // Divider
