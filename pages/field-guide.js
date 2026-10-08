@@ -25,6 +25,14 @@ const COLLECTIONS = [
     slots: 10,
     bg: "linear-gradient(135deg,#e8f5e9,#d4edda)",
   },
+  {
+    id: "animals",
+    name: "Animals",
+    icon: "🐾",
+    description: "Capture 10 unique animals in the wild or outdoors — birds, insects, mammals, reptiles, and more.",
+    slots: 10,
+    bg: "linear-gradient(135deg,#fff3e0,#ffe0b2)",
+  },
 ];
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────

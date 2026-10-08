@@ -27,6 +27,11 @@ const COLLECTION_PROMPTS = {
     description: "a photograph showing water — ocean, lake, river, stream, waterfall, rain, puddle, dew, or any body of water in a natural setting.",
     notAllowed: "photos with absolutely no water visible",
   },
+  animals: {
+    subject: "animal or wildlife",
+    description: "a photograph showing any animal outdoors or in nature — birds, insects, mammals, reptiles, fish, amphibians, or any creature. Pets photographed outside qualify. Wild animals of any kind qualify.",
+    notAllowed: "photos with absolutely no animals visible, or photos of stuffed animals or animal illustrations",
+  },
 };
 
 export default async function handler(req, res) {
