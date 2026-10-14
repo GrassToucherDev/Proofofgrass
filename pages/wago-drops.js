@@ -292,14 +292,18 @@ function MapView({ session, linkedWallet }) {
       });
 
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
-      map.addControl(
-        new mapboxgl.GeolocateControl({
-          positionOptions: { enableHighAccuracy: true },
-          trackUserLocation: true,
-          showUserHeading: true,
-        }),
-        "top-right"
-      );
+
+      const geolocate = new mapboxgl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true,
+        showUserHeading: true,
+      });
+
+      geolocate.on("geolocate", (e) => {
+        setUserPos({ lat: e.coords.latitude, lng: e.coords.longitude });
+      });
+
+      map.addControl(geolocate, "top-right");
 
       map.on("load", () => {
         mapRef.current = map;
@@ -309,18 +313,6 @@ function MapView({ session, linkedWallet }) {
       map.on("moveend", () => fetchDropsInView(map));
     });
 
-    // Geolocation for distance checks
-    if (navigator.geolocation) {
-      const watchId = navigator.geolocation.watchPosition(
-        pos => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        err => console.warn("Geolocation error:", err),
-        { enableHighAccuracy: true, maximumAge: 10000 }
-      );
-      return () => {
-        navigator.geolocation.clearWatch(watchId);
-        map?.remove();
-      };
-    }
     return () => map?.remove();
   }, []);
 
