@@ -278,7 +278,7 @@ function MapView({ session, linkedWallet }) {
     const bounds = map.getBounds();
     try {
       const res = await fetch(
-        `/api/wago-drops/locations?swLat=${bounds.getSouth()}&swLng=${bounds.getWest()}&neLat=${bounds.getNorth()}&neLng=${bounds.getEast()}`
+       `/api/wago-drops/locations?swLat=${bounds.getSouth()}&swLng=${bounds.getWest()}&neLat=${bounds.getNorth()}&neLng=${bounds.getEast()}${userPos ? `&userLat=${userPos.lat}&userLng=${userPos.lng}` : ""}`
       );
       const data = await res.json();
       if (!res.ok) return;
