@@ -45,18 +45,30 @@ export default async function handler(req, res) {
     swLng = midLng - 0.225; neLng = midLng + 0.225;
   }
 
-  // Fetch active locations in active campaigns within bounds
+  // Fetch active locations in bounds
   const { data: locations, error } = await supabase
     .from("wago_drop_locations")
-    .select("id, lat, lng, hint, claim_count, max_claims, campaign_id, wago_drop_campaigns(reveal_radius_m, claim_radius_m, reward_amount, reward_type, proof_bonus_enabled, proof_bonus_amount, name, status)")
+    .select("id, lat, lng, hint, claim_count, max_claims, campaign_id")
     .eq("is_active", true)
     .gte("lat", swLat).lte("lat", neLat)
     .gte("lng", swLng).lte("lng", neLng);
 
   if (error) return res.status(500).json({ error: error.message });
+  if (!locations?.length) return res.status(200).json({ locations: [] });
+
+  // Fetch campaigns for those locations
+  const campaignIds = [...new Set(locations.map(l => l.campaign_id))];
+  const { data: campaigns } = await supabase
+    .from("wago_drop_campaigns")
+    .select("id, name, status, reward_amount, reward_type, proof_bonus_enabled, proof_bonus_amount, reveal_radius_m, claim_radius_m")
+    .in("id", campaignIds)
+    .eq("status", "active");
+
+  const campaignMap = {};
+  (campaigns || []).forEach(c => { campaignMap[c.id] = c; });
 
   // Filter to active campaigns only
-  const active = (locations || []).filter(l => l.wago_drop_campaigns?.status === "active");
+  const active = locations.filter(l => campaignMap[l.campaign_id]);
 
   // Check which locations the user has already claimed
   let claimedSet = new Set();
@@ -76,7 +88,7 @@ export default async function handler(req, res) {
   const hasUserPos = !isNaN(userLat) && !isNaN(userLng);
 
   const result = active.map(loc => {
-    const campaign = loc.wago_drop_campaigns;
+    const campaign = campaignMap[loc.campaign_id];
     const revealRadius = campaign?.reveal_radius_m || 100;
     const distM = hasUserPos ? haversineM(userLat, userLng, loc.lat, loc.lng) : Infinity;
     const revealed = distM <= revealRadius;
