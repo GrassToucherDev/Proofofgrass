@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ["@solana/web3.js", "rpc-websockets"],
   transpilePackages: [
     "@solana/wallet-adapter-react",
     "@solana/wallet-adapter-react-ui",
