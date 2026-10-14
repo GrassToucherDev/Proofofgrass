@@ -13,6 +13,11 @@ export const authOptions = {
     GoogleProvider({
       clientId:     process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          scope: "openid email profile",
+        },
+      },
     }),
   ],
 
@@ -32,9 +37,9 @@ export const authOptions = {
         .upsert(
           {
             google_id:    user.id,
-            email:        user.email,
-            display_name: user.name,
-            avatar_url:   user.image,
+            email:        user.email || "",
+            display_name: user.name  || "",
+            avatar_url:   user.image || null,
             last_sign_in: new Date().toISOString(),
           },
           { onConflict: "google_id", ignoreDuplicates: false }
