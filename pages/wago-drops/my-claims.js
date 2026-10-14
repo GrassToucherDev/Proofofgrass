@@ -1,6 +1,6 @@
-// pages/api/wago-drops/my-saves.js
+// pages/api/wago-drops/my-claims.js
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]";
+import { authOptions } from "../api/auth/[...nextauth]";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -15,13 +15,13 @@ export default async function handler(req, res) {
   if (!session?.user?.google_id) return res.status(401).json({ error: "Not authenticated" });
 
   const { data, error } = await supabase
-    .from("wago_drop_saves")
-    .select(`id, saved_at,
-             wago_drop_locations ( id, hint, lat, lng, campaign_id,
-               wago_drop_campaigns ( name, reward_type, reward_amount ) )`)
+    .from("wago_drop_claims")
+    .select(`id, reward_type, reward_amount, proof_bonus_applied, proof_bonus_amount,
+             tx_signature, status, claimed_at,
+             wago_drop_campaigns ( name, image_url )`)
     .eq("google_id", session.user.google_id)
-    .order("saved_at", { ascending: false });
+    .order("claimed_at", { ascending: false });
 
   if (error) return res.status(500).json({ error: error.message });
-  return res.status(200).json({ saves: data || [] });
+  return res.status(200).json({ claims: data || [] });
 }
