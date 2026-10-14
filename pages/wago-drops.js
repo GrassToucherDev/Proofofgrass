@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
-import AppFooter from "../components/AppFooter";
+
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 const T = {
@@ -527,7 +527,7 @@ export default function WagoDropsPage() {
           <MapView session={session} linkedWallet={linkedWallet} />
         )}
 
-        {!session && <AppFooter />}
+
       </div>
     </>
   );
