@@ -2,7 +2,6 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { createClient } from "@supabase/supabase-js";
-import { PublicKey } from "@solana/web3.js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -18,8 +17,8 @@ export default async function handler(req, res) {
   const { wallet } = req.body;
   if (!wallet) return res.status(400).json({ error: "wallet required" });
 
-  // Validate Solana address
-  try { new PublicKey(wallet); } catch {
+  // Validate Solana address (base58, 32-44 chars)
+  if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet)) {
     return res.status(400).json({ error: "Invalid Solana address" });
   }
 
