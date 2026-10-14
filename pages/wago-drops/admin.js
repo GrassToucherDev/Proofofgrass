@@ -18,7 +18,7 @@ function Input({label,...props}){
   );
 }
 
-function CreateCampaignForm({onCreated}){
+function CreateCampaignForm({onCreated,adminSecret}){
   const MINT="5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
   const [form,setForm]=useState({name:"",description:"",image_url:"",reward_type:"spl_token",reward_amount:"",reward_token_mint:MINT,reveal_radius_m:100,claim_radius_m:25,proof_bonus_enabled:false,proof_bonus_amount:"",starts_at:"",ends_at:""});
   const [loading,setLoading]=useState(false);
@@ -28,7 +28,7 @@ function CreateCampaignForm({onCreated}){
   async function submit(e){
     e.preventDefault();setLoading(true);setMsg(null);
     try{
-      const res=await fetch("/api/wago-drops/admin/create-campaign",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(form)});
+      const res=await fetch("/api/wago-drops/admin/create-campaign",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,_adminSecret:adminSecret})});
       const data=await res.json();
       if(!res.ok)throw new Error(data.error||"Failed");
       setMsg({ok:true,text:`Campaign "${data.campaign.name}" created (ID: ${data.campaign.id})`});
@@ -60,7 +60,7 @@ function CreateCampaignForm({onCreated}){
   );
 }
 
-function PinPlacer({campaigns}){
+function PinPlacer({campaigns,adminSecret}){
   const mapContainer=useRef(null);
   const mapRef=useRef(null);
   const [selectedCampaign,setSelectedCampaign]=useState("");
@@ -93,7 +93,7 @@ function PinPlacer({campaigns}){
     if(!selectedCampaign||pendingPins.length===0)return;
     setSaving(true);setMsg(null);
     try{
-      const res=await fetch("/api/wago-drops/admin/add-locations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({campaignId:selectedCampaign,locations:pendingPins.map(p=>({lat:p.lat,lng:p.lng,hint}))})});
+      const res=await fetch("/api/wago-drops/admin/add-locations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({campaignId:selectedCampaign,locations:pendingPins.map(p=>({lat:p.lat,lng:p.lng,hint})),_adminSecret:adminSecret})});
       const data=await res.json();
       if(!res.ok)throw new Error(data.error||"Failed");
       setMsg({ok:true,text:`${pendingPins.length} pin${pendingPins.length!==1?"s":""} added.`});
@@ -168,13 +168,17 @@ export default function WagoAdminPage(){
   async function checkAuth(e){
     e.preventDefault();
     const res=await fetch("/api/wago-drops/admin/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({secret})});
-    if(res.ok){setAuthed(true);loadData();}
+    if(res.ok){setAuthed(true);loadData(secret);}
     else setAuthErr("Invalid admin secret");
   }
 
-  async function loadData(){
+  async function loadData(s){
+    const _s=s||secret;
     setDataLoading(true);
-    const [cRes,clRes]=await Promise.all([fetch("/api/wago-drops/admin/campaigns-all"),fetch("/api/wago-drops/admin/claims-all")]);
+    const [cRes,clRes]=await Promise.all([
+      fetch(`/api/wago-drops/admin/campaigns-all?_s=${encodeURIComponent(_s)}`),
+      fetch(`/api/wago-drops/admin/claims-all?_s=${encodeURIComponent(_s)}`)
+    ]);
     const [cData,clData]=await Promise.all([cRes.json(),clRes.json()]);
     setCampaigns(cData.campaigns||[]);setClaims(clData.claims||[]);
     setDataLoading(false);
@@ -223,7 +227,7 @@ export default function WagoAdminPage(){
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:32}}>
                   <div>
                     <h3 style={{margin:"0 0 16px",color:T.white}}>Create Campaign</h3>
-                    <CreateCampaignForm onCreated={c=>{setCampaigns(prev=>[c,...prev]);}}/>
+                    <CreateCampaignForm adminSecret={secret} onCreated={c=>{setCampaigns(prev=>[c,...prev]);}}/>
                   </div>
                   <div>
                     <h3 style={{margin:"0 0 16px",color:T.white}}>All Campaigns</h3>
@@ -243,7 +247,7 @@ export default function WagoAdminPage(){
                   </div>
                 </div>
               )}
-              {tab==="Place Pins"&&<PinPlacer campaigns={campaigns.filter(c=>c.status==="active"||c.status==="draft")}/>}
+              {tab==="Place Pins"&&<PinPlacer campaigns={campaigns.filter(c=>c.status==="active"||c.status==="draft")} adminSecret={secret}/>}
               {tab==="Claims"&&(
                 <>
                   <h3 style={{margin:"0 0 16px",color:T.white}}>All Claims</h3>
