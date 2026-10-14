@@ -1,6 +1,6 @@
 // pages/api/wago-drops/save.js
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../api/auth/[...nextauth]";
+import { authOptions } from "../../auth/[...nextauth]";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(

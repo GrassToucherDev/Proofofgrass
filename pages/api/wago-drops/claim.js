@@ -1,6 +1,6 @@
 // pages/api/wago-drops/claim.js
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../api/auth/[...nextauth]";
+import { authOptions } from "../../auth/[...nextauth]";
 import { createClient } from "@supabase/supabase-js";
 import { Connection, PublicKey, Keypair } from "@solana/web3.js";
 import { getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
