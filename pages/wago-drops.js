@@ -225,6 +225,58 @@ function MapView({ session, linkedWallet }) {
   const [claiming, setClaiming] = useState(false);
   const [claimMsg, setClaimMsg] = useState(null);   // { ok, text }
 
+  // ── Fetch drops visible in current map bounds ───────────────────────────────
+  const fetchDropsInView = useCallback(async (map) => {
+    if (!map) return;
+    const bounds = map.getBounds();
+    try {
+      const res = await fetch(
+       `/api/wago-drops/locations?swLat=${bounds.getSouth()}&swLng=${bounds.getWest()}&neLat=${bounds.getNorth()}&neLng=${bounds.getEast()}${userPos ? `&userLat=${userPos.lat}&userLng=${userPos.lng}` : ""}`
+      );
+      const data = await res.json();
+      if (!res.ok) return;
+      setDrops(data.locations || []);
+      updateMapMarkers(map, data.locations || []);
+    } catch (e) {
+      console.error("fetchDropsInView error:", e);
+    }
+  }, [userPos]);
+
+  // ── Add/update markers on the map ──────────────────────────────────────────
+  const markersRef = useRef({});
+  const updateMapMarkers = useCallback((map, locations) => {
+    if (!map || !window.mapboxgl) return;
+    // Remove stale
+    Object.keys(markersRef.current).forEach(id => {
+      if (!locations.find(l => l.id === id)) {
+        markersRef.current[id].remove();
+        delete markersRef.current[id];
+      }
+    });
+    // Add new
+    locations.forEach(loc => {
+      if (markersRef.current[loc.id]) return;
+      const el = document.createElement("div");
+      el.style.cssText = `
+        width:32px;height:32px;border-radius:50%;
+        background:${T.olive};border:2px solid #fff;
+        display:flex;align-items:center;justify-content:center;
+        font-size:16px;cursor:pointer;
+        box-shadow:0 2px 8px rgba(0,0,0,0.4);
+      `;
+      el.textContent = "📦";
+      el.title = loc.hint || "Drop";
+      el.addEventListener("click", () => setSelected(loc));
+
+      import("mapbox-gl").then(({ default: mapboxgl }) => {
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([loc.lng, loc.lat])
+          .addTo(map);
+        markersRef.current[loc.id] = marker;
+      });
+    });
+  }, []);
+
   // ── Load Mapbox + init map ──────────────────────────────────────────────────
   useEffect(() => {
     let map;
@@ -272,57 +324,10 @@ function MapView({ session, linkedWallet }) {
     return () => map?.remove();
   }, []);
 
-  // ── Fetch drops visible in current map bounds ───────────────────────────────
-  const fetchDropsInView = useCallback(async (map) => {
-    if (!map) return;
-    const bounds = map.getBounds();
-    try {
-      const res = await fetch(
-       `/api/wago-drops/locations?swLat=${bounds.getSouth()}&swLng=${bounds.getWest()}&neLat=${bounds.getNorth()}&neLng=${bounds.getEast()}${userPos ? `&userLat=${userPos.lat}&userLng=${userPos.lng}` : ""}`
-      );
-      const data = await res.json();
-      if (!res.ok) return;
-      setDrops(data.locations || []);
-      updateMapMarkers(map, data.locations || []);
-    } catch (e) {
-      console.error("fetchDropsInView error:", e);
-    }
-  }, []);
-
-  // ── Add/update markers on the map ──────────────────────────────────────────
-  const markersRef = useRef({});
-  const updateMapMarkers = useCallback((map, locations) => {
-    if (!map || !window.mapboxgl) return;
-    // Remove stale
-    Object.keys(markersRef.current).forEach(id => {
-      if (!locations.find(l => l.id === id)) {
-        markersRef.current[id].remove();
-        delete markersRef.current[id];
-      }
-    });
-    // Add new
-    locations.forEach(loc => {
-      if (markersRef.current[loc.id]) return;
-      const el = document.createElement("div");
-      el.style.cssText = `
-        width:32px;height:32px;border-radius:50%;
-        background:${T.olive};border:2px solid #fff;
-        display:flex;align-items:center;justify-content:center;
-        font-size:16px;cursor:pointer;
-        box-shadow:0 2px 8px rgba(0,0,0,0.4);
-      `;
-      el.textContent = "📦";
-      el.title = loc.hint || "Drop";
-      el.addEventListener("click", () => setSelected(loc));
-
-      import("mapbox-gl").then(({ default: mapboxgl }) => {
-        const marker = new mapboxgl.Marker({ element: el })
-          .setLngLat([loc.lng, loc.lat])
-          .addTo(map);
-        markersRef.current[loc.id] = marker;
-      });
-    });
-  }, []);
+  // ── Re-fetch drops when user location becomes available ─────────────────────
+  useEffect(() => {
+    if (userPos && mapRef.current) fetchDropsInView(mapRef.current);
+  }, [userPos, fetchDropsInView]);
 
   // ── Claim handler ───────────────────────────────────────────────────────────
   async function handleClaim(locationId) {
@@ -526,7 +531,6 @@ export default function WagoDropsPage() {
         ) : (
           <MapView session={session} linkedWallet={linkedWallet} />
         )}
-
 
       </div>
     </>
