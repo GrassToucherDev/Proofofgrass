@@ -2,9 +2,6 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { createClient } from "@supabase/supabase-js";
-import { Connection, PublicKey, Keypair } from "@solana/web3.js";
-import { getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
-import bs58 from "bs58";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -108,7 +105,7 @@ export default async function handler(req, res) {
       reward_metadata:      campaign.reward_metadata,
       proof_bonus_applied:  proofBonusApplied,
       proof_bonus_amount:   proofBonusApplied ? campaign.proof_bonus_amount : null,
-      status:               "processing",
+      status:               "pending_transfer",
       claimed_lat:          userLat,
       claimed_lng:          userLng,
     })
@@ -123,38 +120,10 @@ export default async function handler(req, res) {
   // Increment claim count
   await supabase.rpc("increment_wago_claim_count", { loc_id: locationId });
 
-  // Send SPL token reward
-  let txSignature = null;
-  try {
-    const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com", "confirmed");
-    const treasuryKeypair = Keypair.fromSecretKey(bs58.decode(process.env.WAGO_DROPS_TREASURY_WALLET));
-    const mintPubkey = new PublicKey(campaign.reward_token_mint);
-    const recipientPubkey = new PublicKey(account.linked_wallet);
-
-    const fromATA = await getOrCreateAssociatedTokenAccount(connection, treasuryKeypair, mintPubkey, treasuryKeypair.publicKey);
-    const toATA = await getOrCreateAssociatedTokenAccount(connection, treasuryKeypair, mintPubkey, recipientPubkey);
-
-    const amount = BigInt(Math.round(Number(campaign.reward_amount) * 1e6));
-    txSignature = await transfer(connection, treasuryKeypair, fromATA.address, toATA.address, treasuryKeypair, amount);
-
-    // Send proof bonus
-    if (proofBonusApplied) {
-      const bonusAmount = BigInt(Math.round(Number(campaign.proof_bonus_amount) * 1e6));
-      const bonusTx = await transfer(connection, treasuryKeypair, fromATA.address, toATA.address, treasuryKeypair, bonusAmount);
-      await supabase.from("wago_drop_proof_bonuses").insert({
-        claim_id: claim.id, google_id: googleId,
-        wallet_address: account.linked_wallet,
-        bonus_amount: campaign.proof_bonus_amount,
-        tx_signature: bonusTx,
-      });
-    }
-
-    await supabase.from("wago_drop_claims").update({ tx_signature: txSignature, status: "completed" }).eq("id", claim.id);
-  } catch (txErr) {
-    console.error("[wago-drops/claim] TX error:", txErr);
-    await supabase.from("wago_drop_claims").update({ status: "failed" }).eq("id", claim.id);
-    return res.status(200).json({ ok: true, message: "Claim recorded. Reward delivery pending — contact support if not received within 24h.", tx: null });
-  }
-
-  return res.status(200).json({ ok: true, message: "Drop claimed! Reward sent.", tx: txSignature });
+  return res.status(200).json({
+    ok: true,
+    message: "Drop claimed! Reward will be sent to your wallet shortly.",
+    claimId: claim.id,
+    tx: null,
+  });
 }
