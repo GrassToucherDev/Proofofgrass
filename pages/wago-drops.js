@@ -495,12 +495,17 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         }
       });
       geolocate.on("error", (e) => {
+        // Only show the error if we never got a successful fix.
+        // A spurious error can fire right after trigger() before the control
+        // is fully ready — even when the user has already granted permission.
+        if (hasFlewToUser.current) return;
         // code 1 = permission denied, code 2 = unavailable, code 3 = timeout
         if (e.code === 1) {
           setLocError("location_denied");
-        } else {
+        } else if (e.code === 2) {
           setLocError("location_unavailable");
         }
+        // Ignore code 3 (timeout) — GPS can be slow on first load, let it keep trying
       });
       geolocateRef.current = geolocate;
       map.addControl(geolocate, "top-right");
@@ -510,9 +515,9 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         if (flyToCoords) {
           map.flyTo({ center: [flyToCoords.lng, flyToCoords.lat], zoom: 16, duration: 1500 });
         } else {
-          // Auto-trigger geolocation on load so the permission prompt fires immediately
-          // and the map centers on the user without them having to tap the button
-          setTimeout(() => geolocate.trigger(), 500);
+          // Auto-trigger geolocation — delay gives the control time to fully init
+          // before we call trigger(), avoiding a spurious error event
+          setTimeout(() => geolocate.trigger(), 1000);
         }
       });
       map.on("moveend", () => fetchDropsInView(map));
