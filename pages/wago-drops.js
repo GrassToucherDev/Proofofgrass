@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
+import { useRouter } from "next/router";
 
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -216,7 +217,7 @@ function WalletLinkView({ googleId, onLinked }) {
 }
 
 // ─── Full map view (signed in + wallet linked) ────────────────────────────────
-function MapView({ session, linkedWallet }) {
+function MapView({ session, linkedWallet, flyToCoords }) {
   const mapContainer = useRef(null);
   const mapRef       = useRef(null);
   const [userPos,  setUserPos]  = useState(null);   // { lat, lng }
@@ -284,11 +285,17 @@ function MapView({ session, linkedWallet }) {
       import("mapbox-gl/dist/mapbox-gl.css").catch(() => {});
       mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
+      // If flyToCoords provided, start centered there at street level
+      const initialCenter = flyToCoords
+        ? [flyToCoords.lng, flyToCoords.lat]
+        : [-98.5795, 39.8283];
+      const initialZoom = flyToCoords ? 16 : 4;
+
       map = new mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/dark-v11",
-        center: [-98.5795, 39.8283], // default center USA
-        zoom: 4,
+        center: initialCenter,
+        zoom: initialZoom,
       });
 
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
@@ -308,6 +315,14 @@ function MapView({ session, linkedWallet }) {
       map.on("load", () => {
         mapRef.current = map;
         fetchDropsInView(map);
+        // Fly to saved drop coordinates if provided
+        if (flyToCoords) {
+          map.flyTo({
+            center: [flyToCoords.lng, flyToCoords.lat],
+            zoom: 16,
+            duration: 1500,
+          });
+        }
       });
 
       map.on("moveend", () => fetchDropsInView(map));
@@ -482,6 +497,16 @@ export default function WagoDropsPage() {
   const { data: session, status } = useSession();
   const [linkedWallet, setLinkedWallet] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
+  const router = useRouter();
+
+  // Parse ?flyTo=LAT,LNG — used to fly map to a saved drop's location
+  const flyToCoords = (() => {
+    const param = router.query.flyTo;
+    if (!param) return null;
+    const [lat, lng] = String(param).split(",").map(Number);
+    if (isNaN(lat) || isNaN(lng)) return null;
+    return { lat, lng };
+  })();
 
   // Load wallet from DB once signed in
   useEffect(() => {
@@ -521,7 +546,7 @@ export default function WagoDropsPage() {
             onLinked={setLinkedWallet}
           />
         ) : (
-          <MapView session={session} linkedWallet={linkedWallet} />
+          <MapView session={session} linkedWallet={linkedWallet} flyToCoords={flyToCoords} />
         )}
 
       </div>

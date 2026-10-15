@@ -31,6 +31,13 @@ export default function WagoDropsSaved() {
     setSaves(prev => prev.filter(s => s.location_id !== locationId));
   }
 
+  function mapLink(s) {
+    if (s.lat != null && s.lng != null) {
+      return `/wago-drops?flyTo=${s.lat},${s.lng}`;
+    }
+    return "/wago-drops";
+  }
+
   return (
     <>
       <Head><title>Saved Drops — WAGO</title></Head>
@@ -62,7 +69,7 @@ export default function WagoDropsSaved() {
                     {s.hint && <div style={{ fontSize: 12, color: T.olive, marginTop: 4 }}>💡 {s.hint}</div>}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-                    <Link href="/wago-drops" style={{ fontSize: 12, color: T.olive, textDecoration: "none", background: "rgba(147,168,90,0.12)", borderRadius: 6, padding: "4px 10px" }}>Find on map</Link>
+                    <Link href={mapLink(s)} style={{ fontSize: 12, color: T.olive, textDecoration: "none", background: "rgba(147,168,90,0.12)", borderRadius: 6, padding: "4px 10px" }}>Find on map</Link>
                     <button onClick={() => unsave(s.location_id)} style={{ fontSize: 11, color: T.dim, background: "none", border: `1px solid ${T.border}`, borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>Remove</button>
                   </div>
                 </div>
