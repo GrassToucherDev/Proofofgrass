@@ -164,6 +164,8 @@ function ClaimsTicker({ onSelectDrop }) {
   return (
     <div style={{
       height: 36,
+      width: "100%",
+      minWidth: 0,
       background: "rgba(8,10,6,0.88)",
       backdropFilter: "blur(8px)",
       borderTop: `1px solid rgba(147,168,90,0.15)`,
@@ -910,8 +912,8 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         </div>
 
         {/* ── Map + ticker + detail panels ── */}
-        <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column" }}>
-          <div className="map-container" ref={mapContainer} style={{ flex: 1 }} />
+        <div style={{ flex: 1, minWidth: 0, position: "relative", display: "flex", flexDirection: "column" }}>
+          <div className="map-container" ref={mapContainer} style={{ flex: 1, minWidth: 0 }} />
 
           {/* Location permission error banner */}
           {locError && (
