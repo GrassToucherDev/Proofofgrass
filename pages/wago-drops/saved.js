@@ -203,7 +203,7 @@ function SaveCard({ save, onUnsave, onGoToMap, removing }) {
           </Link>
         )}
         <button
-          onClick={() => onUnsave(save.id)}
+          onClick={() => onUnsave(save.id, save.location_id)}
           disabled={removing}
           style={{
             flex: 1, background: "none",
@@ -234,13 +234,13 @@ export default function SavedDrops() {
       .catch(() => setLoading(false));
   }, [session]);
 
-  async function handleUnsave(saveId) {
+  async function handleUnsave(saveId, locationId) {
     setRemoving(saveId);
     try {
       await fetch("/api/wago-drops/save", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ saveId }),
+        body: JSON.stringify({ locationId }),
       });
       setSaves(prev => prev.filter(s => s.id !== saveId));
     } catch {}
@@ -251,7 +251,7 @@ export default function SavedDrops() {
     router.push(`/wago-drops?flyTo=${save.lat},${save.lng}`);
   }
 
-  const active   = saves.filter(s => s.campaign_status === "active" && (!s.ends_at || new Date(s.ends_at) > Date.now()) && (!s.max_claims || s.claim_count < s.max_claims));
+  const active   = saves.filter(s => (!s.ends_at || new Date(s.ends_at) > Date.now()) && (!s.max_claims || s.claim_count < s.max_claims));
   const inactive = saves.filter(s => !active.includes(s));
 
   return (
