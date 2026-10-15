@@ -689,8 +689,19 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         }
       });
       map.on("moveend", () => fetchDropsInView(map));
+
+      // Keep the canvas and controls in sync whenever the container's size
+      // changes (e.g. the claims ticker popping in/out shrinks the map).
+      const resizeObserver = new ResizeObserver(() => {
+        map.resize();
+      });
+      resizeObserver.observe(mapContainer.current);
+      map._touchgrassResizeObserver = resizeObserver;
     });
-    return () => map?.remove();
+    return () => {
+      map?._touchgrassResizeObserver?.disconnect();
+      map?.remove();
+    };
   }, []);
 
   useEffect(() => {
