@@ -56,9 +56,10 @@ function WagoNav({ session }) {
         {session && (
           <div style={{ display: "flex", gap: 4 }}>
             {[
-              { href: "/wago-drops/list",     label: "Explore" },
-              { href: "/wago-drops/saved",    label: "Saved"   },
-              { href: "/wago-drops/my-drops", label: "My Drops"},
+              { href: "/wago-drops/list",     label: "Explore"  },
+              { href: "/wago-drops/saved",    label: "Saved"    },
+              { href: "/wago-drops/my-drops", label: "My Drops" },
+              { href: "/wago-drops/settings", label: "Settings" },
             ].map(({ href, label }) => (
               <Link key={href} href={href} style={{
                 fontSize: 12, color: T.muted, textDecoration: "none",
