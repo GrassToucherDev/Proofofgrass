@@ -235,6 +235,7 @@ export default function SavedDrops() {
   }, [session]);
 
   async function handleUnsave(saveId, locationId) {
+    console.log("removing saveId:", saveId, "locationId:", locationId, "saves ids:", saves.map(s => s.id));
     setRemoving(saveId);
     try {
       const res = await fetch("/api/wago-drops/save", {
