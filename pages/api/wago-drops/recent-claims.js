@@ -54,6 +54,7 @@ export default async function handler(req, res) {
     .select(`
       id,
       claimed_at,
+      google_id,
       wago_drop_locations (
         id,
         lat,
@@ -63,6 +64,9 @@ export default async function handler(req, res) {
           reward_type,
           reward_amount
         )
+      ),
+      wago_google_accounts!wago_drop_claims_google_id_fkey (
+        display_name
       )
     `)
     .order("claimed_at", { ascending: false })
@@ -86,7 +90,8 @@ export default async function handler(req, res) {
     const campaign = loc?.wago_drop_campaigns;
     const locLabel = loc ? geoCache.get(loc.id) ?? null : null;
 
-    const username = "Someone";
+    const rawName  = c.wago_google_accounts?.display_name || null;
+    const username = rawName ? rawName.split(" ")[0] : "Someone";
 
     return {
       id:            c.id,
