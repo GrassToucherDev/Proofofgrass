@@ -34,8 +34,8 @@ export default async function handler(req, res) {
     const { error } = await supabase
       .from("wago_drop_saves")
       .delete()
-      .eq("id", locationId)
-      .eq("google_id", session.user.google_id); // ensure ownership
+      .eq("location_id", locationId)        // ← fixed: was .eq("id", locationId)
+      .eq("google_id", session.user.google_id);
 
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json({ ok: true });
