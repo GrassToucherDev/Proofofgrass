@@ -272,16 +272,16 @@ function ClaimsTicker({ onSelectDrop }) {
       {/* 24h stat pinned right */}
       {total24h != null && (
         <div style={{
-          position: "absolute", right: 0, top: 0, bottom: 0, zIndex: 3,
+          position: "absolute", right: 0, top: 0, bottom: 0, zIndex: 10,
           display: "flex", alignItems: "center",
           background: "rgba(8,10,6,0.98)",
-          borderLeft: `1px solid rgba(147,168,90,0.12)`,
-          padding: "0 12px",
-          gap: 4,
-          pointerEvents: "none",
+          borderLeft: `1px solid rgba(147,168,90,0.2)`,
+          padding: "0 14px",
+          gap: 5,
+          flexShrink: 0,
         }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: T.olive }}>{total24h.toLocaleString()}</span>
-          <span style={{ fontSize: 9, color: T.dim, textTransform: "uppercase", letterSpacing: "0.08em" }}>24h</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: T.olive }}>{total24h.toLocaleString()}</span>
+          <span style={{ fontSize: 9, color: T.dim, textTransform: "uppercase", letterSpacing: "0.08em" }}>claims<br/>24h</span>
         </div>
       )}
     </div>
