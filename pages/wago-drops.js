@@ -382,8 +382,14 @@ function MapView({ session, linkedWallet, flyToCoords }) {
   const [saving,       setSaving]       = useState(false);
   const [saveMsg,      setSaveMsg]      = useState(null);
   const [locError,     setLocError]     = useState(null);
+  const [geoLog,       setGeoLog]       = useState([]);
   const hasFlewToUser  = useRef(false);
   const geolocateRef   = useRef(null);
+
+  function geoAppend(msg) {
+    const ts = new Date().toISOString().slice(11, 23);
+    setGeoLog(prev => [`${ts} ${msg}`, ...prev].slice(0, 20));
+  }
 
   // ── Fetch drops visible in current map bounds ───────────────────────────────
   const fetchDropsInView = useCallback(async (map) => {
@@ -482,26 +488,40 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
       const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: false,   // simpler one-shot mode, no motion API needed
-        showUserHeading: false,     // removes the DeviceOrientation permission prompt
+        trackUserLocation: false,
+        showUserHeading: false,
         fitBoundsOptions: { zoom: 15, duration: 1200 },
       });
       geolocate.on("geolocate", (e) => {
         const { latitude: lat, longitude: lng } = e.coords;
+        geoAppend(`✅ geolocate lat=${lat.toFixed(5)} lng=${lng.toFixed(5)}`);
         setLocError(null);
         setUserPos({ lat, lng });
         hasFlewToUser.current = true;
-        // fly to user manually since trackUserLocation is off
         map.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
       });
+      geolocate.on("trackuserlocationstart", () => geoAppend("trackstart"));
+      geolocate.on("trackuserlocationend",   () => geoAppend("trackend"));
       geolocate.on("error", (e) => {
+        geoAppend(`❌ error code=${e.code} msg=${e.message}`);
         if (e.code === 1) setLocError("location_denied");
         else if (e.code === 2) setLocError("location_unavailable");
-        // Ignore code 3 (timeout) — GPS is just slow, let it keep trying
       });
+
+      // Also probe navigator.geolocation directly to isolate Mapbox vs browser
+      if (navigator.geolocation) {
+        geoAppend("navigator.geolocation exists");
+        navigator.permissions?.query({ name: "geolocation" }).then(result => {
+          geoAppend(`permission state: ${result.state}`);
+          result.onchange = () => geoAppend(`permission changed: ${result.state}`);
+        }).catch(err => geoAppend(`permissions API err: ${err.message}`));
+      } else {
+        geoAppend("❌ navigator.geolocation MISSING");
+      }
       geolocateRef.current = geolocate;
       map.addControl(geolocate, "top-right");
       map.on("load", () => {
+        geoAppend("map loaded");
         mapRef.current = map;
         fetchDropsInView(map);
         if (flyToCoords) {
@@ -695,6 +715,22 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         {/* ── Map + detail panel ──────────────────────────────────────────── */}
         <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column" }}>
           <div className="map-container" ref={mapContainer} style={{ flex: 1 }} />
+
+          {/* ── GEO DEBUG PANEL (remove before prod) ── */}
+          <div style={{
+            position: "absolute", bottom: 8, left: 8, zIndex: 30,
+            background: "rgba(0,0,0,0.85)", borderRadius: 8,
+            padding: "8px 10px", maxWidth: 320, maxHeight: 200,
+            overflowY: "auto", fontFamily: "monospace", fontSize: 11,
+            color: "#4ade80", pointerEvents: "none",
+            border: "1px solid rgba(74,222,128,0.3)",
+          }}>
+            <div style={{ color: "#fbbf24", marginBottom: 4, fontWeight: 700 }}>GEO DEBUG</div>
+            {geoLog.length === 0
+              ? <div style={{ color: "#666" }}>waiting… tap locate button</div>
+              : geoLog.map((line, i) => <div key={i}>{line}</div>)
+            }
+          </div>
 
           {/* Location permission error banner */}
           {locError && (
