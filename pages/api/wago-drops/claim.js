@@ -32,20 +32,25 @@ export default async function handler(req, res) {
 
   const googleId = session.user.google_id;
 
-  // Load location + campaign
+  // Load location
   const { data: loc, error: locErr } = await supabase
     .from("wago_drop_locations")
-    .select(`id, lat, lng, max_claims, claim_count, campaign_id,
-             wago_drop_campaigns ( id, name, status, starts_at, ends_at,
-               reward_type, reward_amount, reward_token_mint, reward_metadata,
-               proof_bonus_enabled, proof_bonus_amount, claim_radius_m )`)
+    .select("id, lat, lng, max_claims, claim_count, campaign_id")
     .eq("id", locationId)
     .eq("is_active", true)
     .single();
 
   if (locErr || !loc) return res.status(404).json({ error: "Drop not found" });
 
-  const campaign = loc.wago_drop_campaigns;
+  // Load campaign separately
+  const { data: campaign, error: campErr } = await supabase
+    .from("wago_drop_campaigns")
+    .select("id, name, status, starts_at, ends_at, reward_type, reward_amount, reward_token_mint, reward_metadata, proof_bonus_enabled, proof_bonus_amount, claim_radius_m")
+    .eq("id", loc.campaign_id)
+    .single();
+
+  if (campErr || !campaign) return res.status(404).json({ error: "Campaign not found" });
+
   if (campaign.status !== "active") return res.status(400).json({ error: "Campaign is not active" });
   if (campaign.ends_at && new Date(campaign.ends_at) < new Date()) return res.status(400).json({ error: "Campaign has ended" });
 
