@@ -105,7 +105,7 @@ export default async function handler(req, res) {
       reward_metadata:      campaign.reward_metadata,
       proof_bonus_applied:  proofBonusApplied,
       proof_bonus_amount:   proofBonusApplied ? campaign.proof_bonus_amount : null,
-      status:               "pending_transfer",
+      status:               "pending",
       claimed_lat:          userLat,
       claimed_lng:          userLng,
     })
