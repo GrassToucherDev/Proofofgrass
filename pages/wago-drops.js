@@ -381,6 +381,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
   const [claimMsg,     setClaimMsg]     = useState(null);
   const [saving,       setSaving]       = useState(false);
   const [saveMsg,      setSaveMsg]      = useState(null);
+  const [locError,     setLocError]     = useState(null);
   const hasFlewToUser  = useRef(false);
   const geolocateRef   = useRef(null);
 
@@ -486,11 +487,19 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       });
       geolocate.on("geolocate", (e) => {
         const { latitude: lat, longitude: lng } = e.coords;
+        setLocError(null);
         setUserPos({ lat, lng });
-        // First fix: fly to user if we haven't already (and no explicit flyTo target)
         if (!hasFlewToUser.current && !flyToCoords && mapRef.current) {
           hasFlewToUser.current = true;
           mapRef.current.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
+        }
+      });
+      geolocate.on("error", (e) => {
+        // code 1 = permission denied, code 2 = unavailable, code 3 = timeout
+        if (e.code === 1) {
+          setLocError("location_denied");
+        } else {
+          setLocError("location_unavailable");
         }
       });
       geolocateRef.current = geolocate;
@@ -693,6 +702,35 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         {/* ── Map + detail panel ──────────────────────────────────────────── */}
         <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column" }}>
           <div className="map-container" ref={mapContainer} style={{ flex: 1 }} />
+
+          {/* Location permission error banner */}
+          {locError && (
+            <div style={{
+              position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)",
+              zIndex: 20, maxWidth: 340, width: "calc(100% - 32px)",
+              background: "rgba(8,10,6,0.92)", backdropFilter: "blur(8px)",
+              border: `1px solid rgba(251,191,36,0.3)`,
+              borderRadius: 10, padding: "12px 16px",
+              display: "flex", alignItems: "flex-start", gap: 10,
+              animation: "fadeIn 0.2s ease",
+            }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>📍</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#fbbf24", marginBottom: 3 }}>
+                  Location access blocked
+                </div>
+                <div style={{ fontSize: 12, color: "rgba(240,239,234,0.6)", lineHeight: 1.5 }}>
+                  {locError === "location_denied"
+                    ? "To find drops near you, enable location for this site in your browser or phone settings."
+                    : "Couldn't get your location. Check that location services are on and try again."}
+                </div>
+              </div>
+              <button
+                onClick={() => setLocError(null)}
+                style={{ background: "none", border: "none", color: "rgba(240,239,234,0.3)", fontSize: 18, cursor: "pointer", padding: 0, flexShrink: 0 }}
+              >×</button>
+            </div>
+          )}
 
           {/* Drop detail panel — slides up from bottom of map area */}
           {selected && (
