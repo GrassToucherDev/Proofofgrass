@@ -374,13 +374,15 @@ function WalletLinkView({ googleId, onLinked }) {
 function MapView({ session, linkedWallet, flyToCoords }) {
   const mapContainer = useRef(null);
   const mapRef       = useRef(null);
-  const [userPos,  setUserPos]  = useState(null);
-  const [drops,    setDrops]    = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [claiming, setClaiming] = useState(false);
-  const [claimMsg, setClaimMsg] = useState(null);
-  const [saving,   setSaving]   = useState(false);
-  const [saveMsg,  setSaveMsg]  = useState(null);
+  const [userPos,      setUserPos]      = useState(null);
+  const [drops,        setDrops]        = useState([]);
+  const [selected,     setSelected]     = useState(null);
+  const [claiming,     setClaiming]     = useState(false);
+  const [claimMsg,     setClaimMsg]     = useState(null);
+  const [saving,       setSaving]       = useState(false);
+  const [saveMsg,      setSaveMsg]      = useState(null);
+  const hasFlewToUser  = useRef(false);
+  const geolocateRef   = useRef(null);
 
   // ── Fetch drops visible in current map bounds ───────────────────────────────
   const fetchDropsInView = useCallback(async (map) => {
@@ -483,14 +485,25 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         showUserHeading: true,
       });
       geolocate.on("geolocate", (e) => {
-        setUserPos({ lat: e.coords.latitude, lng: e.coords.longitude });
+        const { latitude: lat, longitude: lng } = e.coords;
+        setUserPos({ lat, lng });
+        // First fix: fly to user if we haven't already (and no explicit flyTo target)
+        if (!hasFlewToUser.current && !flyToCoords && mapRef.current) {
+          hasFlewToUser.current = true;
+          mapRef.current.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
+        }
       });
+      geolocateRef.current = geolocate;
       map.addControl(geolocate, "top-right");
       map.on("load", () => {
         mapRef.current = map;
         fetchDropsInView(map);
         if (flyToCoords) {
           map.flyTo({ center: [flyToCoords.lng, flyToCoords.lat], zoom: 16, duration: 1500 });
+        } else {
+          // Auto-trigger geolocation on load so the permission prompt fires immediately
+          // and the map centers on the user without them having to tap the button
+          setTimeout(() => geolocate.trigger(), 500);
         }
       });
       map.on("moveend", () => fetchDropsInView(map));
