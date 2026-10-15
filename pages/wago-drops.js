@@ -211,8 +211,8 @@ function ClaimsTicker() {
             <div
               key={`${claim.id}-${i}`}
               style={{
-                display: "flex", alignItems: "center", gap: 7,
-                padding: "0 18px",
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "0 20px",
                 borderRight: `1px solid rgba(255,255,255,0.06)`,
                 whiteSpace: "nowrap",
                 flexShrink: 0,
@@ -221,17 +221,24 @@ function ClaimsTicker() {
               <img
                 src={rewardIconUrl(claim)}
                 alt=""
-                style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "contain", opacity: 0.85 }}
+                style={{ width: 14, height: 14, borderRadius: "50%", objectFit: "contain", opacity: 0.75 }}
                 onError={e => { e.currentTarget.style.display = "none"; }}
               />
+              <span style={{ fontSize: 11, color: T.white, fontWeight: 600 }}>
+                {claim.username || "Someone"}
+              </span>
+              <span style={{ fontSize: 11, color: T.dim }}>claimed</span>
               <span style={{ fontSize: 11, color: T.olive, fontWeight: 700 }}>
                 {amt > 0 ? `+${amt.toLocaleString()} ${ticker}` : ticker}
               </span>
-              <span style={{ fontSize: 11, color: T.muted }}>
-                {claim.campaign_name}
-              </span>
-              <span style={{ fontSize: 10, color: T.dim }}>
-                {timeAgo(claim.claimed_at)}
+              {claim.location && (
+                <>
+                  <span style={{ fontSize: 11, color: T.dim }}>·</span>
+                  <span style={{ fontSize: 11, color: T.muted }}>{claim.location}</span>
+                </>
+              )}
+              <span style={{ fontSize: 10, color: T.dim, marginLeft: 2 }}>
+                · {timeAgo(claim.claimed_at)}
               </span>
             </div>
           );
