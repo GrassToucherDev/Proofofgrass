@@ -484,17 +484,14 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true,
         showUserHeading: true,
+        // Let Mapbox fly to the user automatically on first fix
+        fitBoundsOptions: { zoom: 15, duration: 1200 },
       });
       geolocate.on("geolocate", (e) => {
         const { latitude: lat, longitude: lng } = e.coords;
         setLocError(null);
         setUserPos({ lat, lng });
-        // Fly to user on first fix — use the local `map` ref (always valid here)
-        // rather than mapRef.current which may not be set yet on slow mobile loads
-        if (!hasFlewToUser.current && !flyToCoords) {
-          hasFlewToUser.current = true;
-          map.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
-        }
+        hasFlewToUser.current = true;
       });
       geolocate.on("error", (e) => {
         if (e.code === 1) setLocError("location_denied");
