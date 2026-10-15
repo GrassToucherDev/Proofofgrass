@@ -64,15 +64,23 @@ export default async function handler(req, res) {
           reward_type,
           reward_amount
         )
-      ),
-      wago_google_accounts (
-        display_name
       )
     `)
     .order("claimed_at", { ascending: false })
     .limit(limit);
 
   if (error) return res.status(500).json({ error: error.message });
+
+  // Look up display names for unique google_ids
+  const googleIds = [...new Set((claims || []).map(c => c.google_id).filter(Boolean))];
+  const nameMap = {};
+  if (googleIds.length > 0) {
+    const { data: accounts } = await supabase
+      .from("wago_google_accounts")
+      .select("google_id, display_name")
+      .in("google_id", googleIds);
+    (accounts || []).forEach(a => { nameMap[a.google_id] = a.display_name; });
+  }
 
   // Geocode uncached locations (sequentially to respect rate limit)
   const seen = new Set();
@@ -90,7 +98,7 @@ export default async function handler(req, res) {
     const campaign = loc?.wago_drop_campaigns;
     const locLabel = loc ? geoCache.get(loc.id) ?? null : null;
 
-    const rawName  = c.wago_google_accounts?.display_name || null;
+    const rawName  = c.google_id ? nameMap[c.google_id] : null;
     const username = rawName ? rawName.split(" ")[0] : "Someone";
 
     return {
