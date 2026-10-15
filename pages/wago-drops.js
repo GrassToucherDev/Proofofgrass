@@ -489,23 +489,26 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         const { latitude: lat, longitude: lng } = e.coords;
         setLocError(null);
         setUserPos({ lat, lng });
-        if (!hasFlewToUser.current && !flyToCoords && mapRef.current) {
+        // Fly to user on first fix — use the local `map` ref (always valid here)
+        // rather than mapRef.current which may not be set yet on slow mobile loads
+        if (!hasFlewToUser.current && !flyToCoords) {
           hasFlewToUser.current = true;
-          mapRef.current.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
+          map.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
         }
       });
       geolocate.on("error", (e) => {
-        // Only show the error if we never got a successful fix.
-        // A spurious error can fire right after trigger() before the control
-        // is fully ready — even when the user has already granted permission.
-        if (hasFlewToUser.current) return;
-        // code 1 = permission denied, code 2 = unavailable, code 3 = timeout
-        if (e.code === 1) {
-          setLocError("location_denied");
-        } else if (e.code === 2) {
-          setLocError("location_unavailable");
+        // iOS Safari can fire a spurious error before the permission dialog resolves,
+        // then succeed moments later. Delay the banner so a fast-following success
+        // can cancel it. Only show for hard denials (code 1) or unavailable (code 2).
+        if (e.code === 1 || e.code === 2) {
+          setTimeout(() => {
+            // By now, if geolocation succeeded hasFlewToUser will be true — skip it
+            if (!hasFlewToUser.current) {
+              setLocError(e.code === 1 ? "location_denied" : "location_unavailable");
+            }
+          }, 2000);
         }
-        // Ignore code 3 (timeout) — GPS can be slow on first load, let it keep trying
+        // Ignore code 3 (timeout) — GPS is just slow, let it keep trying
       });
       geolocateRef.current = geolocate;
       map.addControl(geolocate, "top-right");
