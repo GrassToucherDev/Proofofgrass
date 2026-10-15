@@ -497,17 +497,8 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         }
       });
       geolocate.on("error", (e) => {
-        // iOS Safari can fire a spurious error before the permission dialog resolves,
-        // then succeed moments later. Delay the banner so a fast-following success
-        // can cancel it. Only show for hard denials (code 1) or unavailable (code 2).
-        if (e.code === 1 || e.code === 2) {
-          setTimeout(() => {
-            // By now, if geolocation succeeded hasFlewToUser will be true — skip it
-            if (!hasFlewToUser.current) {
-              setLocError(e.code === 1 ? "location_denied" : "location_unavailable");
-            }
-          }, 2000);
-        }
+        if (e.code === 1) setLocError("location_denied");
+        else if (e.code === 2) setLocError("location_unavailable");
         // Ignore code 3 (timeout) — GPS is just slow, let it keep trying
       });
       geolocateRef.current = geolocate;
@@ -517,10 +508,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         fetchDropsInView(map);
         if (flyToCoords) {
           map.flyTo({ center: [flyToCoords.lng, flyToCoords.lat], zoom: 16, duration: 1500 });
-        } else {
-          // Auto-trigger geolocation — delay gives the control time to fully init
-          // before we call trigger(), avoiding a spurious error event
-          setTimeout(() => geolocate.trigger(), 1000);
         }
       });
       map.on("moveend", () => fetchDropsInView(map));
