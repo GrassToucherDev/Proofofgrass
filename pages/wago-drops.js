@@ -245,7 +245,7 @@ function MapView({ session, linkedWallet }) {
   // ── Add/update markers on the map ──────────────────────────────────────────
   const markersRef = useRef({});
   const updateMapMarkers = useCallback((map, locations) => {
-    if (!map || !window.mapboxgl) return;
+  if (!map) return;
     // Remove stale
     Object.keys(markersRef.current).forEach(id => {
       if (!locations.find(l => l.id === id)) {
