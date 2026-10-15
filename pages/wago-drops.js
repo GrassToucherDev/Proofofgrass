@@ -26,6 +26,44 @@ const T = {
   red:     "#f87171",
 };
 
+// ─── Reward asset logos ───────────────────────────────────────────────────────
+// Swap TOUCHGRASS_LOGO_URL for your hosted asset once available
+const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png"; // put logo at public/images/touchgrass-token.png
+
+const REWARD_ICONS = {
+  touchgrass: TOUCHGRASS_LOGO_URL,
+  sol:        "https://cryptologos.cc/logos/solana-sol-logo.png",
+};
+
+// Returns the image URL for a drop's reward type
+function rewardIconUrl(drop) {
+  const type = (drop.reward_type || "").toLowerCase();
+  if (type === "sol") return REWARD_ICONS.sol;
+  // Default: assume $TOUCHGRASS for anything else (token, touchgrass, etc.)
+  return REWARD_ICONS.touchgrass;
+}
+
+// Creates a circular marker element with the reward logo inside
+function makeMarkerEl(drop) {
+  const el = document.createElement("div");
+  el.title = drop.hint || "Drop";
+  el.style.cssText = `
+    width:38px;height:38px;border-radius:50%;
+    overflow:hidden;cursor:pointer;
+    border:2.5px solid rgba(255,255,255,0.9);
+    box-shadow:0 2px 10px rgba(0,0,0,0.5);
+    transition:all 0.18s ease;
+    background:#0f1209;
+    display:flex;align-items:center;justify-content:center;
+  `;
+  const img = document.createElement("img");
+  img.src = rewardIconUrl(drop);
+  img.style.cssText = "width:26px;height:26px;object-fit:contain;border-radius:50%;";
+  img.onerror = () => { img.style.display = "none"; el.textContent = "📦"; };
+  el.appendChild(img);
+  return el;
+}
+
 // ─── Haversine distance (metres) — client-side only for the "you are here" ring
 function haversineM(lat1, lng1, lat2, lng2) {
   const R = 6371000;
@@ -414,20 +452,19 @@ function MapView({ session, linkedWallet, flyToCoords }) {
   }, [selected]);
 
   function applyMarkerStyle(el, isActive) {
-    el.style.cssText = `
-      width:${isActive ? 42 : 34}px;
-      height:${isActive ? 42 : 34}px;
-      border-radius:50%;
-      background:${isActive ? "#fff" : T.olive};
-      border:${isActive ? `3px solid ${T.olive}` : "2.5px solid rgba(255,255,255,0.9)"};
-      display:flex;align-items:center;justify-content:center;
-      font-size:${isActive ? 20 : 16}px;
-      cursor:pointer;
-      box-shadow:${isActive ? `0 0 0 4px rgba(147,168,90,0.35), 0 4px 16px rgba(0,0,0,0.6)` : "0 2px 10px rgba(0,0,0,0.5)"};
-      transition:all 0.18s ease;
-      z-index:${isActive ? 10 : 1};
-      position:relative;
-    `;
+    const size = isActive ? 46 : 38;
+    el.style.width  = `${size}px`;
+    el.style.height = `${size}px`;
+    el.style.border = isActive
+      ? `3px solid ${T.olive}`
+      : "2.5px solid rgba(255,255,255,0.9)";
+    el.style.boxShadow = isActive
+      ? `0 0 0 4px rgba(147,168,90,0.35), 0 4px 16px rgba(0,0,0,0.6)`
+      : "0 2px 10px rgba(0,0,0,0.5)";
+    el.style.zIndex = isActive ? "10" : "1";
+    // Scale the inner image too
+    const img = el.querySelector("img");
+    if (img) img.style.width = img.style.height = isActive ? "32px" : "26px";
   }
 
   const updateMapMarkers = useCallback((map, locations) => {
@@ -440,10 +477,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     });
     locations.forEach(loc => {
       if (markersRef.current[loc.id]) return;
-      const el = document.createElement("div");
-      el.textContent = "📦";
-      el.title = loc.hint || "Drop";
-      applyMarkerStyle(el, false);
+      const el = makeMarkerEl(loc);
       el.addEventListener("mouseenter", () => {
         if (selected?.id !== loc.id) el.style.transform = "scale(1.12)";
       });
@@ -643,17 +677,24 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 11, color: T.olive, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>
-                          {drop.campaign_name || "Drop"}
-                        </div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: T.white, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {drop.hint || "Mystery Drop"}
-                        </div>
-                        <div style={{ fontSize: 12, color: T.olive, fontWeight: 600 }}>
-                          {drop.reward_amount
-                            ? `${Number(drop.reward_amount).toLocaleString()} $TOUCHGRASS`
-                            : drop.reward_type}
+                      <div style={{ display: "flex", gap: 10, flex: 1, minWidth: 0 }}>
+                        <img
+                          src={rewardIconUrl(drop)}
+                          style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, objectFit: "contain", background: T.bg, border: `1px solid ${T.border}` }}
+                          onError={e => { e.currentTarget.style.display = "none"; }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11, color: T.olive, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>
+                            {drop.campaign_name || "Drop"}
+                          </div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: T.white, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {drop.hint || "Mystery Drop"}
+                          </div>
+                          <div style={{ fontSize: 12, color: T.olive, fontWeight: 600 }}>
+                            {drop.reward_amount
+                              ? `${Number(drop.reward_amount).toLocaleString()} $TOUCHGRASS`
+                              : drop.reward_type}
+                          </div>
                         </div>
                       </div>
                       {dist !== null && (
