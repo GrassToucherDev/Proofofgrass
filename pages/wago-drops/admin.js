@@ -18,119 +18,336 @@ function Input({label,...props}){
   );
 }
 
-function CreateCampaignForm({onCreated,adminSecret}){
-  const MINT="5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
-  const [form,setForm]=useState({name:"",description:"",image_url:"",reward_type:"spl_token",reward_amount:"",reward_token_mint:MINT,reveal_radius_m:100,claim_radius_m:25,proof_bonus_enabled:false,proof_bonus_amount:"",starts_at:"",ends_at:""});
-  const [loading,setLoading]=useState(false);
-  const [msg,setMsg]=useState(null);
-  const set=(k,v)=>setForm(prev=>({...prev,[k]:v}));
+function Select({label,children,...props}){
+  return(
+    <label style={{display:"block",marginBottom:14}}>
+      <span style={{fontSize:11,color:T.dim,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:5}}>{label}</span>
+      <select style={{width:"100%",boxSizing:"border-box",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:T.white,outline:"none"}} {...props}>{children}</select>
+    </label>
+  );
+}
+
+const MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
+const BLANK_CAMPAIGN = {name:"",description:"",image_url:"",reward_type:"spl_token",reward_amount:"",reward_token_mint:MINT,reveal_radius_m:100,claim_radius_m:25,proof_bonus_enabled:false,proof_bonus_amount:"",starts_at:"",ends_at:"",status:"active"};
+
+function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
+  const [form, setForm] = useState(initial || BLANK_CAMPAIGN);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const set = (k,v) => setForm(prev=>({...prev,[k]:v}));
+
+  useEffect(()=>{ setForm(initial || BLANK_CAMPAIGN); },[initial]);
 
   async function submit(e){
-    e.preventDefault();setLoading(true);setMsg(null);
+    e.preventDefault(); setLoading(true); setMsg(null);
     try{
-      const res=await fetch("/api/wago-drops/admin/create-campaign",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,_adminSecret:adminSecret})});
-      const data=await res.json();
-      if(!res.ok)throw new Error(data.error||"Failed");
-      setMsg({ok:true,text:`Campaign "${data.campaign.name}" created (ID: ${data.campaign.id})`});
-      onCreated&&onCreated(data.campaign);
-    }catch(err){setMsg({ok:false,text:err.message});}finally{setLoading(false);}
+      const isEdit = !!initial?.id;
+      const url = isEdit ? "/api/wago-drops/admin/update-campaign" : "/api/wago-drops/admin/create-campaign";
+      const res = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,_adminSecret:adminSecret})});
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error||"Failed");
+      setMsg({ok:true,text:isEdit?"Campaign updated.":"Campaign created."});
+      onSave && onSave(data.campaign);
+    }catch(err){ setMsg({ok:false,text:err.message}); }
+    finally{ setLoading(false); }
   }
 
   return(
-    <form onSubmit={submit} style={{display:"flex",flexDirection:"column"}}>
+    <form onSubmit={submit}>
       <Input label="Campaign Name *" required value={form.name} onChange={e=>set("name",e.target.value)}/>
-      <Input label="Description" value={form.description} onChange={e=>set("description",e.target.value)}/>
-      <Input label="Image URL" value={form.image_url} onChange={e=>set("image_url",e.target.value)}/>
+      <Input label="Description" value={form.description||""} onChange={e=>set("description",e.target.value)}/>
+      <Input label="Image URL" value={form.image_url||""} onChange={e=>set("image_url",e.target.value)}/>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <Input label="Reward Amount *" type="number" required value={form.reward_amount} onChange={e=>set("reward_amount",e.target.value)}/>
-        <Input label="Token Mint" value={form.reward_token_mint} onChange={e=>set("reward_token_mint",e.target.value)}/>
+        <Input label="Token Mint" value={form.reward_token_mint||""} onChange={e=>set("reward_token_mint",e.target.value)}/>
         <Input label="Reveal Radius (m)" type="number" value={form.reveal_radius_m} onChange={e=>set("reveal_radius_m",Number(e.target.value))}/>
         <Input label="Claim Radius (m)" type="number" value={form.claim_radius_m} onChange={e=>set("claim_radius_m",Number(e.target.value))}/>
-        <Input label="Starts At (UTC)" type="datetime-local" value={form.starts_at} onChange={e=>set("starts_at",e.target.value)}/>
-        <Input label="Ends At (UTC)" type="datetime-local" value={form.ends_at} onChange={e=>set("ends_at",e.target.value)}/>
+        <Input label="Starts At (UTC)" type="datetime-local" value={form.starts_at||""} onChange={e=>set("starts_at",e.target.value)}/>
+        <Input label="Ends At (UTC)" type="datetime-local" value={form.ends_at||""} onChange={e=>set("ends_at",e.target.value)}/>
       </div>
+      <Select label="Status" value={form.status||"active"} onChange={e=>set("status",e.target.value)}>
+        <option value="active">Active</option>
+        <option value="draft">Draft</option>
+        <option value="paused">Paused</option>
+        <option value="ended">Ended</option>
+      </Select>
       <label style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,cursor:"pointer"}}>
-        <input type="checkbox" checked={form.proof_bonus_enabled} onChange={e=>set("proof_bonus_enabled",e.target.checked)}/>
+        <input type="checkbox" checked={!!form.proof_bonus_enabled} onChange={e=>set("proof_bonus_enabled",e.target.checked)}/>
         <span style={{fontSize:13,color:T.muted}}>Enable Proof of Grass bonus</span>
       </label>
-      {form.proof_bonus_enabled&&<Input label="Proof Bonus Amount" type="number" value={form.proof_bonus_amount} onChange={e=>set("proof_bonus_amount",e.target.value)}/>}
-      {msg&&<div style={{fontSize:13,color:msg.ok?T.green:T.red,marginBottom:12,padding:"8px 12px",background:msg.ok?"rgba(74,222,128,0.07)":"rgba(248,113,113,0.07)",borderRadius:8}}>{msg.text}</div>}
-      <button type="submit" disabled={loading} style={{background:T.olive,color:T.bg,border:"none",borderRadius:9,padding:"11px",fontSize:14,fontWeight:700,cursor:loading?"default":"pointer"}}>{loading?"Creating…":"Create Campaign"}</button>
+      {form.proof_bonus_enabled && <Input label="Proof Bonus Amount" type="number" value={form.proof_bonus_amount||""} onChange={e=>set("proof_bonus_amount",e.target.value)}/>}
+      {msg && <div style={{fontSize:13,color:msg.ok?T.green:T.red,marginBottom:12,padding:"8px 12px",background:msg.ok?"rgba(74,222,128,0.07)":"rgba(248,113,113,0.07)",borderRadius:8}}>{msg.text}</div>}
+      <button type="submit" disabled={loading} style={{width:"100%",background:T.olive,color:T.bg,border:"none",borderRadius:9,padding:"11px",fontSize:14,fontWeight:700,cursor:loading?"default":"pointer"}}>{loading?"Saving…":submitLabel}</button>
     </form>
   );
 }
 
-function PinPlacer({campaigns,adminSecret}){
-  const mapContainer=useRef(null);
-  const mapRef=useRef(null);
-  const [selectedCampaign,setSelectedCampaign]=useState("");
-  const [pendingPins,setPendingPins]=useState([]);
-  const [hint,setHint]=useState("");
-  const [saving,setSaving]=useState(false);
-  const [msg,setMsg]=useState(null);
+function CampaignsTab({campaigns, setCampaigns, adminSecret}){
+  const [editing, setEditing] = useState(null); // null = create mode, campaign obj = edit mode
+
+  function handleSave(updated){
+    if(editing){
+      setCampaigns(prev => prev.map(c => c.id === updated.id ? {...c,...updated} : c));
+      setEditing(null);
+    } else {
+      setCampaigns(prev => [updated, ...prev]);
+    }
+  }
+
+  return(
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:32}}>
+      <div>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+          <h3 style={{margin:0,color:T.white}}>{editing ? `Edit: ${editing.name}` : "Create Campaign"}</h3>
+          {editing && <button onClick={()=>setEditing(null)} style={{fontSize:12,color:T.dim,background:"none",border:`1px solid ${T.border}`,borderRadius:6,padding:"3px 10px",cursor:"pointer"}}>← New</button>}
+        </div>
+        <CampaignForm
+          key={editing?.id || "new"}
+          initial={editing}
+          onSave={handleSave}
+          adminSecret={adminSecret}
+          submitLabel={editing ? "Update Campaign" : "Create Campaign"}
+        />
+      </div>
+      <div>
+        <h3 style={{margin:"0 0 16px",color:T.white}}>All Campaigns</h3>
+        {campaigns.length === 0
+          ? <p style={{color:T.dim,fontSize:13}}>No campaigns yet.</p>
+          : (
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {campaigns.map(c=>(
+                <div key={c.id} style={{background:T.card,border:`1px solid ${editing?.id===c.id?T.olive:T.border}`,borderRadius:10,padding:"12px 16px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:600,color:T.white}}>{c.name}</div>
+                      <div style={{fontSize:11,color:T.dim,marginTop:2}}>{c.status} · {c.location_count??0} pins</div>
+                    </div>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <span style={{fontSize:11,color:T.olive,background:"rgba(147,168,90,0.12)",borderRadius:5,padding:"3px 8px"}}>{c.status}</span>
+                      <button onClick={()=>setEditing(c)} style={{fontSize:12,color:T.white,background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Edit</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        }
+      </div>
+    </div>
+  );
+}
+
+function PinManager({campaigns, adminSecret}){
+  const mapContainer = useRef(null);
+  const mapRef = useRef(null);
+  const markersRef = useRef([]);
+  const [selectedCampaign, setSelectedCampaign] = useState("");
+  const [mode, setMode] = useState("place"); // "place" | "manage"
+  const [pendingPins, setPendingPins] = useState([]);
+  const [hint, setHint] = useState("");
+  const [maxClaims, setMaxClaims] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const [locations, setLocations] = useState([]);
+  const [loadingLocs, setLoadingLocs] = useState(false);
+  const [editingPin, setEditingPin] = useState(null);
 
   useEffect(()=>{
     import("mapbox-gl").then(({default:mapboxgl})=>{
       import("mapbox-gl/dist/mapbox-gl.css").catch(()=>{});
-      mapboxgl.accessToken=process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-      const map=new mapboxgl.Map({container:mapContainer.current,style:"mapbox://styles/mapbox/satellite-streets-v12",center:[-98.5795,39.8283],zoom:4});
+      mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+      const map = new mapboxgl.Map({container:mapContainer.current,style:"mapbox://styles/mapbox/satellite-streets-v12",center:[-98.5795,39.8283],zoom:4});
       map.addControl(new mapboxgl.NavigationControl(),"top-right");
       map.addControl(new mapboxgl.GeolocateControl({positionOptions:{enableHighAccuracy:true}}),"top-right");
       map.on("click",(e)=>{
+        if(mode !== "place") return;
         const{lat,lng}=e.lngLat;
-        setPendingPins(prev=>[...prev,{lat,lng,hint:""}]);
+        setPendingPins(prev=>[...prev,{lat,lng}]);
         const el=document.createElement("div");
         el.style.cssText=`width:26px;height:26px;border-radius:50%;background:#f97316;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;`;
         el.textContent="📍";
         new mapboxgl.Marker({element:el}).setLngLat([lng,lat]).addTo(map);
       });
-      mapRef.current=map;
+      mapRef.current = map;
     });
     return()=>mapRef.current?.remove();
   },[]);
 
+  // Sync mode ref so map click handler sees current mode
+  const modeRef = useRef(mode);
+  useEffect(()=>{ modeRef.current = mode; },[mode]);
+
+  async function loadLocations(campId){
+    if(!campId) return;
+    setLoadingLocs(true);
+    const res = await fetch(`/api/wago-drops/admin/locations-by-campaign?campaignId=${campId}&_s=${encodeURIComponent(adminSecret)}`);
+    const data = await res.json();
+    setLocations(data.locations || []);
+    setLoadingLocs(false);
+
+    // Draw existing pins on map
+    markersRef.current.forEach(m=>m.remove());
+    markersRef.current = [];
+    if(mapRef.current){
+      (data.locations||[]).forEach(loc=>{
+        import("mapbox-gl").then(({default:mapboxgl})=>{
+          const el=document.createElement("div");
+          el.style.cssText=`width:22px;height:22px;border-radius:50%;background:${loc.is_active?"#93a85a":"#555"};border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;`;
+          el.textContent="📌";
+          const marker = new mapboxgl.Marker({element:el}).setLngLat([loc.lng,loc.lat]).addTo(mapRef.current);
+          markersRef.current.push(marker);
+        });
+      });
+    }
+  }
+
+  function onCampaignChange(id){
+    setSelectedCampaign(id);
+    setPendingPins([]);
+    setLocations([]);
+    setEditingPin(null);
+    if(id) loadLocations(id);
+  }
+
   async function savePins(){
-    if(!selectedCampaign||pendingPins.length===0)return;
-    setSaving(true);setMsg(null);
+    if(!selectedCampaign || pendingPins.length===0) return;
+    setSaving(true); setMsg(null);
     try{
-      const res=await fetch("/api/wago-drops/admin/add-locations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({campaignId:selectedCampaign,locations:pendingPins.map(p=>({lat:p.lat,lng:p.lng,hint})),_adminSecret:adminSecret})});
-      const data=await res.json();
-      if(!res.ok)throw new Error(data.error||"Failed");
+      const res = await fetch("/api/wago-drops/admin/add-locations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({campaignId:selectedCampaign,locations:pendingPins.map(p=>({lat:p.lat,lng:p.lng,hint:hint||null,max_claims:maxClaims||null})),_adminSecret:adminSecret})});
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error||"Failed");
       setMsg({ok:true,text:`${pendingPins.length} pin${pendingPins.length!==1?"s":""} added.`});
       setPendingPins([]);
-    }catch(err){setMsg({ok:false,text:err.message});}finally{setSaving(false);}
+      loadLocations(selectedCampaign);
+    }catch(err){ setMsg({ok:false,text:err.message}); }
+    finally{ setSaving(false); }
+  }
+
+  async function updatePin(e){
+    e.preventDefault();
+    setSaving(true); setMsg(null);
+    try{
+      const res = await fetch("/api/wago-drops/admin/update-location",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...editingPin,_adminSecret:adminSecret})});
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error||"Failed");
+      setMsg({ok:true,text:"Pin updated."});
+      setEditingPin(null);
+      loadLocations(selectedCampaign);
+    }catch(err){ setMsg({ok:false,text:err.message}); }
+    finally{ setSaving(false); }
+  }
+
+  async function deletePin(id){
+    if(!confirm("Delete this pin?")) return;
+    const res = await fetch("/api/wago-drops/admin/update-location",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,_adminSecret:adminSecret})});
+    if(res.ok){
+      setLocations(prev=>prev.filter(l=>l.id!==id));
+      setMsg({ok:true,text:"Pin deleted."});
+    }
   }
 
   return(
     <div>
-      <p style={{fontSize:13,color:T.muted,marginBottom:14}}>Click anywhere on the map to place a drop pin. Select the campaign below, then save.</p>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
         <label style={{display:"block"}}>
           <span style={{fontSize:11,color:T.dim,display:"block",marginBottom:5}}>CAMPAIGN *</span>
-          <select value={selectedCampaign} onChange={e=>setSelectedCampaign(e.target.value)} style={{width:"100%",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:T.white}}>
+          <select value={selectedCampaign} onChange={e=>onCampaignChange(e.target.value)} style={{width:"100%",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:T.white}}>
             <option value="">— select —</option>
             {campaigns.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
         <label style={{display:"block"}}>
-          <span style={{fontSize:11,color:T.dim,display:"block",marginBottom:5}}>HINT (optional)</span>
-          <input value={hint} onChange={e=>setHint(e.target.value)} placeholder="Revealed at 100m to the user" style={{width:"100%",boxSizing:"border-box",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:T.white}}/>
+          <span style={{fontSize:11,color:T.dim,display:"block",marginBottom:5}}>MODE</span>
+          <select value={mode} onChange={e=>setMode(e.target.value)} style={{width:"100%",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:T.white}}>
+            <option value="place">Place new pins</option>
+            <option value="manage">Manage existing pins</option>
+          </select>
         </label>
       </div>
-      <div ref={mapContainer} style={{width:"100%",height:360,borderRadius:10,marginBottom:12,overflow:"hidden"}}/>
-      <div style={{display:"flex",alignItems:"center",gap:14}}>
-        <span style={{fontSize:13,color:T.muted}}>{pendingPins.length} pin{pendingPins.length!==1?"s":""} placed</span>
-        <button onClick={()=>setPendingPins([])} disabled={!pendingPins.length} style={{fontSize:12,color:T.dim,background:"none",border:`1px solid ${T.border}`,borderRadius:7,padding:"5px 12px",cursor:"pointer"}}>Clear</button>
-        <button onClick={savePins} disabled={saving||!pendingPins.length||!selectedCampaign} style={{fontSize:13,color:T.bg,background:T.olive,border:"none",borderRadius:8,padding:"7px 18px",fontWeight:700,cursor:"pointer"}}>{saving?"Saving…":"Save Pins"}</button>
-      </div>
-      {msg&&<div style={{marginTop:10,fontSize:13,color:msg.ok?T.green:T.red}}>{msg.text}</div>}
+
+      {mode==="place" && (
+        <>
+          <p style={{fontSize:13,color:T.muted,marginBottom:12}}>Click the map to place pins. All pins in this batch share the same hint and max claims.</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+            <label style={{display:"block"}}>
+              <span style={{fontSize:11,color:T.dim,display:"block",marginBottom:5}}>HINT (optional)</span>
+              <input value={hint} onChange={e=>setHint(e.target.value)} placeholder="Revealed at reveal radius" style={{width:"100%",boxSizing:"border-box",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:T.white}}/>
+            </label>
+            <label style={{display:"block"}}>
+              <span style={{fontSize:11,color:T.dim,display:"block",marginBottom:5}}>MAX CLAIMS (blank = unlimited)</span>
+              <input type="number" value={maxClaims} onChange={e=>setMaxClaims(e.target.value)} placeholder="Unlimited" style={{width:"100%",boxSizing:"border-box",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:T.white}}/>
+            </label>
+          </div>
+        </>
+      )}
+
+      <div ref={mapContainer} style={{width:"100%",height:340,borderRadius:10,marginBottom:12,overflow:"hidden"}}/>
+
+      {mode==="place" && (
+        <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:12}}>
+          <span style={{fontSize:13,color:T.muted}}>{pendingPins.length} pin{pendingPins.length!==1?"s":""} placed</span>
+          <button onClick={()=>setPendingPins([])} disabled={!pendingPins.length} style={{fontSize:12,color:T.dim,background:"none",border:`1px solid ${T.border}`,borderRadius:7,padding:"5px 12px",cursor:"pointer"}}>Clear</button>
+          <button onClick={savePins} disabled={saving||!pendingPins.length||!selectedCampaign} style={{fontSize:13,color:T.bg,background:T.olive,border:"none",borderRadius:8,padding:"7px 18px",fontWeight:700,cursor:"pointer"}}>{saving?"Saving…":"Save Pins"}</button>
+        </div>
+      )}
+
+      {msg && <div style={{marginBottom:12,fontSize:13,color:msg.ok?T.green:T.red,padding:"8px 12px",background:msg.ok?"rgba(74,222,128,0.07)":"rgba(248,113,113,0.07)",borderRadius:8}}>{msg.text}</div>}
+
+      {mode==="manage" && selectedCampaign && (
+        <div>
+          {loadingLocs
+            ? <p style={{color:T.dim,fontSize:13}}>Loading pins…</p>
+            : locations.length===0
+              ? <p style={{color:T.dim,fontSize:13}}>No pins for this campaign.</p>
+              : (
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {locations.map(loc=>(
+                    <div key={loc.id} style={{background:T.card,border:`1px solid ${editingPin?.id===loc.id?T.olive:T.border}`,borderRadius:10,padding:"12px 16px"}}>
+                      {editingPin?.id===loc.id ? (
+                        <form onSubmit={updatePin}>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                            <Input label="Lat" type="number" step="any" value={editingPin.lat} onChange={e=>setEditingPin(p=>({...p,lat:e.target.value}))}/>
+                            <Input label="Lng" type="number" step="any" value={editingPin.lng} onChange={e=>setEditingPin(p=>({...p,lng:e.target.value}))}/>
+                            <Input label="Hint" value={editingPin.hint||""} onChange={e=>setEditingPin(p=>({...p,hint:e.target.value}))}/>
+                            <Input label="Max Claims (blank = unlimited)" type="number" value={editingPin.max_claims||""} onChange={e=>setEditingPin(p=>({...p,max_claims:e.target.value}))}/>
+                          </div>
+                          <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,cursor:"pointer"}}>
+                            <input type="checkbox" checked={!!editingPin.is_active} onChange={e=>setEditingPin(p=>({...p,is_active:e.target.checked}))}/>
+                            <span style={{fontSize:13,color:T.muted}}>Active</span>
+                          </label>
+                          <div style={{display:"flex",gap:8}}>
+                            <button type="submit" disabled={saving} style={{fontSize:13,color:T.bg,background:T.olive,border:"none",borderRadius:8,padding:"7px 16px",fontWeight:700,cursor:"pointer"}}>{saving?"Saving…":"Save"}</button>
+                            <button type="button" onClick={()=>setEditingPin(null)} style={{fontSize:13,color:T.muted,background:"none",border:`1px solid ${T.border}`,borderRadius:8,padding:"7px 16px",cursor:"pointer"}}>Cancel</button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{fontSize:13,color:T.white,fontFamily:"monospace"}}>{loc.lat.toFixed(6)}, {loc.lng.toFixed(6)}</div>
+                            <div style={{fontSize:11,color:T.dim,marginTop:2}}>
+                              {loc.hint || <em>no hint</em>} · {loc.claim_count||0}/{loc.max_claims||"∞"} claims · <span style={{color:loc.is_active?T.green:T.red}}>{loc.is_active?"active":"inactive"}</span>
+                            </div>
+                          </div>
+                          <div style={{display:"flex",gap:8}}>
+                            <button onClick={()=>setEditingPin({...loc})} style={{fontSize:12,color:T.white,background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Edit</button>
+                            <button onClick={()=>deletePin(loc.id)} style={{fontSize:12,color:T.red,background:"rgba(248,113,113,0.07)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Delete</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )
+          }
+        </div>
+      )}
     </div>
   );
 }
 
 function ClaimsTable({claims}){
   const SC={completed:T.green,pending:T.yellow,processing:T.yellow,failed:T.red};
-  if(!claims.length)return<p style={{color:T.dim,fontSize:13}}>No claims yet.</p>;
+  if(!claims.length) return <p style={{color:T.dim,fontSize:13}}>No claims yet.</p>;
   return(
     <div style={{overflowX:"auto"}}>
       <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
@@ -154,44 +371,45 @@ function ClaimsTable({claims}){
   );
 }
 
-const TABS=["Campaigns","Place Pins","Claims"];
+const TABS = ["Campaigns","Pins","Claims"];
 
 export default function WagoAdminPage(){
-  const [authed,setAuthed]=useState(false);
-  const [secret,setSecret]=useState("");
-  const [authErr,setAuthErr]=useState(null);
-  const [tab,setTab]=useState("Campaigns");
-  const [campaigns,setCampaigns]=useState([]);
-  const [claims,setClaims]=useState([]);
-  const [dataLoading,setDataLoading]=useState(false);
+  const [authed, setAuthed] = useState(false);
+  const [secret, setSecret] = useState("");
+  const [authErr, setAuthErr] = useState(null);
+  const [tab, setTab] = useState("Campaigns");
+  const [campaigns, setCampaigns] = useState([]);
+  const [claims, setClaims] = useState([]);
+  const [dataLoading, setDataLoading] = useState(false);
 
   async function checkAuth(e){
     e.preventDefault();
-    const res=await fetch("/api/wago-drops/admin/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({secret})});
-    if(res.ok){setAuthed(true);loadData(secret);}
+    const res = await fetch("/api/wago-drops/admin/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({secret})});
+    if(res.ok){ setAuthed(true); loadData(secret); }
     else setAuthErr("Invalid admin secret");
   }
 
   async function loadData(s){
-    const _s=s||secret;
+    const _s = s || secret;
     setDataLoading(true);
-    const [cRes,clRes]=await Promise.all([
+    const [cRes, clRes] = await Promise.all([
       fetch(`/api/wago-drops/admin/campaigns-all?_s=${encodeURIComponent(_s)}`),
       fetch(`/api/wago-drops/admin/claims-all?_s=${encodeURIComponent(_s)}`)
     ]);
-    const [cData,clData]=await Promise.all([cRes.json(),clRes.json()]);
-    setCampaigns(cData.campaigns||[]);setClaims(clData.claims||[]);
+    const [cData, clData] = await Promise.all([cRes.json(), clRes.json()]);
+    setCampaigns(cData.campaigns||[]);
+    setClaims(clData.claims||[]);
     setDataLoading(false);
   }
 
-  if(!authed)return(
+  if(!authed) return(
     <>
       <Head><title>WAGO Drops Admin</title></Head>
       <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
         <form onSubmit={checkAuth} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:14,padding:32,width:320}}>
           <h2 style={{fontFamily:"'Cormorant Garamond',serif",color:T.white,margin:"0 0 20px",textAlign:"center"}}>🗺️ Admin Access</h2>
           <Input label="Admin Secret" type="password" value={secret} onChange={e=>setSecret(e.target.value)}/>
-          {authErr&&<p style={{fontSize:13,color:T.red,margin:"0 0 12px"}}>{authErr}</p>}
+          {authErr && <p style={{fontSize:13,color:T.red,margin:"0 0 12px"}}>{authErr}</p>}
           <button type="submit" style={{width:"100%",background:T.olive,color:T.bg,border:"none",borderRadius:8,padding:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>Enter</button>
         </form>
       </div>
@@ -212,50 +430,18 @@ export default function WagoAdminPage(){
           </div>
           <Link href="/wago-drops" style={{fontSize:12,color:T.muted,textDecoration:"none"}}>← Back to Drops</Link>
         </nav>
-        <div style={{maxWidth:1000,margin:"0 auto",padding:"28px clamp(14px,4vw,48px)"}}>
+        <div style={{maxWidth:1100,margin:"0 auto",padding:"28px clamp(14px,4vw,48px)"}}>
           <div style={{display:"flex",gap:4,marginBottom:28,borderBottom:`1px solid ${T.border}`,paddingBottom:1}}>
             {TABS.map(t=><button key={t} onClick={()=>setTab(t)} style={{fontSize:13,color:tab===t?T.olive:T.muted,background:"none",border:"none",cursor:"pointer",padding:"8px 16px",borderBottom:tab===t?`2px solid ${T.olive}`:"2px solid transparent",marginBottom:-1}}>{t}</button>)}
           </div>
-          {dataLoading?(
-            <div style={{display:"flex",justifyContent:"center",padding:60}}>
-              <div style={{width:32,height:32,border:`3px solid ${T.border}`,borderTopColor:T.olive,borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
-              <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-            </div>
-          ):(
-            <>
-              {tab==="Campaigns"&&(
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:32}}>
-                  <div>
-                    <h3 style={{margin:"0 0 16px",color:T.white}}>Create Campaign</h3>
-                    <CreateCampaignForm adminSecret={secret} onCreated={c=>{setCampaigns(prev=>[c,...prev]);}}/>
-                  </div>
-                  <div>
-                    <h3 style={{margin:"0 0 16px",color:T.white}}>All Campaigns</h3>
-                    {campaigns.length===0?<p style={{color:T.dim,fontSize:13}}>No campaigns yet.</p>:(
-                      <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                        {campaigns.map(c=>(
-                          <div key={c.id} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                            <div>
-                              <div style={{fontSize:14,fontWeight:600,color:T.white}}>{c.name}</div>
-                              <div style={{fontSize:11,color:T.dim,marginTop:2}}>{c.status} · {c.location_count??0} pins</div>
-                            </div>
-                            <div style={{fontSize:11,color:T.olive,background:"rgba(147,168,90,0.12)",borderRadius:5,padding:"3px 8px"}}>{c.status}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {tab==="Place Pins"&&<PinPlacer campaigns={campaigns.filter(c=>c.status==="active"||c.status==="draft")} adminSecret={secret}/>}
-              {tab==="Claims"&&(
-                <>
-                  <h3 style={{margin:"0 0 16px",color:T.white}}>All Claims</h3>
-                  <ClaimsTable claims={claims}/>
-                </>
-              )}
-            </>
-          )}
+          {dataLoading
+            ? <div style={{display:"flex",justifyContent:"center",padding:60}}><div style={{width:32,height:32,border:`3px solid ${T.border}`,borderTopColor:T.olive,borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>
+            : <>
+                {tab==="Campaigns" && <CampaignsTab campaigns={campaigns} setCampaigns={setCampaigns} adminSecret={secret}/>}
+                {tab==="Pins" && <PinManager campaigns={campaigns} adminSecret={secret}/>}
+                {tab==="Claims" && <><h3 style={{margin:"0 0 16px",color:T.white}}>All Claims</h3><ClaimsTable claims={claims}/></>}
+              </>
+          }
         </div>
       </div>
     </>
