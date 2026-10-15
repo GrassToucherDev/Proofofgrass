@@ -121,9 +121,14 @@ export default async function handler(req, res) {
   await supabase.rpc("increment_wago_claim_count", { loc_id: locationId });
 
   return res.status(200).json({
-    ok: true,
-    message: "Drop claimed! Reward will be sent to your wallet shortly.",
-    claimId: claim.id,
-    tx: null,
+    ok:                   true,
+    message:              "Drop claimed! Reward will be sent to your wallet shortly.",
+    claim_id:             claim.id,
+    reward_type:          campaign.reward_type,
+    reward_amount:        campaign.reward_amount,
+    proof_bonus_applied:  proofBonusApplied,
+    proof_bonus_amount:   proofBonusApplied ? campaign.proof_bonus_amount : null,
+    proof_bonus_enabled:  campaign.proof_bonus_enabled,
+    tx_signature:         null,
   });
 }
