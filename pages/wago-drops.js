@@ -401,29 +401,50 @@ function MapView({ session, linkedWallet, flyToCoords }) {
 
   // ── Markers ────────────────────────────────────────────────────────────────
   const markersRef = useRef({});
+
+  // Re-style all markers whenever selection changes
+  useEffect(() => {
+    Object.entries(markersRef.current).forEach(([id, { el }]) => {
+      const isActive = selected?.id === id;
+      applyMarkerStyle(el, isActive);
+    });
+  }, [selected]);
+
+  function applyMarkerStyle(el, isActive) {
+    el.style.cssText = `
+      width:${isActive ? 42 : 34}px;
+      height:${isActive ? 42 : 34}px;
+      border-radius:50%;
+      background:${isActive ? "#fff" : T.olive};
+      border:${isActive ? `3px solid ${T.olive}` : "2.5px solid rgba(255,255,255,0.9)"};
+      display:flex;align-items:center;justify-content:center;
+      font-size:${isActive ? 20 : 16}px;
+      cursor:pointer;
+      box-shadow:${isActive ? `0 0 0 4px rgba(147,168,90,0.35), 0 4px 16px rgba(0,0,0,0.6)` : "0 2px 10px rgba(0,0,0,0.5)"};
+      transition:all 0.18s ease;
+      z-index:${isActive ? 10 : 1};
+      position:relative;
+    `;
+  }
+
   const updateMapMarkers = useCallback((map, locations) => {
     if (!map) return;
     Object.keys(markersRef.current).forEach(id => {
       if (!locations.find(l => l.id === id)) {
-        markersRef.current[id].remove();
+        markersRef.current[id].marker.remove();
         delete markersRef.current[id];
       }
     });
     locations.forEach(loc => {
       if (markersRef.current[loc.id]) return;
       const el = document.createElement("div");
-      el.style.cssText = `
-        width:34px;height:34px;border-radius:50%;
-        background:${T.olive};border:2.5px solid rgba(255,255,255,0.9);
-        display:flex;align-items:center;justify-content:center;
-        font-size:16px;cursor:pointer;
-        box-shadow:0 2px 10px rgba(0,0,0,0.5);
-        transition:transform 0.15s;
-      `;
       el.textContent = "📦";
       el.title = loc.hint || "Drop";
-      el.addEventListener("mouseenter", () => { el.style.transform = "scale(1.15)"; });
-      el.addEventListener("mouseleave", () => { el.style.transform = "scale(1)"; });
+      applyMarkerStyle(el, false);
+      el.addEventListener("mouseenter", () => {
+        if (selected?.id !== loc.id) el.style.transform = "scale(1.12)";
+      });
+      el.addEventListener("mouseleave", () => { el.style.transform = ""; });
       el.addEventListener("click", () => {
         setSelected(loc);
         setClaimMsg(null);
@@ -436,10 +457,10 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         const marker = new mapboxgl.Marker({ element: el })
           .setLngLat([loc.lng, loc.lat])
           .addTo(map);
-        markersRef.current[loc.id] = marker;
+        markersRef.current[loc.id] = { marker, el };
       });
     });
-  }, []);
+  }, [selected]);
 
   // ── Init map ────────────────────────────────────────────────────────────────
   useEffect(() => {
