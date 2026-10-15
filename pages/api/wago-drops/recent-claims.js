@@ -65,7 +65,7 @@ export default async function handler(req, res) {
           reward_amount
         )
       ),
-      wago_google_accounts!wago_drop_claims_google_id_fkey (
+      wago_google_accounts (
         display_name
       )
     `)
