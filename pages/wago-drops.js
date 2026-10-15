@@ -27,23 +27,19 @@ const T = {
 };
 
 // ─── Reward asset logos ───────────────────────────────────────────────────────
-// Swap TOUCHGRASS_LOGO_URL for your hosted asset once available
-const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png"; // put logo at public/images/touchgrass-token.png
+const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
 
 const REWARD_ICONS = {
   touchgrass: TOUCHGRASS_LOGO_URL,
   sol:        "https://cryptologos.cc/logos/solana-sol-logo.png",
 };
 
-// Returns the image URL for a drop's reward type
 function rewardIconUrl(drop) {
   const type = (drop.reward_type || "").toLowerCase();
   if (type === "sol") return REWARD_ICONS.sol;
-  // Default: assume $TOUCHGRASS for anything else (token, touchgrass, etc.)
   return REWARD_ICONS.touchgrass;
 }
 
-// Creates a circular marker element with the reward logo inside
 function makeMarkerEl(drop) {
   const el = document.createElement("div");
   el.title = drop.hint || "Drop";
@@ -64,7 +60,6 @@ function makeMarkerEl(drop) {
   return el;
 }
 
-// ─── Haversine distance (metres) — client-side only for the "you are here" ring
 function haversineM(lat1, lng1, lat2, lng2) {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -72,6 +67,178 @@ function haversineM(lat1, lng1, lat2, lng2) {
   const a = Math.sin(dLat / 2) ** 2
     + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ─── Recent claims hook (polls every 15s) ─────────────────────────────────────
+function useRecentClaims() {
+  const [claims, setClaims] = useState([]);
+  const seenRef = useRef(new Set());
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/wago-drops/recent-claims?limit=20");
+        if (!res.ok) return;
+        const data = await res.json();
+        const incoming = data.claims || [];
+        if (seenRef.current.size === 0) {
+          incoming.forEach(c => seenRef.current.add(c.id));
+          setClaims(incoming);
+        } else {
+          const fresh = incoming.filter(c => !seenRef.current.has(c.id));
+          if (fresh.length > 0) {
+            fresh.forEach(c => seenRef.current.add(c.id));
+            setClaims(prev => [...fresh, ...prev].slice(0, 40));
+          }
+        }
+      } catch {}
+    }
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, []);
+
+  return claims;
+}
+
+// ─── Time-ago helper ──────────────────────────────────────────────────────────
+function timeAgo(iso) {
+  const diff = Math.max(0, Date.now() - new Date(iso));
+  const s = Math.floor(diff / 1000);
+  if (s < 60)  return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60)  return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24)  return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+// ─── Live claims ticker strip ─────────────────────────────────────────────────
+function ClaimsTicker() {
+  const claims = useRecentClaims();
+  const trackRef = useRef(null);
+  const animRef  = useRef(null);
+  const posRef   = useRef(0);
+  const [tick, setTick] = useState(0);
+
+  // Refresh time labels every 30s
+  useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Auto-scroll
+  useEffect(() => {
+    if (!trackRef.current || claims.length === 0) return;
+    let lastTime = null;
+    const SPEED = 32; // px/s
+
+    function step(ts) {
+      if (!trackRef.current) return;
+      if (lastTime === null) lastTime = ts;
+      const dt = (ts - lastTime) / 1000;
+      lastTime = ts;
+      const track = trackRef.current;
+      const half  = track.scrollWidth / 2;
+      posRef.current += SPEED * dt;
+      if (half > 0 && posRef.current >= half) posRef.current -= half;
+      track.style.transform = `translateX(-${posRef.current}px)`;
+      animRef.current = requestAnimationFrame(step);
+    }
+
+    animRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [claims.length > 0]);
+
+  if (claims.length === 0) return null;
+
+  const items = [...claims, ...claims];
+
+  return (
+    <div style={{
+      height: 36,
+      background: "rgba(8,10,6,0.88)",
+      backdropFilter: "blur(8px)",
+      borderTop: `1px solid rgba(147,168,90,0.15)`,
+      overflow: "hidden",
+      flexShrink: 0,
+      display: "flex",
+      alignItems: "center",
+      position: "relative",
+    }}>
+      {/* Left fade */}
+      <div style={{
+        position: "absolute", left: 0, top: 0, bottom: 0, width: 48, zIndex: 2,
+        background: "linear-gradient(to right, rgba(8,10,6,0.98), transparent)",
+        pointerEvents: "none",
+      }} />
+      {/* Right fade */}
+      <div style={{
+        position: "absolute", right: 0, top: 0, bottom: 0, width: 48, zIndex: 2,
+        background: "linear-gradient(to left, rgba(8,10,6,0.98), transparent)",
+        pointerEvents: "none",
+      }} />
+      {/* Live dot + label */}
+      <div style={{
+        position: "absolute", left: 10, zIndex: 3,
+        display: "flex", alignItems: "center", gap: 4,
+        pointerEvents: "none",
+      }}>
+        <span style={{
+          width: 5, height: 5, borderRadius: "50%",
+          background: T.green, display: "inline-block",
+          boxShadow: `0 0 6px ${T.green}`,
+        }} />
+        <span style={{ fontSize: 9, color: T.green, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700 }}>
+          Live
+        </span>
+      </div>
+
+      {/* Scrolling track */}
+      <div
+        ref={trackRef}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          willChange: "transform",
+          paddingLeft: 60,
+        }}
+      >
+        {items.map((claim, i) => {
+          const amt    = Number(claim.reward_amount || 0);
+          const ticker = (claim.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS";
+          return (
+            <div
+              key={`${claim.id}-${i}`}
+              style={{
+                display: "flex", alignItems: "center", gap: 7,
+                padding: "0 18px",
+                borderRight: `1px solid rgba(255,255,255,0.06)`,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={rewardIconUrl(claim)}
+                alt=""
+                style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "contain", opacity: 0.85 }}
+                onError={e => { e.currentTarget.style.display = "none"; }}
+              />
+              <span style={{ fontSize: 11, color: T.olive, fontWeight: 700 }}>
+                {amt > 0 ? `+${amt.toLocaleString()} ${ticker}` : ticker}
+              </span>
+              <span style={{ fontSize: 11, color: T.muted }}>
+                {claim.campaign_name}
+              </span>
+              <span style={{ fontSize: 10, color: T.dim }}>
+                {timeAgo(claim.claimed_at)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 // ─── Nav bar shared across WAGO pages ────────────────────────────────────────
@@ -138,8 +305,6 @@ function WagoNav({ session }) {
 function LandingView() {
   return (
     <div style={{ fontFamily: "system-ui,sans-serif" }}>
-
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <div style={{
         position: "relative", overflow: "hidden",
         background: "linear-gradient(160deg, #0d1508 0%, #080a06 55%, #0a0f07 100%)",
@@ -147,15 +312,12 @@ function LandingView() {
         padding: "80px 20px 72px",
         textAlign: "center",
       }}>
-        {/* Decorative ambient glow */}
         <div style={{
           position: "absolute", top: "-60px", left: "50%", transform: "translateX(-50%)",
           width: 600, height: 400, borderRadius: "50%",
           background: "radial-gradient(ellipse, rgba(147,168,90,0.07) 0%, transparent 70%)",
           pointerEvents: "none",
         }} />
-
-        {/* Eyebrow */}
         <div style={{
           display: "inline-flex", alignItems: "center", gap: 8,
           background: "rgba(147,168,90,0.1)", border: `1px solid rgba(147,168,90,0.25)`,
@@ -166,7 +328,6 @@ function LandingView() {
             Live on Solana
           </span>
         </div>
-
         <h1 style={{
           fontFamily: "'Cormorant Garamond',Georgia,serif",
           fontSize: "clamp(38px,8vw,68px)", fontWeight: 700,
@@ -176,7 +337,6 @@ function LandingView() {
           Touch Grass.<br />
           <span style={{ color: T.olive }}>Get Paid.</span>
         </h1>
-
         <p style={{
           fontSize: "clamp(15px,2.5vw,18px)", color: T.muted,
           lineHeight: 1.7, margin: "20px auto 40px",
@@ -185,7 +345,6 @@ function LandingView() {
           Real-world treasure hunts hidden on a live map. Walk there,
           claim the drop, earn $TOUCHGRASS — proof you were actually outside.
         </p>
-
         <button
           onClick={() => signIn("google")}
           style={{
@@ -200,62 +359,32 @@ function LandingView() {
           Start Hunting
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
-
         <p style={{ fontSize: 11, color: T.dim, marginTop: 14 }}>
           Sign in with Google · Link a Solana wallet · Hunt
         </p>
       </div>
 
-      {/* ── How it works ─────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 860, margin: "0 auto", padding: "72px 20px 64px" }}>
         <p style={{
           fontSize: 11, color: T.olive, letterSpacing: "0.12em",
           textTransform: "uppercase", fontWeight: 600, textAlign: "center", marginBottom: 40,
         }}>How it works</p>
-
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 2,
-        }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
           {[
-            {
-              n: "01",
-              icon: "🗺️",
-              title: "Open the map",
-              desc: "Drop pins appear on a live Mapbox map. They're hidden until you get close.",
-            },
-            {
-              n: "02",
-              icon: "🚶",
-              title: "Walk there",
-              desc: "Pins reveal within 100m. The claim button unlocks at 25m — you have to actually show up.",
-            },
-            {
-              n: "03",
-              icon: "📦",
-              title: "Claim the drop",
-              desc: "Tap Claim. The app records your location and queues your reward on-chain.",
-            },
-            {
-              n: "04",
-              icon: "💰",
-              title: "Earn $TOUCHGRASS",
-              desc: "Tokens land in your Solana wallet automatically. No manual claiming, no gas drama.",
-            },
+            { n: "01", icon: "🗺️", title: "Open the map",    desc: "Drop pins appear on a live Mapbox map. They're hidden until you get close." },
+            { n: "02", icon: "🚶", title: "Walk there",       desc: "Pins reveal within 100m. The claim button unlocks at 25m — you have to actually show up." },
+            { n: "03", icon: "📦", title: "Claim the drop",   desc: "Tap Claim. The app records your location and queues your reward on-chain." },
+            { n: "04", icon: "💰", title: "Earn $TOUCHGRASS", desc: "Tokens land in your Solana wallet automatically. No manual claiming, no gas drama." },
           ].map((step, i) => (
             <div key={step.n} style={{
-              background: T.surface,
-              border: `1px solid ${T.border}`,
+              background: T.surface, border: `1px solid ${T.border}`,
               borderRadius: i === 0 ? "12px 0 0 12px" : i === 3 ? "0 12px 12px 0" : 0,
-              padding: "28px 24px",
-              position: "relative",
+              padding: "28px 24px", position: "relative",
             }}>
               <div style={{
                 fontFamily: "'Cormorant Garamond',Georgia,serif",
                 fontSize: 13, color: "rgba(147,168,90,0.4)",
-                fontWeight: 700, letterSpacing: "0.06em",
-                marginBottom: 16,
+                fontWeight: 700, letterSpacing: "0.06em", marginBottom: 16,
               }}>{step.n}</div>
               <div style={{ fontSize: 28, marginBottom: 14 }}>{step.icon}</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: T.white, marginBottom: 8 }}>{step.title}</div>
@@ -265,35 +394,15 @@ function LandingView() {
         </div>
       </div>
 
-      {/* ── Features ─────────────────────────────────────────────────────── */}
-      <div style={{
-        borderTop: `1px solid ${T.border}`,
-        borderBottom: `1px solid ${T.border}`,
-        background: T.surface,
-      }}>
+      <div style={{ borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, background: T.surface }}>
         <div style={{
-          maxWidth: 860, margin: "0 auto",
-          padding: "64px 20px",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: 40,
+          maxWidth: 860, margin: "0 auto", padding: "64px 20px",
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 40,
         }}>
           {[
-            {
-              icon: "🔒",
-              title: "Proximity-gated",
-              desc: "Drops can only be claimed from within 25 meters. There's no spoofing your way to a reward.",
-            },
-            {
-              icon: "🌱",
-              title: "Proof of Grass bonus",
-              desc: "Existing Grass Draw participants earn an extra bonus on every claim — loyalty recognized.",
-            },
-            {
-              icon: "⚡",
-              title: "Automatic transfers",
-              desc: "$TOUCHGRASS is sent directly to your wallet once your claim is verified. No extra steps.",
-            },
+            { icon: "🔒", title: "Proximity-gated",     desc: "Drops can only be claimed from within 25 meters. There's no spoofing your way to a reward." },
+            { icon: "🌱", title: "Proof of Grass bonus", desc: "Existing Grass Draw participants earn an extra bonus on every claim — loyalty recognized." },
+            { icon: "⚡", title: "Automatic transfers",  desc: "$TOUCHGRASS is sent directly to your wallet once your claim is verified. No extra steps." },
           ].map(f => (
             <div key={f.title} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
               <div style={{
@@ -310,19 +419,15 @@ function LandingView() {
         </div>
       </div>
 
-      {/* ── CTA footer ───────────────────────────────────────────────────── */}
       <div style={{ textAlign: "center", padding: "72px 20px 80px" }}>
         <div style={{ fontSize: 36, marginBottom: 16 }}>🌿</div>
         <h2 style={{
           fontFamily: "'Cormorant Garamond',Georgia,serif",
           fontSize: "clamp(26px,5vw,38px)", fontWeight: 700,
           color: T.white, margin: "0 0 14px", lineHeight: 1.2,
-        }}>
-          Ready to go outside?
-        </h2>
+        }}>Ready to go outside?</h2>
         <p style={{ fontSize: 14, color: T.muted, margin: "0 auto 32px", maxWidth: 380, lineHeight: 1.7 }}>
-          Sign in with Google, link your Solana wallet, and start hunting.
-          Drops are live now.
+          Sign in with Google, link your Solana wallet, and start hunting. Drops are live now.
         </p>
         <button
           onClick={() => signIn("google")}
@@ -338,7 +443,6 @@ function LandingView() {
           Continue with Google
         </button>
       </div>
-
     </div>
   );
 }
@@ -382,7 +486,6 @@ function WalletLinkView({ googleId, onLinked }) {
         Enter your Solana wallet address. All WAGO Drop rewards will be sent here.
         You can change it later — once every 24 hours.
       </p>
-
       <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <input
           value={address}
@@ -416,18 +519,17 @@ function MapView({ session, linkedWallet, flyToCoords }) {
   const [drops,        setDrops]        = useState([]);
   const [selected,     setSelected]     = useState(null);
   const [claiming,     setClaiming]     = useState(false);
-  const [claimMsg,     setClaimMsg]     = useState(null);   // { ok, text } for errors only
-  const [claimResult,  setClaimResult]  = useState(null);   // full success payload
+  const [claimMsg,     setClaimMsg]     = useState(null);
+  const [claimResult,  setClaimResult]  = useState(null);
   const [saving,       setSaving]       = useState(false);
   const [saveMsg,      setSaveMsg]      = useState(null);
-  const [proofMode,    setProofMode]    = useState(false);  // show proof upload prompt
+  const [proofMode,    setProofMode]    = useState(false);
   const [proofFile,    setProofFile]    = useState(null);
-  const [proofStatus,  setProofStatus]  = useState(null);   // { ok, text }
+  const [proofStatus,  setProofStatus]  = useState(null);
   const [locError,     setLocError]     = useState(null);
   const hasFlewToUser  = useRef(false);
   const geolocateRef   = useRef(null);
 
-  // ── Fetch drops visible in current map bounds ───────────────────────────────
   const fetchDropsInView = useCallback(async (map) => {
     if (!map) return;
     const bounds = map.getBounds();
@@ -444,10 +546,8 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     }
   }, [userPos]);
 
-  // ── Markers ────────────────────────────────────────────────────────────────
   const markersRef = useRef({});
 
-  // Re-style all markers whenever selection changes
   useEffect(() => {
     Object.entries(markersRef.current).forEach(([id, { el }]) => {
       const isActive = selected?.id === id;
@@ -459,14 +559,11 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     const size = isActive ? 46 : 38;
     el.style.width  = `${size}px`;
     el.style.height = `${size}px`;
-    el.style.border = isActive
-      ? `3px solid ${T.olive}`
-      : "2.5px solid rgba(255,255,255,0.9)";
+    el.style.border = isActive ? `3px solid ${T.olive}` : "2.5px solid rgba(255,255,255,0.9)";
     el.style.boxShadow = isActive
       ? `0 0 0 4px rgba(147,168,90,0.35), 0 4px 16px rgba(0,0,0,0.6)`
       : "0 2px 10px rgba(0,0,0,0.5)";
     el.style.zIndex = isActive ? "10" : "1";
-    // Scale the inner image too
     const img = el.querySelector("img");
     if (img) img.style.width = img.style.height = isActive ? "32px" : "26px";
   }
@@ -505,7 +602,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     });
   }, [selected]);
 
-  // ── Init map ────────────────────────────────────────────────────────────────
   useEffect(() => {
     let map;
     import("mapbox-gl").then(({ default: mapboxgl }) => {
@@ -555,7 +651,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     if (userPos && mapRef.current) fetchDropsInView(mapRef.current);
   }, [userPos, fetchDropsInView]);
 
-  // ── Claim ──────────────────────────────────────────────────────────────────
   async function handleClaim(locationId) {
     if (!userPos) return setClaimMsg({ ok: false, text: "Enable location to claim." });
     setClaiming(true);
@@ -569,7 +664,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Claim failed");
-      // Store the full result so we can show the success screen
       setClaimResult({
         drop: selected,
         message: data.message,
@@ -590,7 +684,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     }
   }
 
-  // ── Proof photo submit ─────────────────────────────────────────────────────
   async function handleProofSubmit(claimId) {
     if (!proofFile) return;
     setProofStatus({ ok: null, text: "Uploading…" });
@@ -608,7 +701,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     }
   }
 
-  // ── Share ──────────────────────────────────────────────────────────────────
   function handleShare(result) {
     const amount = Number(result.reward_amount || 0);
     const ticker = (result.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS";
@@ -624,7 +716,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     }
   }
 
-  // ── Save ───────────────────────────────────────────────────────────────────
   async function handleSave(locationId) {
     setSaving(true);
     setSaveMsg(null);
@@ -649,10 +740,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
   const canClaim = distToSelected !== null && distToSelected <= (selected?.claim_radius_m ?? 25);
 
   return (
-    <div style={{
-      display: "flex", height: "calc(100vh - 57px)",
-      flexDirection: "row",
-    }}>
+    <div style={{ display: "flex", height: "calc(100vh - 57px)", flexDirection: "row" }}>
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
         @media (max-width: 680px) {
@@ -662,21 +750,14 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         }
       `}</style>
 
-      {/* ── Sidebar ────────────────────────────────────────────────────────── */}
       <div className="map-layout" style={{ display: "flex", flex: 1, flexDirection: "row", overflow: "hidden" }}>
+        {/* ── Sidebar ── */}
         <div className="map-sidebar" style={{
           width: 340, flexShrink: 0,
-          background: T.surface,
-          borderRight: `1px solid ${T.border}`,
-          display: "flex", flexDirection: "column",
-          overflow: "hidden",
+          background: T.surface, borderRight: `1px solid ${T.border}`,
+          display: "flex", flexDirection: "column", overflow: "hidden",
         }}>
-          {/* Sidebar header */}
-          <div style={{
-            padding: "18px 20px 14px",
-            borderBottom: `1px solid ${T.border}`,
-            flexShrink: 0,
-          }}>
+          <div style={{ padding: "18px 20px 14px", borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <div style={{
                 fontFamily: "'Cormorant Garamond',Georgia,serif",
@@ -696,7 +777,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
             </div>
           </div>
 
-          {/* Drop list */}
           <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px" }}>
             {drops.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 16px" }}>
@@ -768,12 +848,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
             )}
           </div>
 
-          {/* Sidebar footer links */}
-          <div style={{
-            borderTop: `1px solid ${T.border}`,
-            padding: "12px 20px",
-            display: "flex", gap: 16, flexShrink: 0,
-          }}>
+          <div style={{ borderTop: `1px solid ${T.border}`, padding: "12px 20px", display: "flex", gap: 16, flexShrink: 0 }}>
             {[
               { href: "/wago-drops/saved",    label: "Saved"    },
               { href: "/wago-drops/my-drops", label: "My Drops" },
@@ -787,7 +862,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
           </div>
         </div>
 
-        {/* ── Map + detail panel ──────────────────────────────────────────── */}
+        {/* ── Map + ticker + detail panels ── */}
         <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column" }}>
           <div className="map-container" ref={mapContainer} style={{ flex: 1 }} />
 
@@ -821,7 +896,10 @@ function MapView({ session, linkedWallet, flyToCoords }) {
             </div>
           )}
 
-          {/* ── Post-claim success screen ───────────────────────────────────── */}
+          {/* ── Live claims ticker ── */}
+          <ClaimsTicker />
+
+          {/* ── Post-claim success screen ── */}
           {claimResult && (
             <div style={{
               background: T.bg, borderTop: `1px solid ${T.border}`,
@@ -829,7 +907,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
               animation: "fadeIn 0.25s ease",
             }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
-                {/* Big asset logo */}
                 <div style={{
                   width: 56, height: 56, borderRadius: "50%", flexShrink: 0,
                   background: T.card, border: `2px solid ${T.olive}`,
@@ -839,7 +916,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                   <img src={rewardIconUrl(claimResult)} style={{ width: 40, height: 40, objectFit: "contain" }}
                     onError={e => { e.currentTarget.style.display = "none"; }} />
                 </div>
-
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 11, color: T.olive, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 3 }}>
                     Drop Claimed 🌿
@@ -860,12 +936,10 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                     Pending · reward queued to your wallet
                   </div>
                 </div>
-
                 <button onClick={() => { setClaimResult(null); setSelected(null); setProofMode(false); setProofStatus(null); }}
                   style={{ background: "none", border: "none", color: T.dim, fontSize: 22, cursor: "pointer", padding: 0, flexShrink: 0 }}>×</button>
               </div>
 
-              {/* Proof photo prompt — only if bonus not already applied */}
               {!claimResult.proof_bonus_applied && claimResult.proof_bonus_enabled && !proofMode && (
                 <div style={{
                   marginTop: 14, background: "rgba(74,222,128,0.06)",
@@ -873,9 +947,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                   padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
                 }}>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.green, marginBottom: 2 }}>
-                      📸 Earn the Proof Bonus
-                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.green, marginBottom: 2 }}>📸 Earn the Proof Bonus</div>
                     <div style={{ fontSize: 12, color: T.muted }}>
                       Submit a photo for +{Number(claimResult.proof_bonus_amount || 0).toLocaleString()} extra
                     </div>
@@ -887,7 +959,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                 </div>
               )}
 
-              {/* Proof upload form */}
               {proofMode && (
                 <div style={{ marginTop: 14 }}>
                   <div style={{ fontSize: 12, color: T.muted, marginBottom: 8 }}>
@@ -928,7 +999,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                 </div>
               )}
 
-              {/* Action row */}
               <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
                 <button onClick={() => handleShare(claimResult)} style={{
                   flex: 1, background: T.olive, color: T.bg, border: "none",
@@ -952,11 +1022,10 @@ function MapView({ session, linkedWallet, flyToCoords }) {
             </div>
           )}
 
-          {/* Drop detail panel — slides up from bottom of map area */}
+          {/* Drop detail panel */}
           {selected && !claimResult && (
             <div style={{
-              background: T.bg,
-              borderTop: `1px solid ${T.border}`,
+              background: T.bg, borderTop: `1px solid ${T.border}`,
               padding: "20px 24px",
               animation: "fadeIn 0.2s ease",
               flexShrink: 0,
@@ -977,7 +1046,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
               </div>
 
               <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
-                {/* Reward chip */}
                 <div style={{
                   background: "rgba(147,168,90,0.1)", border: `1px solid rgba(147,168,90,0.2)`,
                   borderRadius: 8, padding: "8px 14px", flexShrink: 0,
@@ -995,7 +1063,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                   )}
                 </div>
 
-                {/* Distance chip */}
                 {distToSelected !== null && (
                   <div style={{
                     background: canClaim ? "rgba(74,222,128,0.08)" : T.card,
@@ -1012,18 +1079,14 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                   </div>
                 )}
 
-                {/* Action buttons */}
                 <div style={{ display: "flex", gap: 8, marginLeft: "auto", alignItems: "center", flexWrap: "wrap" }}>
                   {claimMsg && (
                     <div style={{
-                      fontSize: 12, color: T.red,
-                      padding: "6px 10px", borderRadius: 7,
+                      fontSize: 12, color: T.red, padding: "6px 10px", borderRadius: 7,
                       background: "rgba(248,113,113,0.08)",
                     }}>{claimMsg.text}</div>
                   )}
-                  {saveMsg && (
-                    <div style={{ fontSize: 12, color: T.muted }}>{saveMsg}</div>
-                  )}
+                  {saveMsg && <div style={{ fontSize: 12, color: T.muted }}>{saveMsg}</div>}
                   <button
                     onClick={() => handleSave(selected.id)}
                     disabled={saving}
@@ -1063,7 +1126,6 @@ export default function WagoDropsPage() {
   const [walletLoading, setWalletLoading] = useState(false);
   const router = useRouter();
 
-  // Parse ?flyTo=LAT,LNG — used to fly map to a saved drop's location
   const flyToCoords = (() => {
     const param = router.query.flyTo;
     if (!param) return null;
@@ -1072,15 +1134,12 @@ export default function WagoDropsPage() {
     return { lat, lng };
   })();
 
-  // Load wallet from DB once signed in
   useEffect(() => {
     if (!session?.user?.google_id) return;
     setWalletLoading(true);
     fetch("/api/wago-drops/me")
       .then(r => r.json())
-      .then(data => {
-        if (data.linked_wallet) setLinkedWallet(data.linked_wallet);
-      })
+      .then(data => { if (data.linked_wallet) setLinkedWallet(data.linked_wallet); })
       .catch(console.error)
       .finally(() => setWalletLoading(false));
   }, [session?.user?.google_id]);
@@ -1105,14 +1164,10 @@ export default function WagoDropsPage() {
         ) : !session ? (
           <LandingView />
         ) : !linkedWallet ? (
-          <WalletLinkView
-            googleId={session.user.google_id}
-            onLinked={setLinkedWallet}
-          />
+          <WalletLinkView googleId={session.user.google_id} onLinked={setLinkedWallet} />
         ) : (
           <MapView session={session} linkedWallet={linkedWallet} flyToCoords={flyToCoords} />
         )}
-
       </div>
     </>
   );
