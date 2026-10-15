@@ -98,55 +98,208 @@ function WagoNav({ session }) {
 // ─── Landing page (signed-out state) ─────────────────────────────────────────
 function LandingView() {
   return (
-    <div style={{ maxWidth: 560, margin: "80px auto", padding: "0 20px", textAlign: "center" }}>
-      <div style={{ fontSize: 64, marginBottom: 20 }}>🗺️</div>
-      <h1 style={{
-        fontFamily: "'Cormorant Garamond',Georgia,serif",
-        fontSize: "clamp(28px,6vw,42px)", fontWeight: 700, color: T.white,
-        margin: "0 0 12px",
-      }}>WAGO Drops</h1>
-      <p style={{ fontSize: 16, color: T.muted, lineHeight: 1.7, margin: "0 0 32px" }}>
-        Real-world treasure hunts with on-chain rewards. Go outside, find the drop,
-        claim your $TOUCHGRASS — proof you were actually there.
-      </p>
+    <div style={{ fontFamily: "system-ui,sans-serif" }}>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 48 }}>
-        {[
-          ["📍", "Find Drops Near You",   "Hidden on a real map. Walk there to reveal and claim."],
-          ["🔒", "Proximity-Gated",        "Pins reveal within 100m. Claims unlock at 25m."],
-          ["💰", "On-Chain Rewards",        "$TOUCHGRASS tokens and NFTs sent directly to your wallet."],
-          ["🌱", "Proof of Grass Bonus",   "Existing Grass Draw participants earn a proof bonus."],
-        ].map(([icon, title, desc]) => (
-          <div key={title} style={{
-            background: T.card, border: `1px solid ${T.border}`, borderRadius: 12,
-            padding: "16px 20px", textAlign: "left", display: "flex", gap: 14, alignItems: "flex-start",
-          }}>
-            <span style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>{icon}</span>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: T.white, marginBottom: 4 }}>{title}</div>
-              <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.5 }}>{desc}</div>
-            </div>
-          </div>
-        ))}
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <div style={{
+        position: "relative", overflow: "hidden",
+        background: "linear-gradient(160deg, #0d1508 0%, #080a06 55%, #0a0f07 100%)",
+        borderBottom: `1px solid ${T.border}`,
+        padding: "80px 20px 72px",
+        textAlign: "center",
+      }}>
+        {/* Decorative ambient glow */}
+        <div style={{
+          position: "absolute", top: "-60px", left: "50%", transform: "translateX(-50%)",
+          width: 600, height: 400, borderRadius: "50%",
+          background: "radial-gradient(ellipse, rgba(147,168,90,0.07) 0%, transparent 70%)",
+          pointerEvents: "none",
+        }} />
+
+        {/* Eyebrow */}
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          background: "rgba(147,168,90,0.1)", border: `1px solid rgba(147,168,90,0.25)`,
+          borderRadius: 100, padding: "5px 14px", marginBottom: 28,
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, display: "inline-block", flexShrink: 0 }} />
+          <span style={{ fontSize: 11, color: T.olive, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>
+            Live on Solana
+          </span>
+        </div>
+
+        <h1 style={{
+          fontFamily: "'Cormorant Garamond',Georgia,serif",
+          fontSize: "clamp(38px,8vw,68px)", fontWeight: 700,
+          color: T.white, margin: "0 0 6px",
+          lineHeight: 1.05, letterSpacing: "-0.01em",
+        }}>
+          Touch Grass.<br />
+          <span style={{ color: T.olive }}>Get Paid.</span>
+        </h1>
+
+        <p style={{
+          fontSize: "clamp(15px,2.5vw,18px)", color: T.muted,
+          lineHeight: 1.7, margin: "20px auto 40px",
+          maxWidth: 480,
+        }}>
+          Real-world treasure hunts hidden on a live map. Walk there,
+          claim the drop, earn $TOUCHGRASS — proof you were actually outside.
+        </p>
+
+        <button
+          onClick={() => signIn("google")}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 10,
+            background: T.olive, color: T.bg,
+            border: "none", borderRadius: 10, padding: "14px 32px",
+            fontSize: 15, fontWeight: 700, cursor: "pointer",
+            boxShadow: "0 4px 24px rgba(147,168,90,0.25)",
+            letterSpacing: "0.01em",
+          }}
+        >
+          Start Hunting
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+
+        <p style={{ fontSize: 11, color: T.dim, marginTop: 14 }}>
+          Sign in with Google · Link a Solana wallet · Hunt
+        </p>
       </div>
 
-      <button
-        onClick={() => signIn("google")}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 10,
-          background: "#fff", color: "#1a1a1a",
-          border: "none", borderRadius: 10, padding: "12px 28px",
-          fontSize: 15, fontWeight: 600, cursor: "pointer",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
-        }}
-      >
-        <img src="https://www.google.com/favicon.ico" alt="" style={{ width: 18, height: 18 }} />
-        Continue with Google
-      </button>
-      <p style={{ fontSize: 11, color: T.dim, marginTop: 14, lineHeight: 1.6 }}>
-        Your Google account is used only for WAGO Drops identity.<br/>
-        You'll link a Solana wallet separately to receive rewards.
-      </p>
+      {/* ── How it works ─────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "72px 20px 64px" }}>
+        <p style={{
+          fontSize: 11, color: T.olive, letterSpacing: "0.12em",
+          textTransform: "uppercase", fontWeight: 600, textAlign: "center", marginBottom: 40,
+        }}>How it works</p>
+
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: 2,
+        }}>
+          {[
+            {
+              n: "01",
+              icon: "🗺️",
+              title: "Open the map",
+              desc: "Drop pins appear on a live Mapbox map. They're hidden until you get close.",
+            },
+            {
+              n: "02",
+              icon: "🚶",
+              title: "Walk there",
+              desc: "Pins reveal within 100m. The claim button unlocks at 25m — you have to actually show up.",
+            },
+            {
+              n: "03",
+              icon: "📦",
+              title: "Claim the drop",
+              desc: "Tap Claim. The app records your location and queues your reward on-chain.",
+            },
+            {
+              n: "04",
+              icon: "💰",
+              title: "Earn $TOUCHGRASS",
+              desc: "Tokens land in your Solana wallet automatically. No manual claiming, no gas drama.",
+            },
+          ].map((step, i) => (
+            <div key={step.n} style={{
+              background: T.surface,
+              border: `1px solid ${T.border}`,
+              borderRadius: i === 0 ? "12px 0 0 12px" : i === 3 ? "0 12px 12px 0" : 0,
+              padding: "28px 24px",
+              position: "relative",
+            }}>
+              <div style={{
+                fontFamily: "'Cormorant Garamond',Georgia,serif",
+                fontSize: 13, color: "rgba(147,168,90,0.4)",
+                fontWeight: 700, letterSpacing: "0.06em",
+                marginBottom: 16,
+              }}>{step.n}</div>
+              <div style={{ fontSize: 28, marginBottom: 14 }}>{step.icon}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.white, marginBottom: 8 }}>{step.title}</div>
+              <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>{step.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Features ─────────────────────────────────────────────────────── */}
+      <div style={{
+        borderTop: `1px solid ${T.border}`,
+        borderBottom: `1px solid ${T.border}`,
+        background: T.surface,
+      }}>
+        <div style={{
+          maxWidth: 860, margin: "0 auto",
+          padding: "64px 20px",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: 40,
+        }}>
+          {[
+            {
+              icon: "🔒",
+              title: "Proximity-gated",
+              desc: "Drops can only be claimed from within 25 meters. There's no spoofing your way to a reward.",
+            },
+            {
+              icon: "🌱",
+              title: "Proof of Grass bonus",
+              desc: "Existing Grass Draw participants earn an extra bonus on every claim — loyalty recognized.",
+            },
+            {
+              icon: "⚡",
+              title: "Automatic transfers",
+              desc: "$TOUCHGRASS is sent directly to your wallet once your claim is verified. No extra steps.",
+            },
+          ].map(f => (
+            <div key={f.title} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: 10, flexShrink: 0,
+                background: "rgba(147,168,90,0.08)", border: `1px solid rgba(147,168,90,0.15)`,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
+              }}>{f.icon}</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.white, marginBottom: 6 }}>{f.title}</div>
+                <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>{f.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── CTA footer ───────────────────────────────────────────────────── */}
+      <div style={{ textAlign: "center", padding: "72px 20px 80px" }}>
+        <div style={{ fontSize: 36, marginBottom: 16 }}>🌿</div>
+        <h2 style={{
+          fontFamily: "'Cormorant Garamond',Georgia,serif",
+          fontSize: "clamp(26px,5vw,38px)", fontWeight: 700,
+          color: T.white, margin: "0 0 14px", lineHeight: 1.2,
+        }}>
+          Ready to go outside?
+        </h2>
+        <p style={{ fontSize: 14, color: T.muted, margin: "0 auto 32px", maxWidth: 380, lineHeight: 1.7 }}>
+          Sign in with Google, link your Solana wallet, and start hunting.
+          Drops are live now.
+        </p>
+        <button
+          onClick={() => signIn("google")}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 10,
+            background: "#fff", color: "#1a1a1a",
+            border: "none", borderRadius: 10, padding: "13px 30px",
+            fontSize: 14, fontWeight: 700, cursor: "pointer",
+            boxShadow: "0 2px 16px rgba(0,0,0,0.3)",
+          }}
+        >
+          <img src="https://www.google.com/favicon.ico" alt="" style={{ width: 16, height: 16 }} />
+          Continue with Google
+        </button>
+      </div>
+
     </div>
   );
 }
