@@ -382,14 +382,8 @@ function MapView({ session, linkedWallet, flyToCoords }) {
   const [saving,       setSaving]       = useState(false);
   const [saveMsg,      setSaveMsg]      = useState(null);
   const [locError,     setLocError]     = useState(null);
-  const [geoLog,       setGeoLog]       = useState([]);
   const hasFlewToUser  = useRef(false);
   const geolocateRef   = useRef(null);
-
-  function geoAppend(msg) {
-    const ts = new Date().toISOString().slice(11, 23);
-    setGeoLog(prev => [`${ts} ${msg}`, ...prev].slice(0, 20));
-  }
 
   // ── Fetch drops visible in current map bounds ───────────────────────────────
   const fetchDropsInView = useCallback(async (map) => {
@@ -494,34 +488,18 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       });
       geolocate.on("geolocate", (e) => {
         const { latitude: lat, longitude: lng } = e.coords;
-        geoAppend(`✅ geolocate lat=${lat.toFixed(5)} lng=${lng.toFixed(5)}`);
         setLocError(null);
         setUserPos({ lat, lng });
         hasFlewToUser.current = true;
         map.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
       });
-      geolocate.on("trackuserlocationstart", () => geoAppend("trackstart"));
-      geolocate.on("trackuserlocationend",   () => geoAppend("trackend"));
       geolocate.on("error", (e) => {
-        geoAppend(`❌ error code=${e.code} msg=${e.message}`);
         if (e.code === 1) setLocError("location_denied");
         else if (e.code === 2) setLocError("location_unavailable");
       });
-
-      // Also probe navigator.geolocation directly to isolate Mapbox vs browser
-      if (navigator.geolocation) {
-        geoAppend("navigator.geolocation exists");
-        navigator.permissions?.query({ name: "geolocation" }).then(result => {
-          geoAppend(`permission state: ${result.state}`);
-          result.onchange = () => geoAppend(`permission changed: ${result.state}`);
-        }).catch(err => geoAppend(`permissions API err: ${err.message}`));
-      } else {
-        geoAppend("❌ navigator.geolocation MISSING");
-      }
       geolocateRef.current = geolocate;
       map.addControl(geolocate, "top-right");
       map.on("load", () => {
-        geoAppend("map loaded");
         mapRef.current = map;
         fetchDropsInView(map);
         if (flyToCoords) {
@@ -716,22 +694,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column" }}>
           <div className="map-container" ref={mapContainer} style={{ flex: 1 }} />
 
-          {/* ── GEO DEBUG PANEL (remove before prod) ── */}
-          <div style={{
-            position: "absolute", bottom: 8, left: 8, zIndex: 30,
-            background: "rgba(0,0,0,0.85)", borderRadius: 8,
-            padding: "8px 10px", maxWidth: 320, maxHeight: 200,
-            overflowY: "auto", fontFamily: "monospace", fontSize: 11,
-            color: "#4ade80", pointerEvents: "none",
-            border: "1px solid rgba(74,222,128,0.3)",
-          }}>
-            <div style={{ color: "#fbbf24", marginBottom: 4, fontWeight: 700 }}>GEO DEBUG</div>
-            {geoLog.length === 0
-              ? <div style={{ color: "#666" }}>waiting… tap locate button</div>
-              : geoLog.map((line, i) => <div key={i}>{line}</div>)
-            }
-          </div>
-
           {/* Location permission error banner */}
           {locError && (
             <div style={{
@@ -749,9 +711,10 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                   Location access blocked
                 </div>
                 <div style={{ fontSize: 12, color: "rgba(240,239,234,0.6)", lineHeight: 1.5 }}>
-                  {locError === "location_denied"
-                    ? "To find drops near you, enable location for this site in your browser or phone settings."
-                    : "Couldn't get your location. Check that location services are on and try again."}
+                  {locError === "location_denied" ? <>
+                    On iPhone: <strong style={{color:"#fbbf24"}}>Settings → Privacy & Security → Location Services → Safari Websites → Ask Next Time</strong>.
+                    Then reload this page.
+                  </> : "Couldn't get your location. Check that location services are on and try again."}
                 </div>
               </div>
               <button
