@@ -482,9 +482,8 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
       const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: true,
-        showUserHeading: true,
-        // Let Mapbox fly to the user automatically on first fix
+        trackUserLocation: false,   // simpler one-shot mode, no motion API needed
+        showUserHeading: false,     // removes the DeviceOrientation permission prompt
         fitBoundsOptions: { zoom: 15, duration: 1200 },
       });
       geolocate.on("geolocate", (e) => {
@@ -492,6 +491,8 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         setLocError(null);
         setUserPos({ lat, lng });
         hasFlewToUser.current = true;
+        // fly to user manually since trackUserLocation is off
+        map.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
       });
       geolocate.on("error", (e) => {
         if (e.code === 1) setLocError("location_denied");
