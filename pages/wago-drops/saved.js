@@ -237,13 +237,19 @@ export default function SavedDrops() {
   async function handleUnsave(saveId, locationId) {
     setRemoving(saveId);
     try {
-      await fetch("/api/wago-drops/save", {
+      const res = await fetch("/api/wago-drops/save", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locationId }),
       });
-      setSaves(prev => prev.filter(s => s.id !== saveId));
-    } catch {}
+      const data = await res.json();
+      console.log("unsave response:", res.status, data);
+      if (res.ok) {
+        setSaves(prev => prev.filter(s => s.id !== saveId));
+      }
+    } catch (err) {
+      console.error("unsave error:", err);
+    }
     setRemoving(null);
   }
 
