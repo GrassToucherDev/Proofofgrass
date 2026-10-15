@@ -71,7 +71,9 @@ function haversineM(lat1, lng1, lat2, lng2) {
 
 // ─── Recent claims hook (polls every 15s) ─────────────────────────────────────
 function useRecentClaims() {
-  const [claims, setClaims] = useState([]);
+  const [claims,   setClaims]   = useState([]);
+  const [total24h, setTotal24h] = useState(null);
+  const [freshIds, setFreshIds] = useState(new Set());
   const seenRef = useRef(new Set());
 
   useEffect(() => {
@@ -81,6 +83,7 @@ function useRecentClaims() {
         if (!res.ok) return;
         const data = await res.json();
         const incoming = data.claims || [];
+        if (data.total_24h != null) setTotal24h(data.total_24h);
         if (seenRef.current.size === 0) {
           incoming.forEach(c => seenRef.current.add(c.id));
           setClaims(incoming);
@@ -88,7 +91,11 @@ function useRecentClaims() {
           const fresh = incoming.filter(c => !seenRef.current.has(c.id));
           if (fresh.length > 0) {
             fresh.forEach(c => seenRef.current.add(c.id));
+            const freshSet = new Set(fresh.map(c => c.id));
+            setFreshIds(freshSet);
             setClaims(prev => [...fresh, ...prev].slice(0, 40));
+            // Clear the fresh highlight after 3s
+            setTimeout(() => setFreshIds(new Set()), 3000);
           }
         }
       } catch {}
@@ -98,7 +105,7 @@ function useRecentClaims() {
     return () => clearInterval(t);
   }, []);
 
-  return claims;
+  return { claims, total24h, freshIds };
 }
 
 // ─── Time-ago helper ──────────────────────────────────────────────────────────
@@ -114,8 +121,8 @@ function timeAgo(iso) {
 }
 
 // ─── Live claims ticker strip ─────────────────────────────────────────────────
-function ClaimsTicker() {
-  const claims = useRecentClaims();
+function ClaimsTicker({ onSelectDrop }) {
+  const { claims, total24h, freshIds } = useRecentClaims();
   const trackRef = useRef(null);
   const animRef  = useRef(null);
   const posRef   = useRef(0);
@@ -166,18 +173,26 @@ function ClaimsTicker() {
       alignItems: "center",
       position: "relative",
     }}>
+      <style>{`
+        @keyframes freshFlash {
+          0%   { background: rgba(74,222,128,0.18); }
+          100% { background: transparent; }
+        }
+      `}</style>
+
       {/* Left fade */}
       <div style={{
-        position: "absolute", left: 0, top: 0, bottom: 0, width: 48, zIndex: 2,
+        position: "absolute", left: 0, top: 0, bottom: 0, width: 60, zIndex: 2,
         background: "linear-gradient(to right, rgba(8,10,6,0.98), transparent)",
         pointerEvents: "none",
       }} />
-      {/* Right fade */}
+      {/* Right fade — shorter to leave room for stat */}
       <div style={{
-        position: "absolute", right: 0, top: 0, bottom: 0, width: 48, zIndex: 2,
-        background: "linear-gradient(to left, rgba(8,10,6,0.98), transparent)",
+        position: "absolute", right: total24h != null ? 90 : 0, top: 0, bottom: 0, width: 40, zIndex: 2,
+        background: `linear-gradient(to left, rgba(8,10,6,0.98), transparent)`,
         pointerEvents: "none",
       }} />
+
       {/* Live dot + label */}
       <div style={{
         position: "absolute", left: 10, zIndex: 3,
@@ -205,18 +220,27 @@ function ClaimsTicker() {
         }}
       >
         {items.map((claim, i) => {
-          const amt    = Number(claim.reward_amount || 0);
-          const ticker = (claim.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS";
+          const amt     = Number(claim.reward_amount || 0);
+          const ticker  = (claim.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS";
+          const isFresh = freshIds.has(claim.id);
+          const clickable = onSelectDrop && claim.lat != null && claim.lng != null;
           return (
             <div
               key={`${claim.id}-${i}`}
+              onClick={() => clickable && onSelectDrop(claim)}
               style={{
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "0 20px",
+                height: 36,
                 borderRight: `1px solid rgba(255,255,255,0.06)`,
                 whiteSpace: "nowrap",
                 flexShrink: 0,
+                cursor: clickable ? "pointer" : "default",
+                animation: isFresh ? "freshFlash 3s ease forwards" : "none",
+                transition: "opacity 0.15s",
               }}
+              onMouseEnter={e => { if (clickable) e.currentTarget.style.opacity = "0.75"; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
             >
               <img
                 src={rewardIconUrl(claim)}
@@ -224,7 +248,7 @@ function ClaimsTicker() {
                 style={{ width: 14, height: 14, borderRadius: "50%", objectFit: "contain", opacity: 0.75 }}
                 onError={e => { e.currentTarget.style.display = "none"; }}
               />
-              <span style={{ fontSize: 11, color: T.white, fontWeight: 600 }}>
+              <span style={{ fontSize: 11, color: isFresh ? T.green : T.white, fontWeight: 600, transition: "color 1s" }}>
                 {claim.username || "Someone"}
               </span>
               <span style={{ fontSize: 11, color: T.dim }}>claimed</span>
@@ -244,6 +268,22 @@ function ClaimsTicker() {
           );
         })}
       </div>
+
+      {/* 24h stat pinned right */}
+      {total24h != null && (
+        <div style={{
+          position: "absolute", right: 0, top: 0, bottom: 0, zIndex: 3,
+          display: "flex", alignItems: "center",
+          background: "rgba(8,10,6,0.98)",
+          borderLeft: `1px solid rgba(147,168,90,0.12)`,
+          padding: "0 12px",
+          gap: 4,
+          pointerEvents: "none",
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: T.olive }}>{total24h.toLocaleString()}</span>
+          <span style={{ fontSize: 9, color: T.dim, textTransform: "uppercase", letterSpacing: "0.08em" }}>24h</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -904,7 +944,30 @@ function MapView({ session, linkedWallet, flyToCoords }) {
           )}
 
           {/* ── Live claims ticker ── */}
-          <ClaimsTicker />
+          <ClaimsTicker onSelectDrop={(claim) => {
+            if (!claim.lat || !claim.lng) return;
+            // Find the matching drop in state, or build a minimal one
+            const match = drops.find(d => d.id === claim.location_id);
+            if (match) {
+              setSelected(match);
+            } else {
+              setSelected({
+                id: claim.location_id,
+                lat: claim.lat,
+                lng: claim.lng,
+                hint: claim.campaign_name,
+                campaign_name: claim.campaign_name,
+                reward_type: claim.reward_type,
+                reward_amount: claim.reward_amount,
+              });
+            }
+            setClaimMsg(null);
+            setClaimResult(null);
+            setProofMode(false);
+            if (mapRef.current) {
+              mapRef.current.flyTo({ center: [claim.lng, claim.lat], zoom: 15, duration: 800 });
+            }
+          }} />
 
           {/* ── Post-claim success screen ── */}
           {claimResult && (

@@ -9,8 +9,34 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// In-process cache: locationId → "City, Country" (or null if lookup failed)
+// In-process cache: locationId → "City, ST/Country" (or null if lookup failed)
 const geoCache = new Map();
+
+const US_STATES = {
+  "Alabama":"AL","Alaska":"AK","Arizona":"AZ","Arkansas":"AR","California":"CA",
+  "Colorado":"CO","Connecticut":"CT","Delaware":"DE","Florida":"FL","Georgia":"GA",
+  "Hawaii":"HI","Idaho":"ID","Illinois":"IL","Indiana":"IN","Iowa":"IA",
+  "Kansas":"KS","Kentucky":"KY","Louisiana":"LA","Maine":"ME","Maryland":"MD",
+  "Massachusetts":"MA","Michigan":"MI","Minnesota":"MN","Mississippi":"MS",
+  "Missouri":"MO","Montana":"MT","Nebraska":"NE","Nevada":"NV","New Hampshire":"NH",
+  "New Jersey":"NJ","New Mexico":"NM","New York":"NY","North Carolina":"NC",
+  "North Dakota":"ND","Ohio":"OH","Oklahoma":"OK","Oregon":"OR","Pennsylvania":"PA",
+  "Rhode Island":"RI","South Carolina":"SC","South Dakota":"SD","Tennessee":"TN",
+  "Texas":"TX","Utah":"UT","Vermont":"VT","Virginia":"VA","Washington":"WA",
+  "West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY","District of Columbia":"DC",
+};
+const CA_PROVINCES = {
+  "Ontario":"ON","Quebec":"QC","British Columbia":"BC","Alberta":"AB",
+  "Manitoba":"MB","Saskatchewan":"SK","Nova Scotia":"NS","New Brunswick":"NB",
+  "Newfoundland and Labrador":"NL","Prince Edward Island":"PE",
+  "Northwest Territories":"NT","Nunavut":"NU","Yukon":"YT",
+};
+
+function usStateAbbr(stateName, countryCode) {
+  if (countryCode === "US") return US_STATES[stateName] || null;
+  if (countryCode === "CA") return CA_PROVINCES[stateName] || null;
+  return null;
+}
 
 async function reverseGeocode(lat, lng) {
   try {
@@ -28,9 +54,13 @@ async function reverseGeocode(lat, lng) {
       addr.municipality ||
       addr.county ||
       null;
-    const country = addr.country || null;
-    if (!city && !country) return null;
-    return [city, country].filter(Boolean).join(", ");
+    const countryCode = addr.country_code?.toUpperCase() || null;
+    const country     = addr.country || null;
+    // For US/CA/AU show "City, ST" (state abbrev), otherwise "City, Country"
+    const stateAbbr = addr.state ? usStateAbbr(addr.state, countryCode) : null;
+    const region = stateAbbr || country;
+    if (!city && !region) return null;
+    return [city, region].filter(Boolean).join(", ");
   } catch {
     return null;
   }
@@ -71,6 +101,13 @@ export default async function handler(req, res) {
 
   if (error) return res.status(500).json({ error: error.message });
 
+  // Count claims in the last 24h for the stat badge
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count: total24h } = await supabase
+    .from("wago_drop_claims")
+    .select("id", { count: "exact", head: true })
+    .gte("claimed_at", since24h);
+
   // Look up display names for unique google_ids
   const googleIds = [...new Set((claims || []).map(c => c.google_id).filter(Boolean))];
   const nameMap = {};
@@ -109,9 +146,12 @@ export default async function handler(req, res) {
       reward_type:   campaign?.reward_type   || "touchgrass",
       reward_amount: campaign?.reward_amount || 0,
       location:      locLabel,
+      location_id:   loc?.id || null,
+      lat:           loc?.lat || null,
+      lng:           loc?.lng || null,
     };
   });
 
   res.setHeader("Cache-Control", "no-store");
-  return res.status(200).json({ claims: result });
+  return res.status(200).json({ claims: result, total_24h: total24h || 0 });
 }
