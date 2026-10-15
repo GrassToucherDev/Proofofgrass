@@ -374,11 +374,13 @@ function WalletLinkView({ googleId, onLinked }) {
 function MapView({ session, linkedWallet, flyToCoords }) {
   const mapContainer = useRef(null);
   const mapRef       = useRef(null);
-  const [userPos,  setUserPos]  = useState(null);   // { lat, lng }
-  const [drops,    setDrops]    = useState([]);      // visible drops
-  const [selected, setSelected] = useState(null);   // drop being viewed
+  const [userPos,  setUserPos]  = useState(null);
+  const [drops,    setDrops]    = useState([]);
+  const [selected, setSelected] = useState(null);
   const [claiming, setClaiming] = useState(false);
-  const [claimMsg, setClaimMsg] = useState(null);   // { ok, text }
+  const [claimMsg, setClaimMsg] = useState(null);
+  const [saving,   setSaving]   = useState(false);
+  const [saveMsg,  setSaveMsg]  = useState(null);
 
   // ── Fetch drops visible in current map bounds ───────────────────────────────
   const fetchDropsInView = useCallback(async (map) => {
@@ -386,7 +388,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     const bounds = map.getBounds();
     try {
       const res = await fetch(
-       `/api/wago-drops/locations?swLat=${bounds.getSouth()}&swLng=${bounds.getWest()}&neLat=${bounds.getNorth()}&neLng=${bounds.getEast()}${userPos ? `&userLat=${userPos.lat}&userLng=${userPos.lng}` : ""}`
+        `/api/wago-drops/locations?swLat=${bounds.getSouth()}&swLng=${bounds.getWest()}&neLat=${bounds.getNorth()}&neLng=${bounds.getEast()}${userPos ? `&userLat=${userPos.lat}&userLng=${userPos.lng}` : ""}`
       );
       const data = await res.json();
       if (!res.ok) return;
@@ -397,32 +399,39 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     }
   }, [userPos]);
 
-  // ── Add/update markers on the map ──────────────────────────────────────────
+  // ── Markers ────────────────────────────────────────────────────────────────
   const markersRef = useRef({});
   const updateMapMarkers = useCallback((map, locations) => {
-  if (!map) return;
-    // Remove stale
+    if (!map) return;
     Object.keys(markersRef.current).forEach(id => {
       if (!locations.find(l => l.id === id)) {
         markersRef.current[id].remove();
         delete markersRef.current[id];
       }
     });
-    // Add new
     locations.forEach(loc => {
       if (markersRef.current[loc.id]) return;
       const el = document.createElement("div");
       el.style.cssText = `
-        width:32px;height:32px;border-radius:50%;
-        background:${T.olive};border:2px solid #fff;
+        width:34px;height:34px;border-radius:50%;
+        background:${T.olive};border:2.5px solid rgba(255,255,255,0.9);
         display:flex;align-items:center;justify-content:center;
         font-size:16px;cursor:pointer;
-        box-shadow:0 2px 8px rgba(0,0,0,0.4);
+        box-shadow:0 2px 10px rgba(0,0,0,0.5);
+        transition:transform 0.15s;
       `;
       el.textContent = "📦";
       el.title = loc.hint || "Drop";
-      el.addEventListener("click", () => setSelected(loc));
-
+      el.addEventListener("mouseenter", () => { el.style.transform = "scale(1.15)"; });
+      el.addEventListener("mouseleave", () => { el.style.transform = "scale(1)"; });
+      el.addEventListener("click", () => {
+        setSelected(loc);
+        setClaimMsg(null);
+        setSaveMsg(null);
+        if (mapRef.current) {
+          mapRef.current.flyTo({ center: [loc.lng, loc.lat], zoom: Math.max(mapRef.current.getZoom(), 15), duration: 600 });
+        }
+      });
       import("mapbox-gl").then(({ default: mapboxgl }) => {
         const marker = new mapboxgl.Marker({ element: el })
           .setLngLat([loc.lng, loc.lat])
@@ -432,65 +441,47 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     });
   }, []);
 
-  // ── Load Mapbox + init map ──────────────────────────────────────────────────
+  // ── Init map ────────────────────────────────────────────────────────────────
   useEffect(() => {
     let map;
     import("mapbox-gl").then(({ default: mapboxgl }) => {
       import("mapbox-gl/dist/mapbox-gl.css").catch(() => {});
       mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-
-      // If flyToCoords provided, start centered there at street level
-      const initialCenter = flyToCoords
-        ? [flyToCoords.lng, flyToCoords.lat]
-        : [-98.5795, 39.8283];
-      const initialZoom = flyToCoords ? 16 : 4;
-
+      const initialCenter = flyToCoords ? [flyToCoords.lng, flyToCoords.lat] : [-98.5795, 39.8283];
+      const initialZoom   = flyToCoords ? 16 : 4;
       map = new mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/dark-v11",
         center: initialCenter,
         zoom: initialZoom,
       });
-
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
-
       const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true,
         showUserHeading: true,
       });
-
       geolocate.on("geolocate", (e) => {
         setUserPos({ lat: e.coords.latitude, lng: e.coords.longitude });
       });
-
       map.addControl(geolocate, "top-right");
-
       map.on("load", () => {
         mapRef.current = map;
         fetchDropsInView(map);
-        // Fly to saved drop coordinates if provided
         if (flyToCoords) {
-          map.flyTo({
-            center: [flyToCoords.lng, flyToCoords.lat],
-            zoom: 16,
-            duration: 1500,
-          });
+          map.flyTo({ center: [flyToCoords.lng, flyToCoords.lat], zoom: 16, duration: 1500 });
         }
       });
-
       map.on("moveend", () => fetchDropsInView(map));
     });
-
     return () => map?.remove();
   }, []);
 
-  // ── Re-fetch drops when user location becomes available ─────────────────────
   useEffect(() => {
     if (userPos && mapRef.current) fetchDropsInView(mapRef.current);
   }, [userPos, fetchDropsInView]);
 
-  // ── Claim handler ───────────────────────────────────────────────────────────
+  // ── Claim ──────────────────────────────────────────────────────────────────
   async function handleClaim(locationId) {
     if (!userPos) return setClaimMsg({ ok: false, text: "Enable location to claim." });
     setClaiming(true);
@@ -499,16 +490,11 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       const res = await fetch("/api/wago-drops/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          locationId,
-          userLat: userPos.lat,
-          userLng: userPos.lng,
-        }),
+        body: JSON.stringify({ locationId, userLat: userPos.lat, userLng: userPos.lng }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Claim failed");
       setClaimMsg({ ok: true, text: data.message || "Claimed! Reward incoming." });
-      setSelected(null);
     } catch (err) {
       setClaimMsg({ ok: false, text: err.message });
     } finally {
@@ -516,132 +502,264 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     }
   }
 
-  // ── Distance to selected drop ──────────────────────────────────────────────
+  // ── Save ───────────────────────────────────────────────────────────────────
+  async function handleSave(locationId) {
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      await fetch("/api/wago-drops/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId }),
+      });
+      setSaveMsg("Saved!");
+    } catch {
+      setSaveMsg("Couldn't save.");
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMsg(null), 2500);
+    }
+  }
+
   const distToSelected = selected && userPos
     ? Math.round(haversineM(userPos.lat, userPos.lng, selected.lat, selected.lng))
     : null;
-
   const canClaim = distToSelected !== null && distToSelected <= (selected?.claim_radius_m ?? 25);
 
   return (
-    <div style={{ position: "relative", height: "calc(100vh - 57px)" }}>
-      {/* Map */}
-      <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
+    <div style={{
+      display: "flex", height: "calc(100vh - 57px)",
+      flexDirection: "row",
+    }}>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+        @media (max-width: 680px) {
+          .map-layout { flex-direction: column !important; }
+          .map-sidebar { width: 100% !important; height: 44vh !important; border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.07) !important; overflow-y: auto !important; }
+          .map-container { height: 56vh !important; }
+        }
+      `}</style>
 
-      {/* Sidebar — drop detail */}
-      {selected && (
-        <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          background: T.surface, borderTop: `1px solid ${T.border}`,
-          padding: "20px clamp(14px,4vw,32px)",
-          animation: "slideUp 0.2s ease",
-          zIndex: 10,
+      {/* ── Sidebar ────────────────────────────────────────────────────────── */}
+      <div className="map-layout" style={{ display: "flex", flex: 1, flexDirection: "row", overflow: "hidden" }}>
+        <div className="map-sidebar" style={{
+          width: 340, flexShrink: 0,
+          background: T.surface,
+          borderRight: `1px solid ${T.border}`,
+          display: "flex", flexDirection: "column",
+          overflow: "hidden",
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-            <div>
-              <div style={{ fontSize: 11, color: T.olive, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>
-                {selected.campaign_name}
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: T.white }}>
-                {selected.hint || "Mystery Drop"}
+          {/* Sidebar header */}
+          <div style={{
+            padding: "18px 20px 14px",
+            borderBottom: `1px solid ${T.border}`,
+            flexShrink: 0,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{
+                fontFamily: "'Cormorant Garamond',Georgia,serif",
+                fontSize: 17, fontWeight: 700, color: T.white,
+              }}>Nearby Drops</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, display: "inline-block" }} />
+                <span style={{ fontSize: 11, color: T.muted, fontFamily: "monospace" }}>
+                  {linkedWallet.slice(0, 4)}…{linkedWallet.slice(-4)}
+                </span>
               </div>
             </div>
-            <button onClick={() => setSelected(null)} style={{
-              background: "none", border: "none", color: T.dim, fontSize: 20, cursor: "pointer",
-            }}>×</button>
+            <div style={{ fontSize: 12, color: T.dim }}>
+              {drops.length > 0
+                ? `${drops.length} drop${drops.length !== 1 ? "s" : ""} in view — click one to explore`
+                : "Pan the map to find drops near you"}
+            </div>
           </div>
 
-          {/* Reward */}
-          <div style={{
-            background: T.card, borderRadius: 10, padding: "12px 16px",
-            marginBottom: 14, border: `1px solid ${T.border}`,
-          }}>
-            <div style={{ fontSize: 11, color: T.muted, marginBottom: 6 }}>Reward</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: T.olive }}>
-              {selected.reward_amount
-                ? `${Number(selected.reward_amount).toLocaleString()} $TOUCHGRASS`
-                : selected.reward_type?.toUpperCase()}
-            </div>
-            {selected.proof_bonus_enabled && (
-              <div style={{ fontSize: 11, color: T.green, marginTop: 4 }}>
-                + {selected.proof_bonus_amount} proof bonus for Grass participants
+          {/* Drop list */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px" }}>
+            {drops.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 16px" }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>🌿</div>
+                <div style={{ fontSize: 13, color: T.dim, lineHeight: 1.6 }}>
+                  No drops visible here.<br />Try panning or zooming out.
+                </div>
               </div>
+            ) : (
+              drops.map(drop => {
+                const dist = userPos
+                  ? Math.round(haversineM(userPos.lat, userPos.lng, drop.lat, drop.lng))
+                  : null;
+                const isSelected = selected?.id === drop.id;
+                return (
+                  <div
+                    key={drop.id}
+                    onClick={() => {
+                      setSelected(drop);
+                      setClaimMsg(null);
+                      setSaveMsg(null);
+                      if (mapRef.current) {
+                        mapRef.current.flyTo({ center: [drop.lng, drop.lat], zoom: Math.max(mapRef.current.getZoom(), 15), duration: 600 });
+                      }
+                    }}
+                    style={{
+                      background: isSelected ? "rgba(147,168,90,0.1)" : T.card,
+                      border: `1px solid ${isSelected ? "rgba(147,168,90,0.35)" : T.border}`,
+                      borderRadius: 10, padding: "13px 14px", marginBottom: 8,
+                      cursor: "pointer", transition: "all 0.15s",
+                      animation: "fadeIn 0.2s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 11, color: T.olive, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>
+                          {drop.campaign_name || "Drop"}
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: T.white, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {drop.hint || "Mystery Drop"}
+                        </div>
+                        <div style={{ fontSize: 12, color: T.olive, fontWeight: 600 }}>
+                          {drop.reward_amount
+                            ? `${Number(drop.reward_amount).toLocaleString()} $TOUCHGRASS`
+                            : drop.reward_type}
+                        </div>
+                      </div>
+                      {dist !== null && (
+                        <div style={{
+                          fontSize: 11, color: dist <= 25 ? T.green : T.dim,
+                          flexShrink: 0, marginLeft: 10, marginTop: 2, textAlign: "right",
+                        }}>
+                          {dist < 1000 ? `${dist}m` : `${(dist / 1000).toFixed(1)}km`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
 
-          {/* Distance */}
-          {distToSelected !== null && (
-            <div style={{
-              fontSize: 13, color: canClaim ? T.green : T.muted, marginBottom: 14,
-            }}>
-              {canClaim
-                ? `✅ You're ${distToSelected}m away — close enough to claim!`
-                : `📍 ${distToSelected}m away — get within ${selected.claim_radius_m ?? 25}m to claim`}
-            </div>
-          )}
-
-          {claimMsg && (
-            <div style={{
-              fontSize: 13, color: claimMsg.ok ? T.green : T.red,
-              marginBottom: 12, padding: "8px 12px",
-              background: claimMsg.ok ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
-              borderRadius: 8,
-            }}>
-              {claimMsg.text}
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              onClick={() => handleClaim(selected.id)}
-              disabled={!canClaim || claiming}
-              style={{
-                flex: 1, background: canClaim ? T.olive : T.border,
-                color: canClaim ? T.bg : T.dim,
-                border: "none", borderRadius: 9, padding: "13px",
-                fontSize: 14, fontWeight: 700,
-                cursor: canClaim && !claiming ? "pointer" : "default",
-              }}
-            >
-              {claiming ? "Claiming…" : canClaim ? "Claim Drop" : `${distToSelected ?? "?"}m Away`}
-            </button>
-            <button
-              onClick={async () => {
-                await fetch("/api/wago-drops/save", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ locationId: selected.id }),
-                });
-              }}
-              style={{
-                background: T.card, border: `1px solid ${T.border}`,
-                color: T.muted, borderRadius: 9, padding: "13px 16px",
-                fontSize: 14, cursor: "pointer",
-              }}
-            >🔖</button>
+          {/* Sidebar footer links */}
+          <div style={{
+            borderTop: `1px solid ${T.border}`,
+            padding: "12px 20px",
+            display: "flex", gap: 16, flexShrink: 0,
+          }}>
+            {[
+              { href: "/wago-drops/saved",    label: "Saved"    },
+              { href: "/wago-drops/my-drops", label: "My Drops" },
+              { href: "/wago-drops/settings", label: "Settings" },
+            ].map(({ href, label }) => (
+              <Link key={href} href={href} style={{ fontSize: 12, color: T.dim, textDecoration: "none" }}
+                onMouseEnter={e => e.currentTarget.style.color = T.olive}
+                onMouseLeave={e => e.currentTarget.style.color = T.dim}
+              >{label}</Link>
+            ))}
           </div>
         </div>
-      )}
 
-      {/* Wallet indicator (top-left over map) */}
-      <div style={{
-        position: "absolute", top: 12, left: 12, zIndex: 5,
-        background: "rgba(8,10,6,0.85)", backdropFilter: "blur(6px)",
-        border: `1px solid ${T.border}`, borderRadius: 9,
-        padding: "6px 12px", display: "flex", alignItems: "center", gap: 8,
-      }}>
-        <span style={{ width: 7, height: 7, borderRadius: "50%", background: T.green, display: "inline-block" }} />
-        <span style={{ fontSize: 11, color: T.muted, fontFamily: "monospace" }}>
-          {linkedWallet.slice(0, 4)}…{linkedWallet.slice(-4)}
-        </span>
-        <Link href="/wago-drops/my-drops" style={{ fontSize: 11, color: T.olive, textDecoration: "none" }}>
-          My Drops
-        </Link>
+        {/* ── Map + detail panel ──────────────────────────────────────────── */}
+        <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column" }}>
+          <div className="map-container" ref={mapContainer} style={{ flex: 1 }} />
+
+          {/* Drop detail panel — slides up from bottom of map area */}
+          {selected && (
+            <div style={{
+              background: T.bg,
+              borderTop: `1px solid ${T.border}`,
+              padding: "20px 24px",
+              animation: "fadeIn 0.2s ease",
+              flexShrink: 0,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: T.olive, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>
+                    {selected.campaign_name}
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: T.white, lineHeight: 1.2 }}>
+                    {selected.hint || "Mystery Drop"}
+                  </div>
+                </div>
+                <button onClick={() => setSelected(null)} style={{
+                  background: "none", border: "none", color: T.dim,
+                  fontSize: 22, cursor: "pointer", padding: "0 0 0 12px", lineHeight: 1,
+                }}>×</button>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
+                {/* Reward chip */}
+                <div style={{
+                  background: "rgba(147,168,90,0.1)", border: `1px solid rgba(147,168,90,0.2)`,
+                  borderRadius: 8, padding: "8px 14px", flexShrink: 0,
+                }}>
+                  <div style={{ fontSize: 10, color: T.muted, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>Reward</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: T.olive }}>
+                    {selected.reward_amount
+                      ? `${Number(selected.reward_amount).toLocaleString()} $TOUCHGRASS`
+                      : selected.reward_type?.toUpperCase()}
+                  </div>
+                  {selected.proof_bonus_enabled && (
+                    <div style={{ fontSize: 10, color: T.green, marginTop: 3 }}>
+                      +{selected.proof_bonus_amount} proof bonus
+                    </div>
+                  )}
+                </div>
+
+                {/* Distance chip */}
+                {distToSelected !== null && (
+                  <div style={{
+                    background: canClaim ? "rgba(74,222,128,0.08)" : T.card,
+                    border: `1px solid ${canClaim ? "rgba(74,222,128,0.2)" : T.border}`,
+                    borderRadius: 8, padding: "8px 14px", flexShrink: 0,
+                  }}>
+                    <div style={{ fontSize: 10, color: T.muted, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>Distance</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: canClaim ? T.green : T.white }}>
+                      {distToSelected}m
+                    </div>
+                    <div style={{ fontSize: 10, color: canClaim ? T.green : T.dim, marginTop: 3 }}>
+                      {canClaim ? "In range ✓" : `Need ${selected.claim_radius_m ?? 25}m`}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div style={{ display: "flex", gap: 8, marginLeft: "auto", alignItems: "center", flexWrap: "wrap" }}>
+                  {claimMsg && (
+                    <div style={{
+                      fontSize: 12, color: claimMsg.ok ? T.green : T.red,
+                      padding: "6px 10px", borderRadius: 7,
+                      background: claimMsg.ok ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
+                    }}>{claimMsg.text}</div>
+                  )}
+                  {saveMsg && (
+                    <div style={{ fontSize: 12, color: T.muted }}>{saveMsg}</div>
+                  )}
+                  <button
+                    onClick={() => handleSave(selected.id)}
+                    disabled={saving}
+                    style={{
+                      background: T.card, border: `1px solid ${T.border}`,
+                      color: T.muted, borderRadius: 8, padding: "10px 14px",
+                      fontSize: 13, cursor: "pointer",
+                    }}
+                  >{saving ? "…" : "🔖 Save"}</button>
+                  <button
+                    onClick={() => handleClaim(selected.id)}
+                    disabled={!canClaim || claiming}
+                    style={{
+                      background: canClaim ? T.olive : T.border,
+                      color: canClaim ? T.bg : T.dim,
+                      border: "none", borderRadius: 8, padding: "10px 20px",
+                      fontSize: 13, fontWeight: 700,
+                      cursor: canClaim && !claiming ? "pointer" : "default",
+                    }}
+                  >
+                    {claiming ? "Claiming…" : canClaim ? "Claim Drop" : `${distToSelected ?? "?"}m Away`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-
-      <style>{`
-        @keyframes slideUp { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-      `}</style>
     </div>
   );
 }
