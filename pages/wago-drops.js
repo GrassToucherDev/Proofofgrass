@@ -652,7 +652,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
   useEffect(() => {
     let map;
     import("mapbox-gl").then(({ default: mapboxgl }) => {
-      import("mapbox-gl/dist/mapbox-gl.css").catch(() => {});
       mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
       const initialCenter = flyToCoords ? [flyToCoords.lng, flyToCoords.lat] : [-98.5795, 39.8283];
       const initialZoom   = flyToCoords ? 16 : 4;
@@ -1222,6 +1221,7 @@ export default function WagoDropsPage() {
         <title>WAGO Drops — Touch Grass</title>
         <meta name="description" content="Real-world location-based $TOUCHGRASS drops. Go outside, find the drop, claim on-chain." />
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet" />
+        <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
       </Head>
       <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "system-ui,sans-serif" }}>
         <WagoNav session={session} />
