@@ -63,9 +63,6 @@ export default async function handler(req, res) {
           reward_type,
           reward_amount
         )
-      ),
-      users (
-        name
       )
     `)
     .order("claimed_at", { ascending: false })
@@ -89,9 +86,7 @@ export default async function handler(req, res) {
     const campaign = loc?.wago_drop_campaigns;
     const locLabel = loc ? geoCache.get(loc.id) ?? null : null;
 
-    // Pull display name: users.name → first word of Google name → "Someone"
-    const rawName  = c.users?.name || null;
-    const username = rawName ? rawName.split(" ")[0] : "Someone";
+    const username = "Someone";
 
     return {
       id:            c.id,
