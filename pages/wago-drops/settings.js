@@ -198,7 +198,7 @@ export default function WagoDropsSettings() {
                 disabled={saving || !newAddress.trim() || !!cooldownRemaining}
                 style={{
                   background: (saving || !newAddress.trim() || cooldownRemaining) ? T.oliveD : T.olive,
-                  color: T.bg, border: "none", borderRadius: 8,
+                  color: "#fff", border: "none", borderRadius: 8,
                   padding: "11px 22px", fontSize: 13, fontWeight: 700,
                   cursor: (saving || !newAddress.trim() || cooldownRemaining) ? "default" : "pointer",
                   opacity: (saving || !newAddress.trim() || cooldownRemaining) ? 0.6 : 1,

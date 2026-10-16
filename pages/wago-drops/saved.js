@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 
 import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
+import Wago from "../../components/wago-drops/Wago";
 
 const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
 function rewardIconUrl(rewardType) {
@@ -173,8 +174,8 @@ function SaveCard({ save, onUnsave, onGoToMap, removing }) {
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
         {!unavailable ? (
           <button onClick={() => onGoToMap(save)} style={{
-            flex: 2, background: T.olive, color: T.bg, border: "none",
-            borderRadius: 8, padding: "9px 0",
+            flex: 2, background: T.olive, color: "#fff", border: "none",
+            borderRadius: 999, padding: "9px 0",
             fontSize: 13, fontWeight: 700, cursor: "pointer",
           }}>
             Go to Drop →
@@ -262,12 +263,12 @@ export default function SavedDrops() {
 
           {!session && (
             <div style={{ textAlign: "center", paddingTop: 60 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🔖</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={110} /></div>
               <p style={{ color: T.muted, fontSize: 14 }}>Sign in to see your saved drops.</p>
               <Link href="/wago-drops" style={{
                 display: "inline-block", marginTop: 16,
-                background: T.olive, color: T.bg,
-                borderRadius: 9, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
+                background: T.olive, color: "#fff",
+                borderRadius: 999, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
               }}>Go to Map</Link>
             </div>
           )}
@@ -281,14 +282,14 @@ export default function SavedDrops() {
 
           {session && !loading && saves.length === 0 && (
             <div style={{ textAlign: "center", paddingTop: 60 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🔖</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={110} /></div>
               <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.6 }}>
                 No saved drops yet.<br />Tap the bookmark on any drop to save it for later.
               </p>
               <Link href="/wago-drops" style={{
                 display: "inline-block", marginTop: 16,
-                background: T.olive, color: T.bg,
-                borderRadius: 9, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
+                background: T.olive, color: "#fff",
+                borderRadius: 999, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
               }}>Browse the Map</Link>
             </div>
           )}

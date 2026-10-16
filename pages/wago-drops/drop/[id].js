@@ -164,7 +164,7 @@ export default function DropDetail() {
                 This drop may have expired or been fully claimed.
               </div>
               <Link href="/wago-drops" style={{
-                background: T.olive, color: T.bg, borderRadius: 9,
+                background: T.olive, color: "#fff", borderRadius: 999,
                 padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
                 display: "inline-block",
               }}>Browse the Map</Link>
@@ -300,7 +300,7 @@ export default function DropDetail() {
               {!session ? (
                 <Link href="/wago-drops" style={{
                   display: "block", textAlign: "center",
-                  background: T.olive, color: T.bg, borderRadius: 10,
+                  background: T.olive, color: "#fff", borderRadius: 999,
                   padding: "14px", fontSize: 14, fontWeight: 700, textDecoration: "none",
                   marginBottom: 10,
                 }}>Sign in to Claim</Link>
@@ -309,8 +309,8 @@ export default function DropDetail() {
                   display: "flex", gap: 10, marginBottom: 10,
                 }}>
                   <button onClick={handleShare} style={{
-                    flex: 1, background: T.olive, color: T.bg, border: "none",
-                    borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 700, cursor: "pointer",
+                    flex: 1, background: T.olive, color: "#fff", border: "none",
+                    borderRadius: 999, padding: "13px", fontSize: 14, fontWeight: 700, cursor: "pointer",
                   }}>🌿 Share Drop</button>
                   <Link href="/wago-drops/my-drops" style={{
                     flex: 1, textAlign: "center",

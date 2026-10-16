@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 
 import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
+import Wago from "../../components/wago-drops/Wago";
 
 const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
 function rewardIconUrl(rewardType) {
@@ -76,12 +77,12 @@ export default function WagoDropsList() {
 
           {session && !loading && claims.length === 0 && (
             <div style={{ textAlign: "center", paddingTop: 60 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={110} /></div>
               <p style={{ color: T.muted, fontSize: 14 }}>No claims yet. Head to the map to find drops!</p>
               <Link href="/wago-drops" style={{
                 display: "inline-block", marginTop: 16,
-                background: T.olive, color: T.bg,
-                borderRadius: 9, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
+                background: T.olive, color: "#fff",
+                borderRadius: 999, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
               }}>Open Map</Link>
             </div>
           )}

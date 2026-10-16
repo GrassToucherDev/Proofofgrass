@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 
 import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
+import Wago from "../../components/wago-drops/Wago";
 
 // ── Reward asset logos (mirrors wago-drops.js) ────────────────────────────────
 const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
@@ -83,8 +84,8 @@ export default function MyDrops() {
               <p style={{ color: T.muted, fontSize: 14 }}>Sign in to view your WAGO Drops profile.</p>
               <Link href="/wago-drops" style={{
                 display: "inline-block", marginTop: 16,
-                background: T.olive, color: T.bg,
-                borderRadius: 9, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
+                background: T.olive, color: "#fff",
+                borderRadius: 999, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
               }}>Go to Map</Link>
             </div>
           )}
@@ -148,12 +149,12 @@ export default function MyDrops() {
                     background: T.surface, border: `1px solid ${T.border}`,
                     borderRadius: 12, padding: "32px 20px", textAlign: "center",
                   }}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>📭</div>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={96} /></div>
                     <div style={{ fontSize: 13, color: T.muted }}>No claims yet — get outside and find a drop!</div>
                     <Link href="/wago-drops" style={{
                       display: "inline-block", marginTop: 14,
-                      background: T.olive, color: T.bg,
-                      borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 700, textDecoration: "none",
+                      background: T.olive, color: "#fff",
+                      borderRadius: 999, padding: "9px 20px", fontSize: 13, fontWeight: 700, textDecoration: "none",
                     }}>Open Map</Link>
                   </div>
                 ) : (
