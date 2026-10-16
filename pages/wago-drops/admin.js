@@ -3,11 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import Head from "next/head";
 import Link from "next/link";
 
-const T = {
-  bg:"#080a06",surface:"#0f1209",card:"#141a0c",border:"rgba(255,255,255,0.07)",
-  olive:"#93a85a",oliveD:"#7a8f48",white:"#f0efea",muted:"rgba(240,239,234,0.45)",
-  dim:"rgba(240,239,234,0.22)",green:"#4ade80",red:"#f87171",yellow:"#fbbf24",
-};
+import { T } from "../../utils/wagoTheme";
 
 function Input({label,...props}){
   return(
@@ -129,8 +125,8 @@ function CampaignsTab({campaigns, setCampaigns, adminSecret}){
                       <div style={{fontSize:11,color:T.dim,marginTop:2}}>{c.status} · {c.location_count??0} pins</div>
                     </div>
                     <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                      <span style={{fontSize:11,color:T.olive,background:"rgba(147,168,90,0.12)",borderRadius:5,padding:"3px 8px"}}>{c.status}</span>
-                      <button onClick={()=>setEditing(c)} style={{fontSize:12,color:T.white,background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Edit</button>
+                      <span style={{fontSize:11,color:T.olive,background:"rgba(91,166,34,0.12)",borderRadius:5,padding:"3px 8px"}}>{c.status}</span>
+                      <button onClick={()=>setEditing(c)} style={{fontSize:12,color:T.white,background:"rgba(13,42,5,0.08)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Edit</button>
                     </div>
                   </div>
                 </div>
@@ -198,7 +194,7 @@ function PinManager({campaigns, adminSecret}){
       (data.locations||[]).forEach(loc=>{
         import("mapbox-gl").then(({default:mapboxgl})=>{
           const el=document.createElement("div");
-          el.style.cssText=`width:22px;height:22px;border-radius:50%;background:${loc.is_active?"#93a85a":"#555"};border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;`;
+          el.style.cssText=`width:22px;height:22px;border-radius:50%;background:${loc.is_active?"#5ba622":"#555"};border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;`;
           el.textContent="📌";
           const marker = new mapboxgl.Marker({element:el}).setLngLat([loc.lng,loc.lat]).addTo(mapRef.current);
           markersRef.current.push(marker);
@@ -335,7 +331,7 @@ function PinManager({campaigns, adminSecret}){
                             </div>
                           </div>
                           <div style={{display:"flex",gap:8}}>
-                            <button onClick={()=>setEditingPin({...loc})} style={{fontSize:12,color:T.white,background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Edit</button>
+                            <button onClick={()=>setEditingPin({...loc})} style={{fontSize:12,color:T.white,background:"rgba(13,42,5,0.08)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Edit</button>
                             <button onClick={()=>deletePin(loc.id)} style={{fontSize:12,color:T.red,background:"rgba(248,113,113,0.07)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Delete</button>
                           </div>
                         </div>

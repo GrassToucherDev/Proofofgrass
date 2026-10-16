@@ -5,20 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 
-const T = {
-  bg:      "#080a06",
-  surface: "#0f1209",
-  card:    "#141a0c",
-  border:  "rgba(255,255,255,0.07)",
-  olive:   "#93a85a",
-  oliveD:  "#7a8f48",
-  white:   "#f0efea",
-  muted:   "rgba(240,239,234,0.45)",
-  dim:     "rgba(240,239,234,0.22)",
-  green:   "#4ade80",
-  red:     "#f87171",
-  yellow:  "#fbbf24",
-};
+import { T } from "../../../utils/wagoTheme";
+import { WagoDropsNav, WagoDropsBottomNav } from "../../../components/wago-drops/WagoDropsNav";
 
 const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
 function rewardIconUrl(rewardType) {
@@ -154,21 +142,8 @@ export default function DropDetail() {
       <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "system-ui,sans-serif" }}>
 
         {/* Nav */}
-        <nav style={{
-          position: "sticky", top: 0, zIndex: 100,
-          background: T.bg, borderBottom: `1px solid ${T.border}`,
-          padding: "0 clamp(14px,4vw,48px)",
-          height: 56, display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <button onClick={() => router.back()} style={{
-            background: "none", border: "none", color: T.muted,
-            fontSize: 13, cursor: "pointer", padding: 0,
-          }}>← Back</button>
-          <span style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 17, fontWeight: 700 }}>
-            WAGO Drop
-          </span>
-          <Link href="/wago-drops" style={{ fontSize: 13, color: T.muted, textDecoration: "none" }}>Map</Link>
-        </nav>
+        <WagoDropsNav session={session} />
+        <WagoDropsBottomNav />
 
         <div style={{ maxWidth: 560, margin: "0 auto", padding: "32px clamp(14px,4vw,32px) 80px" }}>
 
@@ -209,7 +184,7 @@ export default function DropDetail() {
                 <div style={{
                   width: 72, height: 72, borderRadius: "50%", marginBottom: 18,
                   background: T.card, border: `2.5px solid ${T.olive}`,
-                  boxShadow: "0 0 0 6px rgba(147,168,90,0.12)",
+                  boxShadow: "0 0 0 6px rgba(91,166,34,0.12)",
                   display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
                 }}>
                   <img src={rewardIconUrl(drop.reward_type)} alt={drop.reward_type}
@@ -239,7 +214,7 @@ export default function DropDetail() {
                 {/* Reward */}
                 <div style={{
                   display: "inline-flex", alignItems: "center", gap: 8,
-                  background: "rgba(147,168,90,0.1)", border: `1px solid rgba(147,168,90,0.2)`,
+                  background: "rgba(91,166,34,0.1)", border: `1px solid rgba(91,166,34,0.2)`,
                   borderRadius: 10, padding: "8px 18px", marginTop: 4,
                 }}>
                   <span style={{ fontSize: 18, fontWeight: 700, color: T.olive }}>
@@ -367,7 +342,7 @@ export default function DropDetail() {
                     <button onClick={handleSave} disabled={saving} style={{
                       flex: 1, background: T.card,
                       color: saved ? T.olive : T.muted,
-                      border: `1px solid ${saved ? "rgba(147,168,90,0.3)" : T.border}`,
+                      border: `1px solid ${saved ? "rgba(91,166,34,0.3)" : T.border}`,
                       borderRadius: 10, padding: "11px",
                       fontSize: 13, cursor: "pointer",
                     }}>

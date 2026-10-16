@@ -147,6 +147,7 @@ export function WagoDropsBottomNav() {
         }
         @media (max-width: 680px) {
           .wd-bottom-nav { display: flex; }
+          body { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
         }
         .wd-bottom-tab {
           flex: 1; display: flex; flex-direction: column;
