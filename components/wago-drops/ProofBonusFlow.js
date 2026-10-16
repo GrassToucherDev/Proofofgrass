@@ -1,6 +1,6 @@
 // components/wago-drops/ProofBonusFlow.js
 // Post-claim Proof bonus flow:
-//   photo → server validation (100m, 24h, one per claim) → ResultCard →
+//   photo → server validation (100m, 24h, one per claim) → WAGO share card →
 //   Post to X → paste X link → Grass Tickets in the current monthly draw.
 //
 // Server rules live in /api/wago-drops/proof and /proof-confirm; this component
@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { V2, V2Styles } from "../../utils/v2Theme";
 import { supabase } from "../../utils/supabase";
 import { isValidXPostUrl } from "../../utils/wagoProofBonus";
-import ResultCard from "../ResultCard";
+import WagoShareCard from "./WagoShareCard";
 import Wago from "./Wago";
 
 function useCountdown(deadlineIso) {
@@ -78,9 +78,16 @@ export default function ProofBonusFlow({ claim, onDone }) {
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
   const shareText = useMemo(() => {
-    const hint = claim.drop?.hint || claim.drop?.campaign_name || "a drop";
-    return `Found a WAGO drop at "${hint}" 🌿\n\nProof I was there 📸\n\n#WAGO #TouchGrass #ProofOfGrass`;
+    // Campaign name only: the exact hint would give the spot away.
+    const name = claim.drop?.campaign_name || "a drop";
+    return `Just found a WAGO drop — ${name} 🌿\n\nProof I was there 📸\n\n#WAGO #TouchGrass #ProofOfGrass`;
   }, [claim.drop]);
+
+  const rewardText = useMemo(() => {
+    const amt = Number(claim.reward_amount || 0);
+    const ticker = (claim.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS";
+    return amt > 0 ? `+${amt.toLocaleString()} ${ticker}` : ticker;
+  }, [claim.reward_amount, claim.reward_type]);
 
   function pick(e) {
     const f = e.target.files?.[0];
@@ -209,12 +216,13 @@ export default function ProofBonusFlow({ claim, onDone }) {
           <div style={{ fontSize: 14, color: V2.forestLight, margin: "8px 0 4px", lineHeight: 1.5 }}>
             ✅ Proof approved. Post your card to X, then paste the link to your post below.
           </div>
-          <ResultCard
-            imageSrc={preview}
-            proofFile={file}
-            username={pogUser || ""}
-            shareOnly
-            shareTextOverride={shareText}
+          <WagoShareCard
+            photoUrl={preview}
+            campaignName={claim.drop?.campaign_name}
+            rewardText={rewardText}
+            rarity={claim.rarity || "common"}
+            tickets={tickets}
+            shareText={shareText}
             onShared={() => setPosted(true)}
           />
 

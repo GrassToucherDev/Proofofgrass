@@ -164,7 +164,7 @@ function roundRect(ctx,x,y,w,h,r){
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function ResultCard({ imageSrc, proofFile=null, username, initialStreak=1, onStreakUpdate, hasPremiumProofs=false, shareOnly=false, shareTextOverride=null, onShared=null }) {
+export default function ResultCard({ imageSrc, proofFile=null, username, initialStreak=1, onStreakUpdate, hasPremiumProofs=false }) {
   const canvasRef = useRef(null);
   const sharableFileRef = useRef(null);
   const outdoorFileRef  = useRef(null);
@@ -239,9 +239,8 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
   const TAGS   = "$TOUCHGRASS #TouchGrass #ProofOfGrass";
 
   const buildShareText = useCallback(()=>{
-    if(shareTextOverride) return shareTextOverride;
     return `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE}`;
-  },[caption,currentStreak,shareTextOverride]);
+  },[caption,currentStreak]);
 
   const handleNewCaption = useCallback(()=>{
     setCaption(prev=>pickCaption(currentStreak,prev));setCopied(false);
@@ -258,8 +257,6 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
 
   // ── Lock In Streak ────────────────────────────────────────────────────────
   const lockInStreak = useCallback(async()=>{
-    // shareOnly (WAGO Drops): sharing the card must never touch the daily streak.
-    if(shareOnly) return;
     // Fallback to localStorage if username prop is empty
     const effectiveUsername = username ||
       (typeof localStorage !== "undefined" ? localStorage.getItem("pog_username")?.replace(/@/g,"").toLowerCase().trim() : null);
@@ -355,7 +352,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
         }
       }catch(chalErr){console.warn("challenge progress update failed",chalErr);}
     }catch(err){console.error("lock_in_streak exception",err);setSubmitError("Something went wrong — tap again.");setSubmitStatus("error");}
-  },[shareOnly,username,currentStreak,onStreakUpdate,locationMode,gpsLat,gpsLng,locationCity,locationRegion,locationCountry]);
+  },[username,currentStreak,onStreakUpdate,locationMode,gpsLat,gpsLng,locationCity,locationRegion,locationCountry]);
 
   const isInAppBrowser = typeof navigator!=="undefined"&&(/Twitter/i.test(navigator.userAgent)||/Instagram/i.test(navigator.userAgent)||/FBAN|FBAV/i.test(navigator.userAgent)||/MicroMessenger/i.test(navigator.userAgent));
 
@@ -743,7 +740,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           )}
 
           {/* Primary — Lock In Streak */}
-          {!shareOnly && <button onClick={lockInStreak}
+          <button onClick={lockInStreak}
             disabled={submitStatus==="loading"||submitStatus==="success"}
             style={{
               background:submitStatus==="loading"?"rgba(125,200,50,0.5)":"linear-gradient(135deg,#7dc832,#5ba622)",
@@ -755,7 +752,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               WebkitAppearance:"none", touchAction:"manipulation", userSelect:"none",
             }}>
             {submitStatus==="loading"?"⏳ Locking in…":"🔒 Lock In My Streak"}
-          </button>}
+          </button>
 
           {/* Secondary — Share to X */}
           <button onClick={()=>setShowStylePicker(true)} disabled={submitStatus==="loading"}
@@ -779,9 +776,9 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           {submitStatus==="error" && submitError && (
             <p style={{ fontSize:11, color:"#e05050", textAlign:"center", margin:0 }}>{submitError}</p>
           )}
-          {!shareOnly && <p style={{ fontSize:11, color:"#6b7d60", textAlign:"center", margin:0 }}>
+          <p style={{ fontSize:11, color:"#6b7d60", textAlign:"center", margin:0 }}>
             Tap <strong>Lock In My Streak</strong> first, then share to X separately.
-          </p>}
+          </p>
         </div>
       )}
 
@@ -886,7 +883,6 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                     const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent??"");
                     setShareInitiated(true);
                     lockInStreak();
-                    onShared?.();
 
                     const doShare = (file) => {
                       if(isIOS){
