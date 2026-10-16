@@ -652,8 +652,12 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         @media (max-width: 680px) {
           .map-layout { flex-direction: column !important; }
           .wd-map-shell { height: calc(100dvh - 57px - 62px - env(safe-area-inset-bottom)) !important; }
-          .map-sidebar { width: 100% !important; height: 44vh !important; border-right: none !important; border-bottom: 1px solid rgba(13,42,5,0.08) !important; overflow-y: auto !important; }
-          .map-container { height: 56vh !important; }
+          .map-sidebar { width: 100% !important; height: auto !important; max-height: 150px; border-right: none !important; border-bottom: 1px solid rgba(13,42,5,0.08) !important; }
+          .map-sidebar-head, .map-sidebar-foot { display: none !important; }
+          .map-sidebar-list { display: flex !important; flex-direction: row !important; overflow-x: auto !important; overflow-y: hidden !important; gap: 10px; padding: 10px 12px !important; -webkit-overflow-scrolling: touch; }
+          .map-sidebar-list > .map-drop-card { min-width: 250px; max-width: 280px; margin-bottom: 0 !important; flex-shrink: 0; }
+          .map-sidebar-list > .map-empty { width: 100%; padding: 8px 0 !important; display: flex; align-items: center; gap: 12px; text-align: left !important; }
+          .map-container { height: auto !important; min-height: 0; }
         }
       `}</style>
 
@@ -664,7 +668,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
           background: T.surface, borderRight: `1px solid ${T.border}`,
           display: "flex", flexDirection: "column", overflow: "hidden",
         }}>
-          <div style={{ padding: "18px 20px 14px", borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+          <div className="map-sidebar-head" style={{ padding: "18px 20px 14px", borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <div style={{
                 fontFamily: "'Cormorant Garamond',Georgia,serif",
@@ -684,11 +688,11 @@ function MapView({ session, linkedWallet, flyToCoords }) {
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px" }}>
+          <div className="map-sidebar-list" style={{ flex: 1, overflowY: "auto", padding: "12px 12px" }}>
             {drops.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 16px" }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>🌿</div>
-                <div style={{ fontSize: 13, color: T.dim, lineHeight: 1.6 }}>
+              <div className="map-empty" style={{ textAlign: "center", padding: "32px 16px" }}>
+                <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}><Wago pose="salute" size={84} /></div>
+                <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
                   No drops visible here.<br />Try panning or zooming out.
                 </div>
               </div>
@@ -701,6 +705,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                 return (
                   <div
                     key={drop.id}
+                    className="map-drop-card"
                     onClick={() => {
                       setSelected(drop);
                       setClaimMsg(null);
@@ -754,7 +759,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
             )}
           </div>
 
-          <div style={{ borderTop: `1px solid ${T.border}`, padding: "12px 20px", display: "flex", gap: 16, flexShrink: 0 }}>
+          <div className="map-sidebar-foot" style={{ borderTop: `1px solid ${T.border}`, padding: "12px 20px", display: "flex", gap: 16, flexShrink: 0 }}>
             {[
               { href: "/wago-drops/saved",    label: "Saved"    },
               { href: "/wago-drops/my-drops", label: "My Drops" },
@@ -830,8 +835,9 @@ function MapView({ session, linkedWallet, flyToCoords }) {
           {/* ── Post-claim success screen ── */}
           {claimResult && (
             <div style={{
-              background: T.bg, borderTop: `1px solid ${T.border}`,
+              background: T.bg, borderTop: `1px solid ${T.border}`, borderRadius: "20px 20px 0 0", boxShadow: "0 -6px 24px rgba(26,74,10,0.10)", position: "relative", zIndex: 5,
               padding: "20px 24px", flexShrink: 0,
+              maxHeight: "62vh", overflowY: "auto",
               animation: "fadeIn 0.25s ease",
             }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
@@ -859,6 +865,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                     Pending · reward queued to your wallet
                   </div>
                 </div>
+                <Wago pose="salute" size={72} float style={{ flexShrink: 0 }} />
                 <button onClick={() => { setClaimResult(null); setSelected(null); }}
                   style={{ background: "none", border: "none", color: T.dim, fontSize: 22, cursor: "pointer", padding: 0, flexShrink: 0 }}>×</button>
               </div>
@@ -868,10 +875,12 @@ function MapView({ session, linkedWallet, flyToCoords }) {
               )}
 
               <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-                <button onClick={() => handleShare(claimResult)} style={{
-                  flex: 1, background: T.olive, color: T.bg, border: "none",
-                  borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                }}>🌿 Share</button>
+                {!(claimResult.proof_bonus_enabled && claimResult.claim_id) && (
+                  <button onClick={() => handleShare(claimResult)} style={{
+                    flex: 1, background: T.olive, color: T.bg, border: "none",
+                    borderRadius: 999, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                  }}>🌿 Share</button>
+                )}
                 <button onClick={() => { setClaimResult(null); setSelected(null); }} style={{
                   flex: 1, background: T.card, color: T.muted, border: `1px solid ${T.border}`,
                   borderRadius: 8, padding: "10px 16px", fontSize: 13, cursor: "pointer",
@@ -893,7 +902,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
           {/* Drop detail panel */}
           {selected && !claimResult && (
             <div style={{
-              background: T.bg, borderTop: `1px solid ${T.border}`,
+              background: T.bg, borderTop: `1px solid ${T.border}`, borderRadius: "20px 20px 0 0", boxShadow: "0 -6px 24px rgba(26,74,10,0.10)", position: "relative", zIndex: 5,
               padding: "20px 24px",
               animation: "fadeIn 0.2s ease",
               flexShrink: 0,
@@ -913,6 +922,24 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                 }}>×</button>
               </div>
 
+              {distToSelected !== null && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 10, marginBottom: 12,
+                  background: canClaim ? "rgba(125,200,50,0.14)" : T.surface,
+                  border: `1px solid ${canClaim ? "rgba(91,166,34,0.35)" : T.border}`,
+                  borderRadius: 14, padding: "6px 14px 6px 8px",
+                }}>
+                  <Wago pose="salute" size={46} />
+                  <div style={{ fontSize: 13, color: T.white, fontWeight: 600, lineHeight: 1.35 }}>
+                    {canClaim
+                      ? "You're here! Tap Claim Drop."
+                      : distToSelected <= 100
+                        ? `Getting warmer — ${distToSelected - (selected.claim_radius_m ?? 25)}m to go.`
+                        : `Head this way — ${distToSelected >= 1000 ? (distToSelected / 1000).toFixed(1) + "km" : distToSelected + "m"} away.`}
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
                 <div style={{
                   background: "rgba(91,166,34,0.1)", border: `1px solid rgba(91,166,34,0.2)`,
@@ -926,7 +953,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                   </div>
                   {selected.proof_bonus_enabled && (
                     <div style={{ fontSize: 10, color: T.green, marginTop: 3 }}>
-                      +{selected.proof_bonus_amount} proof bonus
+                      🎟️ +{selected.proof_tickets || 0} Grass Tickets with proof
                     </div>
                   )}
                 </div>
@@ -969,8 +996,8 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                     disabled={!canClaim || claiming}
                     style={{
                       background: canClaim ? T.olive : T.border,
-                      color: canClaim ? T.bg : T.dim,
-                      border: "none", borderRadius: 8, padding: "10px 20px",
+                      color: canClaim ? "#fff" : T.dim,
+                      border: "none", borderRadius: 999, padding: "11px 24px",
                       fontSize: 13, fontWeight: 700,
                       cursor: canClaim && !claiming ? "pointer" : "default",
                     }}

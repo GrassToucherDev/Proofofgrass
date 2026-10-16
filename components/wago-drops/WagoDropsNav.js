@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { signIn, signOut } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { V2 } from "../../utils/v2Theme";
 
 const TABS = [
@@ -130,6 +130,8 @@ export function WagoDropsNav({ session }) {
 // ── Mobile bottom tabs ────────────────────────────────────────────────────────
 export function WagoDropsBottomNav() {
   const router = useRouter();
+  const { data: session } = useSession();
+  if (!session) return null;   // tabs are for signed-in users
   return (
     <>
       <style>{`
