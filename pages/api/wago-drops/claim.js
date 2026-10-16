@@ -2,6 +2,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { createClient } from "@supabase/supabase-js";
+import { ticketsForCampaign, PROOF_WINDOW_HOURS } from "../../../utils/wagoProofBonus";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -42,7 +43,7 @@ export default async function handler(req, res) {
   // Load campaign separately
   const { data: campaign, error: campErr } = await supabase
     .from("wago_drop_campaigns")
-    .select("id, name, status, starts_at, ends_at, reward_type, reward_amount, reward_token_mint, reward_metadata, proof_bonus_enabled, proof_bonus_amount, claim_radius_m")
+    .select("*")
     .eq("id", loc.campaign_id)
     .single();
 
@@ -79,17 +80,10 @@ export default async function handler(req, res) {
     .single();
   if (!account?.linked_wallet) return res.status(400).json({ error: "No wallet linked" });
 
-  // Check proof bonus eligibility
-  let proofBonusApplied = false;
-  if (campaign.proof_bonus_enabled && campaign.proof_bonus_amount) {
-    const { data: grassEntry } = await supabase
-      .from("GrassDrawEntries")
-      .select("id")
-      .eq("wallet", account.linked_wallet)
-      .limit(1)
-      .single();
-    proofBonusApplied = !!grassEntry;
-  }
+  // Proof bonus is no longer auto-applied at claim time. It is now the
+  // post-claim flow: proof photo (within 100m, inside 24h) → X post →
+  // Grass Tickets. See /api/wago-drops/proof and /api/wago-drops/proof-confirm.
+  const proofBonusApplied = false;
 
   // Insert claim row
   const { data: claim, error: claimErr } = await supabase
@@ -129,6 +123,10 @@ export default async function handler(req, res) {
     proof_bonus_applied:  proofBonusApplied,
     proof_bonus_amount:   proofBonusApplied ? campaign.proof_bonus_amount : null,
     proof_bonus_enabled:  campaign.proof_bonus_enabled,
+    rarity:               campaign.rarity || "common",
+    proof_tickets:        campaign.proof_bonus_enabled ? ticketsForCampaign(campaign) : 0,
+    claimed_at:           claim.claimed_at,
+    proof_deadline:       new Date(new Date(claim.claimed_at).getTime() + PROOF_WINDOW_HOURS * 3600 * 1000).toISOString(),
     tx_signature:         null,
   });
 }

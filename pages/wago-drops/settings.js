@@ -5,20 +5,8 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/router";
 
-const T = {
-  bg:      "#080a06",
-  surface: "#0f1209",
-  card:    "#141a0c",
-  border:  "rgba(255,255,255,0.07)",
-  olive:   "#93a85a",
-  oliveD:  "#7a8f48",
-  white:   "#f0efea",
-  muted:   "rgba(240,239,234,0.45)",
-  dim:     "rgba(240,239,234,0.22)",
-  green:   "#4ade80",
-  red:     "#f87171",
-  yellow:  "#fbbf24",
-};
+import { T } from "../../utils/wagoTheme";
+import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
 
 export default function WagoDropsSettings() {
   const { data: session, status } = useSession();
@@ -104,24 +92,11 @@ export default function WagoDropsSettings() {
         <title>Settings — WAGO Drops</title>
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet" />
       </Head>
-      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "system-ui,sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif" }}>
 
         {/* Nav */}
-        <nav style={{
-          position: "sticky", top: 0, zIndex: 100,
-          background: T.bg, borderBottom: `1px solid ${T.border}`,
-          padding: "0 clamp(14px,4vw,48px)",
-          height: 56, display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <Link href="/wago-drops" style={{ fontSize: 13, color: T.muted, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
-            ← Map
-          </Link>
-          <span style={{
-            fontFamily: "'Cormorant Garamond',Georgia,serif",
-            fontSize: 16, fontWeight: 700, color: T.white,
-          }}>Settings</span>
-          <div style={{ width: 48 }} /> {/* spacer */}
-        </nav>
+        <WagoDropsNav session={session} />
+        <WagoDropsBottomNav />
 
         {/* Content */}
         <div style={{ maxWidth: 560, margin: "0 auto", padding: "40px clamp(14px,4vw,32px) 80px" }}>
@@ -199,7 +174,7 @@ export default function WagoDropsSettings() {
                 disabled={!!cooldownRemaining}
                 style={{
                   width: "100%", boxSizing: "border-box",
-                  background: cooldownRemaining ? "rgba(255,255,255,0.03)" : T.bg,
+                  background: cooldownRemaining ? "rgba(13,42,5,0.04)" : T.bg,
                   border: `1px solid ${T.border}`, borderRadius: 8,
                   padding: "11px 14px", fontSize: 13, color: T.white,
                   fontFamily: "monospace", outline: "none",
@@ -223,7 +198,7 @@ export default function WagoDropsSettings() {
                 disabled={saving || !newAddress.trim() || !!cooldownRemaining}
                 style={{
                   background: (saving || !newAddress.trim() || cooldownRemaining) ? T.oliveD : T.olive,
-                  color: T.bg, border: "none", borderRadius: 8,
+                  color: "#fff", border: "none", borderRadius: 8,
                   padding: "11px 22px", fontSize: 13, fontWeight: 700,
                   cursor: (saving || !newAddress.trim() || cooldownRemaining) ? "default" : "pointer",
                   opacity: (saving || !newAddress.trim() || cooldownRemaining) ? 0.6 : 1,

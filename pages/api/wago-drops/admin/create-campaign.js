@@ -1,5 +1,6 @@
 // pages/api/wago-drops/admin/create-campaign.js
 import { createClient } from "@supabase/supabase-js";
+import { RARITIES } from "../../../../utils/wagoProofBonus";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -19,6 +20,7 @@ export default async function handler(req, res) {
     name, description, image_url,
     reward_type, reward_amount, reward_token_mint, reward_metadata,
     proof_bonus_enabled, proof_bonus_amount,
+    rarity, proof_bonus_tickets,
     reveal_radius_m, claim_radius_m,
     starts_at, ends_at,
     _adminSecret,
@@ -40,6 +42,8 @@ export default async function handler(req, res) {
       reward_metadata:     reward_metadata || {},
       proof_bonus_enabled: !!proof_bonus_enabled,
       proof_bonus_amount:  proof_bonus_amount ? Number(proof_bonus_amount) : null,
+      rarity:              RARITIES.includes(String(rarity||"").toLowerCase()) ? String(rarity).toLowerCase() : "common",
+      proof_bonus_tickets: Number(proof_bonus_tickets) > 0 ? Math.floor(Number(proof_bonus_tickets)) : null,
       reveal_radius_m:     Number(reveal_radius_m) || 100,
       claim_radius_m:      Number(claim_radius_m) || 25,
       starts_at:           starts_at || null,

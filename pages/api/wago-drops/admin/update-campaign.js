@@ -1,5 +1,6 @@
 // pages/api/wago-drops/admin/update-campaign.js
 import { createClient } from "@supabase/supabase-js";
+import { RARITIES } from "../../../../utils/wagoProofBonus";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -17,7 +18,8 @@ export default async function handler(req, res) {
 
   const { id, name, description, image_url, reward_amount, reward_token_mint,
           reveal_radius_m, claim_radius_m, starts_at, ends_at, status,
-          proof_bonus_enabled, proof_bonus_amount } = req.body;
+          proof_bonus_enabled, proof_bonus_amount,
+          rarity, proof_bonus_tickets } = req.body;
 
   if (!id) return res.status(400).json({ error: "id required" });
 
@@ -34,6 +36,15 @@ export default async function handler(req, res) {
   if (status !== undefined) updates.status = status;
   if (proof_bonus_enabled !== undefined) updates.proof_bonus_enabled = proof_bonus_enabled;
   if (proof_bonus_amount !== undefined) updates.proof_bonus_amount = proof_bonus_amount || null;
+
+  if (rarity !== undefined) {
+    const r = String(rarity).toLowerCase();
+    if (!RARITIES.includes(r)) return res.status(400).json({ error: "Invalid rarity" });
+    updates.rarity = r;
+  }
+  if (proof_bonus_tickets !== undefined) {
+    updates.proof_bonus_tickets = Number(proof_bonus_tickets) > 0 ? Math.floor(Number(proof_bonus_tickets)) : null;
+  }
 
   const { data, error } = await supabase
     .from("wago_drop_campaigns")

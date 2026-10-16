@@ -3,11 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import Head from "next/head";
 import Link from "next/link";
 
-const T = {
-  bg:"#080a06",surface:"#0f1209",card:"#141a0c",border:"rgba(255,255,255,0.07)",
-  olive:"#93a85a",oliveD:"#7a8f48",white:"#f0efea",muted:"rgba(240,239,234,0.45)",
-  dim:"rgba(240,239,234,0.22)",green:"#4ade80",red:"#f87171",yellow:"#fbbf24",
-};
+import { T } from "../../utils/wagoTheme";
 
 function Input({label,...props}){
   return(
@@ -28,7 +24,7 @@ function Select({label,children,...props}){
 }
 
 const MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
-const BLANK_CAMPAIGN = {name:"",description:"",image_url:"",reward_type:"spl_token",reward_amount:"",reward_token_mint:MINT,reveal_radius_m:100,claim_radius_m:25,proof_bonus_enabled:false,proof_bonus_amount:"",starts_at:"",ends_at:"",status:"active"};
+const BLANK_CAMPAIGN = {name:"",description:"",image_url:"",reward_type:"spl_token",reward_amount:"",reward_token_mint:MINT,reveal_radius_m:100,claim_radius_m:25,proof_bonus_enabled:false,proof_bonus_amount:"",rarity:"common",proof_bonus_tickets:"",starts_at:"",ends_at:"",status:"active"};
 
 function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
   const [form, setForm] = useState(initial || BLANK_CAMPAIGN);
@@ -73,9 +69,15 @@ function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
       </Select>
       <label style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,cursor:"pointer"}}>
         <input type="checkbox" checked={!!form.proof_bonus_enabled} onChange={e=>set("proof_bonus_enabled",e.target.checked)}/>
-        <span style={{fontSize:13,color:T.muted}}>Enable Proof of Grass bonus</span>
+        <span style={{fontSize:13,color:T.muted}}>Enable Proof bonus (photo + X post → Grass Tickets)</span>
       </label>
-      {form.proof_bonus_enabled && <Input label="Proof Bonus Amount" type="number" value={form.proof_bonus_amount||""} onChange={e=>set("proof_bonus_amount",e.target.value)}/>}
+      <Select label="Rarity (sets default Grass Tickets: 2 / 5 / 10 / 25)" value={form.rarity||"common"} onChange={e=>set("rarity",e.target.value)}>
+        <option value="common">Common · 2 tickets</option>
+        <option value="rare">Rare · 5 tickets</option>
+        <option value="epic">Epic · 10 tickets</option>
+        <option value="legendary">Legendary · 25 tickets</option>
+      </Select>
+      {form.proof_bonus_enabled && <Input label="Grass Tickets override (optional)" type="number" value={form.proof_bonus_tickets||""} onChange={e=>set("proof_bonus_tickets",e.target.value)}/>}
       {msg && <div style={{fontSize:13,color:msg.ok?T.green:T.red,marginBottom:12,padding:"8px 12px",background:msg.ok?"rgba(74,222,128,0.07)":"rgba(248,113,113,0.07)",borderRadius:8}}>{msg.text}</div>}
       <button type="submit" disabled={loading} style={{width:"100%",background:T.olive,color:T.bg,border:"none",borderRadius:9,padding:"11px",fontSize:14,fontWeight:700,cursor:loading?"default":"pointer"}}>{loading?"Saving…":submitLabel}</button>
     </form>
@@ -123,8 +125,8 @@ function CampaignsTab({campaigns, setCampaigns, adminSecret}){
                       <div style={{fontSize:11,color:T.dim,marginTop:2}}>{c.status} · {c.location_count??0} pins</div>
                     </div>
                     <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                      <span style={{fontSize:11,color:T.olive,background:"rgba(147,168,90,0.12)",borderRadius:5,padding:"3px 8px"}}>{c.status}</span>
-                      <button onClick={()=>setEditing(c)} style={{fontSize:12,color:T.white,background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Edit</button>
+                      <span style={{fontSize:11,color:T.olive,background:"rgba(91,166,34,0.12)",borderRadius:5,padding:"3px 8px"}}>{c.status}</span>
+                      <button onClick={()=>setEditing(c)} style={{fontSize:12,color:T.white,background:"rgba(13,42,5,0.08)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Edit</button>
                     </div>
                   </div>
                 </div>
@@ -192,7 +194,7 @@ function PinManager({campaigns, adminSecret}){
       (data.locations||[]).forEach(loc=>{
         import("mapbox-gl").then(({default:mapboxgl})=>{
           const el=document.createElement("div");
-          el.style.cssText=`width:22px;height:22px;border-radius:50%;background:${loc.is_active?"#93a85a":"#555"};border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;`;
+          el.style.cssText=`width:22px;height:22px;border-radius:50%;background:${loc.is_active?"#5ba622":"#555"};border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;`;
           el.textContent="📌";
           const marker = new mapboxgl.Marker({element:el}).setLngLat([loc.lng,loc.lat]).addTo(mapRef.current);
           markersRef.current.push(marker);
@@ -329,7 +331,7 @@ function PinManager({campaigns, adminSecret}){
                             </div>
                           </div>
                           <div style={{display:"flex",gap:8}}>
-                            <button onClick={()=>setEditingPin({...loc})} style={{fontSize:12,color:T.white,background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Edit</button>
+                            <button onClick={()=>setEditingPin({...loc})} style={{fontSize:12,color:T.white,background:"rgba(13,42,5,0.08)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Edit</button>
                             <button onClick={()=>deletePin(loc.id)} style={{fontSize:12,color:T.red,background:"rgba(248,113,113,0.07)",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>Delete</button>
                           </div>
                         </div>
@@ -422,7 +424,7 @@ export default function WagoAdminPage(){
         <title>WAGO Drops Admin</title>
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet"/>
       </Head>
-      <div style={{minHeight:"100vh",background:T.bg,color:T.white,fontFamily:"system-ui,sans-serif"}}>
+      <div style={{minHeight:"100vh",background:T.bg,color:T.white,fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif"}}>
         <nav style={{position:"sticky",top:0,zIndex:100,background:T.bg,borderBottom:`1px solid ${T.border}`,padding:"0 clamp(14px,4vw,48px)",height:56,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <span style={{fontSize:20}}>🗺️</span>

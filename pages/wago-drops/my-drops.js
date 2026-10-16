@@ -4,19 +4,9 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 
-const T = {
-  bg:      "#080a06",
-  surface: "#0f1209",
-  card:    "#141a0c",
-  border:  "rgba(255,255,255,0.07)",
-  olive:   "#93a85a",
-  white:   "#f0efea",
-  muted:   "rgba(240,239,234,0.45)",
-  dim:     "rgba(240,239,234,0.22)",
-  green:   "#4ade80",
-  red:     "#f87171",
-  yellow:  "#fbbf24",
-};
+import { T } from "../../utils/wagoTheme";
+import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
+import Wago from "../../components/wago-drops/Wago";
 
 // ── Reward asset logos (mirrors wago-drops.js) ────────────────────────────────
 const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
@@ -79,19 +69,11 @@ export default function MyDrops() {
         <title>My WAGO Drops</title>
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet" />
       </Head>
-      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "system-ui,sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif" }}>
 
         {/* Nav */}
-        <nav style={{
-          position: "sticky", top: 0, zIndex: 100,
-          background: T.bg, borderBottom: `1px solid ${T.border}`,
-          padding: "0 clamp(14px,4vw,48px)",
-          height: 56, display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <Link href="/wago-drops" style={{ fontSize: 13, color: T.muted, textDecoration: "none" }}>← Map</Link>
-          <span style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 17, fontWeight: 700 }}>My Profile</span>
-          <Link href="/wago-drops/settings" style={{ fontSize: 12, color: T.dim, textDecoration: "none" }}>Settings</Link>
-        </nav>
+        <WagoDropsNav session={session} />
+        <WagoDropsBottomNav />
 
         <div style={{ maxWidth: 580, margin: "0 auto", padding: "28px clamp(14px,4vw,32px) 80px" }}>
 
@@ -102,8 +84,8 @@ export default function MyDrops() {
               <p style={{ color: T.muted, fontSize: 14 }}>Sign in to view your WAGO Drops profile.</p>
               <Link href="/wago-drops" style={{
                 display: "inline-block", marginTop: 16,
-                background: T.olive, color: T.bg,
-                borderRadius: 9, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
+                background: T.olive, color: "#fff",
+                borderRadius: 999, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
               }}>Go to Map</Link>
             </div>
           )}
@@ -167,12 +149,12 @@ export default function MyDrops() {
                     background: T.surface, border: `1px solid ${T.border}`,
                     borderRadius: 12, padding: "32px 20px", textAlign: "center",
                   }}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>📭</div>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={96} /></div>
                     <div style={{ fontSize: 13, color: T.muted }}>No claims yet — get outside and find a drop!</div>
                     <Link href="/wago-drops" style={{
                       display: "inline-block", marginTop: 14,
-                      background: T.olive, color: T.bg,
-                      borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 700, textDecoration: "none",
+                      background: T.olive, color: "#fff",
+                      borderRadius: 999, padding: "9px 20px", fontSize: 13, fontWeight: 700, textDecoration: "none",
                     }}>Open Map</Link>
                   </div>
                 ) : (

@@ -5,20 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 
-const T = {
-  bg:      "#080a06",
-  surface: "#0f1209",
-  card:    "#141a0c",
-  border:  "rgba(255,255,255,0.07)",
-  olive:   "#93a85a",
-  oliveD:  "#7a8f48",
-  white:   "#f0efea",
-  muted:   "rgba(240,239,234,0.45)",
-  dim:     "rgba(240,239,234,0.22)",
-  green:   "#4ade80",
-  red:     "#f87171",
-  yellow:  "#fbbf24",
-};
+import { T } from "../../../utils/wagoTheme";
+import { WagoDropsNav, WagoDropsBottomNav } from "../../../components/wago-drops/WagoDropsNav";
+import Wago from "../../../components/wago-drops/Wago";
+import ProofBonusFlow from "../../../components/wago-drops/ProofBonusFlow";
 
 const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
 function rewardIconUrl(rewardType) {
@@ -148,27 +138,14 @@ export default function DropDetail() {
         <meta name="description" content={drop?.hint
           ? `Claim this WAGO Drop: ${drop.hint}. Earn ${drop.reward_amount} ${drop.reward_type?.toUpperCase()}.`
           : "A real-world WAGO Drop. Go outside and claim it."} />
-        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </Head>
 
-      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "system-ui,sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif" }}>
 
         {/* Nav */}
-        <nav style={{
-          position: "sticky", top: 0, zIndex: 100,
-          background: T.bg, borderBottom: `1px solid ${T.border}`,
-          padding: "0 clamp(14px,4vw,48px)",
-          height: 56, display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <button onClick={() => router.back()} style={{
-            background: "none", border: "none", color: T.muted,
-            fontSize: 13, cursor: "pointer", padding: 0,
-          }}>← Back</button>
-          <span style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 17, fontWeight: 700 }}>
-            WAGO Drop
-          </span>
-          <Link href="/wago-drops" style={{ fontSize: 13, color: T.muted, textDecoration: "none" }}>Map</Link>
-        </nav>
+        <WagoDropsNav session={session} />
+        <WagoDropsBottomNav />
 
         <div style={{ maxWidth: 560, margin: "0 auto", padding: "32px clamp(14px,4vw,32px) 80px" }}>
 
@@ -183,13 +160,13 @@ export default function DropDetail() {
           {/* Not found */}
           {notFound && (
             <div style={{ textAlign: "center", paddingTop: 80 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={120} /></div>
               <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Drop not found</div>
               <div style={{ fontSize: 13, color: T.muted, marginBottom: 24 }}>
                 This drop may have expired or been fully claimed.
               </div>
               <Link href="/wago-drops" style={{
-                background: T.olive, color: T.bg, borderRadius: 9,
+                background: T.olive, color: "#fff", borderRadius: 999,
                 padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
                 display: "inline-block",
               }}>Browse the Map</Link>
@@ -209,7 +186,7 @@ export default function DropDetail() {
                 <div style={{
                   width: 72, height: 72, borderRadius: "50%", marginBottom: 18,
                   background: T.card, border: `2.5px solid ${T.olive}`,
-                  boxShadow: "0 0 0 6px rgba(147,168,90,0.12)",
+                  boxShadow: "0 0 0 6px rgba(91,166,34,0.12)",
                   display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
                 }}>
                   <img src={rewardIconUrl(drop.reward_type)} alt={drop.reward_type}
@@ -239,7 +216,7 @@ export default function DropDetail() {
                 {/* Reward */}
                 <div style={{
                   display: "inline-flex", alignItems: "center", gap: 8,
-                  background: "rgba(147,168,90,0.1)", border: `1px solid rgba(147,168,90,0.2)`,
+                  background: "rgba(91,166,34,0.1)", border: `1px solid rgba(91,166,34,0.2)`,
                   borderRadius: 10, padding: "8px 18px", marginTop: 4,
                 }}>
                   <span style={{ fontSize: 18, fontWeight: 700, color: T.olive }}>
@@ -249,7 +226,7 @@ export default function DropDetail() {
                 </div>
                 {drop.proof_bonus_enabled && (
                   <div style={{ fontSize: 11, color: T.green, marginTop: 6 }}>
-                    + {Number(drop.proof_bonus_amount || 0).toLocaleString()} proof bonus available
+                    🎟️ +{drop.proof_tickets || 0} Grass Tickets with a proof photo
                   </div>
                 )}
               </div>
@@ -304,12 +281,10 @@ export default function DropDetail() {
                     +{Number(claimResult.reward_amount || 0).toLocaleString()}{" "}
                     {(claimResult.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS"} queued to your wallet.
                   </div>
-                  {claimResult.proof_bonus_applied && (
-                    <div style={{ fontSize: 12, color: T.green, marginTop: 4 }}>
-                      Proof bonus included: +{Number(claimResult.proof_bonus_amount || 0).toLocaleString()}
-                    </div>
-                  )}
                 </div>
+              )}
+              {claimResult?.proof_bonus_enabled && claimResult?.claim_id && (
+                <ProofBonusFlow claim={{ ...claimResult, drop }} />
               )}
 
               {/* Error */}
@@ -325,7 +300,7 @@ export default function DropDetail() {
               {!session ? (
                 <Link href="/wago-drops" style={{
                   display: "block", textAlign: "center",
-                  background: T.olive, color: T.bg, borderRadius: 10,
+                  background: T.olive, color: "#fff", borderRadius: 999,
                   padding: "14px", fontSize: 14, fontWeight: 700, textDecoration: "none",
                   marginBottom: 10,
                 }}>Sign in to Claim</Link>
@@ -334,8 +309,8 @@ export default function DropDetail() {
                   display: "flex", gap: 10, marginBottom: 10,
                 }}>
                   <button onClick={handleShare} style={{
-                    flex: 1, background: T.olive, color: T.bg, border: "none",
-                    borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 700, cursor: "pointer",
+                    flex: 1, background: T.olive, color: "#fff", border: "none",
+                    borderRadius: 999, padding: "13px", fontSize: 14, fontWeight: 700, cursor: "pointer",
                   }}>🌿 Share Drop</button>
                   <Link href="/wago-drops/my-drops" style={{
                     flex: 1, textAlign: "center",
@@ -367,7 +342,7 @@ export default function DropDetail() {
                     <button onClick={handleSave} disabled={saving} style={{
                       flex: 1, background: T.card,
                       color: saved ? T.olive : T.muted,
-                      border: `1px solid ${saved ? "rgba(147,168,90,0.3)" : T.border}`,
+                      border: `1px solid ${saved ? "rgba(91,166,34,0.3)" : T.border}`,
                       borderRadius: 10, padding: "11px",
                       fontSize: 13, cursor: "pointer",
                     }}>

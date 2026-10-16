@@ -5,20 +5,9 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 
-const T = {
-  bg:      "#080a06",
-  surface: "#0f1209",
-  card:    "#141a0c",
-  border:  "rgba(255,255,255,0.07)",
-  olive:   "#93a85a",
-  oliveD:  "#7a8f48",
-  white:   "#f0efea",
-  muted:   "rgba(240,239,234,0.45)",
-  dim:     "rgba(240,239,234,0.22)",
-  green:   "#4ade80",
-  red:     "#f87171",
-  yellow:  "#fbbf24",
-};
+import { T } from "../../utils/wagoTheme";
+import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
+import Wago from "../../components/wago-drops/Wago";
 
 const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
 function rewardIconUrl(rewardType) {
@@ -185,8 +174,8 @@ function SaveCard({ save, onUnsave, onGoToMap, removing }) {
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
         {!unavailable ? (
           <button onClick={() => onGoToMap(save)} style={{
-            flex: 2, background: T.olive, color: T.bg, border: "none",
-            borderRadius: 8, padding: "9px 0",
+            flex: 2, background: T.olive, color: "#fff", border: "none",
+            borderRadius: 999, padding: "9px 0",
             fontSize: 13, fontWeight: 700, cursor: "pointer",
           }}>
             Go to Drop →
@@ -235,7 +224,6 @@ export default function SavedDrops() {
   }, [session]);
 
   async function handleUnsave(saveId, locationId) {
-    console.log("removing saveId:", saveId, "locationId:", locationId, "saves ids:", saves.map(s => s.id));
     setRemoving(saveId);
     try {
       const res = await fetch("/api/wago-drops/save", {
@@ -244,7 +232,6 @@ export default function SavedDrops() {
         body: JSON.stringify({ locationId }),
       });
       const data = await res.json();
-      console.log("unsave response:", res.status, data);
       if (res.ok) {
         setSaves(prev => prev.filter(s => s.id !== saveId));
       }
@@ -267,29 +254,21 @@ export default function SavedDrops() {
         <title>Saved Drops — WAGO</title>
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet" />
       </Head>
-      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "system-ui,sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif" }}>
 
-        <nav style={{
-          position: "sticky", top: 0, zIndex: 100,
-          background: T.bg, borderBottom: `1px solid ${T.border}`,
-          padding: "0 clamp(14px,4vw,48px)",
-          height: 56, display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <Link href="/wago-drops/my-drops" style={{ fontSize: 13, color: T.muted, textDecoration: "none" }}>← Profile</Link>
-          <span style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 17, fontWeight: 700 }}>Saved Drops</span>
-          <Link href="/wago-drops" style={{ fontSize: 13, color: T.muted, textDecoration: "none" }}>Map →</Link>
-        </nav>
+        <WagoDropsNav session={session} />
+        <WagoDropsBottomNav />
 
         <div style={{ maxWidth: 600, margin: "0 auto", padding: "28px clamp(14px,4vw,32px) 80px" }}>
 
           {!session && (
             <div style={{ textAlign: "center", paddingTop: 60 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🔖</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={110} /></div>
               <p style={{ color: T.muted, fontSize: 14 }}>Sign in to see your saved drops.</p>
               <Link href="/wago-drops" style={{
                 display: "inline-block", marginTop: 16,
-                background: T.olive, color: T.bg,
-                borderRadius: 9, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
+                background: T.olive, color: "#fff",
+                borderRadius: 999, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
               }}>Go to Map</Link>
             </div>
           )}
@@ -303,14 +282,14 @@ export default function SavedDrops() {
 
           {session && !loading && saves.length === 0 && (
             <div style={{ textAlign: "center", paddingTop: 60 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🔖</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={110} /></div>
               <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.6 }}>
                 No saved drops yet.<br />Tap the bookmark on any drop to save it for later.
               </p>
               <Link href="/wago-drops" style={{
                 display: "inline-block", marginTop: 16,
-                background: T.olive, color: T.bg,
-                borderRadius: 9, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
+                background: T.olive, color: "#fff",
+                borderRadius: 999, padding: "10px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none",
               }}>Browse the Map</Link>
             </div>
           )}
