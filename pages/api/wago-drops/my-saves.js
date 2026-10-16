@@ -2,6 +2,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { createClient } from "@supabase/supabase-js";
+import { ticketsForCampaign } from "../../../utils/wagoProofBonus";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -32,7 +33,7 @@ export default async function handler(req, res) {
   const campaignIds = [...new Set((locations || []).map(l => l.campaign_id))];
   const { data: campaigns } = await supabase
     .from("wago_drop_campaigns")
-    .select("id, name, status, reward_type, reward_amount, proof_bonus_enabled, proof_bonus_amount, ends_at, claim_radius_m")
+    .select("id, name, status, reward_type, reward_amount, proof_bonus_enabled, proof_bonus_amount, rarity, proof_bonus_tickets, ends_at, claim_radius_m")
     .in("id", campaignIds);
 
   const locMap = {};
@@ -57,6 +58,8 @@ export default async function handler(req, res) {
       reward_amount: camp.reward_amount,
       proof_bonus_enabled: camp.proof_bonus_enabled,
       proof_bonus_amount: camp.proof_bonus_amount,
+      rarity: camp.rarity || "common",
+      proof_tickets: camp.proof_bonus_enabled ? ticketsForCampaign(camp) : 0,
       ends_at: camp.ends_at,
       claim_radius_m: camp.claim_radius_m,
       claim_count: loc.claim_count,

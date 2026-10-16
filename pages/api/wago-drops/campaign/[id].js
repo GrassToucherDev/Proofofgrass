@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   const { data, error } = await supabase
     .from("wago_drop_campaigns")
     .select(`id, name, description, image_url, reward_type, reward_amount,
-             reward_token_mint, proof_bonus_enabled, proof_bonus_amount,
+             reward_token_mint, proof_bonus_enabled, proof_bonus_amount, rarity, proof_bonus_tickets,
              reveal_radius_m, claim_radius_m, starts_at, ends_at, status`)
     .eq("id", id)
     .single();

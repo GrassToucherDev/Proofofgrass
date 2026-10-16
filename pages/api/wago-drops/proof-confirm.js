@@ -92,7 +92,7 @@ export default async function handler(req, res) {
   const host  = req.headers.host;
   const awardRes = await fetch(`${proto}://${host}/api/grass-draw/award-bonus`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-internal-secret": process.env.SUPABASE_SERVICE_ROLE_KEY },
     body: JSON.stringify({
       username,
       entry_type: "wago_proof",

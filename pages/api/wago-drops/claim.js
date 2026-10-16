@@ -2,6 +2,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { createClient } from "@supabase/supabase-js";
+import { ticketsForCampaign, PROOF_WINDOW_HOURS } from "../../../utils/wagoProofBonus";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -122,6 +123,10 @@ export default async function handler(req, res) {
     proof_bonus_applied:  proofBonusApplied,
     proof_bonus_amount:   proofBonusApplied ? campaign.proof_bonus_amount : null,
     proof_bonus_enabled:  campaign.proof_bonus_enabled,
+    rarity:               campaign.rarity || "common",
+    proof_tickets:        campaign.proof_bonus_enabled ? ticketsForCampaign(campaign) : 0,
+    claimed_at:           claim.claimed_at,
+    proof_deadline:       new Date(new Date(claim.claimed_at).getTime() + PROOF_WINDOW_HOURS * 3600 * 1000).toISOString(),
     tx_signature:         null,
   });
 }

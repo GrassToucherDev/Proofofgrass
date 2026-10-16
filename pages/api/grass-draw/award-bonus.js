@@ -68,6 +68,10 @@ export default async function handler(req, res) {
 
     // ── WAGO Drops proof bonus: one award per claim (source_id = claim id) ──
     if (entry_type === 'wago_proof') {
+      // Server-to-server only: /api/wago-drops/proof-confirm sends the service key.
+      if (req.headers['x-internal-secret'] !== process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        return res.status(403).json({ error: 'wago_proof entries can only be awarded by the WAGO Drops server.' });
+      }
       if (!source_id) return res.status(400).json({ error: 'wago_proof entries require a source_id (claim id).' });
       const { data: dup } = await supabase
         .from('grass_draw_entries')
