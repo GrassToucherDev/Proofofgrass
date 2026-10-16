@@ -92,7 +92,7 @@ export default function WagoDropsSettings() {
         <title>Settings — WAGO Drops</title>
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet" />
       </Head>
-      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "system-ui,sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif" }}>
 
         {/* Nav */}
         <WagoDropsNav session={session} />

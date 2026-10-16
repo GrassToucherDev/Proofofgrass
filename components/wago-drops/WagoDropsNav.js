@@ -4,6 +4,7 @@
 // tabs (Explore / Saved / My Drops / Settings), V2BottomNav pattern.
 
 import Link from "next/link";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { V2 } from "../../utils/v2Theme";
@@ -54,6 +55,7 @@ export function WagoDropsNav({ session }) {
   const router = useRouter();
   return (
     <>
+      <Head><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet" /></Head>
       <style>{`
         .wd-nav {
           position: sticky; top: 0; z-index: 200;

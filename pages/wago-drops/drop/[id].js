@@ -7,6 +7,8 @@ import { useSession } from "next-auth/react";
 
 import { T } from "../../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../../components/wago-drops/WagoDropsNav";
+import Wago from "../../../components/wago-drops/Wago";
+import ProofBonusFlow from "../../../components/wago-drops/ProofBonusFlow";
 
 const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
 function rewardIconUrl(rewardType) {
@@ -136,10 +138,10 @@ export default function DropDetail() {
         <meta name="description" content={drop?.hint
           ? `Claim this WAGO Drop: ${drop.hint}. Earn ${drop.reward_amount} ${drop.reward_type?.toUpperCase()}.`
           : "A real-world WAGO Drop. Go outside and claim it."} />
-        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </Head>
 
-      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "system-ui,sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif" }}>
 
         {/* Nav */}
         <WagoDropsNav session={session} />
@@ -158,7 +160,7 @@ export default function DropDetail() {
           {/* Not found */}
           {notFound && (
             <div style={{ textAlign: "center", paddingTop: 80 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={120} /></div>
               <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Drop not found</div>
               <div style={{ fontSize: 13, color: T.muted, marginBottom: 24 }}>
                 This drop may have expired or been fully claimed.
@@ -224,7 +226,7 @@ export default function DropDetail() {
                 </div>
                 {drop.proof_bonus_enabled && (
                   <div style={{ fontSize: 11, color: T.green, marginTop: 6 }}>
-                    + {Number(drop.proof_bonus_amount || 0).toLocaleString()} proof bonus available
+                    🎟️ +{drop.proof_tickets || 0} Grass Tickets with a proof photo
                   </div>
                 )}
               </div>
@@ -279,12 +281,10 @@ export default function DropDetail() {
                     +{Number(claimResult.reward_amount || 0).toLocaleString()}{" "}
                     {(claimResult.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS"} queued to your wallet.
                   </div>
-                  {claimResult.proof_bonus_applied && (
-                    <div style={{ fontSize: 12, color: T.green, marginTop: 4 }}>
-                      Proof bonus included: +{Number(claimResult.proof_bonus_amount || 0).toLocaleString()}
-                    </div>
-                  )}
                 </div>
+              )}
+              {claimResult?.proof_bonus_enabled && claimResult?.claim_id && (
+                <ProofBonusFlow claim={{ ...claimResult, drop }} />
               )}
 
               {/* Error */}

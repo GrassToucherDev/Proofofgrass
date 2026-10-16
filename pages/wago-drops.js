@@ -528,7 +528,9 @@ function MapView({ session, linkedWallet, flyToCoords }) {
 
   useEffect(() => {
     let map;
+    let cancelled = false;   // effect cleaned up (e.g. StrictMode) before mapbox finished loading
     import("mapbox-gl").then(({ default: mapboxgl }) => {
+      if (cancelled) return;
       import("mapbox-gl/dist/mapbox-gl.css").catch(() => {});
       mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
       const initialCenter = flyToCoords ? [flyToCoords.lng, flyToCoords.lat] : [-98.5795, 39.8283];
@@ -568,7 +570,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       });
       map.on("moveend", () => fetchDropsInView(map));
     });
-    return () => map?.remove();
+    return () => { cancelled = true; map?.remove(); };
   }, []);
 
   useEffect(() => {
