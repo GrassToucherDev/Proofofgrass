@@ -28,7 +28,7 @@ function Select({label,children,...props}){
 }
 
 const MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
-const BLANK_CAMPAIGN = {name:"",description:"",image_url:"",reward_type:"spl_token",reward_amount:"",reward_token_mint:MINT,reveal_radius_m:100,claim_radius_m:25,proof_bonus_enabled:false,proof_bonus_amount:"",starts_at:"",ends_at:"",status:"active"};
+const BLANK_CAMPAIGN = {name:"",description:"",image_url:"",reward_type:"spl_token",reward_amount:"",reward_token_mint:MINT,reveal_radius_m:100,claim_radius_m:25,proof_bonus_enabled:false,proof_bonus_amount:"",rarity:"common",proof_bonus_tickets:"",starts_at:"",ends_at:"",status:"active"};
 
 function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
   const [form, setForm] = useState(initial || BLANK_CAMPAIGN);
@@ -73,9 +73,15 @@ function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
       </Select>
       <label style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,cursor:"pointer"}}>
         <input type="checkbox" checked={!!form.proof_bonus_enabled} onChange={e=>set("proof_bonus_enabled",e.target.checked)}/>
-        <span style={{fontSize:13,color:T.muted}}>Enable Proof of Grass bonus</span>
+        <span style={{fontSize:13,color:T.muted}}>Enable Proof bonus (photo + X post → Grass Tickets)</span>
       </label>
-      {form.proof_bonus_enabled && <Input label="Proof Bonus Amount" type="number" value={form.proof_bonus_amount||""} onChange={e=>set("proof_bonus_amount",e.target.value)}/>}
+      <Select label="Rarity (sets default Grass Tickets: 2 / 5 / 10 / 25)" value={form.rarity||"common"} onChange={e=>set("rarity",e.target.value)}>
+        <option value="common">Common · 2 tickets</option>
+        <option value="rare">Rare · 5 tickets</option>
+        <option value="epic">Epic · 10 tickets</option>
+        <option value="legendary">Legendary · 25 tickets</option>
+      </Select>
+      {form.proof_bonus_enabled && <Input label="Grass Tickets override (optional)" type="number" value={form.proof_bonus_tickets||""} onChange={e=>set("proof_bonus_tickets",e.target.value)}/>}
       {msg && <div style={{fontSize:13,color:msg.ok?T.green:T.red,marginBottom:12,padding:"8px 12px",background:msg.ok?"rgba(74,222,128,0.07)":"rgba(248,113,113,0.07)",borderRadius:8}}>{msg.text}</div>}
       <button type="submit" disabled={loading} style={{width:"100%",background:T.olive,color:T.bg,border:"none",borderRadius:9,padding:"11px",fontSize:14,fontWeight:700,cursor:loading?"default":"pointer"}}>{loading?"Saving…":submitLabel}</button>
     </form>

@@ -9,6 +9,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/router";
+import ProofBonusFlow from "../components/wago-drops/ProofBonusFlow";
 
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -572,9 +573,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
   const [claimResult,  setClaimResult]  = useState(null);
   const [saving,       setSaving]       = useState(false);
   const [saveMsg,      setSaveMsg]      = useState(null);
-  const [proofMode,    setProofMode]    = useState(false);
-  const [proofFile,    setProofFile]    = useState(null);
-  const [proofStatus,  setProofStatus]  = useState(null);
   const [locError,     setLocError]     = useState(null);
   const hasFlewToUser  = useRef(false);
   const geolocateRef   = useRef(null);
@@ -636,7 +634,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         setSelected(loc);
         setClaimMsg(null);
         setClaimResult(null);
-        setProofMode(false);
         setSaveMsg(null);
         if (mapRef.current) {
           mapRef.current.flyTo({ center: [loc.lng, loc.lat], zoom: Math.max(mapRef.current.getZoom(), 15), duration: 600 });
@@ -718,35 +715,17 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         message: data.message,
         reward_amount: data.reward_amount ?? selected?.reward_amount,
         reward_type:   data.reward_type   ?? selected?.reward_type,
-        proof_bonus_applied: data.proof_bonus_applied,
-        proof_bonus_amount:  data.proof_bonus_amount,
-        proof_bonus_enabled: selected?.proof_bonus_enabled,
+        claim_id:       data.claim_id,
+        proof_bonus_enabled: data.proof_bonus_enabled,
+        proof_tickets:  data.proof_tickets,
+        proof_deadline: data.proof_deadline,
+        rarity:         data.rarity,
         tx_signature: data.tx_signature,
       });
-      setProofMode(false);
-      setProofFile(null);
-      setProofStatus(null);
     } catch (err) {
       setClaimMsg({ ok: false, text: err.message });
     } finally {
       setClaiming(false);
-    }
-  }
-
-  async function handleProofSubmit(claimId) {
-    if (!proofFile) return;
-    setProofStatus({ ok: null, text: "Uploading…" });
-    try {
-      const form = new FormData();
-      form.append("photo", proofFile);
-      if (claimId) form.append("claimId", claimId);
-      const res = await fetch("/api/wago-drops/proof", { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      setProofStatus({ ok: true, text: "Proof submitted! Bonus queued." });
-      setProofMode(false);
-    } catch (err) {
-      setProofStatus({ ok: false, text: err.message });
     }
   }
 
@@ -760,7 +739,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       navigator.share({ title: "WAGO Drop claimed!", text, url }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(`${text} ${url}`).then(() =>
-        setProofStatus({ ok: true, text: "Copied to clipboard!" })
+        setSaveMsg("Copied to clipboard!")
       );
     }
   }
@@ -847,7 +826,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                       setSelected(drop);
                       setClaimMsg(null);
                       setClaimResult(null);
-                      setProofMode(false);
                       setSaveMsg(null);
                       if (mapRef.current) {
                         mapRef.current.flyTo({ center: [drop.lng, drop.lat], zoom: Math.max(mapRef.current.getZoom(), 15), duration: 600 });
@@ -965,7 +943,6 @@ function MapView({ session, linkedWallet, flyToCoords }) {
             }
             setClaimMsg(null);
             setClaimResult(null);
-            setProofMode(false);
             if (mapRef.current) {
               mapRef.current.flyTo({ center: [claim.lng, claim.lat], zoom: 15, duration: 800 });
             }
@@ -999,76 +976,16 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                       return `+${amt.toLocaleString()} ${ticker}`;
                     })()}
                   </div>
-                  {claimResult.proof_bonus_applied && (
-                    <div style={{ fontSize: 11, color: T.green }}>
-                      +{Number(claimResult.proof_bonus_amount || 0).toLocaleString()} proof bonus included
-                    </div>
-                  )}
                   <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>
                     Pending · reward queued to your wallet
                   </div>
                 </div>
-                <button onClick={() => { setClaimResult(null); setSelected(null); setProofMode(false); setProofStatus(null); }}
+                <button onClick={() => { setClaimResult(null); setSelected(null); }}
                   style={{ background: "none", border: "none", color: T.dim, fontSize: 22, cursor: "pointer", padding: 0, flexShrink: 0 }}>×</button>
               </div>
 
-              {!claimResult.proof_bonus_applied && claimResult.proof_bonus_enabled && !proofMode && (
-                <div style={{
-                  marginTop: 14, background: "rgba(74,222,128,0.06)",
-                  border: "1px solid rgba(74,222,128,0.18)", borderRadius: 10,
-                  padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-                }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.green, marginBottom: 2 }}>📸 Earn the Proof Bonus</div>
-                    <div style={{ fontSize: 12, color: T.muted }}>
-                      Submit a photo for +{Number(claimResult.proof_bonus_amount || 0).toLocaleString()} extra
-                    </div>
-                  </div>
-                  <button onClick={() => setProofMode(true)} style={{
-                    background: T.green, color: T.bg, border: "none",
-                    borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0,
-                  }}>Add Photo</button>
-                </div>
-              )}
-
-              {proofMode && (
-                <div style={{ marginTop: 14 }}>
-                  <div style={{ fontSize: 12, color: T.muted, marginBottom: 8 }}>
-                    Upload a photo showing you were here (selfie, scenery — anything real)
-                  </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                    <label style={{
-                      background: T.card, border: `1px dashed ${T.border}`,
-                      borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer", color: T.muted,
-                    }}>
-                      {proofFile ? proofFile.name : "📷 Choose photo"}
-                      <input type="file" accept="image/*" capture="environment"
-                        style={{ display: "none" }}
-                        onChange={e => { setProofFile(e.target.files[0]); setProofStatus(null); }} />
-                    </label>
-                    <button
-                      onClick={() => handleProofSubmit(claimResult.claim_id)}
-                      disabled={!proofFile || proofStatus?.ok === null}
-                      style={{
-                        background: proofFile ? T.olive : T.border,
-                        color: proofFile ? T.bg : T.dim,
-                        border: "none", borderRadius: 8, padding: "9px 18px",
-                        fontSize: 13, fontWeight: 700,
-                        cursor: proofFile ? "pointer" : "default",
-                      }}>
-                      {proofStatus?.ok === null ? "Uploading…" : "Submit"}
-                    </button>
-                    <button onClick={() => { setProofMode(false); setProofFile(null); setProofStatus(null); }}
-                      style={{ background: "none", border: "none", color: T.dim, fontSize: 13, cursor: "pointer" }}>
-                      Skip
-                    </button>
-                  </div>
-                  {proofStatus && (
-                    <div style={{ fontSize: 12, marginTop: 8, color: proofStatus.ok ? T.green : T.red }}>
-                      {proofStatus.text}
-                    </div>
-                  )}
-                </div>
+              {claimResult.proof_bonus_enabled && claimResult.claim_id && (
+                <ProofBonusFlow claim={claimResult} />
               )}
 
               <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
@@ -1076,7 +993,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                   flex: 1, background: T.olive, color: T.bg, border: "none",
                   borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer",
                 }}>🌿 Share</button>
-                <button onClick={() => { setClaimResult(null); setSelected(null); setProofMode(false); setProofStatus(null); }} style={{
+                <button onClick={() => { setClaimResult(null); setSelected(null); }} style={{
                   flex: 1, background: T.card, color: T.muted, border: `1px solid ${T.border}`,
                   borderRadius: 8, padding: "10px 16px", fontSize: 13, cursor: "pointer",
                 }}>Find Another Drop</button>
