@@ -43,6 +43,7 @@ export default function MyDrops() {
   const [me,      setMe]      = useState(null);
   const [claims,  setClaims]  = useState([]);
   const [saves,   setSaves]   = useState([]);
+  const [ticketsMonth, setTicketsMonth] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function MyDrops() {
     ]).then(([meD, clD, svD]) => {
       setMe(meD);
       setClaims(clD.claims || []);
+      setTicketsMonth(clD.tickets_this_month || 0);
       setSaves(svD.saves  || []);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -121,7 +123,7 @@ export default function MyDrops() {
               </div>
 
               {/* Stats row */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
                 {[
                   { label: "Claims",    value: claims.length },
                   { label: "Saved",     value: saves.length  },
@@ -135,6 +137,19 @@ export default function MyDrops() {
                     <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>{s.label}</div>
                   </div>
                 ))}
+              </div>
+
+              {/* Grass Tickets this month */}
+              <div style={{
+                background: "rgba(125,200,50,0.14)", border: "1px solid rgba(91,166,34,0.3)",
+                borderRadius: 12, padding: "14px 18px", marginBottom: 24,
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+              }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.white }}>🎟️ Grass Tickets this month</div>
+                  <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>Earned from Proof bonuses · resets each month</div>
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: T.olive }}>{ticketsMonth}</div>
               </div>
 
               {/* My Claims */}
@@ -206,6 +221,11 @@ export default function MyDrops() {
                               {rewardLabel}
                             </div>
                             <StatusBadge status={claim.status} />
+                            {claim.proof_status === "awarded" && (
+                              <div style={{ fontSize: 11, color: T.green, fontWeight: 600, marginTop: 4 }}>
+                                🎟️ +{claim.tickets_awarded}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

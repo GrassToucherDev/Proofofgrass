@@ -23,5 +23,27 @@ export default async function handler(req, res) {
     .order("claimed_at", { ascending: false });
 
   if (error) return res.status(500).json({ error: error.message });
-  return res.status(200).json({ claims: data || [] });
+
+  // Proof bonus status per claim + Grass Tickets earned this (UTC) month.
+  const ids = (data || []).map(c => c.id);
+  const proofByClaim = {};
+  if (ids.length) {
+    const { data: proofs } = await supabase
+      .from("wago_drop_proofs")
+      .select("claim_id, status, tickets_awarded, awarded_at")
+      .in("claim_id", ids);
+    (proofs || []).forEach(p => { proofByClaim[p.claim_id] = p; });
+  }
+  const now = new Date();
+  const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+  let ticketsThisMonth = 0;
+  const claims = (data || []).map(c => {
+    const p = proofByClaim[c.id];
+    if (p?.status === "awarded" && p.awarded_at && new Date(p.awarded_at).getTime() >= monthStart) {
+      ticketsThisMonth += Number(p.tickets_awarded || 0);
+    }
+    return { ...c, proof_status: p?.status ?? null, tickets_awarded: p?.tickets_awarded ?? null };
+  });
+
+  return res.status(200).json({ claims, tickets_this_month: ticketsThisMonth });
 }
