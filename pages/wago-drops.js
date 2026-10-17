@@ -12,6 +12,7 @@ import { useRouter } from "next/router";
 import { WagoDropsNav, WagoDropsBottomNav } from "../components/wago-drops/WagoDropsNav";
 import WalletConnect from "../components/wago-drops/WalletConnect";
 import Wago from "../components/wago-drops/Wago";
+import { getDeviceHash } from "../utils/fingerprint";
 import CoverImage from "../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../components/wago-drops/ProofBonusFlow";
 
@@ -378,17 +379,18 @@ function LandingView() {
 }
 
 // ─── Wallet link step ─────────────────────────────────────────────────────────
-function WalletLinkView({ googleId, onLinked }) {
+function WalletLinkView({ googleId, onLinked, needsVerify = false }) {
   return (
     <div style={{ maxWidth: 480, margin: "60px auto", padding: "0 20px", textAlign: "center" }}>
       <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}><Wago pose="ticket" size={120} float /></div>
       <h2 style={{
         fontFamily: "'Cormorant Garamond',Georgia,serif",
         fontSize: 28, fontWeight: 700, color: T.white, margin: "0 0 10px",
-      }}>Connect your wallet</h2>
+      }}>{needsVerify ? "Verify your wallet" : "Connect your wallet"}</h2>
       <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.6, margin: "0 0 28px" }}>
-        Connect Phantom or Solflare so your WAGO Drop rewards have somewhere to land.
-        You can change it later — once every 24 hours.
+        {needsVerify
+          ? "Rewards only go to wallets you've proven are yours. Connect the wallet you linked earlier and sign a free message — it takes a few seconds."
+          : "Connect Phantom or Solflare so your WAGO Drop rewards have somewhere to land. You can change it later — once every 24 hours."}
       </p>
       <WalletConnect googleId={googleId} onLinked={(addr) => onLinked(addr)} ctaLabel="Verify & start hunting" />
     </div>
@@ -561,7 +563,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       const res = await fetch("/api/wago-drops/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locationId, userLat: userPos.lat, userLng: userPos.lng }),
+        body: JSON.stringify({ locationId, userLat: userPos.lat, userLng: userPos.lng, deviceHash: await getDeviceHash() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Claim failed");
@@ -1010,6 +1012,7 @@ export default function WagoDropsPage() {
   const { data: session, status } = useSession();
   const [linkedWallet, setLinkedWallet] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
+  const [needsVerify, setNeedsVerify] = useState(false);   // wallet linked earlier but never proven
   const router = useRouter();
 
   const flyToCoords = (() => {
@@ -1025,7 +1028,11 @@ export default function WagoDropsPage() {
     setWalletLoading(true);
     fetch("/api/wago-drops/me")
       .then(r => r.json())
-      .then(data => { if (data.linked_wallet) setLinkedWallet(data.linked_wallet); })
+      .then(data => {
+        // Only verified wallets can play: an unverified one sends the user to re-connect it.
+        if (data.linked_wallet && data.wallet_verified) setLinkedWallet(data.linked_wallet);
+        else if (data.linked_wallet) setNeedsVerify(true);
+      })
       .catch(console.error)
       .finally(() => setWalletLoading(false));
   }, [session?.user?.google_id]);
@@ -1052,7 +1059,7 @@ export default function WagoDropsPage() {
         ) : !session ? (
           <LandingView />
         ) : !linkedWallet ? (
-          <WalletLinkView googleId={session.user.google_id} onLinked={setLinkedWallet} />
+          <WalletLinkView googleId={session.user.google_id} needsVerify={needsVerify} onLinked={setLinkedWallet} />
         ) : (
           <MapView session={session} linkedWallet={linkedWallet} flyToCoords={flyToCoords} />
         )}

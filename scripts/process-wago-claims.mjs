@@ -14,6 +14,7 @@ import {
   transfer,
 } from "@solana/spl-token";
 import bs58 from "bs58";
+import { payoutEligibility } from "../utils/wagoPayout.mjs";
 import "dotenv/config";
 
 const supabase = createClient(
@@ -53,6 +54,18 @@ async function processClaims() {
   console.log(`Processing ${claims.length} pending claim(s)...`);
 
   for (const claim of claims) {
+    // Verified wallets only: hold anything whose wallet hasn't proven ownership.
+    const { data: account } = await supabase
+      .from("wago_google_accounts")
+      .select("linked_wallet, wallet_verified")
+      .eq("google_id", claim.google_id)
+      .maybeSingle();
+    const gate = payoutEligibility(claim, account);
+    if (!gate.eligible) {
+      console.log(`\nClaim ${claim.id} — HELD: ${gate.reason}`);
+      continue;
+    }
+
     console.log(`\nClaim ${claim.id} — wallet: ${claim.wallet_address}, amount: ${claim.reward_amount} ${claim.reward_token_mint}`);
 
     try {

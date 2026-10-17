@@ -24,9 +24,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Invalid Solana address" });
   }
 
-  // Signed link (connected wallet) = verified. Pasted address (no signature) = unverified.
+  // Wallets must be proven: a pasted address can't claim rewards, so don't accept one.
+  if (!signature) {
+    return res.status(400).json({ error: "Connect your wallet and sign the message to verify it." });
+  }
   let verified = false;
-  if (signature) {
+  {
     const age = Date.now() - new Date(issuedAt).getTime();
     if (!issuedAt || !(age >= -60000 && age <= WALLET_LINK_TTL_MS)) {
       return res.status(400).json({ error: "That signature request expired. Please try again." });
@@ -58,11 +61,13 @@ export default async function handler(req, res) {
   // Check 24-hour cooldown
   const { data: existing } = await supabase
     .from("wago_google_accounts")
-    .select("wallet_linked_at")
+    .select("wallet_linked_at, linked_wallet")
     .eq("google_id", session.user.google_id)
     .single();
 
-  if (existing?.wallet_linked_at) {
+  // Verifying the wallet you already have linked isn't a change, so no cooldown.
+  const sameWallet = existing?.linked_wallet === wallet;
+  if (existing?.wallet_linked_at && !sameWallet) {
     const hoursSince = (Date.now() - new Date(existing.wallet_linked_at).getTime()) / 3600000;
     if (hoursSince < 24) {
       const hoursLeft = Math.ceil(24 - hoursSince);
@@ -76,7 +81,7 @@ export default async function handler(req, res) {
       google_id: session.user.google_id,
       linked_wallet: wallet,
       wallet_verified: verified,
-      wallet_linked_at: new Date().toISOString(),
+      wallet_linked_at: sameWallet && existing?.wallet_linked_at ? existing.wallet_linked_at : new Date().toISOString(),
     }, { onConflict: "google_id" });
 
   if (error) return res.status(500).json({ error: error.message });
