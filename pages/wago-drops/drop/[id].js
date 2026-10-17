@@ -160,7 +160,7 @@ export default function DropDetail() {
           {/* Not found */}
           {notFound && (
             <div style={{ textAlign: "center", paddingTop: 80 }}>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={120} /></div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="shrug" size={120} /></div>
               <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Drop not found</div>
               <div style={{ fontSize: 13, color: T.muted, marginBottom: 24 }}>
                 This drop may have expired or been fully claimed.

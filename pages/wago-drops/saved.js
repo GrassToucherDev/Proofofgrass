@@ -263,7 +263,7 @@ export default function SavedDrops() {
 
           {!session && (
             <div style={{ textAlign: "center", paddingTop: 60 }}>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={110} /></div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="wave" size={110} /></div>
               <p style={{ color: T.muted, fontSize: 14 }}>Sign in to see your saved drops.</p>
               <Link href="/wago-drops" style={{
                 display: "inline-block", marginTop: 16,
@@ -282,7 +282,7 @@ export default function SavedDrops() {
 
           {session && !loading && saves.length === 0 && (
             <div style={{ textAlign: "center", paddingTop: 60 }}>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={110} /></div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="shrug" size={110} /></div>
               <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.6 }}>
                 No saved drops yet.<br />Tap the bookmark on any drop to save it for later.
               </p>

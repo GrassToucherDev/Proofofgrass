@@ -158,7 +158,7 @@ export default function ProofBonusFlow({ claim, onDone, existingProof = null }) 
   if (stage === "done") {
     return (
       <div style={{ ...card, textAlign: "center" }}>
-        <Wago pose="salute" size={110} float />
+        <Wago pose="cheer" size={110} float />
         <div style={{ fontSize: 20, fontWeight: 800, color: V2.forestGreen, marginTop: 6 }}>
           +{awarded.tickets} Grass Ticket{awarded.tickets === 1 ? "" : "s"}!
         </div>
@@ -173,9 +173,14 @@ export default function ProofBonusFlow({ claim, onDone, existingProof = null }) 
   if (expired) {
     return (
       <div style={card}>
-        <div style={label}>Proof bonus</div>
-        <div style={{ fontSize: 14, color: V2.forestLight, marginTop: 6 }}>
-          The 24-hour window for this claim has closed.
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Wago pose="sleep" size={64} style={{ flexShrink: 0 }} />
+          <div>
+            <div style={label}>Proof bonus</div>
+            <div style={{ fontSize: 14, color: V2.forestLight, marginTop: 6 }}>
+              The 24-hour window for this claim has closed.
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -190,9 +195,12 @@ export default function ProofBonusFlow({ claim, onDone, existingProof = null }) 
 
       {stage !== "approved" && (
         <>
-          <div style={{ fontSize: 14, color: V2.forestLight, margin: "8px 0 12px", lineHeight: 1.5 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "8px 0 12px" }}>
+            <Wago pose="camera" size={96} style={{ flexShrink: 0 }} />
+            <div style={{ fontSize: 14, color: V2.forestLight, lineHeight: 1.5 }}>
             Snap a photo of the spot (within 100m of the drop), share it on X, then paste your post link to earn
             tickets in this month&rsquo;s Grass Draw.
+            </div>
           </div>
 
           {preview && (

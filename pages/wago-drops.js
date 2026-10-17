@@ -305,7 +305,7 @@ function LandingView() {
         padding: "56px 20px 64px", textAlign: "center",
       }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}>
-          <Wago pose="salute" size={170} float />
+          <Wago pose="wave" size={170} float />
         </div>
         <div style={{ ...V2Styles.pill, display: "inline-flex", marginBottom: 18 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: V2.grassLime, display: "inline-block", marginRight: 8 }} />
@@ -713,7 +713,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
           <div className="map-sidebar-list" style={{ flex: 1, overflowY: "auto", padding: "12px 12px" }}>
             {drops.length === 0 ? (
               <div className="map-empty" style={{ textAlign: "center", padding: "32px 16px" }}>
-                <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}><Wago pose="salute" size={84} /></div>
+                <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}><Wago pose="point" size={84} /></div>
                 <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
                   No drops visible here.<br />Try panning or zooming out.
                 </div>
@@ -887,7 +887,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                     Pending · reward queued to your wallet
                   </div>
                 </div>
-                <Wago pose="salute" size={72} float style={{ flexShrink: 0 }} />
+                <Wago pose="cheer" size={72} float style={{ flexShrink: 0 }} />
                 <button onClick={() => { setClaimResult(null); setSelected(null); }}
                   style={{ background: "none", border: "none", color: T.dim, fontSize: 22, cursor: "pointer", padding: 0, flexShrink: 0 }}>×</button>
               </div>
@@ -951,7 +951,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                   border: `1px solid ${canClaim ? "rgba(91,166,34,0.35)" : T.border}`,
                   borderRadius: 14, padding: "6px 14px 6px 8px",
                 }}>
-                  <Wago pose="salute" size={46} />
+                  <Wago pose={canClaim ? "cheer" : "point"} size={46} />
                   <div style={{ fontSize: 13, color: T.white, fontWeight: 600, lineHeight: 1.35 }}>
                     {canClaim
                       ? "You're here! Tap Claim Drop."

@@ -77,7 +77,7 @@ export default function WagoDropsList() {
 
           {session && !loading && claims.length === 0 && (
             <div style={{ textAlign: "center", paddingTop: 60 }}>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={110} /></div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="shrug" size={110} /></div>
               <p style={{ color: T.muted, fontSize: 14 }}>No claims yet. Head to the map to find drops!</p>
               <Link href="/wago-drops" style={{
                 display: "inline-block", marginTop: 16,

@@ -147,7 +147,8 @@ export default function MyDrops() {
                 borderRadius: 12, padding: "14px 18px", marginBottom: 24,
                 display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
               }}>
-                <div>
+                <Wago pose="ticket" size={64} style={{ flexShrink: 0, marginTop: -14 }} />
+                <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: T.white }}>🎟️ Grass Tickets this month</div>
                   <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>Earned from Proof bonuses · resets each month</div>
                 </div>
@@ -166,7 +167,7 @@ export default function MyDrops() {
                     background: T.surface, border: `1px solid ${T.border}`,
                     borderRadius: 12, padding: "32px 20px", textAlign: "center",
                   }}>
-                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="salute" size={96} /></div>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Wago pose="shrug" size={96} /></div>
                     <div style={{ fontSize: 13, color: T.muted }}>No claims yet — get outside and find a drop!</div>
                     <Link href="/wago-drops" style={{
                       display: "inline-block", marginTop: 14,

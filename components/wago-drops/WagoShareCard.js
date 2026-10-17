@@ -15,6 +15,9 @@ import { WAGO_POSES } from "./Wago";
 const W = 1080;
 const H = 1350;
 
+// Different mascot pose per rarity so higher drops feel bigger.
+const RARITY_POSE = { common: "salute", rare: "wave", epic: "ticket", legendary: "cheer" };
+
 const RARITY_STYLE = {
   common:    { label: "COMMON",    bg: "#e8f4fd", fg: "#1a4a0a" },
   rare:      { label: "RARE",      bg: "#c5e3f7", fg: "#0d2a5a" },
@@ -80,7 +83,7 @@ async function drawCard(canvas, { photoUrl, campaignName, rewardText, rarity, ti
 
   // Mascot overlapping photo bottom-right
   try {
-    const wago = await loadImage(WAGO_POSES.salute);
+    const wago = await loadImage(WAGO_POSES[RARITY_POSE[rarity]] || WAGO_POSES.salute);
     const mh = 400, mw = (wago.width / wago.height) * mh;
     ctx.save();
     ctx.shadowColor = "rgba(0,0,0,0.25)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10;

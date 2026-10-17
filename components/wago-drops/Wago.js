@@ -10,14 +10,14 @@
 // without touching layouts. Unregistered poses fall back to the default.
 
 export const WAGO_POSES = {
-  salute:    "/images/wago/wago-salute.png",
-  // Future assets (swap in when exported from the source art):
-  // wave:      "/images/wago/wago-wave.png",
-  // walking:   "/images/wago/wago-walking.png",
-  // celebrate: "/images/wago/wago-celebrate.png",
-  // sleeping:  "/images/wago/wago-sleeping.png",
-  // phone:     "/images/wago/wago-phone.png",
-  // map:       "/images/wago/wago-map.png",
+  salute: "/images/wago/wago-salute.png",   // default / share cards
+  wave:   "/images/wago/wago-wave.png",     // welcome, signed-out
+  point:  "/images/wago/wago-point.png",    // "find it" — map, hints
+  cheer:  "/images/wago/wago-cheer.png",    // claim success, tickets won
+  camera: "/images/wago/wago-camera.png",   // proof photo step
+  ticket: "/images/wago/wago-ticket.png",   // Grass Tickets
+  shrug:  "/images/wago/wago-shrug.png",    // empty states / not found
+  sleep:  "/images/wago/wago-sleep.png",    // expired / nothing happening
 };
 
 const DEFAULT_POSE = "salute";
