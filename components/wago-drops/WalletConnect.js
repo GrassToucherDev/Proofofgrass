@@ -1,0 +1,129 @@
+// components/wago-drops/WalletConnect.js
+// Connect a Solana wallet (Phantom / Solflare via the app-wide wallet adapter),
+// sign a short message to prove ownership, and link it to the WAGO account.
+// A "paste address instead" fallback remains for people who can't connect
+// (e.g. a phone browser without a wallet app); those links stay unverified.
+
+import { useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { T } from "../../utils/wagoTheme";
+import { buildLinkMessage, SOLANA_ADDRESS_RE } from "../../utils/wagoWalletLink";
+
+function toBase64(bytes) {
+  let s = "";
+  bytes.forEach(b => { s += String.fromCharCode(b); });
+  return btoa(s);
+}
+
+const btn = (disabled, secondary) => ({
+  width: "100%", border: secondary ? `1px solid ${T.border}` : "none",
+  background: secondary ? "transparent" : (disabled ? T.oliveD : T.olive),
+  color: secondary ? T.muted : "#fff", borderRadius: 999,
+  padding: "13px 20px", fontSize: 14, fontWeight: 700,
+  cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.6 : 1,
+});
+
+export default function WalletConnect({ googleId, onLinked, disabled = false, ctaLabel = "Verify & link wallet" }) {
+  const { publicKey, connected, connecting, signMessage, disconnect, wallet } = useWallet();
+  const { setVisible } = useWalletModal();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [manual, setManual] = useState(false);
+  const [address, setAddress] = useState("");
+
+  const addr = publicKey?.toBase58();
+
+  async function post(body) {
+    const res = await fetch("/api/wago-drops/link-wallet", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Couldn't link wallet");
+    return data;
+  }
+
+  async function verifyAndLink() {
+    if (!addr) return;
+    setBusy(true); setError(null);
+    try {
+      if (!signMessage) throw new Error(`${wallet?.adapter?.name || "This wallet"} can't sign messages. Try Phantom or Solflare.`);
+      const issuedAt = new Date().toISOString();
+      const message = buildLinkMessage({ googleId, wallet: addr, issuedAt });
+      let sig;
+      try { sig = await signMessage(new TextEncoder().encode(message)); }
+      catch { throw new Error("Signature cancelled — nothing was linked."); }
+      const data = await post({ wallet: addr, signature: toBase64(sig), issuedAt });
+      onLinked?.(addr, data.verified !== false);
+    } catch (e) { setError(e.message); }
+    finally { setBusy(false); }
+  }
+
+  async function linkManual(e) {
+    e.preventDefault();
+    const a = address.trim();
+    if (!SOLANA_ADDRESS_RE.test(a)) { setError("That doesn't look like a Solana address."); return; }
+    setBusy(true); setError(null);
+    try { await post({ wallet: a }); onLinked?.(a, false); }
+    catch (e2) { setError(e2.message); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div>
+      {!connected ? (
+        <button onClick={() => setVisible(true)} disabled={disabled || connecting} style={btn(disabled || connecting)}>
+          {connecting ? "Connecting…" : "👛 Connect wallet"}
+        </button>
+      ) : (
+        <div>
+          <div style={{
+            background: T.bg, border: `1px solid ${T.border}`, borderRadius: 12, padding: "10px 14px",
+            fontFamily: "monospace", fontSize: 13, color: T.white, wordBreak: "break-all", marginBottom: 10,
+            display: "flex", alignItems: "center", gap: 10,
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: T.green, flexShrink: 0 }} />
+            {addr}
+          </div>
+          <button onClick={verifyAndLink} disabled={disabled || busy} style={btn(disabled || busy)}>
+            {busy ? "Waiting for signature…" : ctaLabel}
+          </button>
+          <button onClick={() => disconnect().catch(() => {})} disabled={busy}
+            style={{ ...btn(busy, true), marginTop: 8, padding: "10px 20px", fontSize: 13 }}>
+            Use a different wallet
+          </button>
+        </div>
+      )}
+
+      {error && <p style={{ fontSize: 13, color: T.red, margin: "10px 0 0", lineHeight: 1.5 }}>{error}</p>}
+
+      <p style={{ fontSize: 11, color: T.dim, margin: "12px 0 0", lineHeight: 1.6, textAlign: "center" }}>
+        You&rsquo;ll sign a free message to prove the wallet is yours. No transaction, no fees.
+      </p>
+
+      <div style={{ textAlign: "center", marginTop: 8 }}>
+        <button onClick={() => { setManual(m => !m); setError(null); }}
+          style={{ background: "none", border: "none", color: T.muted, fontSize: 12, textDecoration: "underline", cursor: "pointer" }}>
+          {manual ? "Hide" : "Can't connect? Paste an address instead"}
+        </button>
+      </div>
+      {manual && (
+        <form onSubmit={linkManual} style={{ marginTop: 10 }}>
+          <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Solana wallet address (base58)"
+            disabled={disabled}
+            style={{
+              width: "100%", boxSizing: "border-box", background: T.bg, border: `1px solid ${T.border}`,
+              borderRadius: 12, padding: "11px 14px", fontSize: 13, color: T.white, fontFamily: "monospace",
+              outline: "none", marginBottom: 8,
+            }} />
+          <button type="submit" disabled={disabled || busy || !address.trim()} style={btn(disabled || busy || !address.trim(), true)}>
+            {busy ? "Linking…" : "Link without verifying"}
+          </button>
+          <p style={{ fontSize: 11, color: T.dim, margin: "8px 0 0", lineHeight: 1.5 }}>
+            Pasted addresses are marked unverified. Double-check it — rewards can&rsquo;t be recovered if it&rsquo;s wrong.
+          </p>
+        </form>
+      )}
+    </div>
+  );
+}

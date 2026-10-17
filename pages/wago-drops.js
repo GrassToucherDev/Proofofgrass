@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/router";
 import { WagoDropsNav, WagoDropsBottomNav } from "../components/wago-drops/WagoDropsNav";
+import WalletConnect from "../components/wago-drops/WalletConnect";
 import Wago from "../components/wago-drops/Wago";
 import ProofBonusFlow from "../components/wago-drops/ProofBonusFlow";
 
@@ -377,64 +378,18 @@ function LandingView() {
 
 // ─── Wallet link step ─────────────────────────────────────────────────────────
 function WalletLinkView({ googleId, onLinked }) {
-  const [address, setAddress] = useState("");
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState(null);
-
-  async function submit(e) {
-    e.preventDefault();
-    const trimmed = address.trim();
-    if (!trimmed) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/wago-drops/link-wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet: trimmed }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to link wallet");
-      onLinked(trimmed);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
-    <div style={{ maxWidth: 480, margin: "80px auto", padding: "0 20px", textAlign: "center" }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>👛</div>
+    <div style={{ maxWidth: 480, margin: "60px auto", padding: "0 20px", textAlign: "center" }}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}><Wago pose="ticket" size={120} float /></div>
       <h2 style={{
         fontFamily: "'Cormorant Garamond',Georgia,serif",
         fontSize: 28, fontWeight: 700, color: T.white, margin: "0 0 10px",
-      }}>Link a Solana Wallet</h2>
-      <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.6, margin: "0 0 32px" }}>
-        Enter your Solana wallet address. All WAGO Drop rewards will be sent here.
+      }}>Connect your wallet</h2>
+      <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.6, margin: "0 0 28px" }}>
+        Connect Phantom or Solflare so your WAGO Drop rewards have somewhere to land.
         You can change it later — once every 24 hours.
       </p>
-      <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <input
-          value={address}
-          onChange={e => setAddress(e.target.value)}
-          placeholder="Solana wallet address (base58)"
-          style={{
-            background: T.card, border: `1px solid ${T.border}`, borderRadius: 8,
-            padding: "12px 14px", fontSize: 13, color: T.white,
-            fontFamily: "monospace", outline: "none", width: "100%", boxSizing: "border-box",
-          }}
-        />
-        {error && <p style={{ fontSize: 13, color: T.red, margin: 0 }}>{error}</p>}
-        <button type="submit" disabled={loading || !address.trim()} style={{
-          background: loading ? T.oliveD : T.olive,
-          color: T.bg, border: "none", borderRadius: 8,
-          padding: "12px", fontSize: 14, fontWeight: 700,
-          cursor: loading ? "default" : "pointer",
-        }}>
-          {loading ? "Linking…" : "Link Wallet & Start Hunting"}
-        </button>
-      </form>
+      <WalletConnect googleId={googleId} onLinked={(addr) => onLinked(addr)} ctaLabel="Verify & start hunting" />
     </div>
   );
 }

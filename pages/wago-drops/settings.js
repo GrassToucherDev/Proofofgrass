@@ -7,18 +7,18 @@ import { useRouter } from "next/router";
 
 import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
+import WalletConnect from "../../components/wago-drops/WalletConnect";
 
 export default function WagoDropsSettings() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
   const [currentWallet, setCurrentWallet] = useState(null);
+  const [walletVerified, setWalletVerified] = useState(false);
   const [lastUpdated,   setLastUpdated]   = useState(null);
   const [loading,       setLoading]       = useState(true);
 
   // Wallet update form
-  const [newAddress, setNewAddress] = useState("");
-  const [saving,     setSaving]     = useState(false);
   const [saveMsg,    setSaveMsg]    = useState(null); // { ok, text }
 
   // Redirect if not signed in
@@ -33,6 +33,7 @@ export default function WagoDropsSettings() {
       .then(r => r.json())
       .then(data => {
         setCurrentWallet(data.linked_wallet || null);
+        setWalletVerified(!!data.wallet_verified);
         setLastUpdated(data.wallet_linked_at || null);
       })
       .catch(console.error)
@@ -51,31 +52,6 @@ export default function WagoDropsSettings() {
     const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${minutes}m`;
   })();
-
-  async function handleSaveWallet(e) {
-    e.preventDefault();
-    const trimmed = newAddress.trim();
-    if (!trimmed) return;
-    setSaving(true);
-    setSaveMsg(null);
-    try {
-      const res = await fetch("/api/wago-drops/link-wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet: trimmed }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update wallet");
-      setCurrentWallet(trimmed);
-      setLastUpdated(new Date().toISOString());
-      setNewAddress("");
-      setSaveMsg({ ok: true, text: "Wallet updated successfully." });
-    } catch (err) {
-      setSaveMsg({ ok: false, text: err.message });
-    } finally {
-      setSaving(false);
-    }
-  }
 
   if (status === "loading" || loading) {
     return (
@@ -139,6 +115,12 @@ export default function WagoDropsSettings() {
                 }}>
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: T.green, flexShrink: 0 }} />
                   {currentWallet}
+                  <span style={{
+                    marginLeft: "auto", flexShrink: 0, fontFamily: "inherit", fontSize: 11, fontWeight: 700,
+                    padding: "3px 9px", borderRadius: 999,
+                    background: walletVerified ? "rgba(74,222,128,0.14)" : "rgba(251,191,36,0.14)",
+                    color: walletVerified ? T.green : T.yellow,
+                  }}>{walletVerified ? "✓ Verified" : "Unverified"}</span>
                 </div>
               ) : (
                 <div style={{ fontSize: 13, color: T.muted }}>No wallet linked yet.</div>
@@ -164,49 +146,26 @@ export default function WagoDropsSettings() {
               </div>
             )}
 
-            {/* Update form */}
-            <form onSubmit={handleSaveWallet}>
-              <Label>{currentWallet ? "Change wallet" : "Link a wallet"}</Label>
-              <input
-                value={newAddress}
-                onChange={e => setNewAddress(e.target.value)}
-                placeholder="New Solana wallet address (base58)"
-                disabled={!!cooldownRemaining}
-                style={{
-                  width: "100%", boxSizing: "border-box",
-                  background: cooldownRemaining ? "rgba(13,42,5,0.04)" : T.bg,
-                  border: `1px solid ${T.border}`, borderRadius: 8,
-                  padding: "11px 14px", fontSize: 13, color: T.white,
-                  fontFamily: "monospace", outline: "none",
-                  opacity: cooldownRemaining ? 0.5 : 1,
-                  marginBottom: 10,
-                }}
-              />
-
-              {saveMsg && (
-                <div style={{
-                  fontSize: 13, color: saveMsg.ok ? T.green : T.red,
-                  padding: "8px 12px", borderRadius: 8, marginBottom: 10,
-                  background: saveMsg.ok ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
-                }}>
-                  {saveMsg.text}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={saving || !newAddress.trim() || !!cooldownRemaining}
-                style={{
-                  background: (saving || !newAddress.trim() || cooldownRemaining) ? T.oliveD : T.olive,
-                  color: "#fff", border: "none", borderRadius: 8,
-                  padding: "11px 22px", fontSize: 13, fontWeight: 700,
-                  cursor: (saving || !newAddress.trim() || cooldownRemaining) ? "default" : "pointer",
-                  opacity: (saving || !newAddress.trim() || cooldownRemaining) ? 0.6 : 1,
-                }}
-              >
-                {saving ? "Saving…" : currentWallet ? "Update Wallet" : "Link Wallet"}
-              </button>
-            </form>
+            {/* Connect + verify */}
+            <Label>{currentWallet ? "Change wallet" : "Link a wallet"}</Label>
+            <WalletConnect
+              googleId={session?.user?.google_id}
+              disabled={!!cooldownRemaining}
+              ctaLabel={currentWallet ? "Verify & switch wallet" : "Verify & link wallet"}
+              onLinked={(addr, verified) => {
+                setCurrentWallet(addr);
+                setWalletVerified(!!verified);
+                setLastUpdated(new Date().toISOString());
+                setSaveMsg({ ok: true, text: verified ? "Wallet verified and linked." : "Wallet linked (unverified)." });
+              }}
+            />
+            {saveMsg && (
+              <div style={{
+                fontSize: 13, color: saveMsg.ok ? T.green : T.red,
+                padding: "8px 12px", borderRadius: 8, marginTop: 12,
+                background: saveMsg.ok ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
+              }}>{saveMsg.text}</div>
+            )}
 
             <p style={{ fontSize: 11, color: T.dim, marginTop: 14, lineHeight: 1.6 }}>
               All $TOUCHGRASS rewards are sent to this address. Wallets can be changed once every 24 hours.
