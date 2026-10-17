@@ -11,7 +11,7 @@ export function trailRewardParts(trail) {
     parts.push({ kind: "token", text: formatReward(trail), logo: rewardLogo(trail) });
   }
   if (Number(trail?.reward_tickets) > 0) parts.push({ kind: "tickets", text: `${trail.reward_tickets} Grass Tickets`, emoji: "🎟️" });
-  if (trail?.reward_badge) parts.push({ kind: "badge", text: trail.reward_badge, emoji: "🏅" });
+  if (trail?.reward_badge) parts.push({ kind: "badge", text: trail.reward_badge, emoji: "🏅", logo: /trailblazer/i.test(trail.reward_badge) ? "/images/wago/badges/trailblazer.png" : null });
   return parts;
 }
 
