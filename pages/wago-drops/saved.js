@@ -8,20 +8,11 @@ import { useRouter } from "next/router";
 import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
 import Wago from "../../components/wago-drops/Wago";
+import { rewardLogo, formatReward } from "../../utils/wagoReward";
 import CoverImage from "../../components/wago-drops/CoverImage";
 
-const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
-function rewardIconUrl(rewardType) {
-  if ((rewardType || "").toLowerCase() === "sol")
-    return "https://cryptologos.cc/logos/solana-sol-logo.png";
-  return TOUCHGRASS_LOGO_URL;
-}
-
-function rewardLabel(save) {
-  const amt = Number(save.reward_amount || 0);
-  if ((save.reward_type || "").toLowerCase() === "sol") return `${amt} SOL`;
-  return `${amt.toLocaleString()} $TOUCHGRASS`;
-}
+const rewardIconUrl = rewardLogo;
+function rewardLabel(save) { return formatReward(save); }
 
 function useCountdown(endsAt) {
   const [label, setLabel] = useState("");
@@ -116,7 +107,7 @@ function SaveCard({ save, onUnsave, onGoToMap, removing }) {
           opacity: unavailable ? 0.5 : 1,
         }}>
           <img
-            src={rewardIconUrl(save.reward_type)}
+            src={rewardIconUrl(save)}
             alt={save.reward_type}
             style={{ width: 33, height: 33, objectFit: "contain" }}
             onError={e => { e.currentTarget.style.display = "none"; }}

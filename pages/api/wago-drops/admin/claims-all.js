@@ -1,5 +1,6 @@
 // pages/api/wago-drops/admin/claims-all.js
 import { createClient } from "@supabase/supabase-js";
+import { rewardSymbol } from "../../../../utils/wagoReward";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -18,10 +19,10 @@ export default async function handler(req, res) {
   const { data, error } = await supabase
     .from("wago_drop_claims")
     .select(`id, wallet_address, google_id, location_id,
-             reward_type, reward_amount,
+             reward_type, reward_amount, reward_token_mint,
              proof_bonus_applied, proof_bonus_amount,
              tx_signature, status, claimed_at,
-             wago_drop_campaigns ( name )`)
+             wago_drop_campaigns ( name, reward_symbol, reward_token_mint )`)
     .order("claimed_at", { ascending: false })
     .limit(500);
 
@@ -50,6 +51,7 @@ export default async function handler(req, res) {
     campaign_name:       row.wago_drop_campaigns?.name ?? "–",
     reward_type:         row.reward_type,
     reward_amount:       row.reward_amount,
+    reward_symbol:       rewardSymbol({ reward_type: row.reward_type, reward_symbol: row.wago_drop_campaigns?.reward_symbol, reward_token_mint: row.reward_token_mint || row.wago_drop_campaigns?.reward_token_mint }),
     proof_bonus_applied: row.proof_bonus_applied,
     proof_bonus_amount:  row.proof_bonus_amount,
     tx_signature:        row.tx_signature,

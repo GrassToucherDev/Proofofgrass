@@ -9,15 +9,11 @@ import { T } from "../../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../../components/wago-drops/WagoDropsNav";
 import Wago from "../../../components/wago-drops/Wago";
 import { getDeviceHash } from "../../../utils/fingerprint";
+import { rewardLogo, formatReward } from "../../../utils/wagoReward";
 import CoverImage from "../../../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../../../components/wago-drops/ProofBonusFlow";
 
-const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
-function rewardIconUrl(rewardType) {
-  if ((rewardType || "").toLowerCase() === "sol")
-    return "https://cryptologos.cc/logos/solana-sol-logo.png";
-  return TOUCHGRASS_LOGO_URL;
-}
+const rewardIconUrl = rewardLogo;
 
 function haversineM(lat1, lng1, lat2, lng2) {
   const R = 6371000;
@@ -193,7 +189,7 @@ export default function DropDetail() {
                   boxShadow: "0 0 0 6px rgba(91,166,34,0.12)",
                   display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
                 }}>
-                  <img src={rewardIconUrl(drop.reward_type)} alt={drop.reward_type}
+                  <img src={rewardIconUrl(drop)} alt={drop.reward_type}
                     style={{ width: 50, height: 50, objectFit: "contain" }}
                     onError={e => { e.currentTarget.style.display = "none"; }} />
                 </div>
@@ -224,8 +220,7 @@ export default function DropDetail() {
                   borderRadius: 10, padding: "8px 18px", marginTop: 4,
                 }}>
                   <span style={{ fontSize: 18, fontWeight: 700, color: T.olive }}>
-                    {Number(drop.reward_amount || 0).toLocaleString()}{" "}
-                    {(drop.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS"}
+                    {formatReward(drop)}
                   </span>
                 </div>
                 {drop.proof_bonus_enabled && (
@@ -282,8 +277,7 @@ export default function DropDetail() {
                     🌿 Drop Claimed!
                   </div>
                   <div style={{ fontSize: 13, color: T.muted }}>
-                    +{Number(claimResult.reward_amount || 0).toLocaleString()}{" "}
-                    {(claimResult.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS"} queued to your wallet.
+                    {formatReward(claimResult, claimResult.reward_amount, { plus: true })} queued to your wallet.
                   </div>
                 </div>
               )}

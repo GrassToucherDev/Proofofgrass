@@ -71,7 +71,7 @@ export default async function handler(req, res) {
   const campaignIds = [...new Set(locations.map(l => l.campaign_id))];
   const { data: campaigns } = await supabase
     .from("wago_drop_campaigns")
-    .select("id, name, image_url, status, reward_amount, reward_type, proof_bonus_enabled, proof_bonus_amount, rarity, proof_bonus_tickets, reveal_radius_m, claim_radius_m")
+    .select("id, name, image_url, status, reward_amount, reward_type, reward_symbol, reward_logo_url, reward_token_mint, proof_bonus_enabled, proof_bonus_amount, rarity, proof_bonus_tickets, reveal_radius_m, claim_radius_m")
     .in("id", campaignIds)
     .eq("status", "active");
 
@@ -112,6 +112,9 @@ export default async function handler(req, res) {
       image_url: campaign?.image_url || null,
       reward_amount: campaign?.reward_amount,
       reward_type: campaign?.reward_type,
+      reward_symbol: campaign?.reward_symbol || null,
+      reward_logo_url: campaign?.reward_logo_url || null,
+      reward_token_mint: campaign?.reward_token_mint || null,
       proof_bonus_enabled: campaign?.proof_bonus_enabled,
       proof_bonus_amount: campaign?.proof_bonus_amount,
       rarity: campaign?.rarity || "common",

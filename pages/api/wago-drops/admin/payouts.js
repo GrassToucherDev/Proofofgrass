@@ -8,6 +8,7 @@
 // scripts/process-wago-claims.mjs. "Retry" here just re-queues a failed claim.
 import { createClient } from "@supabase/supabase-js";
 import { payoutEligibility } from "../../../../utils/wagoPayout.mjs";
+import { rewardSymbol } from "../../../../utils/wagoReward";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -25,9 +26,9 @@ export default async function handler(req, res) {
 
   const { data, error } = await supabase
     .from("wago_drop_claims")
-    .select(`id, google_id, wallet_address, wallet_verified, reward_type, reward_amount, reward_metadata,
+    .select(`id, google_id, wallet_address, wallet_verified, reward_type, reward_amount, reward_token_mint, reward_metadata,
              tx_signature, status, claimed_at, flags, device_hash,
-             wago_drop_campaigns ( name )`)
+             wago_drop_campaigns ( name, reward_symbol, reward_token_mint )`)
     .order("claimed_at", { ascending: false })
     .limit(1000);
   if (error) return res.status(500).json({ error: error.message });
@@ -42,16 +43,17 @@ export default async function handler(req, res) {
     (accs || []).forEach(a => { accounts[a.google_id] = a; });
   }
 
-  const summary = { pending: 0, held: 0, failed: 0, completed: 0, flagged: 0, completed_amount: 0, queued_amount: 0 };
+  const summary = { pending: 0, held: 0, failed: 0, completed: 0, flagged: 0, completed_by_symbol: {}, queued_by_symbol: {} };
   const claims = (data || []).map(r => {
     const acc = accounts[r.google_id];
     const gate = payoutEligibility(r, acc);
     let state = r.status;
     if (r.status === "pending" && !gate.eligible) state = "held";
     const amt = Number(r.reward_amount || 0);
+    const symbol = rewardSymbol({ reward_type: r.reward_type, reward_symbol: r.wago_drop_campaigns?.reward_symbol, reward_token_mint: r.reward_token_mint || r.wago_drop_campaigns?.reward_token_mint });
     if (summary[state] !== undefined) summary[state] += 1;
-    if (state === "completed") summary.completed_amount += amt;
-    if (state === "pending") summary.queued_amount += amt;
+    if (state === "completed") summary.completed_by_symbol[symbol] = (summary.completed_by_symbol[symbol] || 0) + amt;
+    if (state === "pending") summary.queued_by_symbol[symbol] = (summary.queued_by_symbol[symbol] || 0) + amt;
     const realFlags = (r.flags || []).filter(f => f !== "no_device_hash");
     if (realFlags.length) summary.flagged += 1;
     return {
@@ -64,6 +66,7 @@ export default async function handler(req, res) {
       wallet_verified: gate.eligible,
       reward_type: r.reward_type,
       reward_amount: r.reward_amount,
+      reward_symbol: symbol,
       tx_signature: r.tx_signature,
       error: r.reward_metadata?.error ?? null,
       flags: r.flags || [],

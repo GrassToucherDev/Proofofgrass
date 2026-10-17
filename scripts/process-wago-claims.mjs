@@ -11,6 +11,7 @@ import {
 } from "@solana/web3.js";
 import {
   getOrCreateAssociatedTokenAccount,
+  getMint,
   transfer,
 } from "@solana/spl-token";
 import bs58 from "bs58";
@@ -93,9 +94,8 @@ async function processClaims() {
         recipientPubkey
       );
 
-      // Amount — reward_amount is stored as a string like "1"
-      // $TOUCHGRASS has 6 decimals — adjust if different
-      const TOKEN_DECIMALS = 6;
+      // Amount — reward_amount is a human amount like "1"; convert with THIS token's decimals.
+      const TOKEN_DECIMALS = (await getMint(connection, mintPubkey)).decimals;
       const amount = BigInt(Math.round(parseFloat(claim.reward_amount) * 10 ** TOKEN_DECIMALS));
 
       console.log(`  Sending ${claim.reward_amount} tokens (${amount} raw units)...`);
