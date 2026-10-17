@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
 import Wago from "../../components/wago-drops/Wago";
+import CoverImage from "../../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../../components/wago-drops/ProofBonusFlow";
 
 // ── Reward asset logos (mirrors wago-drops.js) ────────────────────────────────
@@ -204,6 +205,8 @@ export default function MyDrops() {
                               onError={e => { e.currentTarget.style.display = "none"; }}
                             />
                           </div>
+
+                          {claim.image_url && <CoverImage src={claim.image_url} height={46} radius={10} style={{ width: 46, flexShrink: 0 }} />}
 
                           {/* Info */}
                           <div style={{ flex: 1, minWidth: 0 }}>

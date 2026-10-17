@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { T } from "../../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../../components/wago-drops/WagoDropsNav";
 import Wago from "../../../components/wago-drops/Wago";
+import CoverImage from "../../../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../../../components/wago-drops/ProofBonusFlow";
 
 const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
@@ -182,6 +183,8 @@ export default function DropDetail() {
                 borderRadius: 16, padding: "28px 24px", marginBottom: 16,
                 display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
               }}>
+                {drop.image_url && <CoverImage src={drop.image_url} alt={drop.campaign_name} height={190} radius={18} style={{ marginBottom: 18 }} />}
+
                 {/* Asset logo */}
                 <div style={{
                   width: 72, height: 72, borderRadius: "50%", marginBottom: 18,

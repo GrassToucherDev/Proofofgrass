@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { T } from "../../utils/wagoTheme";
 import Wago from "../../components/wago-drops/Wago";
+import { uploadCover } from "../../utils/wagoCoverUpload";
 
 function Input({label,...props}){
   return(
@@ -31,9 +32,19 @@ function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
   const [form, setForm] = useState(initial || BLANK_CAMPAIGN);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const set = (k,v) => setForm(prev=>({...prev,[k]:v}));
 
   useEffect(()=>{ setForm(initial || BLANK_CAMPAIGN); },[initial]);
+
+  async function onCoverFile(e){
+    const f = e.target.files?.[0]; e.target.value = "";
+    if(!f) return;
+    setUploading(true); setMsg(null);
+    try{ set("image_url", await uploadCover(f)); }
+    catch(err){ setMsg({ok:false,text:err.message}); }
+    finally{ setUploading(false); }
+  }
 
   async function submit(e){
     e.preventDefault(); setLoading(true); setMsg(null);
@@ -53,7 +64,17 @@ function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
     <form onSubmit={submit}>
       <Input label="Campaign Name *" required value={form.name} onChange={e=>set("name",e.target.value)}/>
       <Input label="Description" value={form.description||""} onChange={e=>set("description",e.target.value)}/>
-      <Input label="Image URL" value={form.image_url||""} onChange={e=>set("image_url",e.target.value)}/>
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:11,color:T.dim,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Cover photo (shown on the drop card &amp; page)</div>
+        {form.image_url && <img src={form.image_url} alt="Cover" style={{width:"100%",maxHeight:180,objectFit:"cover",borderRadius:12,marginBottom:8,display:"block"}}/>}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <label style={{background:T.olive,color:"#fff",borderRadius:999,padding:"9px 18px",fontSize:13,fontWeight:700,cursor:uploading?"default":"pointer",opacity:uploading?0.6:1}}>
+            {uploading?"Uploading…":form.image_url?"Replace photo":"Upload photo"}
+            <input type="file" accept="image/*" onChange={onCoverFile} disabled={uploading} style={{display:"none"}}/>
+          </label>
+          {form.image_url && <button type="button" onClick={()=>set("image_url","")} style={{background:"transparent",border:`1px solid ${T.border}`,color:T.muted,borderRadius:999,padding:"9px 18px",fontSize:13,cursor:"pointer"}}>Remove</button>}
+        </div>
+      </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <Input label="Reward Amount *" type="number" required value={form.reward_amount} onChange={e=>set("reward_amount",e.target.value)}/>
         <Input label="Token Mint" value={form.reward_token_mint||""} onChange={e=>set("reward_token_mint",e.target.value)}/>

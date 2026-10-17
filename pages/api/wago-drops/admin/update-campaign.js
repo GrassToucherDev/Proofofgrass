@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   const updates = {};
   if (name !== undefined) updates.name = name;
   if (description !== undefined) updates.description = description;
-  if (image_url !== undefined) updates.image_url = image_url;
+  if (image_url !== undefined) updates.image_url = image_url || null;
   if (reward_amount !== undefined) updates.reward_amount = reward_amount;
   if (reward_token_mint !== undefined) updates.reward_token_mint = reward_token_mint;
   if (reveal_radius_m !== undefined) updates.reveal_radius_m = Number(reveal_radius_m);

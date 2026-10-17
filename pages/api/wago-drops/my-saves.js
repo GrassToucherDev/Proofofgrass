@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   const campaignIds = [...new Set((locations || []).map(l => l.campaign_id))];
   const { data: campaigns } = await supabase
     .from("wago_drop_campaigns")
-    .select("id, name, status, reward_type, reward_amount, proof_bonus_enabled, proof_bonus_amount, rarity, proof_bonus_tickets, ends_at, claim_radius_m")
+    .select("id, name, image_url, status, reward_type, reward_amount, proof_bonus_enabled, proof_bonus_amount, rarity, proof_bonus_tickets, ends_at, claim_radius_m")
     .in("id", campaignIds);
 
   const locMap = {};
@@ -53,6 +53,7 @@ export default async function handler(req, res) {
       hint: loc.hint,
       campaign_id: loc.campaign_id,
       campaign_name: camp.name,
+      image_url: camp.image_url || null,
       campaign_status: camp.status,
       reward_type: camp.reward_type,
       reward_amount: camp.reward_amount,

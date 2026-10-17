@@ -12,6 +12,7 @@ import { useRouter } from "next/router";
 import { WagoDropsNav, WagoDropsBottomNav } from "../components/wago-drops/WagoDropsNav";
 import WalletConnect from "../components/wago-drops/WalletConnect";
 import Wago from "../components/wago-drops/Wago";
+import CoverImage from "../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../components/wago-drops/ProofBonusFlow";
 
 
@@ -711,11 +712,14 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div style={{ display: "flex", gap: 10, flex: 1, minWidth: 0 }}>
-                        <img
+                        {drop.image_url ? (
+                          <CoverImage src={drop.image_url} height={44} radius={10} style={{ width: 44, flexShrink: 0 }} />
+                        ) : null}
+                        {!drop.image_url && <img
                           src={rewardIconUrl(drop)}
                           style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, objectFit: "contain", background: T.bg, border: `1px solid ${T.border}` }}
                           onError={e => { e.currentTarget.style.display = "none"; }}
-                        />
+                        />}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 11, color: T.olive, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>
                             {drop.campaign_name || "Drop"}
@@ -893,6 +897,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
               animation: "fadeIn 0.2s ease",
               flexShrink: 0,
             }}>
+              {selected.image_url && <CoverImage src={selected.image_url} alt={selected.campaign_name} height={110} radius={14} style={{ marginBottom: 12 }} />}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
                 <div>
                   <div style={{ fontSize: 11, color: T.olive, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>

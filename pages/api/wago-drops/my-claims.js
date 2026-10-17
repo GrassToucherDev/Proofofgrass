@@ -55,6 +55,7 @@ export default async function handler(req, res) {
       proof_deadline: new Date(deadline).toISOString(),
       proof_tickets: camp.proof_bonus_enabled ? ticketsForCampaign(camp) : 0,
       rarity: camp.rarity || "common",
+      image_url: camp.image_url || null,
       proof_photo_path: p?.status === "photo_approved" ? p.photo_path : null,
       proof_pog_username: p?.pog_username ?? null,
     };

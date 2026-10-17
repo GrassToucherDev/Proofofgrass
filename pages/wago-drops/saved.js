@@ -8,6 +8,7 @@ import { useRouter } from "next/router";
 import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
 import Wago from "../../components/wago-drops/Wago";
+import CoverImage from "../../components/wago-drops/CoverImage";
 
 const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
 function rewardIconUrl(rewardType) {
@@ -121,6 +122,8 @@ function SaveCard({ save, onUnsave, onGoToMap, removing }) {
             onError={e => { e.currentTarget.style.display = "none"; }}
           />
         </div>
+
+        {save.image_url && <CoverImage src={save.image_url} height={52} radius={10} style={{ width: 52, flexShrink: 0 }} />}
 
         {/* Main info */}
         <div style={{ flex: 1, minWidth: 0 }}>
