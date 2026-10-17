@@ -7,7 +7,16 @@ import Wago from "./Wago";
 const SEEN_KEY = "wago_badges_seen_v1";
 
 export default function BadgeShelf({ claims, userKey }) {
-  const badges = useMemo(() => badgeProgress(claims), [claims]);
+  const [trailsCompleted, setTrailsCompleted] = useState(0);
+  useEffect(() => {
+    if (!userKey) return;
+    let alive = true;
+    fetch("/api/wago-drops/trails/mine").then(r => (r.ok ? r.json() : null))
+      .then(d => { if (alive && d?.trails) setTrailsCompleted(d.trails.filter(t => t.status === "completed").length); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [userKey]);
+  const badges = useMemo(() => badgeProgress(claims, { trailsCompleted }), [claims, trailsCompleted]);
   const [toast, setToast] = useState(null);
 
   // Toast when a tier went up since the last visit. The first visit just records
@@ -47,12 +56,13 @@ export default function BadgeShelf({ claims, userKey }) {
               borderRadius: 14, padding: "14px 12px", textAlign: "center",
             }}>
               <div style={{
-                width: 52, height: 52, borderRadius: "50%", margin: "0 auto 8px",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
-                background: earned ? "rgba(125,200,50,0.18)" : "rgba(13,42,5,0.05)",
-                border: `2px solid ${earned ? T.olive : T.border}`,
-                filter: earned ? "none" : "grayscale(1)", opacity: earned ? 1 : 0.45,
-              }}>{b.icon}</div>
+                width: 76, height: 76, margin: "0 auto 6px", display: "flex", alignItems: "center", justifyContent: "center",
+                filter: earned ? "none" : "grayscale(1)", opacity: earned ? 1 : 0.4,
+              }}>
+                {b.art
+                  ? <img src={b.art} alt={b.name} draggable={false} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                  : <span style={{ fontSize: 30 }}>{b.icon}</span>}
+              </div>
               <div style={{ fontSize: 13, fontWeight: 700, color: earned ? T.white : T.muted }}>{b.label}</div>
               <div style={{ height: 5, borderRadius: 99, background: "rgba(13,42,5,0.08)", margin: "8px 0 5px", overflow: "hidden" }}>
                 <div style={{ width: `${b.pct}%`, height: "100%", background: T.olive, borderRadius: 99, transition: "width .4s" }} />
@@ -74,7 +84,7 @@ export default function BadgeShelf({ claims, userKey }) {
           <Wago pose="cheer" size={54} />
           <div>
             <div style={{ fontSize: 11, color: T.olive, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>New badge</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: T.white }}>{toast.icon} {toast.label}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: T.white, display: "flex", alignItems: "center", gap: 8 }}>{toast.art ? <img src={toast.art} alt="" style={{ width: 34, height: 34 }} /> : toast.icon} {toast.label}</div>
           </div>
         </div>
       )}
