@@ -308,7 +308,8 @@ function LandingView() {
         padding: "56px 20px 64px", textAlign: "center",
       }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}>
-          <Wago pose="wave" size={170} float />
+          <img src="/images/wago/wago-drops-logo.png" alt="WAGO Drops" draggable={false}
+            style={{ width: "min(92%, 560px)", height: "auto", display: "block" }} />
         </div>
         <div style={{ ...V2Styles.pill, display: "inline-flex", marginBottom: 18 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: V2.grassLime, display: "inline-block", marginRight: 8 }} />
@@ -1044,6 +1045,10 @@ export default function WagoDropsPage() {
       <Head>
         <title>WAGO Drops — Touch Grass</title>
         <meta name="description" content="Real-world location-based $TOUCHGRASS drops. Go outside, find the drop, claim on-chain." />
+        <meta property="og:title" content="WAGO Drops — Touch Grass" />
+        <meta property="og:description" content="Real-world treasure hunts on a live map. Find drops, prove you were there, earn Grass Tickets." />
+        <meta property="og:image" content="https://proofofgrass.app/images/wago/wago-drops-logo.png" />
+        <meta name="twitter:card" content="summary_large_image" />
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </Head>
       <div style={{ minHeight: "100vh", background: !session ? V2.skyBlue : T.surface, color: T.white, fontFamily: V2.fontSans }}>

@@ -587,8 +587,8 @@ export default function WagoAdminPage(){
       <div style={{minHeight:"100vh",background:T.bg,color:T.white,fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif"}}>
         <nav style={{position:"sticky",top:0,zIndex:100,background:T.bg,borderBottom:`1px solid ${T.border}`,padding:"0 clamp(14px,4vw,48px)",height:56,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <Wago pose="salute" size={34} />
-            <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:17,fontWeight:700}}>WAGO Admin</span>
+            <img src="/images/wago/wago-drops-logo-sm.png" alt="WAGO Drops" style={{height:40,width:"auto",display:"block"}}/>
+            <span style={{fontSize:12,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:T.muted}}>Admin</span>
           </div>
           <Link href="/wago-drops" style={{fontSize:12,color:T.muted,textDecoration:"none"}}>← Back to Drops</Link>
         </nav>

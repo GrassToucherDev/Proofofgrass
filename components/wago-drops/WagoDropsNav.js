@@ -83,11 +83,7 @@ export function WagoDropsNav({ session }) {
       `}</style>
       <nav className="wd-nav">
         <Link href="/wago-drops" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
-          <img src="/images/wago/wago-salute.png" alt="" style={{ height: 34, width: "auto" }}
-            onError={e => { e.currentTarget.style.display = "none"; }} />
-          <span style={{ fontFamily: V2.fontSans, fontSize: 16, fontWeight: 800, color: V2.forestGreen, letterSpacing: "-0.01em" }}>
-            WAGO <span style={{ color: V2.grassGreen }}>Drops</span>
-          </span>
+          <img src="/images/wago/wago-drops-logo-sm.png" alt="WAGO Drops" style={{ height: 46, width: "auto", display: "block" }} />
         </Link>
 
         {session && (
