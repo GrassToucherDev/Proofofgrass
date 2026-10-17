@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
 import Wago from "../../components/wago-drops/Wago";
+import BadgeShelf from "../../components/wago-drops/BadgeShelf";
 import CoverImage from "../../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../../components/wago-drops/ProofBonusFlow";
 
@@ -155,6 +156,8 @@ export default function MyDrops() {
                 </div>
                 <div style={{ fontSize: 28, fontWeight: 800, color: T.olive }}>{ticketsMonth}</div>
               </div>
+
+              <BadgeShelf claims={claims} userKey={session?.user?.google_id} />
 
               {/* My Claims */}
               <div style={{ marginBottom: 24 }}>
