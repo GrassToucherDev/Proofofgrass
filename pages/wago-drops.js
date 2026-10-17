@@ -1048,6 +1048,9 @@ export default function WagoDropsPage() {
         <meta property="og:title" content="WAGO Drops — Touch Grass" />
         <meta property="og:description" content="Real-world treasure hunts on a live map. Find drops, prove you were there, earn Grass Tickets." />
         <meta property="og:image" content="https://proofofgrass.app/images/wago/wago-drops-logo.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/images/wago/icon-32.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/images/wago/icon-192.png" />
+        <link rel="apple-touch-icon" href="/images/wago/apple-touch-icon.png" />
         <meta name="twitter:card" content="summary_large_image" />
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </Head>

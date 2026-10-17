@@ -55,7 +55,9 @@ export function WagoDropsNav({ session }) {
   const router = useRouter();
   return (
     <>
-      <Head><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet" /></Head>
+      <Head><link rel="icon" type="image/png" sizes="32x32" href="/images/wago/icon-32.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/images/wago/icon-192.png" />
+        <link rel="apple-touch-icon" href="/images/wago/apple-touch-icon.png" /><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet" /></Head>
       <style>{`
         .wd-nav {
           position: sticky; top: 0; z-index: 200;

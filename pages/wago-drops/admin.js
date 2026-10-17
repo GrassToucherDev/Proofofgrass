@@ -566,7 +566,9 @@ export default function WagoAdminPage(){
 
   if(!authed) return(
     <>
-      <Head><title>WAGO Drops Admin</title></Head>
+      <Head><title>WAGO Drops Admin</title><link rel="icon" type="image/png" sizes="32x32" href="/images/wago/icon-32.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/images/wago/icon-192.png" />
+        <link rel="apple-touch-icon" href="/images/wago/apple-touch-icon.png" /></Head>
       <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
         <form onSubmit={checkAuth} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:14,padding:32,width:320}}>
           <h2 style={{fontFamily:"'Cormorant Garamond',serif",color:T.white,margin:"0 0 20px",textAlign:"center"}}>🗺️ Admin Access</h2>
