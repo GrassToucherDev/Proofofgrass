@@ -6,6 +6,7 @@ import Link from "next/link";
 import { T } from "../../utils/wagoTheme";
 import Wago from "../../components/wago-drops/Wago";
 import { uploadCover } from "../../utils/wagoCoverUpload";
+import TrailBuilder from "../../components/wago-drops/trails/TrailBuilder";
 
 function Input({label,...props}){
   return(
@@ -555,7 +556,41 @@ function PayoutsTab({adminSecret}){
     </div>);
 }
 
-const TABS = ["Campaigns","Pins","Claims","Payouts"];
+function TrailRewardsSection({adminSecret}){
+  const [rows,setRows]=useState(null);
+  const H={"x-wago-admin-secret":adminSecret};
+  async function load(){ try{ const r=await fetch("/api/wago-drops/admin/payouts",{headers:H}); const d=await r.json(); setRows(d.trail_rewards||[]); }catch{ setRows([]); } }
+  useEffect(()=>{ load(); },[]);
+  async function act(id,action,txSignature){
+    const r=await fetch("/api/wago-drops/admin/payout-action",{method:"POST",headers:{...H,"Content-Type":"application/json"},body:JSON.stringify({trailProgressId:id,action,txSignature})});
+    const d=await r.json(); if(!r.ok) alert(d.error||"Failed"); load();
+  }
+  if(!rows||!rows.length) return null;
+  const SC={completed:T.green,pending:T.yellow,awaiting_wallet:T.red,failed:T.red};
+  const btn={background:"transparent",border:`1px solid ${T.border}`,color:T.olive,borderRadius:999,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer"};
+  return(
+    <div style={{marginTop:32}}>
+      <h3 style={{margin:"0 0 12px",color:T.white}}>Trail completion rewards</h3>
+      <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+        <thead><tr style={{borderBottom:`1px solid ${T.border}`}}>{["State","Trail","Account","Wallet","Amount","Notes",""].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"left",color:T.dim,fontWeight:600}}>{h}</th>)}</tr></thead>
+        <tbody>{rows.map(r=>(
+          <tr key={r.id} style={{borderBottom:`1px solid ${T.border}`,verticalAlign:"top"}}>
+            <td style={{padding:"8px 10px",color:SC[r.state]||T.muted,fontWeight:700}}>{r.state==="awaiting_wallet"?"awaiting wallet":r.state}</td>
+            <td style={{padding:"8px 10px",color:T.white}}>{r.trail_name}</td>
+            <td style={{padding:"8px 10px",color:T.muted}}>{r.email||"—"}</td>
+            <td style={{padding:"8px 10px",fontFamily:"monospace",color:T.muted}}>{r.wallet_address?`${r.wallet_address.slice(0,6)}…${r.wallet_address.slice(-4)}`:"—"}</td>
+            <td style={{padding:"8px 10px",color:T.olive}}>{`${Number(r.reward_amount||0).toLocaleString(undefined,{maximumFractionDigits:6})} ${r.reward_symbol||""}`}</td>
+            <td style={{padding:"8px 10px",color:T.muted}}>{r.error&&<div style={{color:T.red}}>{String(r.error).slice(0,140)}</div>}{r.tx_signature&&<a href={`https://solscan.io/tx/${r.tx_signature}`} target="_blank" rel="noopener noreferrer" style={{color:T.olive,fontFamily:"monospace"}}>{r.tx_signature.slice(0,8)}… ↗</a>}</td>
+            <td style={{padding:"8px 10px",whiteSpace:"nowrap"}}>
+              {r.state==="failed"&&<button onClick={()=>act(r.id,"retry")} style={btn}>Retry</button>}{" "}
+              {(r.state==="failed"||r.state==="pending")&&<button onClick={()=>{const sig=window.prompt("Paste the Solana transaction signature you sent:"); if(sig) act(r.id,"mark_paid",sig);}} style={{...btn,color:T.muted}}>Mark paid</button>}
+            </td>
+          </tr>))}</tbody>
+      </table>
+    </div>);
+}
+
+const TABS = ["Campaigns","Pins","Trails","Claims","Payouts"];
 
 export default function WagoAdminPage(){
   const [authed, setAuthed] = useState(false);
@@ -625,7 +660,8 @@ export default function WagoAdminPage(){
             : <>
                 {tab==="Campaigns" && <CampaignsTab campaigns={campaigns} setCampaigns={setCampaigns} adminSecret={secret}/>}
                 {tab==="Pins" && <PinManager campaigns={campaigns} adminSecret={secret}/>}
-                {tab==="Payouts" && <><h3 style={{margin:"0 0 16px",color:T.white}}>Payouts</h3><PayoutsTab adminSecret={secret}/></>}
+                {tab==="Trails" && <TrailBuilder campaigns={campaigns} adminSecret={secret}/>}
+                {tab==="Payouts" && <><h3 style={{margin:"0 0 16px",color:T.white}}>Payouts</h3><PayoutsTab adminSecret={secret}/><TrailRewardsSection adminSecret={secret}/></>}
                 {tab==="Claims" && <><h3 style={{margin:"0 0 16px",color:T.white}}>All Claims</h3><ClaimsTable claims={claims}/></>}
               </>
           }

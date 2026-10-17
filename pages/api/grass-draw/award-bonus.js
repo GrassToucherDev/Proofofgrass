@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
   if (!username || !entry_type) return res.status(400).json({ error: 'username and entry_type required' });
 
-  const VALID_TYPES = ['spotlight','flex_card','field_guide','x_engagement','challenge_win','referral_convert','manual','wago_proof'];
+  const VALID_TYPES = ['spotlight','flex_card','field_guide','x_engagement','challenge_win','referral_convert','manual','wago_proof','wago_trail'];
   if (!VALID_TYPES.includes(entry_type)) return res.status(400).json({ error: `Invalid entry_type` });
 
   const ADMIN_TYPES = ['spotlight','x_engagement','manual'];
@@ -61,26 +61,26 @@ export default async function handler(req, res) {
       referral_convert: 5, flex_card: 2, field_guide: 1, manual: null, wago_proof: null,
     };
     let raw_amount = BONUS_AMOUNTS[entry_type];
-    if (entry_type === 'manual' || entry_type === 'wago_proof') {
+    if (entry_type === 'manual' || entry_type === 'wago_proof' || entry_type === 'wago_trail') {
       raw_amount = parseFloat(req.body.amount);
       if (!raw_amount || raw_amount <= 0) return res.status(400).json({ error: `${entry_type} entries require a positive amount.` });
     }
 
     // ── WAGO Drops proof bonus: one award per claim (source_id = claim id) ──
-    if (entry_type === 'wago_proof') {
-      // Server-to-server only: /api/wago-drops/proof-confirm sends the service key.
+    if (entry_type === 'wago_proof' || entry_type === 'wago_trail') {
+      // Server-to-server only: WAGO Drops server routes send the service key.
       if (req.headers['x-internal-secret'] !== process.env.SUPABASE_SERVICE_ROLE_KEY) {
-        return res.status(403).json({ error: 'wago_proof entries can only be awarded by the WAGO Drops server.' });
+        return res.status(403).json({ error: `${entry_type} entries can only be awarded by the WAGO Drops server.` });
       }
-      if (!source_id) return res.status(400).json({ error: 'wago_proof entries require a source_id (claim id).' });
+      if (!source_id) return res.status(400).json({ error: `${entry_type} entries require a source_id.` });
       const { data: dup } = await supabase
         .from('grass_draw_entries')
         .select('id')
         .ilike('username', username)
-        .eq('entry_type', 'wago_proof')
+        .eq('entry_type', entry_type)
         .eq('source_id', source_id)
         .maybeSingle();
-      if (dup) return res.status(400).json({ error: 'Proof bonus already awarded for this claim.' });
+      if (dup) return res.status(400).json({ error: 'Already awarded for this source.' });
     }
 
     // ── 4. Weekly caps (flex_card: 3/week, field_guide: 5/week, x_engagement: 1/week) ──

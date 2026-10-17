@@ -75,5 +75,28 @@ export default async function handler(req, res) {
     };
   });
 
-  return res.status(200).json({ summary, claims });
+  // Trail completion rewards (separate from per-drop claims). Additive to the response.
+  const { data: tp } = await supabase
+    .from("wago_trail_progress")
+    .select("id, trail_id, google_id, reward_status, reward_wallet, reward_tx_signature, reward_metadata, reward_claimed_at, wago_trails ( name, reward_type, reward_amount, reward_symbol, reward_token_mint )")
+    .in("reward_status", ["pending", "awaiting_wallet", "failed", "completed"])
+    .not("reward_claimed_at", "is", null)
+    .order("reward_claimed_at", { ascending: false })
+    .limit(500);
+  const tgids = [...new Set((tp || []).map(r => r.google_id))];
+  const taccts = {};
+  if (tgids.length) {
+    const { data: accs } = await supabase.from("wago_google_accounts").select("google_id, email").in("google_id", tgids);
+    (accs || []).forEach(a => { taccts[a.google_id] = a; });
+  }
+  const trail_rewards = (tp || [])
+    .filter(r => r.wago_trails && r.wago_trails.reward_type !== "none" && Number(r.wago_trails.reward_amount) > 0)
+    .map(r => ({
+      id: r.id, state: r.reward_status, trail_name: r.wago_trails.name, email: taccts[r.google_id]?.email ?? null,
+      wallet_address: r.reward_wallet, reward_amount: r.wago_trails.reward_amount,
+      reward_symbol: rewardSymbol({ reward_type: r.wago_trails.reward_type, reward_symbol: r.wago_trails.reward_symbol, reward_token_mint: r.wago_trails.reward_token_mint }),
+      tx_signature: r.reward_tx_signature, error: r.reward_metadata?.error ?? null, claimed_at: r.reward_claimed_at,
+    }));
+
+  return res.status(200).json({ summary, claims, trail_rewards });
 }

@@ -131,4 +131,48 @@ async function processClaims() {
   console.log("\nDone.");
 }
 
-processClaims();
+// Trail completion rewards (wago_trail_progress.reward_status = 'pending').
+async function processTrailRewards() {
+  const { data: rows, error } = await supabase
+    .from("wago_trail_progress")
+    .select("id, google_id, reward_wallet, reward_metadata, wago_trails ( name, reward_type, reward_amount, reward_token_mint )")
+    .eq("reward_status", "pending")
+    .order("completed_at", { ascending: true });
+  if (error) { console.error("Failed to fetch trail rewards:", error.message); return; }
+  if (!rows?.length) { console.log("No pending Trail rewards."); return; }
+  console.log(`\nProcessing ${rows.length} Trail reward(s)...`);
+
+  for (const row of rows) {
+    const t = row.wago_trails;
+    const { data: account } = await supabase
+      .from("wago_google_accounts").select("linked_wallet, wallet_verified").eq("google_id", row.google_id).maybeSingle();
+    // Same gate as drop claims: pay only the verified linked wallet.
+    const gate = payoutEligibility({ wallet_address: row.reward_wallet, wallet_verified: false }, account);
+    if (!gate.eligible) { console.log(`Trail reward ${row.id} — HELD: ${gate.reason}`); continue; }
+    if (!t || t.reward_type !== "spl_token" || !t.reward_token_mint) { console.log(`Trail reward ${row.id} — skipping unsupported type:`, t?.reward_type); continue; }
+
+    console.log(`Trail reward ${row.id} (${t.name}) → ${row.reward_wallet}: ${t.reward_amount}`);
+    let txSig = null;
+    try {
+      const mintPubkey = new PublicKey(t.reward_token_mint);
+      const recipientPubkey = new PublicKey(row.reward_wallet);
+      const treasuryATA = await getOrCreateAssociatedTokenAccount(connection, treasuryKeypair, mintPubkey, treasuryKeypair.publicKey);
+      const recipientATA = await getOrCreateAssociatedTokenAccount(connection, treasuryKeypair, mintPubkey, recipientPubkey);
+      const decimals = (await getMint(connection, mintPubkey)).decimals;
+      const amount = BigInt(Math.round(parseFloat(t.reward_amount) * 10 ** decimals));
+      txSig = await transfer(connection, treasuryKeypair, treasuryATA.address, recipientATA.address, treasuryKeypair, amount);
+      console.log("  ✓ TX:", txSig);
+      const { error: uErr } = await supabase.from("wago_trail_progress")
+        .update({ reward_status: "completed", reward_tx_signature: txSig }).eq("id", row.id);
+      if (uErr) console.error(`  ! Sent but DB update failed — record manually. TX ${txSig}:`, uErr.message);
+    } catch (err) {
+      console.error("  ✗ Failed:", err.message);
+      if (!txSig) {
+        await supabase.from("wago_trail_progress")
+          .update({ reward_status: "failed", reward_metadata: { ...(row.reward_metadata || {}), error: err.message } }).eq("id", row.id);
+      }
+    }
+  }
+}
+
+processClaims().then(processTrailRewards);

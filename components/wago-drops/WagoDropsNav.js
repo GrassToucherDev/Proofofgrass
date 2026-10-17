@@ -19,6 +19,14 @@ const TABS = [
     ),
   },
   {
+    href: "/wago-drops/trails", label: "Trails",
+    icon: (c) => (
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="6" cy="19" r="2.2" /><circle cx="18" cy="5" r="2.2" /><path d="M8 19h6.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H16" />
+      </svg>
+    ),
+  },
+  {
     href: "/wago-drops/saved", label: "Saved",
     icon: (c) => (
       <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
