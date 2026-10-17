@@ -12,6 +12,7 @@ import { supabase } from "../../utils/supabase";
 import { isValidXPostUrl } from "../../utils/wagoProofBonus";
 import WagoShareCard from "./WagoShareCard";
 import Wago from "./Wago";
+import { formatReward } from "../../utils/wagoReward";
 
 function useCountdown(deadlineIso) {
   const [left, setLeft] = useState(() => new Date(deadlineIso).getTime() - Date.now());
@@ -88,9 +89,7 @@ export default function ProofBonusFlow({ claim, onDone, existingProof = null }) 
   }, [claim.drop]);
 
   const rewardText = useMemo(() => {
-    const amt = Number(claim.reward_amount || 0);
-    const ticker = (claim.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS";
-    return amt > 0 ? `+${amt.toLocaleString()} ${ticker}` : ticker;
+    return formatReward(claim, claim.reward_amount, { plus: true });
   }, [claim.reward_amount, claim.reward_type]);
 
   function pick(e) {

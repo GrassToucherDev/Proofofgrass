@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   if (!isAdmin(req)) return res.status(401).json({ error: "Unauthorized" });
 
   const {
-    name, description, image_url,
+    name, description, image_url, reward_symbol, reward_logo_url,
     reward_type, reward_amount, reward_token_mint, reward_metadata,
     proof_bonus_enabled, proof_bonus_amount,
     rarity, proof_bonus_tickets,
@@ -36,6 +36,8 @@ export default async function handler(req, res) {
       name,
       description:         description || null,
       image_url:           image_url || null,
+      reward_symbol:       String(reward_symbol || "").trim().slice(0, 20) || null,
+      reward_logo_url:     reward_logo_url || null,
       reward_type:         reward_type || "spl_token",
       reward_amount:       reward_amount ? Number(reward_amount) : null,
       reward_token_mint:   reward_token_mint || null,

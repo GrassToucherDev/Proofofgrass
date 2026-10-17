@@ -7,20 +7,12 @@ import { useSession } from "next-auth/react";
 import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
 import Wago from "../../components/wago-drops/Wago";
+import { rewardLogo, formatReward } from "../../utils/wagoReward";
 
-const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
-function rewardIconUrl(rewardType) {
-  if ((rewardType || "").toLowerCase() === "sol")
-    return "https://cryptologos.cc/logos/solana-sol-logo.png";
-  return TOUCHGRASS_LOGO_URL;
-}
-
+const rewardIconUrl = rewardLogo;
 function rewardLabel(c) {
-  const base   = Number(c.reward_amount || 0);
-  const bonus  = c.proof_bonus_applied ? Number(c.proof_bonus_amount || 0) : 0;
-  const total  = base + bonus;
-  if ((c.reward_type || "").toLowerCase() === "sol") return `+${total} SOL`;
-  return `+${total.toLocaleString()} $TOUCHGRASS`;
+  const total = Number(c.reward_amount || 0) + (c.proof_bonus_applied ? Number(c.proof_bonus_amount || 0) : 0);
+  return formatReward(c, total, { plus: true });
 }
 
 function StatusBadge({ status }) {
@@ -102,7 +94,7 @@ export default function WagoDropsList() {
                     display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
                   }}>
                     <img
-                      src={rewardIconUrl(c.reward_type)}
+                      src={rewardIconUrl(c)}
                       alt={c.reward_type}
                       style={{ width: 30, height: 30, objectFit: "contain" }}
                       onError={e => { e.currentTarget.style.display = "none"; }}

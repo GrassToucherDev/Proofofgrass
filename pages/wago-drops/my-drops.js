@@ -8,20 +8,11 @@ import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
 import Wago from "../../components/wago-drops/Wago";
 import BadgeShelf from "../../components/wago-drops/BadgeShelf";
+import { rewardLogo, rewardSymbol, formatReward, formatAmount } from "../../utils/wagoReward";
 import CoverImage from "../../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../../components/wago-drops/ProofBonusFlow";
 
-// ── Reward asset logos (mirrors wago-drops.js) ────────────────────────────────
-const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
-const REWARD_ICONS = {
-  sol:        "https://cryptologos.cc/logos/solana-sol-logo.png",
-  touchgrass: TOUCHGRASS_LOGO_URL,
-};
-function rewardIconUrl(rewardType) {
-  const t = (rewardType || "").toLowerCase();
-  if (t === "sol") return REWARD_ICONS.sol;
-  return REWARD_ICONS.touchgrass;
-}
+const rewardIconUrl = rewardLogo;
 
 // Status badge
 function StatusBadge({ status }) {
@@ -65,9 +56,16 @@ export default function MyDrops() {
     }).catch(() => setLoading(false));
   }, [session]);
 
-  const totalTG = claims.reduce((sum, c) =>
-    sum + Number(c.reward_amount || 0) + (c.proof_bonus_applied ? Number(c.proof_bonus_amount || 0) : 0), 0
-  );
+  // Rewards earned, per token (campaigns can pay different tokens, so never sum across them).
+  const earnedBySymbol = {};
+  claims.forEach(c => {
+    if (c.status === "failed") return;
+    const sym = rewardSymbol(c);
+    const amt = Number(c.reward_amount || 0) + (c.proof_bonus_applied ? Number(c.proof_bonus_amount || 0) : 0);
+    earnedBySymbol[sym] = (earnedBySymbol[sym] || 0) + amt;
+  });
+  const earnedLines = Object.entries(earnedBySymbol).filter(([, v]) => v > 0).map(([sym, v]) => `${formatAmount(v)} ${sym}`);
+
 
   return (
     <>
@@ -131,13 +129,19 @@ export default function MyDrops() {
                 {[
                   { label: "Claims",    value: claims.length },
                   { label: "Saved",     value: saves.length  },
-                  { label: "TG Earned", value: totalTG.toLocaleString() },
+                  { label: "Earned", lines: earnedLines },
                 ].map(s => (
                   <div key={s.label} style={{
                     background: T.surface, border: `1px solid ${T.border}`,
                     borderRadius: 10, padding: "14px 12px", textAlign: "center",
                   }}>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: T.olive }}>{s.value}</div>
+                    {s.lines ? (
+                      <div style={{ minHeight: 28, display: "flex", flexDirection: "column", justifyContent: "center", gap: 1 }}>
+                        {s.lines.length === 0 ? <div style={{ fontSize: 22, fontWeight: 700, color: T.olive }}>0</div>
+                          : s.lines.slice(0, 3).map(l => <div key={l} style={{ fontSize: s.lines.length > 1 ? 13 : 17, fontWeight: 700, color: T.olive, lineHeight: 1.25 }}>{l}</div>)}
+                        {s.lines.length > 3 && <div style={{ fontSize: 11, color: T.muted }}>+{s.lines.length - 3} more</div>}
+                      </div>
+                    ) : <div style={{ fontSize: 22, fontWeight: 700, color: T.olive }}>{s.value}</div>}
                     <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>{s.label}</div>
                   </div>
                 ))}
@@ -182,12 +186,10 @@ export default function MyDrops() {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {claims.map(claim => {
-                      const iconUrl = rewardIconUrl(claim.reward_type);
+                      const iconUrl = rewardIconUrl(claim);
                       const amount  = Number(claim.reward_amount || 0)
                         + (claim.proof_bonus_applied ? Number(claim.proof_bonus_amount || 0) : 0);
-                      const rewardLabel = claim.reward_type?.toLowerCase() === "sol"
-                        ? `${amount} SOL`
-                        : `${amount.toLocaleString()} $TOUCHGRASS`;
+                      const rewardLabel = formatReward(claim, amount);
                       return (
                         <div key={claim.id}>
                         <div style={{

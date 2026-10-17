@@ -42,7 +42,7 @@ export default async function handler(req, res) {
   // Load campaign
   const { data: campaign, error: campErr } = await supabase
     .from("wago_drop_campaigns")
-    .select("id, name, image_url, status, reward_amount, reward_type, proof_bonus_enabled, proof_bonus_amount, rarity, proof_bonus_tickets, reveal_radius_m, claim_radius_m, ends_at")
+    .select("id, name, image_url, status, reward_amount, reward_type, reward_symbol, reward_logo_url, reward_token_mint, proof_bonus_enabled, proof_bonus_amount, rarity, proof_bonus_tickets, reveal_radius_m, claim_radius_m, ends_at")
     .eq("id", loc.campaign_id)
     .single();
 
@@ -76,6 +76,9 @@ export default async function handler(req, res) {
     campaign_name:       campaign.name,
     image_url:           campaign.image_url || null,
     reward_type:         campaign.reward_type,
+    reward_symbol:       campaign.reward_symbol || null,
+    reward_logo_url:     campaign.reward_logo_url || null,
+    reward_token_mint:   campaign.reward_token_mint || null,
     reward_amount:       campaign.reward_amount,
     proof_bonus_enabled: campaign.proof_bonus_enabled,
     proof_bonus_amount:  campaign.proof_bonus_amount,

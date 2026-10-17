@@ -26,7 +26,7 @@ function Select({label,children,...props}){
 }
 
 const MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
-const BLANK_CAMPAIGN = {name:"",description:"",image_url:"",reward_type:"spl_token",reward_amount:"",reward_token_mint:MINT,reveal_radius_m:100,claim_radius_m:25,proof_bonus_enabled:false,proof_bonus_amount:"",rarity:"common",proof_bonus_tickets:"",starts_at:"",ends_at:"",status:"active"};
+const BLANK_CAMPAIGN = {name:"",description:"",image_url:"",reward_type:"spl_token",reward_amount:"",reward_token_mint:MINT,reward_symbol:"$TOUCHGRASS",reward_logo_url:"",reveal_radius_m:100,claim_radius_m:25,proof_bonus_enabled:false,proof_bonus_amount:"",rarity:"common",proof_bonus_tickets:"",starts_at:"",ends_at:"",status:"active"};
 
 function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
   const [form, setForm] = useState(initial || BLANK_CAMPAIGN);
@@ -36,6 +36,15 @@ function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
   const set = (k,v) => setForm(prev=>({...prev,[k]:v}));
 
   useEffect(()=>{ setForm(initial || BLANK_CAMPAIGN); },[initial]);
+
+  async function onLogoFile(e){
+    const f = e.target.files?.[0]; e.target.value = "";
+    if(!f) return;
+    setUploading(true); setMsg(null);
+    try{ set("reward_logo_url", await uploadCover(f,{logo:true})); }
+    catch(err){ setMsg({ok:false,text:err.message}); }
+    finally{ setUploading(false); }
+  }
 
   async function onCoverFile(e){
     const f = e.target.files?.[0]; e.target.value = "";
@@ -78,6 +87,18 @@ function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <Input label="Reward Amount *" type="number" required value={form.reward_amount} onChange={e=>set("reward_amount",e.target.value)}/>
         <Input label="Token Mint" value={form.reward_token_mint||""} onChange={e=>set("reward_token_mint",e.target.value)}/>
+        <Input label="Token Symbol * (shown to users, e.g. BONK)" required value={form.reward_symbol||""} onChange={e=>set("reward_symbol",e.target.value)}/>
+        <div>
+          <div style={{fontSize:11,color:T.dim,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Token logo (optional)</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {form.reward_logo_url && <img src={form.reward_logo_url} alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"contain",background:T.surface,border:`1px solid ${T.border}`}}/>}
+            <label style={{background:T.olive,color:"#fff",borderRadius:999,padding:"8px 16px",fontSize:12,fontWeight:700,cursor:uploading?"default":"pointer",opacity:uploading?0.6:1}}>
+              {form.reward_logo_url?"Replace":"Upload logo"}
+              <input type="file" accept="image/*" onChange={onLogoFile} disabled={uploading} style={{display:"none"}}/>
+            </label>
+            {form.reward_logo_url && <button type="button" onClick={()=>set("reward_logo_url","")} style={{background:"transparent",border:`1px solid ${T.border}`,color:T.muted,borderRadius:999,padding:"8px 14px",fontSize:12,cursor:"pointer"}}>Remove</button>}
+          </div>
+        </div>
         <Input label="Reveal Radius (m)" type="number" value={form.reveal_radius_m} onChange={e=>set("reveal_radius_m",Number(e.target.value))}/>
         <Input label="Claim Radius (m)" type="number" value={form.claim_radius_m} onChange={e=>set("claim_radius_m",Number(e.target.value))}/>
         <Input label="Starts At (UTC)" type="datetime-local" value={form.starts_at||""} onChange={e=>set("starts_at",e.target.value)}/>
@@ -430,7 +451,7 @@ function ClaimsTable({claims}){
               <td style={{padding:"8px 12px",color:T.white}}>{c.campaign_name}</td>
               <td style={{padding:"8px 12px",color:T.dim,fontFamily:"monospace"}}>{c.location_id?String(c.location_id).slice(0,4):"—"}</td>
               <td style={{padding:"8px 12px",color:T.muted,fontFamily:"monospace"}}>{c.wallet_address?.slice(0,6)}…{c.wallet_address?.slice(-4)}</td>
-              <td style={{padding:"8px 12px",color:T.olive}}>{c.reward_type==="spl_token"?`${Number(c.reward_amount||0).toLocaleString()} TG`:c.reward_type}</td>
+              <td style={{padding:"8px 12px",color:T.olive}}>{`${Number(c.reward_amount||0).toLocaleString(undefined,{maximumFractionDigits:6})} ${c.reward_symbol||""}`}</td>
               <td style={{padding:"8px 12px",color:SC[c.status]||T.muted}}>{c.status}</td>
               <td style={{padding:"8px 12px"}}>{c.proof_status==="awarded"
                 ?<span style={{color:T.green,fontWeight:600}}>🎟️ {c.tickets_awarded} {c.x_post_url&&<a href={c.x_post_url} target="_blank" rel="noopener noreferrer" style={{color:T.olive,fontWeight:400}}>post ↗</a>}</span>
@@ -447,6 +468,7 @@ function ClaimsTable({claims}){
   );
 }
 
+const fmtBySymbol=(m)=>{const e=Object.entries(m||{}).filter(([,v])=>v>0);return e.length?e.map(([k,v])=>`${v.toLocaleString(undefined,{maximumFractionDigits:6})} ${k}`).join(" · "):"–";};
 const FLAG_LABEL = {device_multi_account:"multi-account device", ip_shared:"shared IP"};
 
 function PayoutsTab({adminSecret}){
@@ -489,10 +511,10 @@ function PayoutsTab({adminSecret}){
   return(
     <div>
       <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
-        <Card label="Queued" value={s.pending} color={T.yellow} sub={`${s.queued_amount.toLocaleString()} TG`}/>
+        <Card label="Queued" value={s.pending} color={T.yellow} sub={fmtBySymbol(s.queued_by_symbol)}/>
         <Card label="Held" value={s.held} color={s.held?T.red:T.white} sub="unverified wallet"/>
         <Card label="Failed" value={s.failed} color={s.failed?T.red:T.white} sub="needs retry"/>
-        <Card label="Paid" value={s.completed} color={T.green} sub={`${s.completed_amount.toLocaleString()} TG`}/>
+        <Card label="Paid" value={s.completed} color={T.green} sub={fmtBySymbol(s.completed_by_symbol)}/>
         <Card label="Flagged" value={s.flagged} color={s.flagged?T.yellow:T.white} sub="review"/>
       </div>
       <p style={{fontSize:12,color:T.muted,margin:"0 0 12px",lineHeight:1.6}}>
@@ -515,7 +537,7 @@ function PayoutsTab({adminSecret}){
               <td style={{padding:"8px 10px",color:T.white}}>{c.campaign_name}</td>
               <td style={{padding:"8px 10px",color:T.muted}}>{c.email||"—"}</td>
               <td style={{padding:"8px 10px",fontFamily:"monospace",color:T.muted}}>{c.wallet_address?.slice(0,6)}…{c.wallet_address?.slice(-4)} {c.wallet_verified?<span style={{color:T.green}}>✓</span>:<span style={{color:T.red}}>unverified</span>}</td>
-              <td style={{padding:"8px 10px",color:T.olive}}>{c.reward_type==="spl_token"?`${Number(c.reward_amount||0).toLocaleString()} TG`:c.reward_type}</td>
+              <td style={{padding:"8px 10px",color:T.olive}}>{`${Number(c.reward_amount||0).toLocaleString(undefined,{maximumFractionDigits:6})} ${c.reward_symbol||""}`}</td>
               <td style={{padding:"8px 10px",color:T.muted,maxWidth:260}}>
                 {c.error&&<div style={{color:T.red}}>{String(c.error).slice(0,140)}</div>}
                 {c.hold_reason&&c.state==="held"&&<div style={{color:T.red}}>{c.hold_reason}</div>}

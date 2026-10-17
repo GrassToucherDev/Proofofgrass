@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     .from("wago_drop_claims")
     .select(`id, reward_type, reward_amount, proof_bonus_applied, proof_bonus_amount,
              tx_signature, status, claimed_at,
-             wago_drop_campaigns ( name, image_url, rarity, proof_bonus_enabled, proof_bonus_tickets )`)
+             wago_drop_campaigns ( name, image_url, reward_symbol, reward_logo_url, reward_token_mint, rarity, proof_bonus_enabled, proof_bonus_tickets )`)
     .eq("google_id", session.user.google_id)
     .order("claimed_at", { ascending: false });
 
@@ -56,6 +56,9 @@ export default async function handler(req, res) {
       proof_tickets: camp.proof_bonus_enabled ? ticketsForCampaign(camp) : 0,
       rarity: camp.rarity || "common",
       image_url: camp.image_url || null,
+      reward_symbol: camp.reward_symbol || null,
+      reward_logo_url: camp.reward_logo_url || null,
+      reward_token_mint: camp.reward_token_mint || null,
       proof_photo_path: p?.status === "photo_approved" ? p.photo_path : null,
       proof_pog_username: p?.pog_username ?? null,
     };

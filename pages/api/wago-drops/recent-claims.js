@@ -92,7 +92,10 @@ export default async function handler(req, res) {
         wago_drop_campaigns (
           name,
           reward_type,
-          reward_amount
+          reward_amount,
+          reward_symbol,
+          reward_logo_url,
+          reward_token_mint
         )
       )
     `)
@@ -145,6 +148,9 @@ export default async function handler(req, res) {
       campaign_name: campaign?.name          || "Mystery Drop",
       reward_type:   campaign?.reward_type   || "touchgrass",
       reward_amount: campaign?.reward_amount || 0,
+      reward_symbol: campaign?.reward_symbol || null,
+      reward_logo_url: campaign?.reward_logo_url || null,
+      reward_token_mint: campaign?.reward_token_mint || null,
       location:      locLabel,
       location_id:   loc?.id || null,
       lat:           loc?.lat || null,

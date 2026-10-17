@@ -13,6 +13,7 @@ import { WagoDropsNav, WagoDropsBottomNav } from "../components/wago-drops/WagoD
 import WalletConnect from "../components/wago-drops/WalletConnect";
 import Wago from "../components/wago-drops/Wago";
 import { getDeviceHash } from "../utils/fingerprint";
+import { rewardLogo, rewardSymbol, formatReward } from "../utils/wagoReward";
 import CoverImage from "../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../components/wago-drops/ProofBonusFlow";
 
@@ -21,19 +22,8 @@ import ProofBonusFlow from "../components/wago-drops/ProofBonusFlow";
 import { T } from "../utils/wagoTheme";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
-// ─── Reward asset logos ───────────────────────────────────────────────────────
-const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
-
-const REWARD_ICONS = {
-  touchgrass: TOUCHGRASS_LOGO_URL,
-  sol:        "https://cryptologos.cc/logos/solana-sol-logo.png",
-};
-
-function rewardIconUrl(drop) {
-  const type = (drop.reward_type || "").toLowerCase();
-  if (type === "sol") return REWARD_ICONS.sol;
-  return REWARD_ICONS.touchgrass;
-}
+// ─── Reward display (any Solana token) ───────────────────────────────────────
+const rewardIconUrl = rewardLogo;
 
 function makeMarkerEl(drop) {
   const el = document.createElement("div");
@@ -218,7 +208,7 @@ function ClaimsTicker({ onSelectDrop }) {
       >
         {items.map((claim, i) => {
           const amt     = Number(claim.reward_amount || 0);
-          const ticker  = (claim.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS";
+          const ticker  = rewardSymbol(claim);
           const isFresh = freshIds.has(claim.id);
           const clickable = onSelectDrop && claim.lat != null && claim.lng != null;
           return (
@@ -250,7 +240,7 @@ function ClaimsTicker({ onSelectDrop }) {
               </span>
               <span style={{ fontSize: 11, color: T.dim }}>claimed</span>
               <span style={{ fontSize: 11, color: T.olive, fontWeight: 700 }}>
-                {amt > 0 ? `+${amt.toLocaleString()} ${ticker}` : ticker}
+                {formatReward(claim, amt, { plus: true })}
               </span>
               {claim.location && (
                 <>
@@ -573,6 +563,9 @@ function MapView({ session, linkedWallet, flyToCoords }) {
         message: data.message,
         reward_amount: data.reward_amount ?? selected?.reward_amount,
         reward_type:   data.reward_type   ?? selected?.reward_type,
+        reward_symbol:    data.reward_symbol    ?? selected?.reward_symbol,
+        reward_logo_url:  data.reward_logo_url  ?? selected?.reward_logo_url,
+        reward_token_mint: data.reward_token_mint ?? selected?.reward_token_mint,
         claim_id:       data.claim_id,
         proof_bonus_enabled: data.proof_bonus_enabled,
         proof_tickets:  data.proof_tickets,
@@ -588,10 +581,8 @@ function MapView({ session, linkedWallet, flyToCoords }) {
   }
 
   function handleShare(result) {
-    const amount = Number(result.reward_amount || 0);
-    const ticker = (result.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS";
     const hint   = result.drop?.hint || "a drop";
-    const text   = `Just claimed ${amount.toLocaleString()} ${ticker} at "${hint}" 🌿 #WAGO #TouchGrass #ProofOfGrass`;
+    const text   = `Just claimed ${formatReward(result, result.reward_amount)} at "${hint}" 🌿 #WAGO #TouchGrass #ProofOfGrass`;
     const url    = "https://proofofgrass.app/wago-drops";
     if (navigator.share) {
       navigator.share({ title: "WAGO Drop claimed!", text, url }).catch(() => {});
@@ -731,9 +722,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                             {drop.hint || "Mystery Drop"}
                           </div>
                           <div style={{ fontSize: 12, color: T.olive, fontWeight: 600 }}>
-                            {drop.reward_amount
-                              ? `${Number(drop.reward_amount).toLocaleString()} $TOUCHGRASS`
-                              : drop.reward_type}
+                            {formatReward(drop)}
                           </div>
                         </div>
                       </div>
@@ -848,11 +837,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                     Drop Claimed 🌿
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: T.white, marginBottom: 2 }}>
-                    {(() => {
-                      const amt = Number(claimResult.reward_amount || 0);
-                      const ticker = (claimResult.reward_type || "").toLowerCase() === "sol" ? "SOL" : "$TOUCHGRASS";
-                      return `+${amt.toLocaleString()} ${ticker}`;
-                    })()}
+                    {formatReward(claimResult, claimResult.reward_amount, { plus: true })}
                   </div>
                   <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>
                     Pending · reward queued to your wallet
@@ -941,9 +926,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                 }}>
                   <div style={{ fontSize: 10, color: T.muted, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>Reward</div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: T.olive }}>
-                    {selected.reward_amount
-                      ? `${Number(selected.reward_amount).toLocaleString()} $TOUCHGRASS`
-                      : selected.reward_type?.toUpperCase()}
+                    {formatReward(selected)}
                   </div>
                   {selected.proof_bonus_enabled && (
                     <div style={{ fontSize: 10, color: T.green, marginTop: 3 }}>
@@ -1044,7 +1027,7 @@ export default function WagoDropsPage() {
     <>
       <Head>
         <title>WAGO Drops — Touch Grass</title>
-        <meta name="description" content="Real-world location-based $TOUCHGRASS drops. Go outside, find the drop, claim on-chain." />
+        <meta name="description" content="Real-world location-based crypto drops on Solana. Go outside, find the drop, claim on-chain." />
         <meta property="og:title" content="WAGO Drops — Touch Grass" />
         <meta property="og:description" content="Real-world treasure hunts on a live map. Find drops, prove you were there, earn Grass Tickets." />
         <meta property="og:image" content="https://proofofgrass.app/images/wago/wago-drops-logo.png" />
