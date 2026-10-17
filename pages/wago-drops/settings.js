@@ -146,6 +146,12 @@ export default function WagoDropsSettings() {
               </div>
             )}
 
+            {currentWallet && !walletVerified && (
+              <div style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 8,
+                padding: "10px 14px", marginBottom: 16, fontSize: 13, color: T.yellow, lineHeight: 1.5 }}>
+                Your wallet isn&rsquo;t verified yet, so you can&rsquo;t claim drops. Connect the same wallet below and sign to verify it.
+              </div>
+            )}
             {/* Connect + verify */}
             <Label>{currentWallet ? "Change wallet" : "Link a wallet"}</Label>
             <WalletConnect
@@ -168,7 +174,7 @@ export default function WagoDropsSettings() {
             )}
 
             <p style={{ fontSize: 11, color: T.dim, marginTop: 14, lineHeight: 1.6 }}>
-              All $TOUCHGRASS rewards are sent to this address. Wallets can be changed once every 24 hours.
+              Rewards are sent only to a verified wallet. Wallets can be changed once every 24 hours.
             </p>
           </Section>
 

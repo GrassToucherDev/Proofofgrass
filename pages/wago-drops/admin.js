@@ -447,7 +447,93 @@ function ClaimsTable({claims}){
   );
 }
 
-const TABS = ["Campaigns","Pins","Claims"];
+const FLAG_LABEL = {device_multi_account:"multi-account device", ip_shared:"shared IP"};
+
+function PayoutsTab({adminSecret}){
+  const [data,setData]=useState(null);
+  const [err,setErr]=useState(null);
+  const [filter,setFilter]=useState("attention");
+  const [busy,setBusy]=useState(null);
+  const H={"x-wago-admin-secret":adminSecret};
+  async function load(){
+    setErr(null);
+    try{
+      const r=await fetch("/api/wago-drops/admin/payouts",{headers:H}); const d=await r.json();
+      if(!r.ok) throw new Error(d.error||"Failed"); setData(d);
+    }catch(e){ setErr(e.message); }
+  }
+  useEffect(()=>{ load(); },[]);
+  async function act(claimId,action,txSignature){
+    setBusy(claimId);
+    try{
+      const r=await fetch("/api/wago-drops/admin/payout-action",{method:"POST",headers:{...H,"Content-Type":"application/json"},body:JSON.stringify({claimId,action,txSignature})});
+      const d=await r.json(); if(!r.ok) throw new Error(d.error||"Failed");
+      await load();
+    }catch(e){ alert(e.message); }
+    finally{ setBusy(null); }
+  }
+  function markPaid(id){ const sig=window.prompt("Paste the Solana transaction signature you sent:"); if(sig) act(id,"mark_paid",sig); }
+
+  if(err) return <p style={{color:T.red,fontSize:13}}>{err} <button onClick={load} style={{marginLeft:8}}>Retry</button></p>;
+  if(!data) return <p style={{color:T.dim,fontSize:13}}>Loading…</p>;
+  const s=data.summary;
+  const SC={completed:T.green,pending:T.yellow,held:T.red,failed:T.red};
+  const rows=data.claims.filter(c=>filter==="all"?true:filter==="attention"?(c.state==="held"||c.state==="failed"||c.state==="pending"||c.flags.some(f=>f!=="no_device_hash")):c.state===filter);
+  const Card=({label,value,color,sub})=>(
+    <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"12px 14px",minWidth:120,flex:"1 1 120px"}}>
+      <div style={{fontSize:11,color:T.dim,textTransform:"uppercase",letterSpacing:"0.08em"}}>{label}</div>
+      <div style={{fontSize:22,fontWeight:800,color:color||T.white}}>{value}</div>
+      {sub&&<div style={{fontSize:11,color:T.muted}}>{sub}</div>}
+    </div>);
+  const btn={background:"transparent",border:`1px solid ${T.border}`,color:T.olive,borderRadius:999,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer"};
+  return(
+    <div>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
+        <Card label="Queued" value={s.pending} color={T.yellow} sub={`${s.queued_amount.toLocaleString()} TG`}/>
+        <Card label="Held" value={s.held} color={s.held?T.red:T.white} sub="unverified wallet"/>
+        <Card label="Failed" value={s.failed} color={s.failed?T.red:T.white} sub="needs retry"/>
+        <Card label="Paid" value={s.completed} color={T.green} sub={`${s.completed_amount.toLocaleString()} TG`}/>
+        <Card label="Flagged" value={s.flagged} color={s.flagged?T.yellow:T.white} sub="review"/>
+      </div>
+      <p style={{fontSize:12,color:T.muted,margin:"0 0 12px",lineHeight:1.6}}>
+        Payouts are sent by the payout script (<code>node scripts/process-wago-claims.mjs</code>), which pays only verified wallets. “Retry” re-queues a failed claim for the next run.
+      </p>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+        {[["attention","Needs attention"],["pending","Queued"],["held","Held"],["failed","Failed"],["completed","Paid"],["all","All"]].map(([k,l])=>
+          <button key={k} onClick={()=>setFilter(k)} style={{...btn,background:filter===k?T.olive:"transparent",color:filter===k?"#fff":T.olive}}>{l}</button>)}
+        <button onClick={load} style={{...btn,marginLeft:"auto",color:T.muted}}>↻ Refresh</button>
+      </div>
+      {!rows.length?<p style={{color:T.dim,fontSize:13}}>Nothing here.</p>:(
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+          <thead><tr style={{borderBottom:`1px solid ${T.border}`}}>
+            {["State","Campaign","Account","Wallet","Amount","Notes","Claimed",""].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"left",color:T.dim,fontWeight:600}}>{h}</th>)}
+          </tr></thead>
+          <tbody>{rows.map(c=>(
+            <tr key={c.id} style={{borderBottom:`1px solid ${T.border}`,verticalAlign:"top"}}>
+              <td style={{padding:"8px 10px",color:SC[c.state]||T.muted,fontWeight:700}}>{c.state}</td>
+              <td style={{padding:"8px 10px",color:T.white}}>{c.campaign_name}</td>
+              <td style={{padding:"8px 10px",color:T.muted}}>{c.email||"—"}</td>
+              <td style={{padding:"8px 10px",fontFamily:"monospace",color:T.muted}}>{c.wallet_address?.slice(0,6)}…{c.wallet_address?.slice(-4)} {c.wallet_verified?<span style={{color:T.green}}>✓</span>:<span style={{color:T.red}}>unverified</span>}</td>
+              <td style={{padding:"8px 10px",color:T.olive}}>{c.reward_type==="spl_token"?`${Number(c.reward_amount||0).toLocaleString()} TG`:c.reward_type}</td>
+              <td style={{padding:"8px 10px",color:T.muted,maxWidth:260}}>
+                {c.error&&<div style={{color:T.red}}>{String(c.error).slice(0,140)}</div>}
+                {c.hold_reason&&c.state==="held"&&<div style={{color:T.red}}>{c.hold_reason}</div>}
+                {c.flags.filter(f=>f!=="no_device_hash").map(f=><span key={f} style={{display:"inline-block",background:"rgba(251,191,36,0.14)",color:T.yellow,borderRadius:999,padding:"1px 8px",marginRight:4,fontSize:11}}>{FLAG_LABEL[f]||f}</span>)}
+                {c.tx_signature&&<a href={`https://solscan.io/tx/${c.tx_signature}`} target="_blank" rel="noopener noreferrer" style={{color:T.olive,fontFamily:"monospace"}}>{c.tx_signature.slice(0,8)}… ↗</a>}
+              </td>
+              <td style={{padding:"8px 10px",color:T.dim,whiteSpace:"nowrap"}}>{new Date(c.claimed_at).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</td>
+              <td style={{padding:"8px 10px",whiteSpace:"nowrap"}}>
+                {c.state==="failed"&&<button disabled={busy===c.id} onClick={()=>act(c.id,"retry")} style={btn}>Retry</button>}{" "}
+                {(c.state==="failed"||c.state==="pending"||c.state==="held")&&<button disabled={busy===c.id} onClick={()=>markPaid(c.id)} style={{...btn,color:T.muted}}>Mark paid</button>}
+              </td>
+            </tr>))}</tbody>
+        </table>
+      </div>)}
+    </div>);
+}
+
+const TABS = ["Campaigns","Pins","Claims","Payouts"];
 
 export default function WagoAdminPage(){
   const [authed, setAuthed] = useState(false);
@@ -515,6 +601,7 @@ export default function WagoAdminPage(){
             : <>
                 {tab==="Campaigns" && <CampaignsTab campaigns={campaigns} setCampaigns={setCampaigns} adminSecret={secret}/>}
                 {tab==="Pins" && <PinManager campaigns={campaigns} adminSecret={secret}/>}
+                {tab==="Payouts" && <><h3 style={{margin:"0 0 16px",color:T.white}}>Payouts</h3><PayoutsTab adminSecret={secret}/></>}
                 {tab==="Claims" && <><h3 style={{margin:"0 0 16px",color:T.white}}>All Claims</h3><ClaimsTable claims={claims}/></>}
               </>
           }

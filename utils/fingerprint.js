@@ -35,11 +35,8 @@ function getCanvasFingerprint() {
   }
 }
 
-export async function collectAndSendFingerprint(username) {
-  if (typeof window === "undefined" || !username) return;
-
-  try {
-    const signals = [
+function deviceSignals() {
+  return [
       navigator.userAgent,
       navigator.language,
       screen.width + "x" + screen.height,
@@ -49,8 +46,19 @@ export async function collectAndSendFingerprint(username) {
       navigator.deviceMemory || "",
       getCanvasFingerprint(),
     ].join("|");
+}
 
-    const fingerprintHash = await hashString(signals);
+// Stable per-device hash (sent with WAGO claims for anti-abuse checks).
+export async function getDeviceHash() {
+  if (typeof window === "undefined") return null;
+  try { return await hashString(deviceSignals()); } catch { return null; }
+}
+
+export async function collectAndSendFingerprint(username) {
+  if (typeof window === "undefined" || !username) return;
+
+  try {
+    const fingerprintHash = await hashString(deviceSignals());
     if (!fingerprintHash) return;
 
     // Fire and forget — never await, never block

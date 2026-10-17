@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { T } from "../../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../../components/wago-drops/WagoDropsNav";
 import Wago from "../../../components/wago-drops/Wago";
+import { getDeviceHash } from "../../../utils/fingerprint";
 import CoverImage from "../../../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../../../components/wago-drops/ProofBonusFlow";
 
@@ -90,7 +91,7 @@ export default function DropDetail() {
       const res = await fetch("/api/wago-drops/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locationId: drop.id, userLat: userPos.lat, userLng: userPos.lng }),
+        body: JSON.stringify({ locationId: drop.id, userLat: userPos.lat, userLng: userPos.lng, deviceHash: await getDeviceHash() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Claim failed");
