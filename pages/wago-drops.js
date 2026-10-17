@@ -505,10 +505,19 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     locations.forEach(loc => {
       if (markersRef.current[loc.id]) return;
       const el = makeMarkerEl(loc);
+      // Never set transform on the marker element itself: Mapbox positions it
+      // with transform, so overriding it sends the pin to the map's top-left.
+      // Scale the inner image instead.
       el.addEventListener("mouseenter", () => {
-        if (selected?.id !== loc.id) el.style.transform = "scale(1.12)";
+        const img = el.querySelector("img");
+        if (img) img.style.transform = "scale(1.12)";
+        el.style.filter = "brightness(1.06)";
       });
-      el.addEventListener("mouseleave", () => { el.style.transform = ""; });
+      el.addEventListener("mouseleave", () => {
+        const img = el.querySelector("img");
+        if (img) img.style.transform = "";
+        el.style.filter = "";
+      });
       el.addEventListener("click", () => {
         setSelected(loc);
         setClaimMsg(null);
