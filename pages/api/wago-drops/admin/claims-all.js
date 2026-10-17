@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
   const { data, error } = await supabase
     .from("wago_drop_claims")
-    .select(`id, wallet_address, google_id,
+    .select(`id, wallet_address, google_id, location_id,
              reward_type, reward_amount,
              proof_bonus_applied, proof_bonus_amount,
              tx_signature, status, claimed_at,
@@ -27,7 +27,23 @@ export default async function handler(req, res) {
 
   if (error) return res.status(500).json({ error: error.message });
 
+  // Proof bonus status per claim (wago_drop_proofs: photo_approved | awarded | expired)
+  const ids = (data || []).map(r => r.id);
+  const proofByClaim = {};
+  if (ids.length) {
+    const { data: proofs } = await supabase
+      .from("wago_drop_proofs")
+      .select("claim_id, status, tickets_awarded, pog_username, x_post_url")
+      .in("claim_id", ids);
+    (proofs || []).forEach(p => { proofByClaim[p.claim_id] = p; });
+  }
+
   const claims = (data || []).map(row => ({
+    location_id:         row.location_id,
+    proof_status:        proofByClaim[row.id]?.status ?? null,
+    tickets_awarded:     proofByClaim[row.id]?.tickets_awarded ?? null,
+    proof_username:      proofByClaim[row.id]?.pog_username ?? null,
+    x_post_url:          proofByClaim[row.id]?.x_post_url ?? null,
     id:                  row.id,
     wallet_address:      row.wallet_address,
     google_id:           row.google_id,

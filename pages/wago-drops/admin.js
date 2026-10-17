@@ -4,6 +4,7 @@ import Head from "next/head";
 import Link from "next/link";
 
 import { T } from "../../utils/wagoTheme";
+import Wago from "../../components/wago-drops/Wago";
 
 function Input({label,...props}){
   return(
@@ -122,7 +123,7 @@ function CampaignsTab({campaigns, setCampaigns, adminSecret}){
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div>
                       <div style={{fontSize:14,fontWeight:600,color:T.white}}>{c.name}</div>
-                      <div style={{fontSize:11,color:T.dim,marginTop:2}}>{c.status} · {c.location_count??0} pins</div>
+                      <div style={{fontSize:11,color:T.dim,marginTop:2}}>{c.status} · {c.location_count??0} pins{c.proof_bonus_enabled?` · ${(c.rarity||"common")} · 🎟️ ${c.proof_bonus_tickets||({common:2,rare:5,epic:10,legendary:25}[c.rarity||"common"])}`:""}</div>
                     </div>
                     <div style={{display:"flex",gap:8,alignItems:"center"}}>
                       <span style={{fontSize:11,color:T.olive,background:"rgba(91,166,34,0.12)",borderRadius:5,padding:"3px 8px"}}>{c.status}</span>
@@ -354,15 +355,21 @@ function ClaimsTable({claims}){
     <div style={{overflowX:"auto"}}>
       <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
         <thead><tr style={{borderBottom:`1px solid ${T.border}`}}>
-          {["Campaign","Wallet","Amount","Status","TX","Claimed At"].map(h=><th key={h} style={{padding:"8px 12px",textAlign:"left",color:T.dim,fontWeight:600}}>{h}</th>)}
+          {["Campaign","Pin","Wallet","Amount","Status","Proof / Tickets","TX","Claimed At"].map(h=><th key={h} style={{padding:"8px 12px",textAlign:"left",color:T.dim,fontWeight:600}}>{h}</th>)}
         </tr></thead>
         <tbody>
           {claims.map(c=>(
             <tr key={c.id} style={{borderBottom:`1px solid ${T.border}`}}>
               <td style={{padding:"8px 12px",color:T.white}}>{c.campaign_name}</td>
+              <td style={{padding:"8px 12px",color:T.dim,fontFamily:"monospace"}}>{c.location_id?String(c.location_id).slice(0,4):"—"}</td>
               <td style={{padding:"8px 12px",color:T.muted,fontFamily:"monospace"}}>{c.wallet_address?.slice(0,6)}…{c.wallet_address?.slice(-4)}</td>
               <td style={{padding:"8px 12px",color:T.olive}}>{c.reward_type==="spl_token"?`${Number(c.reward_amount||0).toLocaleString()} TG`:c.reward_type}</td>
               <td style={{padding:"8px 12px",color:SC[c.status]||T.muted}}>{c.status}</td>
+              <td style={{padding:"8px 12px"}}>{c.proof_status==="awarded"
+                ?<span style={{color:T.green,fontWeight:600}}>🎟️ {c.tickets_awarded} {c.x_post_url&&<a href={c.x_post_url} target="_blank" rel="noopener noreferrer" style={{color:T.olive,fontWeight:400}}>post ↗</a>}</span>
+                :c.proof_status==="photo_approved"?<span style={{color:T.yellow}}>photo OK · awaiting X link</span>
+                :c.proof_status==="expired"?<span style={{color:T.dim}}>expired</span>
+                :<span style={{color:T.dim}}>—</span>}</td>
               <td style={{padding:"8px 12px"}}>{c.tx_signature?<a href={`https://solscan.io/tx/${c.tx_signature}`} target="_blank" rel="noopener noreferrer" style={{color:T.olive,fontFamily:"monospace"}}>{c.tx_signature.slice(0,8)}…</a>:<span style={{color:T.dim}}>—</span>}</td>
               <td style={{padding:"8px 12px",color:T.dim}}>{new Date(c.claimed_at).toLocaleDateString()}</td>
             </tr>
@@ -427,7 +434,7 @@ export default function WagoAdminPage(){
       <div style={{minHeight:"100vh",background:T.bg,color:T.white,fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif"}}>
         <nav style={{position:"sticky",top:0,zIndex:100,background:T.bg,borderBottom:`1px solid ${T.border}`,padding:"0 clamp(14px,4vw,48px)",height:56,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <span style={{fontSize:20}}>🗺️</span>
+            <Wago pose="salute" size={34} />
             <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:17,fontWeight:700}}>WAGO Admin</span>
           </div>
           <Link href="/wago-drops" style={{fontSize:12,color:T.muted,textDecoration:"none"}}>← Back to Drops</Link>
