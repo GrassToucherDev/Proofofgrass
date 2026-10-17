@@ -154,30 +154,72 @@ function PinManager({campaigns, adminSecret}){
   const [locations, setLocations] = useState([]);
   const [loadingLocs, setLoadingLocs] = useState(false);
   const [editingPin, setEditingPin] = useState(null);
+  const [zoomLvl, setZoomLvl] = useState(4);
+  const [locBusy, setLocBusy] = useState(false);
+  const pendingMarkersRef = useRef([]);
+  const mapboxRef = useRef(null);
+  const modeRef = useRef("place");
+
+  // Add a pending pin (shared by map clicks and "Use my current location").
+  function placePin(lat,lng){
+    const mapboxgl = mapboxRef.current, map = mapRef.current;
+    if(!mapboxgl || !map) return;
+    setPendingPins(prev=>[...prev,{lat,lng}]);
+    const el=document.createElement("div");
+    el.style.cssText=`width:26px;height:26px;border-radius:50%;background:#f97316;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;`;
+    el.textContent="📍";
+    pendingMarkersRef.current.push(new mapboxgl.Marker({element:el}).setLngLat([lng,lat]).addTo(map));
+  }
+  function clearPending(){
+    pendingMarkersRef.current.forEach(m=>m.remove());
+    pendingMarkersRef.current=[];
+    setPendingPins([]);
+  }
+
+  // Drop a pin exactly where you are standing: sample GPS for a few seconds and keep the best fix.
+  function useMyLocation(){
+    if(!navigator.geolocation){ setMsg({ok:false,text:"Location isn't available in this browser."}); return; }
+    setLocBusy(true); setMsg(null);
+    let best=null;
+    const finish=()=>{
+      navigator.geolocation.clearWatch(id); clearTimeout(timer); setLocBusy(false);
+      if(!best){ setMsg({ok:false,text:"Couldn't get a GPS fix. Allow location access and try again outdoors."}); return; }
+      const {latitude:lat,longitude:lng,accuracy}=best.coords;
+      mapRef.current?.flyTo({center:[lng,lat],zoom:19,duration:800});
+      placePin(lat,lng);
+      const acc=Math.round(accuracy);
+      setMsg(acc<=15
+        ? {ok:true,text:`Pin placed at your location (GPS accuracy ±${acc}m).`}
+        : {ok:false,text:`Pin placed, but GPS accuracy is only ±${acc}m. Step outside / away from buildings, hit Clear and try again for a tighter pin.`});
+    };
+    const id=navigator.geolocation.watchPosition(
+      p=>{ if(!best||p.coords.accuracy<best.coords.accuracy) best=p; if(p.coords.accuracy<=5) finish(); },
+      ()=>finish(),
+      {enableHighAccuracy:true,maximumAge:0,timeout:15000}
+    );
+    const timer=setTimeout(finish,8000);
+  }
 
   useEffect(()=>{
     import("mapbox-gl").then(({default:mapboxgl})=>{
+      mapboxRef.current=mapboxgl;
       import("mapbox-gl/dist/mapbox-gl.css").catch(()=>{});
       mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
       const map = new mapboxgl.Map({container:mapContainer.current,style:"mapbox://styles/mapbox/satellite-streets-v12",center:[-98.5795,39.8283],zoom:4});
       map.addControl(new mapboxgl.NavigationControl(),"top-right");
       map.addControl(new mapboxgl.GeolocateControl({positionOptions:{enableHighAccuracy:true}}),"top-right");
       map.on("click",(e)=>{
-        if(mode !== "place") return;
+        if(modeRef.current !== "place") return;
         const{lat,lng}=e.lngLat;
-        setPendingPins(prev=>[...prev,{lat,lng}]);
-        const el=document.createElement("div");
-        el.style.cssText=`width:26px;height:26px;border-radius:50%;background:#f97316;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;`;
-        el.textContent="📍";
-        new mapboxgl.Marker({element:el}).setLngLat([lng,lat]).addTo(map);
+        placePin(lat,lng);
       });
+      map.on("zoom",()=>setZoomLvl(map.getZoom()));
       mapRef.current = map;
     });
     return()=>mapRef.current?.remove();
   },[]);
 
   // Sync mode ref so map click handler sees current mode
-  const modeRef = useRef(mode);
   useEffect(()=>{ modeRef.current = mode; },[mode]);
 
   async function loadLocations(campId){
@@ -206,7 +248,7 @@ function PinManager({campaigns, adminSecret}){
 
   function onCampaignChange(id){
     setSelectedCampaign(id);
-    setPendingPins([]);
+    clearPending();
     setLocations([]);
     setEditingPin(null);
     if(id) loadLocations(id);
@@ -220,7 +262,7 @@ function PinManager({campaigns, adminSecret}){
       const data = await res.json();
       if(!res.ok) throw new Error(data.error||"Failed");
       setMsg({ok:true,text:`${pendingPins.length} pin${pendingPins.length!==1?"s":""} added.`});
-      setPendingPins([]);
+      clearPending();
       loadLocations(selectedCampaign);
     }catch(err){ setMsg({ok:false,text:err.message}); }
     finally{ setSaving(false); }
@@ -285,11 +327,15 @@ function PinManager({campaigns, adminSecret}){
       )}
 
       <div ref={mapContainer} style={{width:"100%",height:340,borderRadius:10,marginBottom:12,overflow:"hidden"}}/>
+      {mode==="place" && zoomLvl<17 && (
+        <div style={{fontSize:12,color:T.yellow,marginBottom:10}}>⚠️ Zoom in to street level (17+) before clicking so pins land exactly where you mean — or stand at the spot and use "Use my current location".</div>
+      )}
 
       {mode==="place" && (
         <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:12}}>
           <span style={{fontSize:13,color:T.muted}}>{pendingPins.length} pin{pendingPins.length!==1?"s":""} placed</span>
-          <button onClick={()=>setPendingPins([])} disabled={!pendingPins.length} style={{fontSize:12,color:T.dim,background:"none",border:`1px solid ${T.border}`,borderRadius:7,padding:"5px 12px",cursor:"pointer"}}>Clear</button>
+          <button onClick={useMyLocation} disabled={locBusy} style={{fontSize:12,color:T.white,background:"rgba(125,200,50,0.14)",border:"1px solid rgba(91,166,34,0.35)",borderRadius:999,padding:"6px 14px",cursor:"pointer",fontWeight:600}}>{locBusy?"Getting GPS fix…":"📍 Use my current location"}</button>
+          <button onClick={clearPending} disabled={!pendingPins.length} style={{fontSize:12,color:T.dim,background:"none",border:`1px solid ${T.border}`,borderRadius:7,padding:"5px 12px",cursor:"pointer"}}>Clear</button>
           <button onClick={savePins} disabled={saving||!pendingPins.length||!selectedCampaign} style={{fontSize:13,color:T.bg,background:T.olive,border:"none",borderRadius:8,padding:"7px 18px",fontWeight:700,cursor:"pointer"}}>{saving?"Saving…":"Save Pins"}</button>
         </div>
       )}
