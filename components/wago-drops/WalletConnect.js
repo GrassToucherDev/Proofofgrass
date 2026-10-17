@@ -3,11 +3,20 @@
 // sign a short message to prove ownership, and link it to the WAGO account.
 // Only wallets proven this way can claim rewards (no paste-an-address path).
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { T } from "../../utils/wagoTheme";
 import { buildLinkMessage } from "../../utils/wagoWalletLink";
+import { startConnect, DEEPLINK_PROVIDERS } from "../../utils/wagoWalletDeeplink";
+
+// Phone browser with no wallet extension/in-app wallet: use the wallet-app deep link flow.
+function needsDeeplink() {
+  if (typeof navigator === "undefined") return false;
+  const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const injected = !!(window.phantom?.solana || window.solana || window.solflare);
+  return mobile && !injected;
+}
 
 function toBase64(bytes) {
   let s = "";
@@ -30,6 +39,8 @@ export default function WalletConnect({ googleId, onLinked, disabled = false, ct
   const [error, setError] = useState(null);
 
   const addr = publicKey?.toBase58();
+  const [deeplink, setDeeplink] = useState(false);
+  useEffect(() => { setDeeplink(needsDeeplink()); }, []);
 
   async function post(body) {
     const res = await fetch("/api/wago-drops/link-wallet", {
@@ -58,7 +69,18 @@ export default function WalletConnect({ googleId, onLinked, disabled = false, ct
 
   return (
     <div>
-      {!connected ? (
+      {deeplink ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {Object.entries(DEEPLINK_PROVIDERS).map(([id, p]) => (
+            <button key={id} disabled={disabled} onClick={() => startConnect(id, googleId)} style={btn(disabled)}>
+              👛 Open {p.label}
+            </button>
+          ))}
+          <p style={{ fontSize: 11, color: T.dim, margin: "4px 0 0", lineHeight: 1.6 }}>
+            Your wallet app opens, then brings you back here. Two quick approvals: connect, then sign.
+          </p>
+        </div>
+      ) : !connected ? (
         <button onClick={() => setVisible(true)} disabled={disabled || connecting} style={btn(disabled || connecting)}>
           {connecting ? "Connecting…" : "👛 Connect wallet"}
         </button>
@@ -88,9 +110,6 @@ export default function WalletConnect({ googleId, onLinked, disabled = false, ct
         You&rsquo;ll sign a free message to prove the wallet is yours. No transaction, no fees.
       </p>
 
-      <p style={{ fontSize: 11, color: T.dim, margin: "8px 0 0", lineHeight: 1.6, textAlign: "center" }}>
-        On a phone? Open this page inside the Phantom or Solflare app&rsquo;s built-in browser to connect.
-      </p>
     </div>
   );
 }
