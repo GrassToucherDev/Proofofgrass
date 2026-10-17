@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
   const { data, error } = await supabase
     .from("wago_google_accounts")
-    .select("google_id, email, display_name, avatar_url, linked_wallet, wallet_linked_at")
+    .select("google_id, email, display_name, avatar_url, linked_wallet, wallet_linked_at, wallet_verified")
     .eq("google_id", session.user.google_id)
     .single();
 
