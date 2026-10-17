@@ -453,6 +453,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
   const [saveMsg,      setSaveMsg]      = useState(null);
   const [locError,     setLocError]     = useState(null);
   const hasFlewToUser  = useRef(false);
+  const userPosRef     = useRef(null);   // latest position, readable from map event handlers (no stale closure)
   const geolocateRef   = useRef(null);
 
   const fetchDropsInView = useCallback(async (map) => {
@@ -460,7 +461,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
     const bounds = map.getBounds();
     try {
       const res = await fetch(
-        `/api/wago-drops/locations?swLat=${bounds.getSouth()}&swLng=${bounds.getWest()}&neLat=${bounds.getNorth()}&neLng=${bounds.getEast()}${userPos ? `&userLat=${userPos.lat}&userLng=${userPos.lng}` : ""}`
+        `/api/wago-drops/locations?swLat=${bounds.getSouth()}&swLng=${bounds.getWest()}&neLat=${bounds.getNorth()}&neLng=${bounds.getEast()}${userPosRef.current ? `&userLat=${userPosRef.current.lat}&userLng=${userPosRef.current.lng}` : ""}`
       );
       const data = await res.json();
       if (!res.ok) return;
@@ -543,17 +544,24 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       });
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
       const geolocate = new mapboxgl.GeolocateControl({
-        positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: false,
+        positionOptions: { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
+        trackUserLocation: true,
         showUserHeading: false,
         fitBoundsOptions: { zoom: 15, duration: 1200 },
       });
       geolocate.on("geolocate", (e) => {
         const { latitude: lat, longitude: lng } = e.coords;
         setLocError(null);
-        setUserPos({ lat, lng });
-        hasFlewToUser.current = true;
-        map.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 });
+        // Ignore GPS jitter under ~8m so we don't refetch on every tiny update.
+        const prev = userPosRef.current;
+        if (!prev || haversineM(prev.lat, prev.lng, lat, lng) > 8) {
+          userPosRef.current = { lat, lng };
+          setUserPos({ lat, lng });
+        }
+        if (!hasFlewToUser.current) {
+          hasFlewToUser.current = true;
+          map.flyTo({ center: [lng, lat], zoom: 17, duration: 1200 });
+        }
       });
       geolocate.on("error", (e) => {
         if (e.code === 1) setLocError("location_denied");
@@ -564,6 +572,8 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       map.on("load", () => {
         mapRef.current = map;
         fetchDropsInView(map);
+        // Start live location right away so drops reveal at their true spot.
+        try { geolocate.trigger(); } catch {}
         if (flyToCoords) {
           map.flyTo({ center: [flyToCoords.lng, flyToCoords.lat], zoom: 16, duration: 1500 });
         }
@@ -641,6 +651,16 @@ function MapView({ session, linkedWallet, flyToCoords }) {
       setTimeout(() => setSaveMsg(null), 2500);
     }
   }
+
+  // Keep the open drop in sync with fresh data: once you're close enough for the
+  // server to reveal it, swap the blurred coordinates/hint for the real ones.
+  useEffect(() => {
+    if (!selected || claimResult) return;
+    const fresh = drops.find(d => d.id === selected.id);
+    if (fresh && (fresh.lat !== selected.lat || fresh.lng !== selected.lng || fresh.hint !== selected.hint)) {
+      setSelected(fresh);
+    }
+  }, [drops]);
 
   const distToSelected = selected && userPos
     ? Math.round(haversineM(userPos.lat, userPos.lng, selected.lat, selected.lng))

@@ -9,9 +9,19 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-function jitter(val, metres) {
+// Stable blur for not-yet-revealed pins: the offset is derived from the drop id,
+// so a pin never moves between requests (it used to be re-randomized every fetch).
+function seeded(id, salt) {
+  let h = 2166136261 ^ salt;
+  const s = String(id);
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 2246822519); h ^= h >>> 13;
+  return ((h >>> 0) / 4294967295) * 2 - 1;   // -1 … 1
+}
+function jitter(val, metres, id, salt, lat) {
   const deg = metres / 111320;
-  return val + (Math.random() * 2 - 1) * deg;
+  const scale = salt === 1 ? 1 : 1 / Math.max(0.2, Math.cos(lat * Math.PI / 180));   // keep E-W metres equal at latitude
+  return val + seeded(id, salt) * deg * scale;
 }
 
 function haversineM(lat1, lng1, lat2, lng2) {
@@ -110,8 +120,9 @@ export default async function handler(req, res) {
       hint: revealed ? loc.hint : null,
       already_claimed,
       // Jitter coords unless revealed
-      lat: revealed ? loc.lat : jitter(loc.lat, revealRadius * 1.5),
-      lng: revealed ? loc.lng : jitter(loc.lng, revealRadius * 1.5),
+      lat: revealed ? loc.lat : jitter(loc.lat, revealRadius * 0.6, loc.id, 1, loc.lat),
+      lng: revealed ? loc.lng : jitter(loc.lng, revealRadius * 0.6, loc.id, 2, loc.lat),
+      revealed,
     };
   });
 
