@@ -72,8 +72,7 @@ alter table wago_trail_stops enable row level security;
 alter table wago_trail_progress enable row level security;
 alter table wago_trail_stop_progress enable row level security;
 
--- Grass Draw ledger: allow the new entry type if entry_type is constrained.
--- CHECK FIRST:
---   select conname, pg_get_constraintdef(oid) from pg_constraint
---   where conrelid = 'grass_draw_entries'::regclass and contype = 'c';
--- If a check lists entry types, drop and recreate it including 'wago_trail'.
+-- Grass Draw ledger: allow the new entry type.
+alter table grass_draw_entries drop constraint if exists grass_draw_entries_entry_type_check;
+alter table grass_draw_entries add constraint grass_draw_entries_entry_type_check
+  check (entry_type = any (array['proof','spotlight','flex_card','field_guide','x_engagement','challenge_win','referral_convert','manual','wago_proof','wago_trail']::text[]));
