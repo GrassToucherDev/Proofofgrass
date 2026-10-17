@@ -2,6 +2,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { createClient } from "@supabase/supabase-js";
+import { PROOF_WINDOW_HOURS, ticketsForCampaign } from "../../../utils/wagoProofBonus";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -18,7 +19,7 @@ export default async function handler(req, res) {
     .from("wago_drop_claims")
     .select(`id, reward_type, reward_amount, proof_bonus_applied, proof_bonus_amount,
              tx_signature, status, claimed_at,
-             wago_drop_campaigns ( name, image_url )`)
+             wago_drop_campaigns ( name, image_url, rarity, proof_bonus_enabled, proof_bonus_tickets )`)
     .eq("google_id", session.user.google_id)
     .order("claimed_at", { ascending: false });
 
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
   if (ids.length) {
     const { data: proofs } = await supabase
       .from("wago_drop_proofs")
-      .select("claim_id, status, tickets_awarded, awarded_at")
+      .select("claim_id, status, tickets_awarded, awarded_at, photo_path, pog_username")
       .in("claim_id", ids);
     (proofs || []).forEach(p => { proofByClaim[p.claim_id] = p; });
   }
@@ -42,7 +43,21 @@ export default async function handler(req, res) {
     if (p?.status === "awarded" && p.awarded_at && new Date(p.awarded_at).getTime() >= monthStart) {
       ticketsThisMonth += Number(p.tickets_awarded || 0);
     }
-    return { ...c, proof_status: p?.status ?? null, tickets_awarded: p?.tickets_awarded ?? null };
+    const camp = c.wago_drop_campaigns || {};
+    const deadline = new Date(c.claimed_at).getTime() + PROOF_WINDOW_HOURS * 3600 * 1000;
+    const proofOpen = !!camp.proof_bonus_enabled && p?.status !== "awarded" && Date.now() < deadline;
+    return {
+      ...c,
+      proof_status: p?.status ?? null,
+      tickets_awarded: p?.tickets_awarded ?? null,
+      // Resume info: lets My Drops offer "Finish proof" while the 24h window is open.
+      proof_open: proofOpen,
+      proof_deadline: new Date(deadline).toISOString(),
+      proof_tickets: camp.proof_bonus_enabled ? ticketsForCampaign(camp) : 0,
+      rarity: camp.rarity || "common",
+      proof_photo_path: p?.status === "photo_approved" ? p.photo_path : null,
+      proof_pog_username: p?.pog_username ?? null,
+    };
   });
 
   return res.status(200).json({ claims, tickets_this_month: ticketsThisMonth });

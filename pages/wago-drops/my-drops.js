@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
 import Wago from "../../components/wago-drops/Wago";
+import ProofBonusFlow from "../../components/wago-drops/ProofBonusFlow";
 
 // ── Reward asset logos (mirrors wago-drops.js) ────────────────────────────────
 const TOUCHGRASS_LOGO_URL = "/images/touchgrass-token.png";
@@ -44,6 +45,7 @@ export default function MyDrops() {
   const [claims,  setClaims]  = useState([]);
   const [saves,   setSaves]   = useState([]);
   const [ticketsMonth, setTicketsMonth] = useState(0);
+  const [openProof, setOpenProof] = useState(null);   // claim id with the proof flow expanded
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -182,7 +184,8 @@ export default function MyDrops() {
                         ? `${amount} SOL`
                         : `${amount.toLocaleString()} $TOUCHGRASS`;
                       return (
-                        <div key={claim.id} style={{
+                        <div key={claim.id}>
+                        <div style={{
                           background: T.surface, border: `1px solid ${T.border}`,
                           borderRadius: 11, padding: "13px 16px",
                           display: "flex", alignItems: "center", gap: 14,
@@ -227,6 +230,27 @@ export default function MyDrops() {
                               </div>
                             )}
                           </div>
+                        </div>
+                        {claim.proof_open && (
+                          <div style={{ marginTop: 6 }}>
+                            {openProof === claim.id ? (
+                              <ProofBonusFlow
+                                claim={{ ...claim, claim_id: claim.id, drop: { campaign_name: claim.wago_drop_campaigns?.name || claim.campaign_name } }}
+                                existingProof={claim.proof_photo_path ? { photo_path: claim.proof_photo_path, pog_username: claim.proof_pog_username } : null}
+                                onDone={() => setTimeout(() => window.location.reload(), 2500)}
+                              />
+                            ) : (
+                              <button onClick={() => setOpenProof(claim.id)} style={{
+                                width: "100%", background: "rgba(125,200,50,0.14)", color: T.white,
+                                border: "1px solid rgba(91,166,34,0.35)", borderRadius: 999,
+                                padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                              }}>
+                                🎟️ Finish proof for +{claim.proof_tickets} Grass Tickets
+                                {claim.proof_photo_path ? " · paste your X link" : ""}
+                              </button>
+                            )}
+                          </div>
+                        )}
                         </div>
                       );
                     })}

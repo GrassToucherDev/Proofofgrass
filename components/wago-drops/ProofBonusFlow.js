@@ -58,14 +58,18 @@ function getPosition() {
 const card = { ...V2Styles.glassCard, padding: 18, marginTop: 14 };
 const label = { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: V2.grassDark };
 
-export default function ProofBonusFlow({ claim, onDone }) {
+export default function ProofBonusFlow({ claim, onDone, existingProof = null }) {
   // claim: { claim_id, proof_tickets, proof_deadline, rarity, drop }
-  const [stage, setStage]     = useState("intro");   // intro | uploading | approved | done
+  // existingProof: { photo_path, pog_username } — resume after the photo was already approved.
+  const [stage, setStage]     = useState(existingProof ? "approved" : "intro");   // intro | uploading | approved | done
   const [file, setFile]       = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [preview, setPreview] = useState(() =>
+    existingProof?.photo_path
+      ? supabase.storage.from("proof-photos").getPublicUrl(existingProof.photo_path).data.publicUrl
+      : null);
   const [error, setError]     = useState(null);
   const [tickets, setTickets] = useState(claim.proof_tickets);
-  const [pogUser, setPogUser] = useState(null);
+  const [pogUser, setPogUser] = useState(existingProof?.pog_username || null);
   const [needUser, setNeedUser] = useState(false);
   const [userInput, setUserInput] = useState("");
   const [xUrl, setXUrl]       = useState("");
