@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../utils/supabase";
 
 // ── Premium+ Themes ──────────────────────────────────────────────────────────
@@ -164,6 +165,14 @@ function roundRect(ctx,x,y,w,h,r){
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
+
+// Renders children into <body> so position:fixed overlays are not trapped by
+// ancestors with transform / backdrop-filter (which made the sheet clip on mobile).
+function Portal({ children }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(()=>{ setMounted(true); },[]);
+  return mounted ? createPortal(children, document.body) : null;
+}
 
 // Shared step header: numbered badge, title, optional hint on its own line,
 // optional right-aligned action. Wraps cleanly on narrow screens.
@@ -847,68 +856,75 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
         </div>
       )}
 
-      {/* ── Style Picker Modal ────────────────────────────────────────────── */}
-      {showStylePicker && (()=>{
-        const cardStyle=(style)=>({
-          flex:"1 1 0", minWidth:0,
-          border:`2px solid ${shareStyle===style?"#5ba622":"rgba(200,220,190,0.5)"}`,
-          borderRadius:12, padding:"14px 12px", cursor:"pointer",
-          background:shareStyle===style?"rgba(125,200,50,0.08)":"white",
-          display:"flex", flexDirection:"column", gap:8, transition:"all 0.15s", outline:"none",
-        });
-        return (
-          <>
-            <div onClick={()=>setShowStylePicker(false)} role="button"
-              style={{position:"fixed",inset:0,zIndex:997,background:"rgba(26,74,10,0.4)",backdropFilter:"blur(4px)"}} />
-            <div role="dialog" aria-modal="true"
-              onKeyDown={e=>{if(e.key==="Escape")setShowStylePicker(false);}} tabIndex={-1}
-              style={{position:"fixed",left:0,right:0,bottom:0,zIndex:998,background:"white",
-                borderTop:"1px solid rgba(200,220,190,0.5)",borderRadius:"20px 20px 0 0",
-                padding:"24px 20px clamp(24px,env(safe-area-inset-bottom,24px)+24px,48px)",
-                maxHeight:"85vh",overflowY:"auto",boxShadow:"0 -8px 40px rgba(26,74,10,0.12)"}}>
-              <div style={{width:40,height:4,borderRadius:2,background:"rgba(200,220,190,0.5)",margin:"0 auto 20px"}} />
-              <div style={{fontSize:15,fontWeight:700,color:"#1a4a0a",textAlign:"center",marginBottom:18}}>
-                Choose Your Proof Style
+      {/* ── Share Sheet (portaled to <body> so it's never clipped by a transformed/blurred ancestor) ── */}
+      {showStylePicker && (
+        <Portal>
+          <div onClick={()=>setShowStylePicker(false)} aria-hidden="true"
+            style={{position:"fixed",inset:0,zIndex:997,background:"rgba(26,74,10,0.45)",backdropFilter:"blur(4px)",WebkitBackdropFilter:"blur(4px)"}} />
+          <div role="dialog" aria-modal="true" aria-labelledby="share-sheet-title"
+            onKeyDown={e=>{if(e.key==="Escape")setShowStylePicker(false);}} tabIndex={-1}
+            style={{position:"fixed",left:0,right:0,bottom:0,zIndex:998,margin:"0 auto",width:"100%",maxWidth:520,
+              background:"white",borderRadius:"22px 22px 0 0",boxShadow:"0 -8px 40px rgba(26,74,10,0.18)",
+              padding:"10px 18px calc(env(safe-area-inset-bottom,0px) + 18px)",maxHeight:"92vh",overflowY:"auto",
+              fontFamily:"DM Sans,sans-serif",boxSizing:"border-box"}}>
+            <div style={{width:40,height:4,borderRadius:2,background:"rgba(200,220,190,0.8)",margin:"0 auto 12px"}} />
+            <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:14}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div id="share-sheet-title" style={{fontSize:19,fontWeight:800,color:"#0d2a05",lineHeight:1.2}}>Share your proof</div>
+                <div style={{fontSize:12.5,color:"#6b7d60",marginTop:3}}>Pick the image that goes with your post.</div>
               </div>
-              <div style={{display:"flex",gap:12,marginBottom:20}}>
-                <button style={cardStyle("outdoor_photo")} onClick={()=>selectShareStyle("outdoor_photo")}>
-                  <div style={{width:"100%",height:140,borderRadius:8,overflow:"hidden",background:"rgba(200,220,190,0.2)",flexShrink:0}}>
-                    {imageSrc&&<img src={imageSrc} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />}
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"#1a4a0a"}}>Outdoor Photo</div>
-                      <div style={{fontSize:10,color:"#6b7d60"}}>Authentic and simple</div>
+              <button onClick={()=>setShowStylePicker(false)} aria-label="Close"
+                style={{width:34,height:34,borderRadius:"50%",border:"1px solid rgba(200,220,190,0.8)",background:"white",
+                  color:"#1a4a0a",fontSize:18,lineHeight:1,cursor:"pointer",flexShrink:0}}>×</button>
+            </div>
+
+            <div role="radiogroup" aria-label="Proof style" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+              {[
+                {id:"outdoor_photo",title:"Outdoor photo",sub:"Authentic and simple",src:imageSrc,badge:"Recommended"},
+                {id:"result_card",title:"Result card",sub:"Branded, streak-focused",src:downloadUrl},
+              ].map(o=>{
+                const on=shareStyle===o.id;
+                return (
+                  <button key={o.id} role="radio" aria-checked={on} onClick={()=>selectShareStyle(o.id)}
+                    style={{position:"relative",minWidth:0,padding:8,borderRadius:16,cursor:"pointer",textAlign:"left",
+                      border:`2px solid ${on?"#5ba622":"rgba(200,220,190,0.7)"}`,
+                      background:on?"rgba(125,200,50,0.08)":"white",
+                      boxShadow:on?"0 2px 12px rgba(125,200,50,0.25)":"none",
+                      transition:"all .15s",fontFamily:"DM Sans,sans-serif",display:"flex",flexDirection:"column",gap:8}}>
+                    <div style={{position:"relative",width:"100%",aspectRatio:"4 / 3",borderRadius:10,overflow:"hidden",background:"rgba(200,220,190,0.25)"}}>
+                      {o.src && <img src={o.src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />}
+                      {o.badge && (
+                        <span style={{position:"absolute",left:6,top:6,fontSize:9.5,fontWeight:800,letterSpacing:"0.06em",textTransform:"uppercase",
+                          color:"white",background:"rgba(26,74,10,0.82)",borderRadius:20,padding:"3px 8px"}}>{o.badge}</span>
+                      )}
+                      <span aria-hidden="true" style={{position:"absolute",right:6,top:6,width:22,height:22,borderRadius:"50%",
+                        background:on?"#5ba622":"rgba(255,255,255,0.9)",border:on?"none":"1.5px solid rgba(200,220,190,0.9)",
+                        color:"white",fontSize:12,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{on?"✓":""}</span>
                     </div>
-                    {shareStyle==="outdoor_photo"&&<span style={{fontSize:16}}>✓</span>}
-                  </div>
-                  <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:"#93a85a",background:"rgba(147,168,90,0.12)",borderRadius:20,padding:"2px 10px",alignSelf:"flex-start"}}>
-                    Recommended
-                  </div>
-                </button>
-                <button style={cardStyle("result_card")} onClick={()=>selectShareStyle("result_card")}>
-                  <div style={{width:"100%",height:140,borderRadius:8,overflow:"hidden",background:"rgba(200,220,190,0.2)",flexShrink:0}}>
-                    {downloadUrl&&<img src={downloadUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />}
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"#1a4a0a"}}>Result Card</div>
-                      <div style={{fontSize:10,color:"#6b7d60"}}>Branded and streak-focused</div>
+                    <div style={{padding:"0 2px 2px"}}>
+                      <div style={{fontSize:13.5,fontWeight:800,color:"#0d2a05"}}>{o.title}</div>
+                      <div style={{fontSize:11.5,color:"#6b7d60",marginTop:1}}>{o.sub}</div>
                     </div>
-                    {shareStyle==="result_card"&&<span style={{fontSize:16}}>✓</span>}
-                  </div>
-                </button>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{border:"1.5px solid rgba(200,220,190,0.7)",borderRadius:14,background:"rgba(125,200,50,0.04)",marginBottom:14,overflow:"hidden"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",borderBottom:"1px solid rgba(200,220,190,0.5)"}}>
+                <span style={{fontSize:11,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:"#6b7d60"}}>Your post</span>
+                <button onClick={handleNewCaption}
+                  style={{background:"none",border:"none",color:"#3d7a12",fontSize:12,fontWeight:800,cursor:"pointer",padding:"4px 2px",fontFamily:"DM Sans,sans-serif"}}>↻ New caption</button>
               </div>
-              <div style={{background:"rgba(125,200,50,0.04)",border:"1px solid rgba(200,220,190,0.5)",borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#1a4a0a",lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>
-                {buildShareText()}
+              <div style={{padding:"10px 12px 12px",maxHeight:150,overflowY:"auto"}}>
+                <p style={{margin:0,fontSize:13.5,color:"#0d2a05",lineHeight:1.5,fontWeight:600,wordBreak:"break-word"}}>{caption}</p>
+                <p style={{margin:"6px 0 0",fontSize:12,color:"#6b7d60",fontWeight:600}}>Day {currentStreak} · proof of grass 🌿</p>
+                <p style={{margin:"6px 0 0",fontSize:12.5,color:"#3d7a12",lineHeight:1.5,fontWeight:600,wordBreak:"break-word"}}>{TAGS}<br/>{HANDLE}</p>
               </div>
-              <div style={{display:"flex",gap:8}}>
-                <button onClick={()=>setShowStylePicker(false)}
-                  style={{flex:"0 0 auto",padding:"12px 18px",borderRadius:8,border:"1px solid rgba(200,220,190,0.5)",background:"white",color:"#6b7d60",fontSize:13,cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>
-                  Cancel
-                </button>
-                <button
-                  onClick={()=>{
+            </div>
+
+            <button
+              onClick={()=>{
                     setShowStylePicker(false);
                     const text=buildShareText();
                     const isAndroid=/Android/i.test(navigator.userAgent??"");
@@ -972,21 +988,27 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                       doShare(null);
                     }
                   }}
-                  style={{flex:1,padding:"13px",borderRadius:8,border:"none",background:"#93a85a",color:"#0e1108",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:"0.08em"}}>
-                  Continue to X →
-                </button>
-              </div>
+              style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#7dc832,#5ba622)",
+                color:"white",fontSize:16,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 18px rgba(125,200,50,0.4)",
+                fontFamily:"DM Sans,sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,touchAction:"manipulation"}}>
+              Continue to X <span aria-hidden="true">→</span>
+            </button>
+            <div style={{textAlign:"center",fontSize:11.5,color:"#6b7d60",margin:"10px 0 2px",lineHeight:1.4}}>
+              This locks in your streak, then opens your share options.
             </div>
-          </>
-        );
-      })()}
+            <button onClick={()=>setShowStylePicker(false)}
+              style={{display:"block",margin:"4px auto 0",background:"none",border:"none",color:"#6b7d60",fontSize:13.5,fontWeight:700,
+                cursor:"pointer",padding:"8px 16px",fontFamily:"DM Sans,sans-serif"}}>Cancel</button>
+          </div>
+        </Portal>
+      )}
 
       {shareFallbackMsg && (
-        <div role="status" onClick={()=>setShareFallbackMsg("")}
+        <Portal><div role="status" onClick={()=>setShareFallbackMsg("")}
           style={{position:"fixed",left:12,right:12,bottom:"max(16px,env(safe-area-inset-bottom))",zIndex:9998,background:"#1a4a0a",color:"white",borderRadius:12,padding:"14px 16px",fontSize:13,lineHeight:1.5,boxShadow:"0 8px 30px rgba(0,0,0,0.35)",fontFamily:"DM Sans,sans-serif"}}>
           {shareFallbackMsg}
           <div style={{fontSize:11,opacity:0.7,marginTop:6}}>Tap to dismiss</div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ── Lucky Touch Modal ─────────────────────────────────────────────── */}
