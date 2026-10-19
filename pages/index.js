@@ -576,6 +576,27 @@ export default function Home() {
           sunsetPasses: sunsetPassCount,
         });
 
+        // Sunset Pass (23:00–02:00 UTC): when a pass can save the streak, say so instead of
+        // showing "shield available" / "streak lost".
+        try {
+          const sr = await fetch(`/api/sunset/status?username=${encodeURIComponent(username)}`);
+          if (sr.ok) {
+            const sd = await sr.json();
+            if (sd.window && sd.needed) {
+              if (sd.activated) {
+                setStreakStatus(sd.window === "apply"
+                  ? `Sunset Pass active — post now to count it for yesterday`
+                  : "Sunset Pass active — you have until 2:00 AM UTC");
+                setStreakTone("warning");
+                setShieldEligible(false); setMissedOneDayNoShield(false);
+              } else if (sd.window === "apply" && sd.passes > 0) {
+                setStreakStatus("Missed yesterday? Make your proof, then use a Sunset Pass to save your streak");
+                setStreakTone("warning");
+              }
+            }
+          }
+        } catch {}
+
         supabase.from("Challenges").select("id,slug,challenger,challenged,duration_days,message,created_at")
           .eq("challenged",username).eq("status","pending").order("created_at",{ascending:false})
           .then(({ data }) => setPendingChallenges(data ?? []));
