@@ -436,12 +436,11 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
 function BurnTotal() {
   const [total, setTotal] = useState(null);
   useEffect(()=>{
-    supabase.from("UserInventory").select("tokens_spent").eq("owned", true)
-      .then(({data})=>{
-        const t = (data||[]).reduce((s,r)=>s+(parseFloat(r.tokens_spent)||0), 0);
-        const fmt = t >= 1000000 ? (t/1000000).toFixed(2)+"M" : t >= 1000 ? (t/1000).toFixed(1)+"K" : Math.round(t).toLocaleString();
-        setTotal(fmt);
-      }).catch(()=>{});
+    fetch("/api/marketplace/burn-total").then(r=>r.ok?r.json():null).then(d=>{
+      if(!d) return;
+      const t = d.total || 0;
+      setTotal(t >= 1000000 ? (t/1000000).toFixed(2)+"M" : t >= 1000 ? (t/1000).toFixed(1)+"K" : Math.round(t).toLocaleString());
+    }).catch(()=>{});
   },[]);
   return <span>{total ?? "—"}</span>;
 }
@@ -452,15 +451,10 @@ function BurnStats() {
   const [totalOrders, setTotalOrders] = useState(null);
   const [loading,     setLoading]     = useState(true);
   useEffect(()=>{
-    supabase.from("UserInventory")
-      .select("tokens_spent", { count:"exact" })
-      .eq("owned", true)
-      .then(({ data, count }) => {
-        const total = (data||[]).reduce((s,r)=>s+(parseFloat(r.tokens_spent)||0), 0);
-        setTotalSpent(total);
-        setTotalOrders(count||0);
-        setLoading(false);
-      }).catch(()=>setLoading(false));
+    fetch("/api/marketplace/burn-total").then(r=>r.ok?r.json():null).then(d=>{
+      if(d){ setTotalSpent(d.total||0); setTotalOrders(d.orders||0); }
+      setLoading(false);
+    }).catch(()=>setLoading(false));
   },[]);
   const fmt = (n) => {
     if (n == null) return "—";
