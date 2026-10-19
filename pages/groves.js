@@ -113,8 +113,11 @@ export default function GrovesPage() {
       <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>
         <V2Nav username={username} onUsernameChange={setUsername} showUpload={() => { window.location.href = "/#upload"; }} />
         <main className="gv-wrap">
-          <h1 className="gv-h" style={{ fontSize: "clamp(30px,5vw,44px)" }}>🌳 Groves</h1>
-          <p style={{ color: V2.textBody, marginTop: 0, marginBottom: 20 }}>
+          <h1 style={{ margin: 0 }}>
+            <img src="/groves-logo.webp" alt="Groves" width={700} height={233}
+              style={{ display: "block", width: "100%", maxWidth: 700, height: "auto", margin: "0 auto 8px" }} />
+          </h1>
+          <p style={{ color: V2.textBody, marginTop: 0, marginBottom: 20, textAlign: "center" }}>
             Team up with 2–5 friends. When at least two thirds of your grove post a proof, the grove's streak grows. Gift shields to keep each other going.
           </p>
 
