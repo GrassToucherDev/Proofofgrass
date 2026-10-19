@@ -164,7 +164,25 @@ function roundRect(ctx,x,y,w,h,r){
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function ResultCard({ imageSrc, proofFile=null, username, initialStreak=1, onStreakUpdate, hasPremiumProofs=false }) {
+
+// Shared step header: numbered badge, title, optional hint on its own line,
+// optional right-aligned action. Wraps cleanly on narrow screens.
+function StepHeader({ n, title, hint, action }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+      <div style={{ width:26, height:26, borderRadius:"50%", background:"#5ba622", color:"white",
+        fontSize:12, fontWeight:800, flexShrink:0,
+        display:"flex", alignItems:"center", justifyContent:"center" }}>{n}</div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:15, fontWeight:800, color:"#1a4a0a", lineHeight:1.2 }}>{title}</div>
+        {hint && <div style={{ fontSize:11.5, color:"#6b7d60", marginTop:1, lineHeight:1.3 }}>{hint}</div>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+export default function ResultCard({ imageSrc, proofFile=null, username, initialStreak=1, onStreakUpdate, hasPremiumProofs=false, onRetake }) {
   const canvasRef = useRef(null);
   const sharableFileRef = useRef(null);
   const outdoorFileRef  = useRef(null);
@@ -527,17 +545,13 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
 
       {/* ── Step 1: Your Proof ─────────────────────────────────────────── */}
       <div style={{ padding:"20px 20px 0" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
-          <div style={{ width:24, height:24, borderRadius:"50%", background:V2G.green,
-            color:"white", fontSize:11, fontWeight:800,
-            display:"flex", alignItems:"center", justifyContent:"center" }}>1</div>
-          <span style={{ fontSize:14, fontWeight:700, color:V2G.darkGreen }}>Your Proof 🌿</span>
-          <button style={{ marginLeft:"auto", background:"transparent",
-            border:`1px solid ${V2G.border}`, borderRadius:20, padding:"4px 12px",
-            fontSize:11, color:V2G.midGray, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
-            Retake
-          </button>
-        </div>
+        <StepHeader n={1} title="Your proof" hint="Your outdoor photo"
+          action={onRetake && submitStatus!=="loading" ? (
+            <button onClick={onRetake} aria-label="Choose a different photo"
+              style={{ background:"white", border:`1px solid ${V2G.border}`, borderRadius:20, padding:"6px 12px",
+                fontSize:12, fontWeight:700, color:V2G.darkGreen, cursor:"pointer", whiteSpace:"nowrap",
+                fontFamily:"DM Sans,sans-serif" }}>↺ Retake</button>
+          ) : null} />
         <div style={{ borderRadius:12, overflow:"hidden", marginBottom:12,
           background:"rgba(200,220,190,0.2)", minHeight:200,
           display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -561,14 +575,8 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
 
           {/* ── Step 2: Card Type ─────────────────────────────────────────── */}
           <div style={{ margin:"16px 0" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-              <div style={{ width:24, height:24, borderRadius:"50%", background:V2G.green,
-                color:"white", fontSize:11, fontWeight:800,
-                display:"flex", alignItems:"center", justifyContent:"center" }}>2</div>
-              <span style={{ fontSize:14, fontWeight:700, color:V2G.darkGreen }}>Card Type 🎴</span>
-              <span style={{ fontSize:11, color:V2G.midGray, marginLeft:4 }}>What would you like to share?</span>
-            </div>
-            <div style={{ display:"flex", gap:10 }}>
+            <StepHeader n={2} title="Card type" hint="What would you like to share?" />
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
               <button onClick={()=>selectShareStyle("outdoor_photo")}
                 style={{ flex:1, padding:"14px 12px", borderRadius:12, cursor:"pointer",
                   border:`2px solid ${shareStyle==="outdoor_photo"?V2G.green:V2G.border}`,
@@ -608,32 +616,26 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
 
           {/* ── Step 3: Location ──────────────────────────────────────────── */}
           <div style={{ margin:"16px 0" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-              <div style={{ width:24, height:24, borderRadius:"50%", background:V2G.green,
-                color:"white", fontSize:11, fontWeight:800,
-                display:"flex", alignItems:"center", justifyContent:"center" }}>3</div>
-              <span style={{ fontSize:14, fontWeight:700, color:V2G.darkGreen }}>Location 📍</span>
-              <span style={{ fontSize:11, color:V2G.midGray, marginLeft:4 }}>Display location</span>
-            </div>
+            <StepHeader n={3} title="Location" hint="Optional · shown as an approximate area" />
             {locationMode===null ? (
               <div>
-                <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
                   <button onClick={requestGpsLocation} disabled={gpsRequesting}
-                    style={{ flex:1, padding:"10px 8px", borderRadius:20, cursor:"pointer",
-                      border:`1.5px solid ${V2G.green}`, background:"rgba(125,200,50,0.08)",
-                      color:V2G.green, fontSize:12, fontWeight:600, fontFamily:"DM Sans,sans-serif" }}>
-                    📍 {gpsRequesting?"Locating…":"Use My Location"}
+                    style={{ gridColumn:"1 / -1", padding:"12px 10px", borderRadius:12, cursor:"pointer",
+                      border:`1.5px solid ${V2G.green}`, background:"rgba(125,200,50,0.10)",
+                      color:V2G.darkGreen, fontSize:13, fontWeight:700, fontFamily:"DM Sans,sans-serif", whiteSpace:"nowrap" }}>
+                    📍 {gpsRequesting?"Locating…":"Use my location"}
                   </button>
                   <button onClick={()=>setLocationMode("manual")}
-                    style={{ flex:1, padding:"10px 8px", borderRadius:20, cursor:"pointer",
+                    style={{ padding:"11px 8px", borderRadius:12, cursor:"pointer",
                       border:`1.5px solid ${V2G.border}`, background:"white",
-                      color:V2G.darkGreen, fontSize:12, fontWeight:600, fontFamily:"DM Sans,sans-serif" }}>
-                    ✏️ Enter City
+                      color:V2G.darkGreen, fontSize:13, fontWeight:600, fontFamily:"DM Sans,sans-serif", whiteSpace:"nowrap" }}>
+                    ✏️ Enter city
                   </button>
                   <button onClick={()=>setLocationMode("none")}
-                    style={{ flex:1, padding:"10px 8px", borderRadius:20, cursor:"pointer",
+                    style={{ padding:"11px 8px", borderRadius:12, cursor:"pointer",
                       border:`1.5px solid ${V2G.border}`, background:"white",
-                      color:V2G.midGray, fontSize:12, fontWeight:600, fontFamily:"DM Sans,sans-serif" }}>
+                      color:V2G.midGray, fontSize:13, fontWeight:600, fontFamily:"DM Sans,sans-serif", whiteSpace:"nowrap" }}>
                     Skip
                   </button>
                 </div>
@@ -693,37 +695,24 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
 
           {/* ── Step 4: Caption Preview ────────────────────────────────────── */}
           <div style={{ margin:"16px 0" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-              <div style={{ width:24, height:24, borderRadius:"50%", background:V2G.green,
-                color:"white", fontSize:11, fontWeight:800,
-                display:"flex", alignItems:"center", justifyContent:"center" }}>4</div>
-              <span style={{ fontSize:14, fontWeight:700, color:V2G.darkGreen }}>Caption Preview ✏️</span>
-            </div>
-            <div style={{ position:"relative", padding:"12px 14px", borderRadius:10,
+            <StepHeader n={4} title="Caption" hint="Your post text"
+              action={<button onClick={handleNewCaption} aria-label="Get a new caption"
+                style={{ background:"white", border:`1px solid ${V2G.border}`, borderRadius:20, padding:"6px 12px",
+                  fontSize:12, fontWeight:700, color:V2G.darkGreen, cursor:"pointer", whiteSpace:"nowrap",
+                  fontFamily:"DM Sans,sans-serif" }}>↻ New caption</button>} />
+            <div style={{ padding:"12px 14px", borderRadius:12,
               border:`1.5px solid ${V2G.border}`, background:"rgba(125,200,50,0.03)" }}>
               <p style={{ fontSize:12, color:V2G.darkGreen, lineHeight:1.6, margin:0 }}>{caption}</p>
               <p style={{ fontSize:11, color:V2G.green, margin:"6px 0 0", lineHeight:1.6 }}>
                 {TAGS}<br/>@TouchGrass #GrassTouchers
               </p>
-              <button onClick={handleNewCaption}
-                style={{ position:"absolute", top:10, right:10, background:"none",
-                  border:`1px solid ${V2G.border}`, borderRadius:20, padding:"3px 10px",
-                  fontSize:10, color:V2G.midGray, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
-                ✏️ Edit
-              </button>
             </div>
           </div>
 
           {/* ── Step 5: Card Skin ──────────────────────────────────────────── */}
           {hasPremiumProofs && (
             <div style={{ margin:"16px 0" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-                <div style={{ width:24, height:24, borderRadius:"50%", background:V2G.green,
-                  color:"white", fontSize:11, fontWeight:800,
-                  display:"flex", alignItems:"center", justifyContent:"center" }}>5</div>
-                <span style={{ fontSize:14, fontWeight:700, color:V2G.darkGreen }}>Card Skin 🎨</span>
-                <span style={{ fontSize:11, color:V2G.midGray }}>Choose a background skin</span>
-              </div>
+              <StepHeader n={5} title="Card skin" hint="Choose a background skin" />
               <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:6, scrollbarWidth:"none" }}>
                 {Object.entries(THEMES).map(([key,theme])=>(
                   <button key={key} onClick={()=>setSelectedTheme(key)}
