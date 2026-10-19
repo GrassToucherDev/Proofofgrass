@@ -1,5 +1,5 @@
 // pages/grass-draw.js — V2 Grass Draw (Mockup Match)
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Head from "next/head";
 import { supabase } from "../utils/supabase";
@@ -154,33 +154,11 @@ export default function GrassDraw() {
         setStreak(streakRes.data?.current_streak || 0);
         setEntries(entriesRes.data || []);
 
-        // Fetch leaderboard — top 20 by total entries this cycle
-        setLbLoading(true);
-        const { data: lbRes } = await supabase
-          .from("grass_draw_user_totals")
-          .select("username,total_active_entries,proof_entries,active_bonus_entries")
-          .eq("cycle_id", cycleData.id)
-          .order("total_active_entries", { ascending: false })
-          .limit(20);
-        setLbData(lbRes || []);
-        setLbLoading(false);
         setWalletOk(!!(profileRes.data?.wallet_verified && profileRes.data?.wallet_address));
       }
     } catch(e) { setError("Failed to load data. Try again."); }
     setLoading(false); setSearched(true);
   }, [username, cycle]);
-
-  useEffect(()=>{
-    if(!cycle || !cycle.id) return;
-    setLbLoading(true);
-    supabase.from('grass_draw_user_totals')
-      .select('username,total_active_entries,proof_entries,active_bonus_entries')
-      .eq('cycle_id', cycle.id)
-      .order('total_active_entries', { ascending:false })
-      .limit(20)
-      .then(({data})=>{ setLbData(data||[]); setLbLoading(false); })
-      .catch(()=>setLbLoading(false));
-  },[cycle]);
 
   // Load leaderboard whenever cycle is available
   useEffect(()=>{
@@ -194,6 +172,14 @@ export default function GrassDraw() {
       .then(({data})=>{ setLbData(data||[]); setLbLoading(false); })
       .catch(()=>setLbLoading(false));
   },[cycle]);
+
+  // Look up the saved user's entries automatically once the cycle has loaded
+  const autoLooked = useRef(false);
+  useEffect(() => {
+    if (autoLooked.current || !cycle || !username) return;
+    autoLooked.current = true;
+    fetchUserData();
+  }, [cycle, username, fetchUserData]);
 
   const daysRemaining = cycle
     ? Math.max(0, Math.ceil((new Date(cycle.ends_at) - new Date()) / 86400000))
