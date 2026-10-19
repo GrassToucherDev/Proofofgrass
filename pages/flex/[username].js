@@ -268,8 +268,15 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
     const ag = ctx.createLinearGradient(AV_X,AV_Y,AV_X+AV,AV_Y+AV);
     ag.addColorStop(0,accent+"44"); ag.addColorStop(1,accent+"22");
     ctx.fillStyle=ag; ctx.fill();
-    ctx.font="700 60px Georgia,serif"; ctx.fillStyle=accent; ctx.textAlign="center";
-    ctx.fillText((username[0]||"?").toUpperCase(), AV_X+AV/2, AV_Y+AV/2+20);
+    try {
+      // No profile photo: show the Touch Grass mark instead of a lone letter
+      const logo = await loadImage("/touchgrass-transparent.png");
+      const L = AV * 0.62;
+      ctx.drawImage(logo, AV_X+(AV-L)/2, AV_Y+(AV-L)/2, L, L);
+    } catch {
+      ctx.font="700 60px Georgia,serif"; ctx.fillStyle=accent; ctx.textAlign="center";
+      ctx.fillText((username[0]||"?").toUpperCase(), AV_X+AV/2, AV_Y+AV/2+20);
+    }
   }
   ctx.restore();
   // Verified dot
@@ -585,6 +592,7 @@ export default function FlexCardPage() {
   const [chalDone,     setChalDone]    = useState(0);
   const [chalSent,     setChalSent]    = useState(0);
   const [profileRow,   setProfileRow]  = useState(null);
+  const [previewCover, setPreviewCover] = useState(null); // temp preview cover (not yet applied)
   const [loading,      setLoading]     = useState(true);
   const [copied,       setCopied]      = useState(false);
   const [generatingImg,setGeneratingImg]=useState(false);
@@ -634,6 +642,8 @@ export default function FlexCardPage() {
     ? profileRow.grass_score
     : Math.floor(streak*38+subCount*12+best*22);
   const activeCover = resolveActiveCover(profileRow);
+  // What the card shows: a cover being previewed wins over the saved one, so Share matches the preview.
+  const effectiveCover = previewCover || activeCover;
   const tier        = getTier(streak);
   const tierTitle   = getTierTitle(streak);
   const pct         = totalUsers > 0 ? ((rank/totalUsers)*100).toFixed(1) : "—";
@@ -680,7 +690,7 @@ export default function FlexCardPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [loading, username, streak, activeCover]);
+  }, [loading, username, streak, effectiveCover]);
 
   const isOwner = !!(viewer && viewer === username);
   const shareUrl = typeof window !== "undefined" ? window.location.href : `https://proofofgrass.app/u/${username}/flex`;
@@ -688,21 +698,21 @@ export default function FlexCardPage() {
 
   const buildImageParams = useCallback(() => {
     // Build theme from active cover — drives all visual decisions in canvas
-    const theme = activeCover ? {
-      imageUrl:     activeCover.imageUrl     || null,
-      fallback:     activeCover.fallback     || "linear-gradient(135deg,#0a0c08,#0a0c08)",
-      accentColor:  activeCover.accentColor  || "#93a85a",
-      borderColor:  activeCover.borderColor  || "rgba(147,168,90,0.35)",
-      panelTint:    activeCover.panelTint    || "rgba(6,8,4,0.72)",
-      scrimTop:     activeCover.scrimTop     || "rgba(4,6,4,0.82)",
-      scrimBot:     activeCover.scrimBot     || "rgba(4,6,4,0.94)",
-      glowColor:    activeCover.glowColor    || "#93a85a",
-      badgeStroke:  activeCover.badgeStroke  || "rgba(147,168,90,0.45)",
-      progressFrom: activeCover.progressFrom || "#5a8a30",
-      progressTo:   activeCover.progressTo   || "#93a85a",
-      name:         activeCover.name         || null,
-      marketplaceOnly: activeCover.marketplaceOnly || false,
-      unlockDay:    activeCover.unlockDay    || null,
+    const theme = effectiveCover ? {
+      imageUrl:     effectiveCover.imageUrl     || null,
+      fallback:     effectiveCover.fallback     || "linear-gradient(135deg,#0a0c08,#0a0c08)",
+      accentColor:  effectiveCover.accentColor  || "#93a85a",
+      borderColor:  effectiveCover.borderColor  || "rgba(147,168,90,0.35)",
+      panelTint:    effectiveCover.panelTint    || "rgba(6,8,4,0.72)",
+      scrimTop:     effectiveCover.scrimTop     || "rgba(4,6,4,0.82)",
+      scrimBot:     effectiveCover.scrimBot     || "rgba(4,6,4,0.94)",
+      glowColor:    effectiveCover.glowColor    || "#93a85a",
+      badgeStroke:  effectiveCover.badgeStroke  || "rgba(147,168,90,0.45)",
+      progressFrom: effectiveCover.progressFrom || "#5a8a30",
+      progressTo:   effectiveCover.progressTo   || "#93a85a",
+      name:         effectiveCover.name         || null,
+      marketplaceOnly: effectiveCover.marketplaceOnly || false,
+      unlockDay:    effectiveCover.unlockDay    || null,
     } : {
       imageUrl: null, fallback:"linear-gradient(135deg,#0a0c08,#141a10,#0a0c08)",
       accentColor:"#93a85a", borderColor:"rgba(147,168,90,0.35)",
@@ -722,7 +732,7 @@ export default function FlexCardPage() {
       avatarFrame: profileRow?.avatar_frame || null,
       theme,
     };
-  }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow, activeCover]);
+  }, [username, streak, tier, tierTitle, grassScore, rank, subCount, earnedBadges, best, shields, profileRow, effectiveCover]);
 
   const downloadCard = useCallback(async () => {
     setGeneratingImg(true);
@@ -792,7 +802,6 @@ export default function FlexCardPage() {
   }, [username, streak, tier, awardFlexDrawBonus]);
 
   const [activeTab, setActiveTab] = useState("backgrounds");
-  const [previewCover, setPreviewCover] = useState(null); // temp preview cover
 
   // All packs the user has unlocked
   const unlockedCovers = profileRow?.unlocked_covers ?? [];
@@ -857,8 +866,6 @@ export default function FlexCardPage() {
     },
   ];
 
-  // Effective cover — previewCover overrides active
-  const effectiveCover = previewCover || activeCover;
 
   const V2G = {
     bg:"white", green:"#5ba622", darkGreen:"#1a4a0a",
@@ -1258,8 +1265,11 @@ export default function FlexCardPage() {
               <button
                 onClick={async()=>{
                   // Save active cover to profile
-                  await supabase.from("Profiles")
+                  const { error: applyErr } = await supabase.from("Profiles")
                     .upsert({ username, active_cover_id:previewCover.slug }, { onConflict:"username" });
+                  if (applyErr) { console.warn("[flex] apply cover failed:", applyErr.message); return; }
+                  // Keep local data in step with the DB so the card and Share use the new cover immediately
+                  setProfileRow(prev => ({ ...(prev || {}), active_cover_id: previewCover.slug }));
                   setPreviewCover(null);
                 }}
                 style={{ background:"linear-gradient(135deg,#7dc832,#5ba622)",
