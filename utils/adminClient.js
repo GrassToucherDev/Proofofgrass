@@ -5,7 +5,7 @@ function getSecret(force) {
   try {
     let s = force ? null : sessionStorage.getItem(KEY);
     if (!s) {
-      s = window.prompt("Admin secret (ADMIN_API_SECRET):") || "";
+      s = window.prompt("Admin secret:") || "";
       if (s) sessionStorage.setItem(KEY, s);
     }
     return s;
