@@ -6,6 +6,7 @@ import Link from "next/link";
 import Head from "next/head";
 import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
+import V2Nav from "../components/V2Nav";
 const BURN_ADDR       = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const TOUCHGRASS_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const SUPABASE_URL    = "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public";
@@ -567,35 +568,8 @@ export default function Marketplace() {
       <Head><title>Marketplace | Proof of Grass</title></Head>
       <style dangerouslySetInnerHTML={{ __html:css }} />
       <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>
-        {/* NAV */}
-        <nav style={{ position:"sticky", top:0, zIndex:200, height:64,
-          display:"flex", alignItems:"center", padding:"0 clamp(14px,4vw,40px)", gap:20,
-          background:"rgba(255,255,255,0.95)", backdropFilter:"blur(20px)",
-          borderBottom:`1px solid ${V2.borderSoft}`,
-          boxShadow:"0 2px 16px rgba(26,74,10,0.07)" }}>
-          <Link href="/" style={{ display:"flex", alignItems:"center", gap:10, textDecoration:"none", flexShrink:0 }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width:36, height:36, objectFit:"contain" }} />
-            <span style={{ fontFamily:V2.fontSans, fontSize:16, fontWeight:800, color:V2.forestGreen }}>
-              Touch Grass
-            </span>
-            <div style={{ background:V2.grassGreen, color:"white", fontSize:9, fontWeight:800,
-              borderRadius:20, padding:"2px 8px", letterSpacing:"0.06em" }}>V2</div>
-          </Link>
-          <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
-            {username && (
-              <div style={{ display:"flex", alignItems:"center", gap:8,
-                background:"white", border:`1px solid ${V2.borderSoft}`, borderRadius:20,
-                padding:"6px 14px", boxShadow:"0 1px 6px rgba(26,74,10,0.06)" }}>
-                <span style={{ fontSize:16 }}>🌿</span>
-                <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{username}</span>
-                <span style={{ fontSize:12, color:V2.midGray }}>▾</span>
-              </div>
-            )}
-            <div style={{ width:40, height:40, borderRadius:12, background:"white",
-              border:`1px solid ${V2.borderSoft}`, display:"flex", alignItems:"center",
-              justifyContent:"center", cursor:"pointer", fontSize:18 }}>☰</div>
-          </div>
-        </nav>
+        {/* NAV — shared V2 nav (working menu) */}
+        <V2Nav username={username||""} onUsernameChange={setUsername} showUpload={()=>{ window.location.href="/#upload"; }} />
         {/* Activity ticker */}
         <ActivityTicker />
         {/* HERO */}
