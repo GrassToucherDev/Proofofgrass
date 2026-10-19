@@ -147,6 +147,9 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
     /* Responsive */
     @media (max-width: 768px) {
       .v2nav-links { display: none; }
+      .v2nav { gap: 12px; }
+      .v2nav-right { gap: 8px; min-width: 0; }
+      .v2nav-myprofile { display: none; }
       .v2nav-input { width: 110px; }
       .v2nav-input:focus { width: 130px; }
     }
@@ -217,7 +220,7 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
               </button>
             )}
             {username && (
-              <button className="v2nav-profile-btn" onClick={handleProfile}
+              <button className="v2nav-profile-btn v2nav-myprofile" onClick={handleProfile}
                 style={{ whiteSpace:"nowrap" }}>
                 My Profile →
               </button>

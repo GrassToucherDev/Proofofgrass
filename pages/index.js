@@ -331,7 +331,7 @@ function FeaturedPostsSection() {
 }
 
 function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, hasPostedToday,
-  onUpload, streakStatus, streakTone, resolvedStreak, loadingUser }) {
+  onUpload, onRetake, streakStatus, streakTone, resolvedStreak, loadingUser }) {
 
   const toneColor = {
     success: V2.success, warning: V2.warning, reset: V2.danger, neutral: V2.midGray,
@@ -379,6 +379,7 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
             proofFile={proofFile}
             username={username}
             initialStreak={(resolvedStreak ?? 0) + 1}
+            onRetake={onRetake}
           />
         </div>
       )}
@@ -685,6 +686,10 @@ export default function Home() {
       await supabase.storage.from("proof-photos").upload(fileName, file, { contentType:file.type||"image/png", upsert:true });
     } catch(e) {}
   }, [username, hasUser]);
+
+  const handleRetake = useCallback(() => {
+    setShowResult(false); setImageSrc(null); setProofFile(null);
+  }, []);
 
   const resolvedStreak = loadingUser ? null : displayStreak ?? null;
   const tier = getV2Tier(resolvedStreak ?? currentStreak ?? 0);
@@ -994,6 +999,7 @@ export default function Home() {
             showResult={showResult}
             hasPostedToday={hasPostedToday}
             onUpload={handleImageUpload}
+            onRetake={handleRetake}
             streakStatus={streakStatus}
             streakTone={streakTone}
             resolvedStreak={resolvedStreak}
