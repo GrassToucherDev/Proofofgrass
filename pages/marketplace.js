@@ -129,14 +129,31 @@ function useTouchgrassPrice() {
   return { price, loading, tokensFor };
 }
 // ── Activity ticker ────────────────────────────────────────────────────────────
+function timeAgo(iso) {
+  const sec = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (sec < 60)     return "just now";
+  if (sec < 3600)   return Math.floor(sec/60) + "m ago";
+  if (sec < 86400)  return Math.floor(sec/3600) + "h ago";
+  if (sec < 604800) return Math.floor(sec/86400) + "d ago";
+  return new Date(iso).toLocaleDateString("en-US", { month:"short", day:"numeric" });
+}
+const ITEM_EMOJI = { streak_shield:"🛡️", sunset_pass:"🌅" };
+
+// Real purchases from the MarketplacePurchases ledger (via /api/marketplace/recent-activity).
 function ActivityTicker() {
-  const items = [
-    { avatar:"🌿", name:"MeadowMind",   action:"bought",  item:"Retro Vibes Pack", time:"2m ago"  },
-    { avatar:"☀️",  name:"SunWalker",    action:"applied", item:"Retro Mountain",   time:"5m ago"  },
-    { avatar:"🏔️", name:"TrailBlazer",  action:"bought",  item:"Anime Outdoors",   time:"8m ago"  },
-    { avatar:"🌱", name:"GrassRunner",  action:"bought",  item:"Streak Shield",    time:"12m ago" },
-    { avatar:"💧", name:"StreamSeeker", action:"applied", item:"Cherry Blossom",   time:"15m ago" },
-  ];
+  const [items, setItems] = useState(null);   // null = loading
+  useEffect(()=>{
+    let alive = true;
+    const load = () => fetch("/api/marketplace/recent-activity")
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{ if(alive && d) setItems((d.items||[]).map(i=>({
+        avatar: ITEM_EMOJI[i.item_id] || "🎨", name: i.username, action:"bought", item: i.item, time: timeAgo(i.at),
+      }))); })
+      .catch(()=>{});
+    load();
+    const t = setInterval(load, 60000);
+    return ()=>{ alive=false; clearInterval(t); };
+  },[]);
   return (
     <div style={{ background:"white", borderBottom:`1px solid ${V2.borderSoft}`,
       padding:"10px clamp(14px,4vw,40px)", display:"flex", alignItems:"center", gap:16,
@@ -146,7 +163,10 @@ function ActivityTicker() {
           boxShadow:`0 0 8px ${V2.grassGreen}` }} />
         <span style={{ fontSize:11, fontWeight:700, color:V2.grassGreen, whiteSpace:"nowrap" }}>Live Activity</span>
       </div>
-      {items.map((item,i)=>(
+      {items && items.length === 0 && (
+        <span style={{ fontSize:12, color:V2.midGray, whiteSpace:"nowrap" }}>No purchases yet — be the first to grab something.</span>
+      )}
+      {(items||[]).map((item,i)=>(
         <div key={i} style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0,
           padding:"6px 12px", background:"rgba(125,200,50,0.06)", borderRadius:20,
           border:`1px solid ${V2.borderSoft}` }}>
