@@ -1,444 +1,333 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+// pages/map.js — Proof of Grass community map (V2 design)
+// Shows where people chose to share an approximate location with their daily proof.
+import { useState, useEffect, useRef, useCallback } from "react";
+import Head from "next/head";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { supabase } from "../utils/supabase";
+import { useRouter } from "next/router";
+import { V2, V2GlobalCSS } from "../utils/v2Theme";
+import V2Nav from "../components/V2Nav";
+import V2BottomNav from "../components/V2BottomNav";
 
-const T = {
-  bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
-  border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)", borderGold:"rgba(200,168,75,0.35)",
-  olive:"#93a85a", gold:"#c8a84b",
-  white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
-};
-
-const US_STATES_COUNT  = 50;
-const COUNTRIES_COUNT  = 195;
-
-const LeafletMap = dynamic(() => import("../components/ProofMapLeaflet"), {
+const CommunityMap = dynamic(() => import("../components/CommunityMap"), {
   ssr: false,
-  loading: () => (
-    <div style={{ height:"clamp(420px,55vh,620px)", background:"#0a0c08", borderRadius:16,
-      display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12 }}>
-      <div style={{ fontSize:28, opacity:0.3 }}>🌍</div>
-      <span style={{ color:T.dim, fontSize:13, letterSpacing:"0.06em" }}>Loading map…</span>
-    </div>
-  ),
+  loading: () => <div style={{ width: "100%", height: "100%", background: "#dcecf6" }} />,
 });
 
+const RANGES = [
+  { id: "all",   label: "All time"  },
+  { id: "week",  label: "This week" },
+  { id: "today", label: "Today"     },
+];
+const RANGE_NOTE = {
+  all:   "Showing all-time proofs",
+  week:  "Showing the last 7 days (UTC)",
+  today: "Showing today, UTC",
+};
+
 function timeAgo(iso) {
-  if (!iso) return "";
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 86400 * 30) return `${Math.floor(s / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+const fmtDate = (iso) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+
+function Avatar({ p, size = 40 }) {
+  const [bad, setBad] = useState(false);
+  const base = { width: size, height: size, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,#d8f0c0,#b8e08a)", border: "2px solid #fff", boxShadow: "0 1px 4px rgba(26,74,10,0.15)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", fontSize: size * 0.5 };
+  if (p.avatarUrl && !bad) return <img src={p.avatarUrl} alt="" loading="lazy" width={size} height={size} onError={() => setBad(true)} style={{ ...base, objectFit: "cover" }} />;
+  return <div aria-hidden="true" style={base}>{p.avatarEmoji || "🌿"}</div>;
 }
 
-export default function MapPage() {
-  const [loading,          setLoading]          = useState(true);
-  const [regions,          setRegions]          = useState([]);
-  const [stats,            setStats]            = useState({ totalProofs:0, regionCount:0, countryCount:0, activeTouchers:0 });
-  const [drawerData,       setDrawerData]       = useState(null);
-  const [statesTouched,    setStatesTouched]    = useState(0);
-  const [countriesTouched, setCountriesTouched] = useState(0);
-  const [countryNames,     setCountryNames]     = useState(new Set());
-  const [topRegions,       setTopRegions]       = useState([]);
+function StatCard({ icon, value, label, loading }) {
+  return (
+    <div className="pm-stat">
+      <div className="pm-stat-icon" aria-hidden="true">{icon}</div>
+      <div style={{ minWidth: 0 }}>
+        <div className="pm-stat-val">{loading ? <span className="pm-skel" style={{ width: 44, height: 22, display: "inline-block" }} /> : Number(value || 0).toLocaleString()}</div>
+        <div className="pm-stat-lbl">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function Progress({ icon, label, count, total }) {
+  const pct = total ? Math.min(100, (count / total) * 100) : 0;
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6, gap: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: V2.forestGreen }}><span aria-hidden="true">{icon} </span>{label}</span>
+        <span style={{ fontSize: 13, fontWeight: 800, color: V2.forestGreen, whiteSpace: "nowrap" }}>{count} <span style={{ fontWeight: 600, color: V2.dimGray }}>/ {total}</span></span>
+      </div>
+      <div role="progressbar" aria-label={`${label} represented`} aria-valuemin={0} aria-valuemax={total} aria-valuenow={count}
+        style={{ height: 10, borderRadius: 10, background: "rgba(200,220,190,0.45)", overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, minWidth: count > 0 ? 6 : 0, height: "100%", borderRadius: 10, background: V2.gradientGrassBtn, transition: "width .5s" }} />
+      </div>
+      <div style={{ fontSize: 11, color: V2.dimGray, marginTop: 4, fontWeight: 600 }}>{pct < 10 && count > 0 ? pct.toFixed(1) : Math.round(pct)}% of {total}</div>
+    </div>
+  );
+}
+
+export default function CommunityMapPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [range, setRange] = useState("all");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [fullscreen, setFullscreen] = useState(false);
+  const [sel, setSel] = useState(null);       // { ids, count, label }
+  const [preview, setPreview] = useState(null); // { loading, proofs }
+  const reqRef = useRef(0);
 
   useEffect(() => {
-    (async () => {
-      const { data: subs } = await supabase
-        .from("Submissions")
-        .select("username,location_label,location_city,location_region,location_country,location_lat_rounded,location_lng_rounded,location_source,created_at")
-        .not("location_source", "eq", "none")
-        .in("status", ["pending","approved"])
-        .order("created_at", { ascending: false })
-        .limit(5000);
-
-      const rows = subs ?? [];
-
-      // ── Aggregate by unique rounded coordinate pair ────────────────────
-      // Key by lat+lng so every distinct location gets its own marker.
-      // This fixes the bug where multiple regions shared the same rounded
-      // coords and only one cluster appeared.
-      const byCoord = {};
-      rows.forEach(r => {
-        if (r.location_lat_rounded == null || r.location_lng_rounded == null) return;
-        const key = `${r.location_lat_rounded},${r.location_lng_rounded}`;
-        if (!byCoord[key]) {
-          byCoord[key] = {
-            label:     r.location_label || r.location_city || "Nearby Region",
-            lat:       r.location_lat_rounded,
-            lng:       r.location_lng_rounded,
-            country:   r.location_country,
-            region:    r.location_region,
-            count:     0,
-            usernames: new Set(),
-            mostRecent: r.created_at,
-          };
-        }
-        byCoord[key].count += 1;
-        byCoord[key].usernames.add(r.username);
-        if (r.created_at > byCoord[key].mostRecent) byCoord[key].mostRecent = r.created_at;
-      });
-
-      const aggregated = Object.values(byCoord).map(r => ({
-        ...r,
-        usernames: [...r.usernames],
-      }));
-
-      setRegions(aggregated);
-
-      // ── Stats ──────────────────────────────────────────────────────────
-      const uniqueCountries = new Set(rows.map(r => r.location_country).filter(Boolean));
-      const uniqueLabels    = new Set(rows.map(r => r.location_label).filter(Boolean));
-      const uniqueUsers     = new Set(rows.map(r => r.username));
-      const uniqueUSStates  = new Set(
-        rows.filter(r => ["United States","USA","US"].includes(r.location_country))
-          .map(r => r.location_region).filter(Boolean)
-      );
-
-      setStats({
-        totalProofs:    rows.length,
-        regionCount:    uniqueLabels.size,
-        countryCount:   uniqueCountries.size,
-        activeTouchers: uniqueUsers.size,
-      });
-      setStatesTouched(uniqueUSStates.size);
-      setCountriesTouched(uniqueCountries.size);
-      setCountryNames(uniqueCountries); // passed to map for green tint
-
-      // ── Top regions for sidebar ────────────────────────────────────────
-      const sorted = [...aggregated].sort((a, b) => b.count - a.count).slice(0, 8);
-      setTopRegions(sorted);
-
-      setLoading(false);
-    })();
+    try { setUsername(localStorage.getItem("pog_username") || ""); } catch {}
   }, []);
 
-  const onRegionClick = useCallback(async (region) => {
-    setDrawerData({ ...region, loading: true });
-    if (region.usernames?.length) {
-      const { data: streaks } = await supabase
-        .from("Streaks")
-        .select("username,current_streak,best_streak")
-        .in("username", region.usernames.slice(0, 50));
-      const sorted = (streaks ?? []).sort((a, b) => (b.best_streak ?? 0) - (a.best_streak ?? 0));
-      setDrawerData({
-        ...region,
-        loading:       false,
-        topToucher:    sorted[0]?.username ?? null,
-        longestStreak: sorted[0]?.best_streak ?? null,
-        recentUsers:   region.usernames.slice(0, 5),
-      });
-    } else {
-      setDrawerData({ ...region, loading: false });
+  // range ⇄ URL
+  useEffect(() => {
+    if (!router.isReady) return;
+    const q = String(router.query.range || "");
+    if (RANGES.some(r => r.id === q)) setRange(q);
+  }, [router.isReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const load = useCallback(async (r) => {
+    const my = ++reqRef.current;
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`/api/map/data?range=${r}`);
+      if (!res.ok) throw new Error();
+      const j = await res.json();
+      if (my !== reqRef.current) return;
+      setData(j);
+    } catch {
+      if (my === reqRef.current) setError("Couldn't load community proofs. Please try again.");
     }
+    if (my === reqRef.current) setLoading(false);
   }, []);
+  useEffect(() => { if (router.isReady) load(range); }, [range, router.isReady, load]);
 
-  const closeDrawer = () => setDrawerData(null);
+  const pickRange = (id) => {
+    setRange(id); setSel(null); setPreview(null);
+    router.replace({ pathname: "/map", query: id === "all" ? {} : { range: id } }, undefined, { shallow: true });
+  };
 
-  const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html{overflow-x:hidden;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
-    ::-webkit-scrollbar{width:4px;}
-    ::-webkit-scrollbar-track{background:${T.bg};}
-    ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-    @keyframes greenPulse{0%,100%{opacity:0.7;}50%{opacity:1;}}
-    .fade{animation:fadeUp 0.5s ease both;}
-    .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
-    @media(max-width:640px){.stat-grid{grid-template-columns:repeat(2,1fr);}}
-    .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);z-index:998;}
-    .drawer{position:fixed;left:0;right:0;bottom:0;z-index:999;
-      background:${T.bg2};border-top:1px solid ${T.borderGold};border-radius:20px 20px 0 0;
-      padding:24px clamp(16px,5vw,32px) 40px;
-      box-shadow:0 -20px 60px rgba(0,0,0,0.6);}
-    @media(min-width:768px){
-      .drawer{left:auto;right:24px;bottom:24px;border-radius:18px;width:380px;border:1px solid ${T.borderGold};}
+  // marker preview
+  useEffect(() => {
+    if (!sel) { setPreview(null); return; }
+    let live = true;
+    setPreview({ loading: true, proofs: [] });
+    fetch(`/api/map/proofs?ids=${encodeURIComponent(sel.ids.join(","))}`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(j => live && setPreview({ loading: false, proofs: j.proofs || [] }))
+      .catch(() => live && setPreview({ loading: false, proofs: [], failed: true }));
+    return () => { live = false; };
+  }, [sel]);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") { if (sel) setSel(null); else if (fullscreen) setFullscreen(false); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sel, fullscreen]);
+  useEffect(() => {
+    document.body.style.overflow = fullscreen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [fullscreen]);
+
+  const stats = data?.stats;
+  const fp = data?.footprint;
+  const recent = data?.recent || [];
+
+  const css = V2GlobalCSS + `
+    .pm-wrap { max-width: 1180px; margin: 0 auto; padding: 22px clamp(14px,4vw,40px) 40px; }
+    .pm-back { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:${V2.grassDark}; text-decoration:none; padding:6px 0; }
+    .pm-back:hover { color:${V2.forestGreen}; }
+    .pm-title { font-family:${V2.fontSans}; font-weight:900; font-size:clamp(28px,5vw,44px); line-height:1.1; color:${V2.forestGreen}; margin:6px 0 8px; letter-spacing:-0.01em; }
+    .pm-sub { font-size:clamp(14px,2vw,17px); color:${V2.forestLight}; font-weight:600; }
+    .pm-head { display:flex; flex-wrap:wrap; gap:14px 24px; align-items:flex-end; justify-content:space-between; margin-bottom:18px; }
+    .pm-filters { display:flex; gap:8px; flex-wrap:wrap; }
+    .pm-filter { padding:9px 18px; border-radius:22px; cursor:pointer; border:1.5px solid ${V2.borderSoft}; background:#fff; color:${V2.forestGreen}; font-size:13px; font-weight:700; transition:all .15s; min-height:40px; white-space:nowrap; }
+    .pm-filter:hover { border-color:${V2.grassLime}; }
+    .pm-filter[aria-pressed="true"] { background:${V2.gradientGrassBtn}; color:#fff; border-color:${V2.grassGreen}; box-shadow:0 2px 12px rgba(125,200,50,0.35); }
+    .pm-filter:focus-visible, .pm-icon-btn:focus-visible, .pm-row:focus-visible, .pm-link:focus-visible, .pm-back:focus-visible { outline:3px solid ${V2.forestMid}; outline-offset:2px; }
+    .pm-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:6px; }
+    .pm-stat { display:flex; align-items:center; gap:12px; background:#fff; border:1px solid ${V2.borderSoft}; border-radius:18px; padding:14px 16px; box-shadow:${V2.shadowCard}; min-width:0; }
+    .pm-stat-icon { width:40px; height:40px; border-radius:12px; background:${V2.glassGreen}; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+    .pm-stat-val { font-size:clamp(20px,3.4vw,28px); font-weight:900; color:${V2.forestGreen}; line-height:1.1; }
+    .pm-stat-lbl { font-size:12px; font-weight:700; color:${V2.dimGray}; margin-top:2px; }
+    .pm-range-note { font-size:12px; font-weight:700; color:${V2.dimGray}; margin:6px 2px 14px; }
+    .pm-grid { display:grid; grid-template-columns:minmax(0,1.9fr) minmax(0,1fr); gap:18px; align-items:start; }
+    .pm-card { background:#fff; border:1px solid ${V2.borderSoft}; border-radius:22px; box-shadow:${V2.shadowCard}; overflow:hidden; }
+    .pm-mapbox { position:relative; height:clamp(340px,56vh,560px); }
+    .pm-mapbox.fs { position:fixed; inset:0; z-index:500; height:auto; background:#fff; }
+    .pm-note { padding:12px 18px; font-size:12.5px; font-weight:600; color:${V2.forestLight}; border-top:1px solid ${V2.borderSoft}; display:flex; gap:8px; align-items:flex-start; }
+    .pm-side { display:flex; flex-direction:column; gap:18px; min-width:0; }
+    .pm-side-card { padding:18px 18px 8px; }
+    .pm-h2 { font-size:17px; font-weight:800; color:${V2.forestGreen}; margin:0 0 4px; font-family:${V2.fontSans}; }
+    .pm-h2-sub { font-size:12px; color:${V2.dimGray}; font-weight:700; margin-bottom:14px; }
+    .pm-row { display:flex; align-items:center; gap:12px; padding:10px 8px; margin:0 -8px; border-radius:14px; text-decoration:none; color:inherit; transition:background .15s; }
+    .pm-row:hover { background:${V2.glassGreen}; }
+    .pm-row-name { font-weight:800; font-size:14px; color:${V2.forestGreen}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pm-row-loc { font-size:12px; font-weight:600; color:${V2.dimGray}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pm-row-time { font-size:11.5px; font-weight:700; color:${V2.dimGray}; white-space:nowrap; margin-left:auto; padding-left:8px; }
+    .pm-skel { background:linear-gradient(90deg,rgba(200,220,190,.3),rgba(200,220,190,.6),rgba(200,220,190,.3)); background-size:200% 100%; animation:pmShim 1.2s infinite; border-radius:8px; }
+    @keyframes pmShim { to { background-position:-200% 0; } }
+    .pm-icon-btn { width:32px; height:32px; border-radius:50%; border:1px solid ${V2.borderSoft}; background:#fff; cursor:pointer; color:${V2.forestGreen}; font-size:16px; line-height:1; }
+    .pm-link { font-size:12.5px; font-weight:800; color:${V2.grassDark}; text-decoration:none; }
+    .pm-sheet { position:absolute; left:12px; right:12px; bottom:28px; z-index:6; max-width:380px; background:#fff; border-radius:18px; box-shadow:0 8px 30px rgba(26,74,10,0.28); padding:14px; max-height:60%; overflow:auto; }
+    @media (max-width:900px) {
+      .pm-grid { grid-template-columns:minmax(0,1fr); }
     }
-    .top-region-row{display:flex;align-items:center;gap:10px;padding:10px 0;
-      border-bottom:1px solid ${T.border};cursor:pointer;transition:opacity 0.15s;}
-    .top-region-row:hover{opacity:0.75;}
-    .top-region-row:last-child{border-bottom:none;}
-    .goals-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-    @media(max-width:480px){.goals-grid{grid-template-columns:1fr;}}
+    @media (max-width:520px) {
+      .pm-stat { flex-direction:column; align-items:flex-start; gap:8px; padding:12px; }
+      .pm-stat-icon { width:34px; height:34px; font-size:17px; }
+      .pm-filter { flex:1 1 0; padding:9px 6px; font-size:12.5px; white-space:nowrap; }
+      .pm-sheet { max-width:none; }
+    }
+    @media (prefers-reduced-motion: reduce) { .pm-skel { animation:none; } * { scroll-behavior:auto !important; } }
   `;
 
   return (
     <>
+      <Head>
+        <title>Proof of Grass Map | Touch Grass</title>
+        <meta name="description" content="See where our community is getting outside." />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+      </Head>
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div style={{ minHeight:"100vh", background:T.bg }}>
 
-        {/* NAV */}
-        <nav style={{ position:"sticky", top:0, zIndex:100, display:"flex",
-          alignItems:"center", justifyContent:"space-between",
-          padding:"0 clamp(14px,4vw,48px)", height:56,
-          background:`${T.bg}ec`, backdropFilter:"blur(18px)",
-          borderBottom:`1px solid ${T.border}` }}>
-          <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
-            <img src="/touchgrass-transparent.png" alt=""
-              style={{ width:26, height:26, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
-          </Link>
-          <Link href="/" style={{ fontSize:11, color:T.olive, textDecoration:"none" }}>← Dashboard</Link>
-        </nav>
+      <V2Nav username={username} onUsernameChange={setUsername} showUpload={() => router.push("/#upload")} />
 
-        {/* HERO */}
-        <div style={{ padding:"40px clamp(14px,5vw,64px) 28px",
-          background:"linear-gradient(180deg,#0a0f07 0%,#080a06 100%)",
-          borderBottom:`1px solid ${T.border}` }}>
-          <div style={{ fontSize:10, letterSpacing:"0.22em", color:T.gold,
-            textTransform:"uppercase", marginBottom:10, fontWeight:600 }}>
-            🌍 Global Movement
-          </div>
-          <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize:"clamp(32px,5.5vw,56px)", fontWeight:700, color:T.white,
-            lineHeight:1, letterSpacing:"-0.02em", marginBottom:12 }}>
-            Proof of Grass Map
-          </h1>
-          <p style={{ fontSize:13, color:T.dim, fontWeight:300, maxWidth:520, lineHeight:1.7, marginBottom:24 }}>
-            Every marker is a real person who went outside. Watch the world turn green.
-          </p>
+      <main className="v2-page-wrap" style={{ background: V2.gradientSky, minHeight: "100vh" }}>
+        <div className="pm-wrap">
+          <Link href="/" className="pm-back">← Back to dashboard</Link>
 
-          {/* Countries greened progress — hero stat */}
-          <div style={{ display:"inline-flex", alignItems:"center", gap:14,
-            background:`${T.olive}0a`, border:`1px solid ${T.borderG}`,
-            borderRadius:12, padding:"12px 20px" }}>
-            <div style={{ fontSize:28, animation:"greenPulse 3s ease-in-out infinite" }}>🌿</div>
+          <div className="pm-head">
             <div>
-              <div style={{ display:"flex", alignItems:"baseline", gap:6, marginBottom:4 }}>
-                <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                  fontSize:28, fontWeight:700, color:T.olive }}>
-                  {loading ? "—" : countriesTouched}
-                </span>
-                <span style={{ fontSize:13, color:T.dim }}>/ {COUNTRIES_COUNT} countries greened</span>
-              </div>
-              <div style={{ height:5, width:240, background:T.bg3, borderRadius:3, overflow:"hidden" }}>
-                <div style={{ height:"100%",
-                  width:`${loading ? 0 : Math.min(100,(countriesTouched/COUNTRIES_COUNT)*100)}%`,
-                  background:`linear-gradient(90deg,${T.olive},${T.gold})`,
-                  borderRadius:3, transition:"width 1.5s ease" }} />
-              </div>
+              <h1 className="pm-title">Proof of Grass Map</h1>
+              <p className="pm-sub">See where our community is getting outside.</p>
+            </div>
+            <div className="pm-filters" role="group" aria-label="Time range">
+              {RANGES.map(r => (
+                <button key={r.id} type="button" className="pm-filter" aria-pressed={range === r.id} onClick={() => pickRange(r.id)}>{r.label}</button>
+              ))}
             </div>
           </div>
-        </div>
 
-        <div style={{ padding:"24px clamp(14px,5vw,64px)" }}>
-
-          {/* STATS STRIP */}
-          <div className="stat-grid fade" style={{ marginBottom:20 }}>
-            {[
-              { label:"Proofs Logged",    value:stats.totalProofs,    icon:"🌿", accent:false },
-              { label:"Unique Regions",   value:stats.regionCount,    icon:"📍", accent:false },
-              { label:"Countries",        value:stats.countryCount,   icon:"🌍", accent:true  },
-              { label:"Active Touchers",  value:stats.activeTouchers, icon:"🏃", accent:false },
-            ].map(({ label, value, icon, accent }) => (
-              <div key={label} style={{ background:T.bg2,
-                border:`1px solid ${accent ? T.borderGold : T.border}`,
-                borderRadius:12, padding:"16px 14px", textAlign:"center",
-                boxShadow: accent ? "0 0 20px rgba(200,168,75,0.06)" : "none" }}>
-                <div style={{ fontSize:20, marginBottom:4 }}>{icon}</div>
-                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                  fontSize:"clamp(22px,3vw,32px)", fontWeight:700,
-                  color: accent ? T.gold : T.white }}>
-                  {loading ? "—" : value.toLocaleString()}
-                </div>
-                <div style={{ fontSize:9, color:T.dim, textTransform:"uppercase",
-                  letterSpacing:"0.1em", marginTop:4 }}>{label}</div>
-              </div>
-            ))}
+          <div className="pm-stats" aria-live="polite">
+            <StatCard icon="📍" value={stats?.mappedProofs} label="Mapped proofs" loading={!stats} />
+            <StatCard icon="🌍" value={stats?.countries} label="Countries" loading={!stats} />
+            <StatCard icon="🧑‍🌾" value={stats?.participants} label="Participants" loading={!stats} />
           </div>
+          <div className="pm-range-note">{RANGE_NOTE[range]}</div>
 
-          {/* MAP */}
-          <div style={{ borderRadius:16, overflow:"hidden",
-            border:`1px solid ${T.borderGold}`,
-            boxShadow:"0 0 40px rgba(147,168,90,0.06), 0 0 80px rgba(0,0,0,0.4)",
-            marginBottom:20 }}>
-            <LeafletMap
-              regions={regions}
-              onRegionClick={onRegionClick}
-              countryCodes={countryNames}
-            />
-          </div>
-
-          {/* PRIVACY NOTE */}
-          <div style={{ display:"flex", alignItems:"center", gap:8,
-            fontSize:11, color:T.dim, marginBottom:24,
-            padding:"10px 14px", background:T.bg2, borderRadius:10,
-            border:`1px solid ${T.border}` }}>
-            <span>🔒</span>
-            Approximate locations only. Exact coordinates are never stored or displayed.
-          </div>
-
-          {/* COMMUNITY GOALS */}
-          <div className="goals-grid" style={{ marginBottom:28 }}>
-            {[
-              { label:"🇺🇸 US States Greened",    val:statesTouched,    max:US_STATES_COUNT,  color:T.olive },
-              { label:"🌍 Countries Greened",      val:countriesTouched, max:COUNTRIES_COUNT,  color:T.gold  },
-            ].map(({ label, val, max, color }) => (
-              <div key={label} style={{ background:T.bg2,
-                border:`1px solid ${T.border}`, borderRadius:14, padding:"18px 20px" }}>
-                <div style={{ fontSize:10, color:T.dim, textTransform:"uppercase",
-                  letterSpacing:"0.1em", marginBottom:10 }}>{label}</div>
-                <div style={{ display:"flex", alignItems:"baseline", gap:6, marginBottom:12 }}>
-                  <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                    fontSize:30, fontWeight:700, color }}>
-                    {loading ? "—" : val}
-                  </span>
-                  <span style={{ fontSize:14, color:T.dim }}>/ {max}</span>
-                  <span style={{ fontSize:11, color, marginLeft:"auto",
-                    fontWeight:600 }}>
-                    {loading ? "" : `${((val/max)*100).toFixed(1)}%`}
-                  </span>
-                </div>
-                <div style={{ height:6, background:T.bg3, borderRadius:3, overflow:"hidden" }}>
-                  <div style={{ height:"100%",
-                    width:`${loading ? 0 : Math.min(100,(val/max)*100)}%`,
-                    background:`linear-gradient(90deg,${color}cc,${color})`,
-                    borderRadius:3, transition:"width 1.5s ease 0.3s" }} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* TOP REGIONS */}
-          {topRegions.length > 0 && (
-            <div style={{ background:T.bg2, border:`1px solid ${T.border}`,
-              borderRadius:14, padding:"20px", marginBottom:28 }}>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.18em",
-                textTransform:"uppercase", color:T.dim, marginBottom:16 }}>
-                🔥 Most Active Regions
-              </div>
-              {topRegions.map((r, i) => {
-                const maxCount = topRegions[0]?.count ?? 1;
-                const pct = Math.round((r.count / maxCount) * 100);
-                return (
-                  <div key={i} className="top-region-row"
-                    onClick={() => onRegionClick(r)}>
-                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                      fontSize:18, fontWeight:700, color:T.dim,
-                      width:22, flexShrink:0 }}>{i + 1}</div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:T.white,
-                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                        {r.label}
-                      </div>
-                      {r.country && (
-                        <div style={{ fontSize:10, color:T.dim }}>
-                          {[r.region, r.country].filter(Boolean).join(", ")}
-                        </div>
-                      )}
-                      <div style={{ height:3, background:T.bg3, borderRadius:2,
-                        overflow:"hidden", marginTop:5 }}>
-                        <div style={{ height:"100%", width:`${pct}%`,
-                          background:`linear-gradient(90deg,${T.olive},${T.gold})`,
-                          borderRadius:2 }} />
-                      </div>
-                    </div>
-                    <div style={{ textAlign:"right", flexShrink:0 }}>
-                      <div style={{ fontSize:16, fontWeight:700, color:T.gold,
-                        fontFamily:"'Cormorant Garamond',Georgia,serif" }}>{r.count}</div>
-                      <div style={{ fontSize:9, color:T.dim }}>proofs</div>
-                    </div>
-                  </div>
-                );
-              })}
+          {error && (
+            <div role="alert" style={{ background: "#fff", border: `1px solid ${V2.danger}55`, borderRadius: 16, padding: "12px 16px", marginBottom: 14, display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: V2.forestGreen }}>{error}</span>
+              <button type="button" className="pm-filter" onClick={() => load(range)}>Retry</button>
             </div>
           )}
 
-        </div>
+          <div className="pm-grid">
+            <section className="pm-card" aria-label="Map of community proofs">
+              <div className={`pm-mapbox${fullscreen ? " fs" : ""}`}>
+                <CommunityMap
+                  points={data?.points}
+                  loading={loading}
+                  resetKey={range}
+                  fullscreen={fullscreen}
+                  onToggleFullscreen={() => setFullscreen(f => !f)}
+                  onSelect={setSel}
+                />
 
-        {/* REGION DRAWER */}
-        {drawerData && (
-          <>
-            <div className="drawer-overlay" onClick={closeDrawer} />
-            <div className="drawer">
-              <div style={{ width:36, height:4, background:"rgba(255,255,255,0.15)",
-                borderRadius:2, margin:"0 auto 20px" }} />
-              <div style={{ display:"flex", alignItems:"flex-start",
-                justifyContent:"space-between", marginBottom:18, gap:12 }}>
-                <div>
-                  <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                    fontSize:22, fontWeight:700, color:T.white,
-                    marginBottom:4 }}>{drawerData.label}</h2>
-                  {drawerData.country && (
-                    <div style={{ fontSize:11, color:T.dim }}>
-                      {[drawerData.region, drawerData.country].filter(Boolean).join(", ")}
+                {sel && (
+                  <div className="pm-sheet" role="dialog" aria-label="Proof preview">
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: V2.dimGray }}>
+                        📍 {sel.label}{sel.count > 1 ? ` · ${sel.count} proofs` : ""}
+                      </div>
+                      <button type="button" className="pm-icon-btn" aria-label="Close preview" onClick={() => setSel(null)}>×</button>
                     </div>
-                  )}
-                </div>
-                <button onClick={closeDrawer}
-                  style={{ background:"none", border:"none", color:T.dim,
-                    fontSize:20, cursor:"pointer", flexShrink:0, lineHeight:1 }}>✕</button>
-              </div>
-
-              {drawerData.loading ? (
-                <div style={{ height:120, display:"flex", alignItems:"center",
-                  justifyContent:"center", color:T.dim, fontSize:12 }}>
-                  Loading…
-                </div>
-              ) : (
-                <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
-                  {[
-                    ["Proofs Logged",    drawerData.count,                   T.gold],
-                    ["Active Touchers",  drawerData.usernames?.length ?? 0,  T.olive],
-                    ["Longest Streak",   drawerData.longestStreak != null ? `${drawerData.longestStreak}d` : null, "#f97316"],
-                    ["Most Recent",      timeAgo(drawerData.mostRecent),      T.muted],
-                  ].filter(([, val]) => val != null).map(([label, val, col], i, arr) => (
-                    <div key={label} style={{ display:"flex", justifyContent:"space-between",
-                      alignItems:"center", padding:"12px 0",
-                      borderBottom: i < arr.length - 1 ? `1px solid ${T.border}` : "none" }}>
-                      <span style={{ fontSize:12, color:T.dim }}>{label}</span>
-                      <span style={{ fontSize:14, fontWeight:700, color:col }}>{val}</span>
-                    </div>
-                  ))}
-
-                  {drawerData.topToucher && (
-                    <div style={{ display:"flex", justifyContent:"space-between",
-                      alignItems:"center", padding:"12px 0",
-                      borderTop:`1px solid ${T.border}` }}>
-                      <span style={{ fontSize:12, color:T.dim }}>Top Toucher</span>
-                      <Link href={`/u/${drawerData.topToucher}`}
-                        style={{ fontSize:13, fontWeight:700, color:T.olive,
-                          textDecoration:"none" }}>
-                        @{drawerData.topToucher}
+                    {preview?.loading && <div className="pm-skel" style={{ height: 52 }} />}
+                    {preview?.failed && <div style={{ fontSize: 13, fontWeight: 700, color: V2.danger }}>Couldn't load this proof.</div>}
+                    {preview && !preview.loading && !preview.failed && preview.proofs.length === 0 && (
+                      <div style={{ fontSize: 13, fontWeight: 700, color: V2.dimGray }}>This proof is no longer available.</div>
+                    )}
+                    {preview?.proofs.map(p => (
+                      <Link key={p.id} href={`/u/${p.username}`} className="pm-row">
+                        <Avatar p={p} size={44} />
+                        <div style={{ minWidth: 0 }}>
+                          <div className="pm-row-name">@{p.username}</div>
+                          <div className="pm-row-loc">{p.label} · {fmtDate(p.createdAt)}</div>
+                        </div>
+                        <span className="pm-link" style={{ marginLeft: "auto", paddingLeft: 8, whiteSpace: "nowrap" }}>Profile →</span>
                       </Link>
-                    </div>
-                  )}
+                    ))}
+                    {sel.count > (preview?.proofs.length || 0) && !preview?.loading && (
+                      <div style={{ fontSize: 11.5, fontWeight: 700, color: V2.dimGray, marginTop: 4 }}>Showing the latest {preview?.proofs.length} of {sel.count} here.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="pm-note">
+                <span aria-hidden="true">🔒</span>
+                <span>Only locations shared with a proof appear. Locations are approximate.</span>
+              </div>
+            </section>
 
-                  {/* Recent users */}
-                  {drawerData.recentUsers?.length > 0 && (
-                    <div style={{ marginTop:16, padding:"14px",
-                      background:T.bg3, borderRadius:10,
-                      border:`1px solid ${T.border}` }}>
-                      <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.14em",
-                        textTransform:"uppercase", color:T.dim, marginBottom:10 }}>
-                        Grass Touchers Here
+            <div className="pm-side">
+              <section className="pm-card pm-side-card" aria-labelledby="pm-fp">
+                <h2 className="pm-h2" id="pm-fp">Growing our footprint</h2>
+                <div className="pm-h2-sub">{fp?.label || "All-time footprint"}</div>
+                {!fp ? (
+                  <>
+                    <div className="pm-skel" style={{ height: 38, marginBottom: 14 }} />
+                    <div className="pm-skel" style={{ height: 38, marginBottom: 14 }} />
+                  </>
+                ) : (
+                  <>
+                    <Progress icon="🌍" label="Countries" count={fp.countries.count} total={fp.countries.total} />
+                    <Progress icon="🇺🇸" label="US states" count={fp.usStates.count} total={fp.usStates.total} />
+                    {fp.usOther.length > 0 && (
+                      <div style={{ fontSize: 11.5, color: V2.dimGray, fontWeight: 700, marginBottom: 10 }}>
+                        Also represented (not counted in 50): {fp.usOther.join(", ")}
                       </div>
-                      <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
-                        {drawerData.recentUsers.map(u => (
-                          <Link key={u} href={`/u/${u}`} style={{
-                            fontSize:11, fontWeight:600, color:T.olive,
-                            textDecoration:"none", padding:"3px 9px",
-                            background:`${T.olive}12`,
-                            border:`1px solid ${T.borderG}`,
-                            borderRadius:20 }}>
-                            @{u}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </>
+                )}
+              </section>
+
+              <section className="pm-card pm-side-card" aria-labelledby="pm-recent">
+                <h2 className="pm-h2" id="pm-recent">Recent proofs</h2>
+                <div className="pm-h2-sub">{RANGE_NOTE[range].replace("Showing ", "")}</div>
+                {!data ? (
+                  [0, 1, 2, 3].map(i => <div key={i} className="pm-skel" style={{ height: 48, marginBottom: 10 }} />)
+                ) : recent.length === 0 ? (
+                  <div style={{ fontSize: 13, fontWeight: 600, color: V2.dimGray, padding: "6px 0 14px" }}>No mapped proofs in this period yet.</div>
+                ) : (
+                  <div style={{ paddingBottom: 8 }}>
+                    {recent.map(p => (
+                      <Link key={p.id} href={`/u/${p.username}`} className="pm-row">
+                        <Avatar p={p} size={40} />
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div className="pm-row-name">@{p.username}</div>
+                          <div className="pm-row-loc">{p.label}</div>
+                        </div>
+                        <time className="pm-row-time" dateTime={p.createdAt}>{timeAgo(p.createdAt)}</time>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </section>
             </div>
-          </>
-        )}
+          </div>
+        </div>
+      </main>
 
-      </div>
+      <V2BottomNav username={username} onLogProof={() => router.push("/#upload")} onMore={() => {}} />
     </>
   );
 }
