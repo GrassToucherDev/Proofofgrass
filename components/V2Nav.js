@@ -21,6 +21,7 @@ const MENU_LINKS = [
   { href: "/grass-draw",   label: "Grass Draw",   icon: "🌱" },
   { href: "/marketplace",  label: "Marketplace",  icon: "🏪" },
   { href: "/map",          label: "World Map",    icon: "🗺️" },
+  { href: "/groves",       label: "Groves",       icon: "🌳" },
   { href: "/field-guide",  label: "Field Guide",  icon: "📖" },
   { href: "/spotlight",    label: "Spotlight",    icon: "🌟" },
   { href: "/challenges",   label: "Challenges",   icon: "⚡" },
