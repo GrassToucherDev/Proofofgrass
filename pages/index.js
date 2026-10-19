@@ -564,7 +564,7 @@ export default function Home() {
         if (!lastDate)            setStreakStatus("Start your streak today"),              setStreakTone("neutral");
         else if (postedToday)     setStreakStatus("Streak locked in for today ✓"),         setStreakTone("success");
         else if (postedYesterday) setStreakStatus(`Submit today to reach Day ${actual+1}`),setStreakTone("warning");
-        else if (missedOne && shieldCount > 0) setStreakStatus(`Day ${actual} — shield available`), setStreakTone("reset");
+        else if (missedOne && shieldCount > 0) setStreakStatus(`You missed a day — post today and a shield keeps your Day ${actual} streak`), setStreakTone("warning");
         else                      setStreakStatus("Streak lost — start again today"),      setStreakTone("reset");
 
         setShieldEligible(missedOne && shieldCount > 0);
