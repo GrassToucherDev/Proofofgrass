@@ -1,5 +1,6 @@
 // pages/wago-drops/my-drops.js
 import Head from "next/head";
+import WagoAvatar from "../../components/wago-drops/WagoAvatar";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
@@ -109,10 +110,7 @@ export default function MyDrops() {
                 borderRadius: 14, padding: "20px 22px", marginBottom: 16,
                 display: "flex", alignItems: "center", gap: 16,
               }}>
-                {session.user?.image && (
-                  <img src={session.user.image} alt=""
-                    style={{ width: 52, height: 52, borderRadius: "50%", border: `1px solid ${T.border}` }} />
-                )}
+                <WagoAvatar src={session.user?.image} size={52} border={`1px solid ${T.border}`} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 16, fontWeight: 700 }}>{session.user?.name}</div>
                   <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{session.user?.email}</div>

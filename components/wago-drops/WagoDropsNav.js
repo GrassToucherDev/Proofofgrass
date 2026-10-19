@@ -4,6 +4,7 @@
 // tabs (Explore / Saved / My Drops / Settings), V2BottomNav pattern.
 
 import Link from "next/link";
+import WagoAvatar from "./WagoAvatar";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { signIn, signOut, useSession } from "next-auth/react";
@@ -110,10 +111,7 @@ export function WagoDropsNav({ session }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           {session ? (
             <>
-              {session.user?.image && (
-                <img src={session.user.image} alt=""
-                  style={{ width: 30, height: 30, borderRadius: "50%", border: `2px solid ${V2.borderSoft}` }} />
-              )}
+              <WagoAvatar src={session.user?.image} size={30} border={`2px solid ${V2.borderSoft}`} />
               <span className="v2-desktop-only" style={{ fontSize: 13, fontWeight: 600, color: V2.forestMid }}>
                 {session.user?.name?.split(" ")[0]}
               </span>

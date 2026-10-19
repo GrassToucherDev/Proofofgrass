@@ -1,5 +1,6 @@
 // pages/wago-drops/settings.js
 import { useState, useEffect } from "react";
+import WagoAvatar from "../../components/wago-drops/WagoAvatar";
 import Head from "next/head";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
@@ -80,10 +81,7 @@ export default function WagoDropsSettings() {
           {/* Account section */}
           <Section title="Account">
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              {session?.user?.image && (
-                <img src={session.user.image} alt=""
-                  style={{ width: 48, height: 48, borderRadius: "50%", border: `1px solid ${T.border}` }} />
-              )}
+              <WagoAvatar src={session?.user?.image} size={48} border={`1px solid ${T.border}`} />
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: T.white }}>{session?.user?.name}</div>
                 <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{session?.user?.email}</div>
