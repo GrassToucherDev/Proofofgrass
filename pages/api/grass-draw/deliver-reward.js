@@ -61,10 +61,18 @@ export default async function handler(req, res) {
         }]);
       }
 
-      // Also increment Streaks.shield_count as fallback
-      await supabase.from('Streaks')
-        .update({ shield_count: supabase.rpc('increment', { x: 1 }) })
-        .ilike('username', username);
+      // Keep Streaks.shield_count in step (lock_in_streak falls back to it when the
+      // UserConsumables balance is 0). Read-modify-write; the previous
+      // update({ shield_count: supabase.rpc(...) }) passed a query builder as the value
+      // and never incremented anything.
+      const { data: streakRow } = await supabase.from('Streaks')
+        .select('shield_count').ilike('username', username).maybeSingle();
+      if (streakRow) {
+        const { error: scErr } = await supabase.from('Streaks')
+          .update({ shield_count: (streakRow.shield_count || 0) + 1 })
+          .ilike('username', username);
+        if (scErr) console.warn('[deliver-reward] shield_count sync failed', scErr.message);
+      }
 
       // Log consumable event
       await supabase.from('ConsumableEvents').insert([{
