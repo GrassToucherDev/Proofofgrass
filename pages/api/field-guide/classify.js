@@ -1,5 +1,21 @@
 // pages/api/field-guide/classify.js
-export const config = { api: { bodyParser: { sizeLimit: "10mb" } } };
+// Vercel caps request bodies at ~4.5 MB regardless of this; the client shrinks photos before sending.
+export const config = { api: { bodyParser: { sizeLimit: "6mb" } } };
+
+const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_BASE64_CHARS = 5_500_000;
+
+// Best-effort per-IP limiter (per server instance — it slows abuse, it doesn't stop a determined one).
+const HITS = new Map();
+function rateLimited(req) {
+  const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "unknown";
+  const now = Date.now(), WINDOW = 10 * 60 * 1000, MAX = 15;
+  const recent = (HITS.get(ip) || []).filter(t => now - t < WINDOW);
+  recent.push(now);
+  HITS.set(ip, recent);
+  if (HITS.size > 5000) for (const [k, v] of HITS) if (!v.some(t => now - t < WINDOW)) HITS.delete(k);
+  return recent.length > MAX;
+}
 
 const COLLECTION_PROMPTS = {
   skies: {
@@ -37,10 +53,21 @@ const COLLECTION_PROMPTS = {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { imageBase64, mimeType, collectionSlug, existingLabels } = req.body;
+  const { imageBase64, mimeType, collectionSlug } = req.body || {};
+  const existingLabels = Array.isArray(req.body?.existingLabels)
+    ? req.body.existingLabels.slice(0, 30).map(l => String(l).slice(0, 80)) : [];
 
   if (!imageBase64 || !collectionSlug) {
     return res.status(400).json({ error: "Missing imageBase64 or collectionSlug" });
+  }
+  if (!ALLOWED_MIME.includes(mimeType || "image/jpeg")) {
+    return res.status(400).json({ error: "Unsupported image type. Please use a JPEG, PNG, WebP or GIF photo." });
+  }
+  if (typeof imageBase64 !== "string" || imageBase64.length > MAX_BASE64_CHARS) {
+    return res.status(413).json({ error: "That photo is too large. Try a smaller one." });
+  }
+  if (rateLimited(req)) {
+    return res.status(429).json({ error: "Too many photos submitted. Please wait a few minutes and try again." });
   }
 
   const prompt = COLLECTION_PROMPTS[collectionSlug];
@@ -132,18 +159,18 @@ Respond ONLY with valid JSON in this exact format:
       result = JSON.parse(clean);
     } catch(parseErr) {
       console.error("[classify] JSON parse failed. Raw text:", text);
-      const lowerText = text.toLowerCase();
-      const approved = lowerText.includes('"approved": true') ||
-                       lowerText.includes('"approved":true') ||
-                       lowerText.includes("qualifies") ||
-                       lowerText.includes("approve");
+      // Only trust an explicit "approved": true/false. The old keyword fallback matched words like
+      // "disapprove" / "not approved" and approved photos the model had rejected.
+      const m = text.match(/"approved"\s*:\s*(true|false)/i);
+      if (!m) return res.status(502).json({ error: "Couldn't read the verification result. Please try again." });
       result = {
-        approved,
-        label: "outdoor nature photo",
+        approved: m[1].toLowerCase() === "true",
+        label: (text.match(/"label"\s*:\s*"([^"]{1,80})"/) || [])[1] || "outdoor nature photo",
         confidence: "medium",
-        reason: "Verified.",
+        reason: (text.match(/"reason"\s*:\s*"([^"]{1,300})"/) || [])[1] || "Verified.",
       };
     }
+    result.approved = result.approved === true;
 
     return res.status(200).json(result);
 
