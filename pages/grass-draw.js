@@ -194,8 +194,9 @@ export default function GrassDraw() {
     @media(max-width:900px) { .gd-reward-grid { grid-template-columns:repeat(2,1fr) !important; } }
     @media(max-width:600px) {
       .gd-reward-grid { grid-template-columns:repeat(2,1fr) !important; }
-      .gd-stats-row { flex-wrap:wrap; }
-      .gd-stats-row > div { min-width:calc(50% - 5px); }
+      /* Stat cards go full width under the big total and sit 2x2, instead of four slivers beside it */
+      .gd-stats-row { flex:1 1 100% !important; flex-wrap:wrap; }
+      .gd-stats-row > div { flex:1 1 calc(50% - 5px) !important; min-width:calc(50% - 5px); box-sizing:border-box; }
       .gd-how-aside { display:none !important; }
     }
   `;
