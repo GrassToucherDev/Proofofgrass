@@ -218,11 +218,9 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}
       else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
       ctx.drawImage(ci,dx,dy,dw,dh);
-    } catch {
-      // Fallback gradient
-      const gb = ctx.createLinearGradient(0,0,0,H);
-      gb.addColorStop(0,"#c5e3f7"); gb.addColorStop(1,"#d8f0e8");
-      ctx.fillStyle=gb; ctx.fillRect(0,0,W,H);
+    } catch(e) {
+      // Don't silently ship a card without the pack — let the caller retry.
+      throw new Error("cover_load_failed: " + (e?.message || e));
     }
   } else {
     const gb = ctx.createLinearGradient(0,0,0,H);
@@ -248,11 +246,11 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   const TOP_Y = 40, TOP_H = 300;
 
   // Identity glass panel — left side
-  const ID_X = 36, ID_Y = TOP_Y, ID_W = 580, ID_H = TOP_H;
+  const ID_X = 36, ID_Y = TOP_Y, ID_W = 640, ID_H = TOP_H;
   glassPanel(ID_X, ID_Y, ID_W, ID_H, 20, 0.80);
 
   // ── Avatar — centered vertically in panel ────────────────────────────────
-  const AV = 200, AV_X = ID_X + 20, AV_Y = ID_Y + (ID_H - AV) / 2;
+  const AV = 184, AV_X = ID_X + 22, AV_Y = ID_Y + (ID_H - AV) / 2;
   // Avatar glow
   ctx.save();
   ctx.shadowColor = accent + "66"; ctx.shadowBlur = 28;
@@ -283,22 +281,26 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   ctx.fillText("✓", AV_X+AV-12, AV_Y+AV-7); ctx.textAlign = "left";
 
   // ── Right side content ────────────────────────────────────────────────────
-  const NX = AV_X + AV + 24;
-  const maxNW = ID_X + ID_W - NX - 16;
+  const NX = AV_X + AV + 26;
+  const PAD_R = 24;
+  const maxNW = ID_X + ID_W - NX - PAD_R;
 
-  // Username
-  const uSz = username.length>18 ? 36 : username.length>14 ? 44 : username.length>11 ? 52 : 60;
-  const NY = ID_Y + 52;
+  // Username — shrink the font to fit instead of truncating
+  const NY = ID_Y + 60;
+  const fullName = "@" + username;
+  let uSz = 60;
   ctx.font = `700 ${uSz}px 'Playfair Display',Georgia,serif`;
+  while (ctx.measureText(fullName).width > maxNW && uSz > 30) {
+    uSz -= 2;
+    ctx.font = `700 ${uSz}px 'Playfair Display',Georgia,serif`;
+  }
   ctx.fillStyle = "#1a4a0a";
   ctx.shadowColor = "rgba(255,255,255,0.8)"; ctx.shadowBlur = 10;
-  ctx.save();
-  ctx.beginPath(); ctx.rect(NX, ID_Y, maxNW, ID_H); ctx.clip();
-  let uText = "@" + username;
-  while(ctx.measureText(uText).width > maxNW && uText.length > 4) uText = uText.slice(0,-1);
-  if(uText.length < ("@"+username).length) uText = uText.slice(0,-1) + "…";
+  let uText = fullName;
+  while (ctx.measureText(uText).width > maxNW && uText.length > 4) uText = uText.slice(0,-1);
+  if (uText.length < fullName.length) uText = uText.slice(0,-1) + "…";
+  ctx.textAlign = "left";
   ctx.fillText(uText, NX, NY);
-  ctx.restore();
   ctx.shadowBlur = 0;
 
   // Thin accent rule under username
@@ -307,11 +309,11 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
   const ur = ctx.createLinearGradient(NX,0,NX+maxNW,0);
   ur.addColorStop(0,accent); ur.addColorStop(1,"rgba(0,0,0,0)");
   ctx.strokeStyle=ur; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(NX,NY+10); ctx.lineTo(NX+maxNW,NY+10); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(NX,NY+12); ctx.lineTo(NX+maxNW,NY+12); ctx.stroke();
   ctx.restore();
 
-  // Chips row — horizontal layout to fill width
-  const C_Y = NY + 24;
+  // Chips — wrap onto a second row instead of silently dropping any (the pack chip
+  // used to vanish when the row overflowed)
   const chips = [
     { txt:"✦ VERIFIED OUTDOORS", bg:"rgba(125,200,50,0.18)", border:"rgba(125,200,50,0.5)", color:"#1a4a0a" },
     { txt:`✦ ${tierTitle.toUpperCase()}`,  bg:accent+"22",             border:accent,                color:"#1a4a0a" },
@@ -328,47 +330,54 @@ async function generateShareImage({ username, streak, tier, tierTitle, grassScor
       theme.name.includes("Moon")?"🌕":theme.name.includes("Lagoon")?"💧":"🎨";
     chips.push({ txt:`${skinEmoji} ${theme.name.toUpperCase()}`, bg:"rgba(255,255,255,0.75)", border:"rgba(200,220,190,0.6)", color:"#1a4a0a" });
   }
-  ctx.font = "700 12px 'Plus Jakarta Sans',sans-serif";
-  let chipX = NX;
+  const CHIP_H = 30, CHIP_GAP = 8, CHIP_FONT = "700 14px 'Plus Jakarta Sans',sans-serif";
+  ctx.font = CHIP_FONT;
+  let chipX = NX, chipY = NY + 32;
   chips.forEach(chip => {
-    const cw = ctx.measureText(chip.txt).width + 24;
-    if(chipX + cw > ID_X + ID_W - 12) return; // skip if overflow
+    const cw = Math.min(maxNW, ctx.measureText(chip.txt).width + 28);
+    if (chipX > NX && chipX + cw > NX + maxNW) { chipX = NX; chipY += CHIP_H + 8; }
     ctx.fillStyle = chip.bg;
-    roundRect(ctx, chipX, C_Y, cw, 26, 13); ctx.fill();
+    roundRect(ctx, chipX, chipY, cw, CHIP_H, CHIP_H/2); ctx.fill();
     ctx.strokeStyle = chip.border; ctx.lineWidth = 1.5;
-    roundRect(ctx, chipX, C_Y, cw, 26, 13); ctx.stroke();
-    ctx.fillStyle = chip.color;
-    ctx.fillText(chip.txt, chipX+12, C_Y+18);
-    chipX += cw + 8;
+    roundRect(ctx, chipX, chipY, cw, CHIP_H, CHIP_H/2); ctx.stroke();
+    ctx.fillStyle = chip.color; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText(chip.txt, chipX+14, chipY + CHIP_H/2 + 1);
+    ctx.textBaseline = "alphabetic";
+    chipX += cw + CHIP_GAP;
   });
 
-  // Mini stats row — fills the lower space
-  const MS_Y = C_Y + 80;
+  // Mini stats — three equal columns pinned to the bottom of the panel. Every
+  // column shares the same left inset, label baseline and value baseline, and a
+  // value is scaled down if it would spill into the next column.
   const miniStats = [
     { label:"STREAK",     value:`${streak}d`,                    color:accent },
     { label:"GRASS SCORE",value:grassScore>=1000?(grassScore/1000).toFixed(1)+"K":String(grassScore), color:"#2d7a1a" },
     { label:"RANK",       value:rank?`#${rank}`:"—",             color:"#a07820" },
   ];
-  ctx.font = "800 13px 'Plus Jakarta Sans',sans-serif";
-  const msColW = (maxNW + 60) / miniStats.length;
+  const msW = [0.28, 0.40, 0.32].map(f => f * maxNW);   // GRASS SCORE needs the widest column
+  const msX = [0, msW[0], msW[0] + msW[1]];
+  const MS_LABEL_Y = ID_Y + ID_H - 78;
+  const MS_VALUE_Y = ID_Y + ID_H - 30;
   miniStats.forEach((ms, i) => {
-    const mx = NX + msColW * i;
-    // Divider
-    if(i > 0) {
-      ctx.save(); ctx.globalAlpha = 0.25;
+    const colX = NX + msX[i];
+    const tx = colX + (i > 0 ? 16 : 0);
+    const colTextW = msW[i] - (i > 0 ? 16 : 0) - 10;
+    if (i > 0) {
+      ctx.save(); ctx.globalAlpha = 0.3;
       ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(mx, MS_Y-10); ctx.lineTo(mx, MS_Y+68); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(colX, MS_LABEL_Y - 14); ctx.lineTo(colX, MS_VALUE_Y + 6); ctx.stroke();
       ctx.restore();
     }
-    // Label
-    ctx.font = "700 12px 'Plus Jakarta Sans',sans-serif";
-    ctx.fillStyle = "#6b7d60"; ctx.textAlign = "left";
-    ctx.fillText(ms.label, mx + (i>0?14:0), MS_Y+14);
-    // Value — bigger
-    ctx.font = "800 46px 'Playfair Display',Georgia,serif";
+    ctx.textAlign = "left";
+    ctx.font = "700 14px 'Plus Jakarta Sans',sans-serif";
+    ctx.fillStyle = "#6b7d60";
+    ctx.fillText(ms.label, tx, MS_LABEL_Y);
+    let vSz = 46;
+    ctx.font = `800 ${vSz}px 'Playfair Display',Georgia,serif`;
+    while (ctx.measureText(ms.value).width > colTextW && vSz > 24) { vSz -= 2; ctx.font = `800 ${vSz}px 'Playfair Display',Georgia,serif`; }
     ctx.fillStyle = ms.color;
     ctx.shadowColor = ms.color+"55"; ctx.shadowBlur = 10;
-    ctx.fillText(ms.value, mx + (i>0?14:0), MS_Y+52);
+    ctx.fillText(ms.value, tx, MS_VALUE_Y);
     ctx.shadowBlur = 0;
   });
   ctx.textAlign = "left";
@@ -510,6 +519,67 @@ function roundRect(ctx,x,y,w,h,r){
   ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
 }
 
+// Loads an image for canvas use without tainting it. Tries a CORS <img> load first,
+// then a fetch→blob load, then a cache-busted retry. The retries matter because a
+// cached non-CORS copy of the same URL (e.g. from the on-page <img>) can make the
+// CORS load fail intermittently, especially on iOS Safari.
+function loadImageOnce(src, mode, timeoutMs){
+  return new Promise((res,rej)=>{
+    const timer = setTimeout(() => rej(new Error("loadImage timeout: " + src)), timeoutMs);
+    const done = (val) => { clearTimeout(timer); res(val); };
+    const fail = (err) => { clearTimeout(timer); rej(err); };
+    if (mode === "img") {
+      const img=new Image(); img.crossOrigin="anonymous";
+      img.onload=()=>done(img);
+      img.onerror=()=>fail(new Error("img load failed: "+src));
+      img.src=src;
+      return;
+    }
+    const url = mode === "bust" ? src + (src.includes("?")?"&":"?") + "cb=" + Date.now() : src;
+    fetch(url,{mode:"cors", cache: mode === "bust" ? "reload" : "default"})
+      .then(r=>{ if(!r.ok) throw new Error("http "+r.status); return r.blob(); })
+      .then(blob=>{
+        const obj=URL.createObjectURL(blob);
+        const img2=new Image();
+        img2.onload=()=>{URL.revokeObjectURL(obj);done(img2);};
+        img2.onerror=()=>{URL.revokeObjectURL(obj);fail(new Error("img load failed"));};
+        img2.src=obj;
+      })
+      .catch(fail);
+  });
+}
+async function loadImage(src){
+  let lastErr;
+  for (const mode of ["img","fetch","bust"]) {
+    try { return await loadImageOnce(src, mode, 10000); }
+    catch(e){ lastErr = e; }
+  }
+  throw lastErr;
+}
+
+// Build the share image, retrying if the cover art can't be fetched. A themed card
+// that silently falls back to the plain gradient is worse than a short wait, so only
+// fall back to the plain card after several tries.
+async function generateShareImageReliable(params){
+  const attempts = params.theme?.imageUrl ? 3 : 1;
+  for (let i = 0; i < attempts; i++) {
+    try { return await generateShareImage(params); }
+    catch(e) {
+      console.warn(`[flex] card gen attempt ${i+1} failed:`, e?.message);
+      if (i < attempts - 1) await new Promise(r => setTimeout(r, 1200 * (i + 1)));
+    }
+  }
+  return generateShareImage({ ...params, theme: { ...params.theme, imageUrl: null } });
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath(); ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+}
+
 function loadImage(src){
   return new Promise((res,rej)=>{
     const timer = setTimeout(() => rej(new Error("loadImage timeout: " + src)), 8000);
@@ -622,15 +692,8 @@ export default function FlexCardPage() {
     flexDataUrl.current  = null;
     (async () => {
       try {
-        let params = buildImageParams();
-        let dataUrl;
-        try {
-          dataUrl = await generateShareImage(params);
-        } catch(e) {
-          // Canvas may be tainted by a cross-origin cover image — retry without cover
-          console.warn("[flex] card gen failed, retrying without cover:", e?.message);
-          dataUrl = await generateShareImage({ ...params, theme: { ...params.theme, imageUrl: null } });
-        }
+        const params = buildImageParams();
+        const dataUrl = await generateShareImageReliable(params);
         if (cancelled) return;
         flexDataUrl.current = dataUrl;
         const res  = await fetch(dataUrl);
@@ -695,7 +758,7 @@ export default function FlexCardPage() {
   const downloadCard = useCallback(async () => {
     setGeneratingImg(true);
     try {
-      const dataUrl = await generateShareImage(buildImageParams());
+      const dataUrl = await generateShareImageReliable(buildImageParams());
       const link = document.createElement("a");
       link.download = `proof-of-grass-${username}-day${streak}.png`;
       link.href = dataUrl; link.click();
