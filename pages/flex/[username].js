@@ -572,37 +572,6 @@ async function generateShareImageReliable(params){
   return generateShareImage({ ...params, theme: { ...params.theme, imageUrl: null } });
 }
 
-function roundRect(ctx,x,y,w,h,r){
-  ctx.beginPath(); ctx.moveTo(x+r,y);
-  ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
-  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
-  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
-  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
-}
-
-function loadImage(src){
-  return new Promise((res,rej)=>{
-    const timer = setTimeout(() => rej(new Error("loadImage timeout: " + src)), 8000);
-    const done = (val) => { clearTimeout(timer); res(val); };
-    const fail = (err) => { clearTimeout(timer); rej(err); };
-    const img=new Image(); img.crossOrigin="anonymous";
-    img.onload=()=>done(img);
-    img.onerror=()=>{
-      fetch(src,{mode:"cors"})
-        .then(r=>r.blob())
-        .then(blob=>{
-          const url=URL.createObjectURL(blob);
-          const img2=new Image();
-          img2.onload=()=>{URL.revokeObjectURL(url);done(img2);};
-          img2.onerror=()=>{URL.revokeObjectURL(url);fail(new Error("img load failed"));};
-          img2.src=url;
-        })
-        .catch(fail);
-    };
-    img.src=src;
-  });
-}
-
 export default function FlexCardPage() {
   const router = useRouter();
   const { username: slug } = router.query;
