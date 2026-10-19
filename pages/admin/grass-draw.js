@@ -1,5 +1,6 @@
 // pages/admin/grass-draw.js
 import { useState, useEffect, useCallback } from "react";
+import { adminFetch } from "../../utils/adminClient";
 import Link from "next/link";
 import { supabase } from "../../utils/supabase";
 
@@ -285,7 +286,7 @@ function BonusesTab({ cycle, flash, reload }) {
         admin_username:"admin",
         ...(bonusType==="manual"?{amount:parseFloat(amount)}:{}),
       };
-      const r = await fetch("/api/grass-draw/award-bonus",{
+      const r = await adminFetch("/api/grass-draw/award-bonus",{
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify(body),
       });
@@ -534,7 +535,7 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
     if(!cycle) return flash("No active cycle","err");
     setDrawing(true);
     try {
-      const r = await fetch("/api/grass-draw/execute-draw", {
+      const r = await adminFetch("/api/grass-draw/execute-draw", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           cycle_id: cycle.id,
@@ -566,7 +567,7 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
 
   const deliverReward = async (winner) => {
     try {
-      const r = await fetch("/api/grass-draw/deliver-reward", {
+      const r = await adminFetch("/api/grass-draw/deliver-reward", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ winner_id: winner.id, admin_username:"admin" }),
       });

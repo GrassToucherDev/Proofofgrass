@@ -1,5 +1,6 @@
 // pages/grass-draw/leaf-draw.js
 import { useState, useEffect, useRef, useCallback } from "react";
+import { adminFetch } from "../../utils/adminClient";
 import Head from "next/head";
 import { supabase } from "../../utils/supabase";
 
@@ -89,7 +90,7 @@ export default function LeafDraw() {
 
     try {
       // Step 1: Run server-side draw (dry run to get winner)
-      const r = await fetch("/api/grass-draw/execute-draw", {
+      const r = await adminFetch("/api/grass-draw/execute-draw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,7 +144,7 @@ export default function LeafDraw() {
   const confirmWinner = async () => {
     if (!drawResult || confirmed) return;
     try {
-      const r = await fetch("/api/grass-draw/execute-draw", {
+      const r = await adminFetch("/api/grass-draw/execute-draw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

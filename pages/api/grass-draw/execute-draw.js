@@ -2,8 +2,11 @@
 // Server-side weighted random draw engine
 // Auditable, seed-based, excludes ineligible users per draw order rules
 
+import { isAdminRequest } from "../../../utils/adminApi";
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!isAdminRequest(req)) return res.status(401).json({ error: 'Admin authorization required' });
 
   const { cycle_id, draw_type, admin_username, dry_run = false } = req.body;
 
