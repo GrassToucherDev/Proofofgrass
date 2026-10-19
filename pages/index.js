@@ -378,7 +378,9 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
             imageSrc={imageSrc}
             proofFile={proofFile}
             username={username}
-            initialStreak={(resolvedStreak ?? 0) + 1}
+            // resolvedStreak is already the streak AFTER today's post (see computePreviewStreak);
+            // adding 1 here double-counted and made the card disagree with the platform.
+            initialStreak={resolvedStreak ?? 1}
             onRetake={onRetake}
           />
         </div>
