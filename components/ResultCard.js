@@ -183,6 +183,8 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
   const [sunsetActivated,setSunsetActivated]= useState(false);
   const [sunsetPasses,   setSunsetPasses]   = useState(0);
   const [activatingSunset,setActivatingSunset]=useState(false);
+  const [sunsetMode,     setSunsetMode]     = useState(null);   // "arm" (before midnight UTC) | "apply" (00:00–02:00 UTC)
+  const [sunsetError,    setSunsetError]    = useState("");
   const [luckyTouch,     setLuckyTouch]     = useState(null);
   const [selectedTheme,  setSelectedTheme]  = useState("classic");
   const [inAppBrowserMode,setInAppBrowserMode]=useState(false);
@@ -253,6 +255,42 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
   const selectShareStyle=(style)=>{
     setShareStyle(style);
     try{localStorage.setItem("pog_preferred_share_style",style);}catch{}
+  };
+
+  // ── Sunset Pass ───────────────────────────────────────────────────────────
+  // Only relevant 23:00–02:00 UTC, and only when a pass would save a live streak.
+  const sunsetUser = ()=> username ||
+    (typeof localStorage !== "undefined" ? localStorage.getItem("pog_username")?.replace(/@/g,"").toLowerCase().trim() : null);
+  const refreshSunset = useCallback(async()=>{
+    const u = sunsetUser();
+    if(!u) return;
+    try{
+      const r = await fetch(`/api/sunset/status?username=${encodeURIComponent(u)}`);
+      if(!r.ok) return;
+      const d = await r.json();
+      setSunsetMode(d.window||null);
+      setSunsetPasses(d.passes||0);
+      setSunsetActivated(!!d.activated && !!d.needed);
+      setSunsetWarning(!!d.window && !!d.needed);
+    }catch{}
+  },[username]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(()=>{
+    refreshSunset();
+    const t=setInterval(refreshSunset,60000);
+    return ()=>clearInterval(t);
+  },[refreshSunset]);
+  const activateSunset = async()=>{
+    const u = sunsetUser();
+    if(!u||activatingSunset) return;
+    setActivatingSunset(true); setSunsetError("");
+    try{
+      const r = await fetch("/api/sunset/activate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u})});
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error||"Couldn't activate");
+      setSunsetPasses(d.passes_remaining??0);
+      setSunsetActivated(true);
+    }catch(e){ setSunsetError(e.message||"Couldn't activate"); }
+    setActivatingSunset(false);
   };
 
   // ── Lock In Streak ────────────────────────────────────────────────────────
@@ -715,15 +753,20 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               background:"rgba(232,160,32,0.08)", border:"1px solid rgba(232,160,32,0.3)",
               display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:13, fontWeight:700, color:"#c8a84b", marginBottom:2 }}>⏰ Deadline in ~1 hour</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"#c8a84b", marginBottom:2 }}>
+                  {sunsetMode==="apply"?"⏰ Yesterday's deadline just passed":"⏰ Deadline in under an hour"}
+                </div>
                 <div style={{ fontSize:11, color:"rgba(200,168,75,0.7)" }}>
                   {sunsetPasses>0
-                    ?`You have ${sunsetPasses} Sunset Pass${sunsetPasses>1?"es":""}. Activate to extend to 2:00 AM UTC.`
+                    ?(sunsetMode==="apply"
+                        ?`Use a Sunset Pass and this post counts for yesterday, keeping your streak alive. You have ${sunsetPasses}.`
+                        :`You have ${sunsetPasses} Sunset Pass${sunsetPasses>1?"es":""}. Activate to extend to 2:00 AM UTC.`)
                     :"No Sunset Passes. Purchase one in the Marketplace."}
                 </div>
+                {sunsetError && <div style={{ fontSize:11, color:"#e05252", marginTop:4 }}>{sunsetError}</div>}
               </div>
               {sunsetPasses>0 && (
-                <button onClick={()=>{}} disabled={activatingSunset}
+                <button onClick={activateSunset} disabled={activatingSunset}
                   style={{ background:"rgba(200,168,75,0.15)", border:"1px solid rgba(200,168,75,0.4)",
                     borderRadius:8, padding:"8px 14px", color:"#c8a84b", fontSize:12, fontWeight:700,
                     cursor:"pointer", flexShrink:0, opacity:activatingSunset?0.6:1, fontFamily:"DM Sans,sans-serif" }}>
@@ -735,7 +778,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           {sunsetActivated && (
             <div style={{ fontSize:12, color:"#5ba622", padding:"8px 12px", borderRadius:8,
               background:"rgba(125,200,50,0.08)", border:"1px solid rgba(125,200,50,0.2)" }}>
-              🌅 Sunset Pass active — deadline extended to 2:00 AM UTC
+              🌅 Sunset Pass active — {sunsetMode==="apply"?"this post will count for yesterday":"deadline extended to 2:00 AM UTC"}
             </div>
           )}
 
