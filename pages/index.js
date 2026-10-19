@@ -482,7 +482,9 @@ export default function Home() {
   const [dailyCount,           setDailyCount]           = useState(null);
   const [totalProofs,          setTotalProofs]          = useState(null);
   const [topStreaker,          setTopStreaker]           = useState(null);
-  const [leaders,              setLeaders]              = useState([]);
+  const [lbMode,               setLbMode]               = useState("grass_score");
+  const [leaderboards,         setLeaderboards]         = useState({});
+  const [lbLoading,            setLbLoading]            = useState(false);
   const [mounted,              setMounted]              = useState(false);
   const [pendingChallenges,    setPendingChallenges]    = useState([]);
   const [challengeActioning,   setChallengeActioning]   = useState(null);
@@ -620,13 +622,32 @@ export default function Home() {
     if (streakers?.[0]) setTopStreaker({ username: normalizeUsername(streakers[0].username), streak: streakers[0].current_streak ?? 1 });
   }, []);
 
-  const fetchLeaderboard = useCallback(async () => {
-    const { data } = await supabase.from("Streaks").select("username,current_streak")
-      .order("current_streak",{ascending:false}).limit(8);
-    if (data) setLeaders(data.map(r => ({ username: normalizeUsername(r.username), streak: r.current_streak ?? 1 })));
+  // Mini leaderboard: switch between Grass Score, Streak and Referrals. Each board loads on first view.
+  const fetchLeaderboard = useCallback(async (mode) => {
+    setLbLoading(true);
+    try {
+      let rows = [];
+      if (mode === "streak") {
+        const { data } = await supabase.from("Streaks").select("username,current_streak")
+          .order("current_streak",{ascending:false}).limit(5);
+        rows = (data||[]).map(r => ({ username: normalizeUsername(r.username), value: r.current_streak ?? 0, suffix: "d" }));
+      } else if (mode === "referrals") {
+        const { data } = await supabase.from("Profiles").select("username,referral_count_successful")
+          .gt("referral_count_successful",0)
+          .order("referral_count_successful",{ascending:false}).limit(5);
+        rows = (data||[]).map(r => ({ username: normalizeUsername(r.username), value: r.referral_count_successful ?? 0, suffix: "" }));
+      } else {
+        const { data } = await supabase.from("Profiles").select("username,grass_score")
+          .order("grass_score",{ascending:false,nullsFirst:false}).limit(5);
+        rows = (data||[]).map(r => ({ username: normalizeUsername(r.username), value: r.grass_score ?? 0, suffix: "" }));
+      }
+      setLeaderboards(prev => ({ ...prev, [mode]: rows }));
+    } catch(e) { console.warn("[leaderboard] load failed:", e?.message); }
+    setLbLoading(false);
   }, []);
 
-  useEffect(() => { fetchStats(); fetchLeaderboard(); }, []);
+  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => { if (!leaderboards[lbMode]) fetchLeaderboard(lbMode); }, [lbMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Challenge actions
   const handleChallengeAction = useCallback(async (challenge, action) => {
@@ -929,17 +950,33 @@ export default function Home() {
             ) : (
               <div style={{ ...V2Styles.glassCard, padding: "20px" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
-                  textTransform: "uppercase", color: V2.grassGreen, marginBottom: 12 }}>Leaderboard</div>
-                {leaders.slice(0,5).map((l,i) => (
-                <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0",
-                  borderBottom:i<4?"1px solid rgba(200,220,190,0.4)":"none" }}>
-                  <div style={{ width:28, textAlign:"center", fontWeight:700, color:"#6b7d60", fontSize:14 }}>
-                    {i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}
-                  </div>
-                  <div style={{ flex:1, fontSize:13, fontWeight:600, color:"#1a4a0a" }}>{"@"+l.username}</div>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#5ba622" }}>{(l.streak||0).toLocaleString()}d</div>
+                  textTransform: "uppercase", color: V2.grassGreen, marginBottom: 10 }}>Leaderboard</div>
+                <div role="tablist" style={{ display:"flex", gap:4, padding:3, borderRadius:10, marginBottom:8,
+                  background:"rgba(200,220,190,0.3)" }}>
+                  {[["grass_score","Grass Score"],["streak","Streak"],["referrals","Referrals"]].map(([k,label]) => (
+                    <button key={k} role="tab" aria-selected={lbMode===k} onClick={()=>setLbMode(k)}
+                      style={{ flex:1, padding:"7px 4px", borderRadius:8, border:"none", cursor:"pointer",
+                        fontSize:11, fontWeight:700, fontFamily:"inherit", whiteSpace:"nowrap",
+                        background:lbMode===k?"white":"transparent",
+                        color:lbMode===k?"#1a4a0a":"#6b7d60",
+                        boxShadow:lbMode===k?"0 1px 4px rgba(26,74,10,0.12)":"none" }}>{label}</button>
+                  ))}
                 </div>
-              ))}
+                {(() => {
+                  const rows = leaderboards[lbMode];
+                  if (!rows) return <div style={{ padding:"18px 0", textAlign:"center", fontSize:12, color:"#6b7d60" }}>{lbLoading?"Loading…":"—"}</div>;
+                  if (!rows.length) return <div style={{ padding:"18px 0", textAlign:"center", fontSize:12, color:"#6b7d60" }}>No {lbMode==="referrals"?"referrals yet — invite a friend!":"entries yet"}</div>;
+                  return rows.map((l,i) => (
+                    <div key={l.username+i} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0",
+                      borderBottom:i<rows.length-1?"1px solid rgba(200,220,190,0.4)":"none" }}>
+                      <div style={{ width:28, textAlign:"center", fontWeight:700, color:"#6b7d60", fontSize:14 }}>
+                        {i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}
+                      </div>
+                      <Link href={"/u/"+l.username} style={{ flex:1, fontSize:13, fontWeight:600, color:"#1a4a0a", textDecoration:"none" }}>{"@"+l.username}</Link>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#5ba622" }}>{l.value.toLocaleString()}{l.suffix}</div>
+                    </div>
+                  ));
+                })()}
                 <Link href="/leaderboard" style={{ display: "block", textAlign: "center",
                   marginTop: 12, fontSize: 12, color: V2.grassGreen, textDecoration: "none" }}>
                   View Full Leaderboard →
