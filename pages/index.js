@@ -937,7 +937,7 @@ export default function Home() {
                     {i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}
                   </div>
                   <div style={{ flex:1, fontSize:13, fontWeight:600, color:"#1a4a0a" }}>{"@"+l.username}</div>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#5ba622" }}>{(l.grass_score||l.current_streak||0).toLocaleString()}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#5ba622" }}>{(l.streak||0).toLocaleString()}d</div>
                 </div>
               ))}
                 <Link href="/leaderboard" style={{ display: "block", textAlign: "center",
