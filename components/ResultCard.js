@@ -880,7 +880,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
 
             <div role="radiogroup" aria-label="Proof style" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
               {[
-                {id:"outdoor_photo",title:"Outdoor photo",sub:"Authentic and simple",src:imageSrc,badge:"Recommended"},
+                {id:"outdoor_photo",title:"Outdoor photo",sub:"Authentic and simple",src:imageSrc},
                 {id:"result_card",title:"Result card",sub:"Branded, streak-focused",src:downloadUrl},
               ].map(o=>{
                 const on=shareStyle===o.id;
@@ -893,10 +893,6 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                       transition:"all .15s",fontFamily:"DM Sans,sans-serif",display:"flex",flexDirection:"column",gap:8}}>
                     <div style={{position:"relative",width:"100%",aspectRatio:"4 / 3",borderRadius:10,overflow:"hidden",background:"rgba(200,220,190,0.25)"}}>
                       {o.src && <img src={o.src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />}
-                      {o.badge && (
-                        <span style={{position:"absolute",left:6,top:6,fontSize:9.5,fontWeight:800,letterSpacing:"0.06em",textTransform:"uppercase",
-                          color:"white",background:"rgba(26,74,10,0.82)",borderRadius:20,padding:"3px 8px"}}>{o.badge}</span>
-                      )}
                       <span aria-hidden="true" style={{position:"absolute",right:6,top:6,width:22,height:22,borderRadius:"50%",
                         background:on?"#5ba622":"rgba(255,255,255,0.9)",border:on?"none":"1.5px solid rgba(200,220,190,0.9)",
                         color:"white",fontSize:12,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{on?"✓":""}</span>
