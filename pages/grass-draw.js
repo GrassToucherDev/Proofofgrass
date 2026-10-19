@@ -194,6 +194,9 @@ export default function GrassDraw() {
     @media(max-width:900px) { .gd-reward-grid { grid-template-columns:repeat(2,1fr) !important; } }
     @media(max-width:600px) {
       .gd-reward-grid { grid-template-columns:repeat(2,1fr) !important; }
+      /* Centre the big total and the lookup button on phones */
+      .gd-total { flex:1 1 100% !important; text-align:center; }
+      .gd-check-btn { flex:1 1 100% !important; justify-content:center; text-align:center; }
       /* Stat cards go full width under the big total and sit 2x2, instead of four slivers beside it */
       .gd-stats-row { flex:1 1 100% !important; flex-wrap:wrap; }
       .gd-stats-row > div { flex:1 1 calc(50% - 5px) !important; min-width:calc(50% - 5px); box-sizing:border-box; }
@@ -332,7 +335,7 @@ export default function GrassDraw() {
                     color:V2.forestGreen, background:"transparent", fontFamily:V2.fontSans }}
                 />
               </div>
-              <button onClick={fetchUserData} disabled={loading || !username || !cycle}
+              <button className="gd-check-btn" onClick={fetchUserData} disabled={loading || !username || !cycle}
                 style={{ ...V2Styles.btnPrimary, fontSize:15, padding:"12px 28px",
                   opacity:(!username||!cycle)?0.5:1,
                   cursor:(!username||!cycle)?"default":"pointer", flexShrink:0 }}>
@@ -358,7 +361,7 @@ export default function GrassDraw() {
 
               <div style={{ display:"flex", gap:16, flexWrap:"wrap", marginBottom:20, alignItems:"flex-start" }}>
                 {/* Total entries — large */}
-                <div style={{ minWidth:140 }}>
+                <div className="gd-total" style={{ minWidth:140 }}>
                   {loading ? <Skel h={64} r={6} /> : (
                     <>
                       <div style={{ fontFamily:V2.fontSerif, fontSize:"clamp(48px,8vw,72px)",
