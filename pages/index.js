@@ -9,6 +9,7 @@ import V2BottomNav from "../components/V2BottomNav";
 import V2Ticker from "../components/V2Ticker";
 import { supabase } from "../utils/supabase";
 import WagoCard from "../components/WagoCard";
+import SecureUsernameCard from "../components/SecureUsernameCard";
 import { getSpotlightBadge, getSpotlightFeedText, SPOTLIGHT_BADGES } from "../utils/spotlightBadges";
 import { V2, V2Styles, V2GlobalCSS, V2_TIERS, getV2Tier } from "../utils/v2Theme";
 
@@ -752,6 +753,12 @@ export default function Home() {
 
       {/* Main page */}
       <div className="v2-page-wrap">
+
+        {username && (
+          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 16px 0" }}>
+            <SecureUsernameCard username={username} />
+          </div>
+        )}
 
         {/* ── HERO ────────────────────────────────────────────────────────── */}
         <section className="v2-hero">
