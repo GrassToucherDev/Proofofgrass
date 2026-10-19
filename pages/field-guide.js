@@ -35,6 +35,11 @@ const COLLECTIONS = [
   },
 ];
 
+// Older entries were saved under shorter slugs; treat them as the same collection.
+const SLUG_ALIASES = { plants_foliage:["plants_foliage","plants"], animals:["animals","wildlife"] };
+const slugsFor = (id) => SLUG_ALIASES[id] || [id];
+const canonicalSlug = (slug) => Object.keys(SLUG_ALIASES).find(k => SLUG_ALIASES[k].includes(slug)) || slug;
+
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 function Skel({ w="100%", h=16, r=8 }) {
   return <div style={{ width:w, height:h, borderRadius:r,
@@ -62,7 +67,7 @@ function Slot({ num, entry, onTapEmpty, onTapFilled, isOwner }) {
       onMouseLeave={e=>{ e.currentTarget.style.transform=""; }}>
       {filled ? (
         <>
-          <img src={entry.image_url} alt={`Slot ${num}`} loading="lazy"
+          <img src={entry.photo_url} alt={`Slot ${num}`} loading="lazy"
             style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }} />
           <div style={{ position:"absolute", inset:0,
             background:"linear-gradient(180deg,transparent 60%,rgba(0,0,0,0.5) 100%)" }} />
@@ -182,7 +187,7 @@ function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
       // 1. Is the slot still free? Check before spending an AI call or storage upload.
       const { data:slotTaken } = await supabase
         .from("FieldGuideEntries").select("id")
-        .eq("username", username).eq("collection_id", collection.id).eq("slot_number", slotNum)
+        .eq("username", username).in("collection_slug", slugsFor(collection.id)).eq("slot_number", slotNum)
         .maybeSingle();
       if (slotTaken) {
         setStatus("error"); setMessage("This slot is already filled."); return;
@@ -210,7 +215,7 @@ function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
       // Existing labels for this collection (so the AI can check the find is different)
       const { data: existingEntries } = await supabase
         .from("FieldGuideEntries").select("label")
-        .eq("username", username).eq("collection_id", collection.id);
+        .eq("username", username).in("collection_slug", slugsFor(collection.id));
       const existingLabels = (existingEntries || []).map(e => e.label).filter(Boolean);
 
       const classifyRes = await fetch("/api/field-guide/classify", {
@@ -247,12 +252,14 @@ function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
         .from("FieldGuideEntries")
         .insert([{
           username,
-          collection_id: collection.id,
+          collection_slug: collection.id,
           slot_number: slotNum,
-          image_url: urlData?.publicUrl,
+          photo_url: urlData?.publicUrl,
+          storage_path: path,
           label: result.label || "outdoor nature photo",
-          verified: true,
-          verification_method: "claude_vision",
+          ai_label: result.label || "outdoor nature photo",
+          ai_confidence: result.confidence || null,
+          status: "approved",
           submitted_at: new Date().toISOString(),
         }])
         .select("id").single();
@@ -370,7 +377,7 @@ function SlotDetailModal({ entry, onClose }) {
       <div style={{ background:"white", borderRadius:24, overflow:"hidden",
         maxWidth:480, width:"100%", boxShadow:"0 20px 60px rgba(26,74,10,0.2)" }}
         onClick={e=>e.stopPropagation()}>
-        <img src={entry.image_url} alt="" style={{ width:"100%", maxHeight:320, objectFit:"cover" }} />
+        <img src={entry.photo_url} alt="" style={{ width:"100%", maxHeight:320, objectFit:"cover" }} />
         <div style={{ padding:"20px 24px" }}>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
             <div>
@@ -385,7 +392,7 @@ function SlotDetailModal({ entry, onClose }) {
             </div>
             <div style={{ fontSize:12, fontWeight:700, color:V2.grassGreen,
               background:"rgba(125,200,50,0.1)", borderRadius:20, padding:"4px 12px" }}>
-              {entry.verified ? "✓ Verified" : "⏳ Pending"}
+              {entry.status === "approved" ? "✓ Verified" : "⏳ Pending"}
             </div>
           </div>
           <button onClick={onClose} style={{ ...V2Styles.btnSecondary, width:"100%",
@@ -398,22 +405,22 @@ function SlotDetailModal({ entry, onClose }) {
 
 // ── Recent find card ──────────────────────────────────────────────────────────
 function RecentFindCard({ find }) {
-  const col = COLLECTIONS.find(c => c.id === find.collection_id);
+  const col = COLLECTIONS.find(c => c.id === canonicalSlug(find.collection_slug));
   return (
     <div style={{ borderRadius:16, overflow:"hidden", position:"relative",
       aspectRatio:"1/1", background:"rgba(200,220,190,0.2)",
       boxShadow:"0 2px 12px rgba(26,74,10,0.1)", cursor:"pointer" }}>
-      <img src={find.image_url} alt="" loading="lazy"
+      <img src={find.photo_url} alt="" loading="lazy"
         style={{ width:"100%", height:"100%", objectFit:"cover" }}
         onError={e=>{e.currentTarget.style.display="none";}} />
       <div style={{ position:"absolute", inset:0,
         background:"linear-gradient(180deg,transparent 50%,rgba(0,0,0,0.7) 100%)" }} />
       <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"10px 12px" }}>
         <div style={{ fontSize:11, fontWeight:700, color:V2.grassLime, marginBottom:2 }}>
-          {col?.icon} {col?.name || find.collection_id}
+          {col?.icon} {col?.name || find.collection_slug}
         </div>
         <div style={{ fontSize:12, fontWeight:600, color:"white" }}>@{find.username}</div>
-        <div style={{ fontSize:10, color:"rgba(255,255,255,0.65)" }}>{find.label || "outdoor nature photo"}</div>
+        <div style={{ fontSize:10, color:"rgba(255,255,255,0.65)" }}>{find.label || find.ai_label || "outdoor nature photo"}</div>
       </div>
     </div>
   );
@@ -443,12 +450,12 @@ export default function FieldGuide() {
           .from("FieldGuideEntries")
           .select("*")
           .eq("username", username)
-          .eq("verified", true);
+          .eq("status", "approved");
 
         const grouped = {};
         COLLECTIONS.forEach(c => { grouped[c.id] = []; });
         (data || []).forEach(e => {
-          if (grouped[e.collection_id]) grouped[e.collection_id].push(e);
+          const k = canonicalSlug(e.collection_slug); if (grouped[k]) grouped[k].push(e);
         });
         setAllEntries(grouped);
       }
@@ -457,7 +464,7 @@ export default function FieldGuide() {
       const { data:recent } = await supabase
         .from("FieldGuideEntries")
         .select("*")
-        .eq("verified", true)
+        .eq("status", "approved")
         .order("submitted_at", { ascending:false })
         .limit(8);
       setRecentFinds(recent || []);
