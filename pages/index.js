@@ -376,7 +376,7 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
         <div style={{ marginBottom: 16 }}>
           <ResultCard
             imageSrc={imageSrc}
-            file={proofFile}
+            proofFile={proofFile}
             username={username}
             initialStreak={(resolvedStreak ?? 0) + 1}
           />

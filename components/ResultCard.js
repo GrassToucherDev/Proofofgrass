@@ -177,6 +177,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
   const [submitStatus,   setSubmitStatus]   = useState(null);
   const [submitError,    setSubmitError]    = useState("");
   const [shareHint,      setShareHint]      = useState(false);
+  const [shareFallbackMsg, setShareFallbackMsg] = useState("");
   const [showStylePicker,setShowStylePicker]= useState(false);
   const [shareInitiated, setShareInitiated] = useState(false);
   const [sunsetWarning,  setSunsetWarning]  = useState(false);
@@ -215,14 +216,13 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
   // Pre-build outdoor file
   useEffect(()=>{
     outdoorFileRef.current=null;
-    if(!proofFile) return;
     if(proofFile instanceof File){
-      outdoorFileRef.current=new File([proofFile],"proof-of-grass-outdoor.png",{type:proofFile.type||"image/png"});
+      outdoorFileRef.current=new File([proofFile],"proof-of-grass-outdoor."+((proofFile.type||"image/png").split("/")[1]||"png").replace("jpeg","jpg"),{type:proofFile.type||"image/png"});
       return;
     }
     if(typeof imageSrc==="string"&&imageSrc.startsWith("blob:")){
       fetch(imageSrc).then(r=>r.blob()).then(blob=>{
-        outdoorFileRef.current=new File([blob],"proof-of-grass-outdoor.png",{type:"image/png"});
+        outdoorFileRef.current=new File([blob],"proof-of-grass-outdoor."+((blob.type||"image/png").split("/")[1]||"png").replace("jpeg","jpg"),{type:blob.type||"image/png"});
       }).catch(()=>{});
     }
   },[proofFile,imageSrc]);
@@ -396,7 +396,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
 
   const buildShareFile = useCallback(async(style)=>{
     if(style==="outdoor_photo"){
-      if(proofFile instanceof File) return new File([proofFile],"proof-of-grass-outdoor.png",{type:proofFile.type||"image/png"});
+      if(proofFile instanceof File) return new File([proofFile],"proof-of-grass-outdoor."+((proofFile.type||"image/png").split("/")[1]||"png").replace("jpeg","jpg"),{type:proofFile.type||"image/png"});
       if(imageSrc&&imageSrc.startsWith("blob:")){
         try{const res=await fetch(imageSrc);const blob=await res.blob();return new File([blob],"proof-of-grass-outdoor.png",{type:"image/png"});}catch{return null;}
       }
@@ -927,31 +927,37 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                     setShareInitiated(true);
                     lockInStreak();
 
+                    // Native share sheet is the only way to hand X an actual image. It works on
+                    // Android Chrome as well as iOS, so use it whenever the browser can share files.
+                    // Otherwise (in-app browsers, desktop, share cancelled by the OS) fall back to:
+                    // save the image, copy the caption, open X's composer, and tell the user what to do.
                     const doShare = (file) => {
-                      if(isIOS){
-                        const canShare=!isInAppBrowser&&typeof navigator.share==="function"&&typeof navigator.canShare==="function";
-                        if(canShare&&file&&navigator.canShare({files:[file]})){
-                          setShareHint(true);
-                          navigator.share({files:[file],text})
-                            .then(()=>setShareHint(false))
-                            .catch(err=>{
-                              setShareHint(false);
-                              if(err?.name!=="AbortError"){
-                                navigator.clipboard.writeText(text).catch(()=>{});
-                                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");
-                              }
-                            });
-                        }else{
-                          navigator.clipboard.writeText(text).catch(()=>{});
-                          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");
+                      const canNative = !isInAppBrowser && !!file
+                        && typeof navigator.share==="function" && typeof navigator.canShare==="function"
+                        && navigator.canShare({files:[file]});
+                      const fallback = () => {
+                        navigator.clipboard.writeText(text).catch(()=>{});
+                        let saved=false;
+                        if(file && !isIOS){
+                          try{const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);saved=true;}catch{}
                         }
-                      }else if(isAndroid){
-                        try{if(file){const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}}catch{}
-                        navigator.clipboard.writeText(text).catch(()=>{});
+                        setShareFallbackMsg(saved
+                          ? "Your image was saved to your device and your caption is copied. In X, tap the photo icon and pick the saved image, then paste the caption if it's empty."
+                          : "Your caption is copied. Tap ‘Download Card’ to save the image, then attach it in X.");
+                        setTimeout(()=>setShareFallbackMsg(""),20000);
                         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");
+                      };
+                      if(canNative){
+                        navigator.clipboard.writeText(text).catch(()=>{});   // backup in case the target app drops the text
+                        setShareHint(true);
+                        navigator.share({files:[file],text})
+                          .then(()=>setShareHint(false))
+                          .catch(err=>{
+                            setShareHint(false);
+                            if(err?.name!=="AbortError") fallback();
+                          });
                       }else{
-                        navigator.clipboard.writeText(text).catch(()=>{});
-                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,"_blank");
+                        fallback();
                       }
                     };
 
@@ -985,6 +991,14 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           </>
         );
       })()}
+
+      {shareFallbackMsg && (
+        <div role="status" onClick={()=>setShareFallbackMsg("")}
+          style={{position:"fixed",left:12,right:12,bottom:"max(16px,env(safe-area-inset-bottom))",zIndex:9998,background:"#1a4a0a",color:"white",borderRadius:12,padding:"14px 16px",fontSize:13,lineHeight:1.5,boxShadow:"0 8px 30px rgba(0,0,0,0.35)",fontFamily:"DM Sans,sans-serif"}}>
+          {shareFallbackMsg}
+          <div style={{fontSize:11,opacity:0.7,marginTop:6}}>Tap to dismiss</div>
+        </div>
+      )}
 
       {/* ── Lucky Touch Modal ─────────────────────────────────────────────── */}
       {luckyTouch?.triggered && (
