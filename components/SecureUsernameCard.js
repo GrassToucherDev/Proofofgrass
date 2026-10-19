@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { V2, V2Styles } from "../utils/v2Theme";
 
-export default function SecureUsernameCard({ username }) {
+export default function SecureUsernameCard({ username, onClaimed }) {
   const { status } = useSession();
   const [state, setState] = useState(null); // { claimed, mine }
   const [busy, setBusy] = useState(false);
@@ -33,7 +33,7 @@ export default function SecureUsernameCard({ username }) {
       const r = await fetch("/api/username/claim", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username }) });
       const d = await r.json();
       if (!r.ok) setErr(d.error || "Something went wrong.");
-      else setState({ ...state, claimed: true, mine: true });
+      else { setState({ ...state, claimed: true, mine: true }); onClaimed?.(); }
     } catch { setErr("Network error. Try again."); }
     setBusy(false);
   };
