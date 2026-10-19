@@ -2,6 +2,8 @@
 // Awards bonus Grass Draw entries for ecosystem actions
 // Called by: admin pages, automated triggers (challenge win, referral convert, field guide, flex card)
 
+import { isAdminRequest } from "../../../utils/adminApi";
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -22,6 +24,10 @@ export default async function handler(req, res) {
   const ADMIN_TYPES = ['spotlight','x_engagement','manual'];
   if (ADMIN_TYPES.includes(entry_type) && !admin_username) {
     return res.status(400).json({ error: `entry_type "${entry_type}" requires admin_username` });
+  }
+
+  if (ADMIN_TYPES.includes(entry_type) && !isAdminRequest(req)) {
+    return res.status(401).json({ error: 'Admin authorization required' });
   }
 
   try {

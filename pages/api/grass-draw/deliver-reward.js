@@ -5,8 +5,11 @@
 // Profile Packs: adds slugs to unlocked_covers + UserInventory
 // NFTs: records wallet address for manual transfer + marks pending
 
+import { isAdminRequest } from "../../../utils/adminApi";
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!isAdminRequest(req)) return res.status(401).json({ error: 'Admin authorization required' });
 
   const { winner_id, admin_username } = req.body;
   if (!winner_id || !admin_username) {

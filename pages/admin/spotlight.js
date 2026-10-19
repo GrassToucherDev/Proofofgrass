@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { adminFetch } from "../../utils/adminClient";
 import { supabase } from "../../utils/supabase";
 
 const T = {
@@ -139,7 +140,7 @@ export default function AdminSpotlight() {
 
       // Award Grass Draw spotlight bonus — only on new saves, not edits
       if (!editId) {
-        fetch("/api/grass-draw/award-bonus", {
+        adminFetch("/api/grass-draw/award-bonus", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
