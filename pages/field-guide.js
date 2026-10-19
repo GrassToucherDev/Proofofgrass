@@ -35,6 +35,11 @@ const COLLECTIONS = [
   },
 ];
 
+// Older entries were saved under shorter slugs; treat them as the same collection.
+const SLUG_ALIASES = { plants_foliage:["plants_foliage","plants"], animals:["animals","wildlife"] };
+const slugsFor = (id) => SLUG_ALIASES[id] || [id];
+const canonicalSlug = (slug) => Object.keys(SLUG_ALIASES).find(k => SLUG_ALIASES[k].includes(slug)) || slug;
+
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 function Skel({ w="100%", h=16, r=8 }) {
   return <div style={{ width:w, height:h, borderRadius:r,
@@ -62,7 +67,7 @@ function Slot({ num, entry, onTapEmpty, onTapFilled, isOwner }) {
       onMouseLeave={e=>{ e.currentTarget.style.transform=""; }}>
       {filled ? (
         <>
-          <img src={entry.image_url} alt={`Slot ${num}`} loading="lazy"
+          <img src={entry.photo_url} alt={`Slot ${num}`} loading="lazy"
             style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }} />
           <div style={{ position:"absolute", inset:0,
             background:"linear-gradient(180deg,transparent 60%,rgba(0,0,0,0.5) 100%)" }} />
@@ -143,6 +148,25 @@ function CollectionCard({ col, entries, onTapEmpty, onTapFilled, isOwner }) {
   );
 }
 
+// ── Downscale photos before upload ───────────────────────────────────────────
+// Phone photos are 3–12 MB. Vercel rejects API bodies over ~4.5 MB, and the AI check doesn't need
+// more than ~1600px, so shrink to a JPEG first. Also makes the guide load faster for everyone.
+const MAX_EDGE = 1600;
+async function shrinkPhoto(file) {
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, MAX_EDGE / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    canvas.getContext("2d").drawImage(bmp, 0, 0, w, h);
+    bmp.close?.();
+    const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.85));
+    if (blob) return blob;
+  } catch (e) { console.warn("[field-guide] shrink failed:", e?.message); }
+  return null;
+}
+
 // ── Upload modal ──────────────────────────────────────────────────────────────
 function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
   const [file,      setFile]      = useState(null);
@@ -160,107 +184,105 @@ function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
     if (!file || !username) return;
     setStatus("uploading"); setMessage("");
     try {
-      // Convert to base64 for Claude vision
+      // 1. Is the slot still free? Check before spending an AI call or storage upload.
+      const { data:slotTaken } = await supabase
+        .from("FieldGuideEntries").select("id")
+        .eq("username", username).in("collection_slug", slugsFor(collection.id)).eq("slot_number", slotNum)
+        .maybeSingle();
+      if (slotTaken) {
+        setStatus("error"); setMessage("This slot is already filled."); return;
+      }
+
+      // 2. Shrink the photo (falls back to the original if it's small enough to send as-is).
+      const shrunk = await shrinkPhoto(file);
+      const upload = shrunk || file;
+      if (!shrunk && file.size > 3.5 * 1024 * 1024) {
+        setStatus("error");
+        setMessage("That photo format isn't supported here. Try a JPEG or PNG, or take a new photo.");
+        return;
+      }
+      const mime = shrunk ? "image/jpeg" : (file.type || "image/jpeg");
+
       const base64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onload = () => resolve(String(reader.result).split(",")[1]);
         reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(upload);
       });
 
       setStatus("verifying"); setMessage("AI is verifying your photo…");
 
-      // Get existing labels for this collection to check uniqueness
+      // Existing labels for this collection (so the AI can check the find is different)
       const { data: existingEntries } = await supabase
-        .from("FieldGuideEntries")
-        .select("label")
-        .eq("username", username)
-        .eq("collection_id", collection.id);
+        .from("FieldGuideEntries").select("label")
+        .eq("username", username).in("collection_slug", slugsFor(collection.id));
       const existingLabels = (existingEntries || []).map(e => e.label).filter(Boolean);
 
-      // Call classify API
       const classifyRes = await fetch("/api/field-guide/classify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: base64,
-          mimeType: file.type || "image/jpeg",
-          collectionSlug: collection.id,
-          existingLabels,
-        }),
+        body: JSON.stringify({ imageBase64: base64, mimeType: mime, collectionSlug: collection.id, existingLabels }),
       });
-
-      const result = await classifyRes.json();
+      const result = await classifyRes.json().catch(() => ({}));
 
       if (!classifyRes.ok) {
         setStatus("error");
-        setMessage("Verification service unavailable. Please try again.");
+        setMessage(result?.error && classifyRes.status < 500
+          ? result.error
+          : "Verification service unavailable. Please try again.");
         return;
       }
 
-      if (result.approved) {
-        // Upload to Supabase storage
-        const ext  = file.name.split(".").pop() || "jpg";
-        const path = `${username}/${collection.id}/slot_${slotNum}_${Date.now()}.${ext}`;
-        const { error:upErr } = await supabase.storage
-          .from("field-guide-photos").upload(path, file, { upsert:true });
-        if (upErr) throw upErr;
-
-        const { data:urlData } = supabase.storage.from("field-guide-photos").getPublicUrl(path);
-        const imageUrl = urlData?.publicUrl;
-
-        // Check for duplicate slot
-        const { data:existing } = await supabase
-          .from("FieldGuideEntries")
-          .select("id")
-          .eq("username", username)
-          .eq("collection_id", collection.id)
-          .eq("slot_number", slotNum)
-          .maybeSingle();
-
-        if (existing) {
-          setStatus("error");
-          setMessage("This slot is already filled.");
-          return;
-        }
-
-        // Save entry
-        const { error:insertErr } = await supabase
-          .from("FieldGuideEntries")
-          .insert([{
-            username,
-            collection_id: collection.id,
-            slot_number: slotNum,
-            image_url: imageUrl,
-            label: result.label || "outdoor nature photo",
-            verified: true,
-            verification_method: "claude_vision",
-            submitted_at: new Date().toISOString(),
-          }]);
-
-        if (insertErr) {
-          setStatus("error");
-          setMessage("Failed to save entry. Please try again.");
-          return;
-        }
-
-        // Award Grass Draw bonus
-        try {
-          await fetch("/api/grass-draw/award-bonus", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, bonus_type: "field_guide" }),
-          });
-        } catch(e) { console.warn("[field-guide] bonus non-fatal:", e?.message); }
-
-        setStatus("done");
-        setMessage(`Verified! "${result.label}" added to your ${collection.name} collection.`);
-        setTimeout(() => { onSuccess(); onClose(); }, 1800);
-
-      } else {
+      if (!result.approved) {
         setStatus("error");
         setMessage(result.reason || `This photo doesn't match the ${collection.name} collection. Try a photo where the subject is clearer.`);
+        return;
       }
+
+      // 3. Upload the (shrunk) photo
+      const ext  = shrunk ? "jpg" : ((file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "jpg");
+      const path = `${username}/${collection.id}/slot_${slotNum}_${Date.now()}.${ext}`;
+      const { error:upErr } = await supabase.storage
+        .from("field-guide-photos").upload(path, upload, { upsert:true, contentType: mime });
+      if (upErr) throw upErr;
+      const { data:urlData } = supabase.storage.from("field-guide-photos").getPublicUrl(path);
+
+      // 4. Save entry (a unique index on user/collection/slot makes a double-submit fail cleanly)
+      const { data:inserted, error:insertErr } = await supabase
+        .from("FieldGuideEntries")
+        .insert([{
+          username,
+          collection_slug: collection.id,
+          slot_number: slotNum,
+          photo_url: urlData?.publicUrl,
+          storage_path: path,
+          label: result.label || "outdoor nature photo",
+          ai_label: result.label || "outdoor nature photo",
+          ai_confidence: result.confidence || null,
+          status: "approved",
+          submitted_at: new Date().toISOString(),
+        }])
+        .select("id").single();
+
+      if (insertErr) {
+        supabase.storage.from("field-guide-photos").remove([path]).catch(() => {});   // don't leave orphans
+        setStatus("error");
+        setMessage(insertErr.code === "23505" ? "This slot is already filled." : "Failed to save entry. Please try again.");
+        return;
+      }
+
+      // 5. Grass Draw bonus (the API expects entry_type — this used to send bonus_type and always 400'd)
+      try {
+        await fetch("/api/grass-draw/award-bonus", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, entry_type: "field_guide", source_id: `field_guide_${inserted?.id || path}` }),
+        });
+      } catch(e) { console.warn("[field-guide] bonus non-fatal:", e?.message); }
+
+      setStatus("done");
+      setMessage(`Verified! "${result.label}" added to your ${collection.name} collection.`);
+      setTimeout(() => { onSuccess(); onClose(); }, 1800);
     } catch(e) {
       console.error("[field-guide] submit error:", e);
       setStatus("error");
@@ -314,7 +336,7 @@ function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
               </div>
             )}
           </div>
-          <input ref={inputRef} type="file" accept="image/*" capture="environment"
+          <input ref={inputRef} type="file" accept="image/*"
             onChange={e=>handleFile(e.target.files?.[0])}
             style={{ display:"none" }} />
 
@@ -355,7 +377,7 @@ function SlotDetailModal({ entry, onClose }) {
       <div style={{ background:"white", borderRadius:24, overflow:"hidden",
         maxWidth:480, width:"100%", boxShadow:"0 20px 60px rgba(26,74,10,0.2)" }}
         onClick={e=>e.stopPropagation()}>
-        <img src={entry.image_url} alt="" style={{ width:"100%", maxHeight:320, objectFit:"cover" }} />
+        <img src={entry.photo_url} alt="" style={{ width:"100%", maxHeight:320, objectFit:"cover" }} />
         <div style={{ padding:"20px 24px" }}>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
             <div>
@@ -370,7 +392,7 @@ function SlotDetailModal({ entry, onClose }) {
             </div>
             <div style={{ fontSize:12, fontWeight:700, color:V2.grassGreen,
               background:"rgba(125,200,50,0.1)", borderRadius:20, padding:"4px 12px" }}>
-              {entry.verified ? "✓ Verified" : "⏳ Pending"}
+              {entry.status === "approved" ? "✓ Verified" : "⏳ Pending"}
             </div>
           </div>
           <button onClick={onClose} style={{ ...V2Styles.btnSecondary, width:"100%",
@@ -383,22 +405,22 @@ function SlotDetailModal({ entry, onClose }) {
 
 // ── Recent find card ──────────────────────────────────────────────────────────
 function RecentFindCard({ find }) {
-  const col = COLLECTIONS.find(c => c.id === find.collection_id);
+  const col = COLLECTIONS.find(c => c.id === canonicalSlug(find.collection_slug));
   return (
     <div style={{ borderRadius:16, overflow:"hidden", position:"relative",
       aspectRatio:"1/1", background:"rgba(200,220,190,0.2)",
       boxShadow:"0 2px 12px rgba(26,74,10,0.1)", cursor:"pointer" }}>
-      <img src={find.image_url} alt="" loading="lazy"
+      <img src={find.photo_url} alt="" loading="lazy"
         style={{ width:"100%", height:"100%", objectFit:"cover" }}
         onError={e=>{e.currentTarget.style.display="none";}} />
       <div style={{ position:"absolute", inset:0,
         background:"linear-gradient(180deg,transparent 50%,rgba(0,0,0,0.7) 100%)" }} />
       <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"10px 12px" }}>
         <div style={{ fontSize:11, fontWeight:700, color:V2.grassLime, marginBottom:2 }}>
-          {col?.icon} {col?.name || find.collection_id}
+          {col?.icon} {col?.name || find.collection_slug}
         </div>
         <div style={{ fontSize:12, fontWeight:600, color:"white" }}>@{find.username}</div>
-        <div style={{ fontSize:10, color:"rgba(255,255,255,0.65)" }}>outdoor nature photo</div>
+        <div style={{ fontSize:10, color:"rgba(255,255,255,0.65)" }}>{find.label || find.ai_label || "outdoor nature photo"}</div>
       </div>
     </div>
   );
@@ -428,12 +450,12 @@ export default function FieldGuide() {
           .from("FieldGuideEntries")
           .select("*")
           .eq("username", username)
-          .eq("verified", true);
+          .eq("status", "approved");
 
         const grouped = {};
         COLLECTIONS.forEach(c => { grouped[c.id] = []; });
         (data || []).forEach(e => {
-          if (grouped[e.collection_id]) grouped[e.collection_id].push(e);
+          const k = canonicalSlug(e.collection_slug); if (grouped[k]) grouped[k].push(e);
         });
         setAllEntries(grouped);
       }
@@ -442,7 +464,7 @@ export default function FieldGuide() {
       const { data:recent } = await supabase
         .from("FieldGuideEntries")
         .select("*")
-        .eq("verified", true)
+        .eq("status", "approved")
         .order("submitted_at", { ascending:false })
         .limit(8);
       setRecentFinds(recent || []);
