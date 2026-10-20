@@ -4,6 +4,7 @@
 //   POST { action: "replace_stop", trail_id, position, campaign_id, location_id, label? }
 //                                         → swap a stop mid-flight; completed progress is preserved per position
 //   POST { action: "set_status", id, status }
+import { solToLamports, maxSolPerClaim } from "../../../../utils/wagoPayout.mjs";
 import { sb, loadStops } from "../../../../utils/wagoTrailsServer";
 import { routeDistanceM, estimateMinutes, TRAIL_MIN_STOPS, TRAIL_MAX_STOPS } from "../../../../utils/wagoTrails";
 
@@ -30,7 +31,12 @@ function cleanTrail(t) {
     if (!(out.reward_amount > 0)) throw new Error("Reward amount must be greater than 0.");
     if (out.reward_type === "spl_token" && !out.reward_token_mint) throw new Error("Token rewards need a mint address.");
   } else { out.reward_amount = null; out.reward_token_mint = null; out.reward_symbol = null; out.reward_logo_url = null; }
-  if (out.reward_type === "sol") { out.reward_token_mint = null; }
+  if (out.reward_type === "sol") {
+    out.reward_token_mint = null; out.reward_symbol = "SOL";
+    if (solToLamports(out.reward_amount) == null) throw new Error("SOL amounts can have at most 9 decimal places.");
+    const cap = maxSolPerClaim(process.env);
+    if (out.reward_amount > cap) throw new Error(`SOL reward is above the per-claim limit of ${cap} SOL.`);
+  }
   if (out.starts_at && out.ends_at && new Date(out.ends_at) <= new Date(out.starts_at)) throw new Error("End date must be after the start date.");
   return out;
 }
