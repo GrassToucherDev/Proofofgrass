@@ -85,11 +85,21 @@ function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
           {form.image_url && <button type="button" onClick={()=>set("image_url","")} style={{background:"transparent",border:`1px solid ${T.border}`,color:T.muted,borderRadius:999,padding:"9px 18px",fontSize:13,cursor:"pointer"}}>Remove</button>}
         </div>
       </div>
+      <Select label="Reward type" value={form.reward_type==="sol"?"sol":"spl_token"} onChange={e=>{
+        const t=e.target.value;
+        setForm(prev=>t==="sol"
+          ? {...prev,reward_type:"sol",reward_token_mint:"",reward_symbol:"SOL",reward_logo_url:""}
+          : {...prev,reward_type:"spl_token",reward_token_mint:prev.reward_token_mint||MINT,reward_symbol:prev.reward_symbol==="SOL"?"$TOUCHGRASS":prev.reward_symbol});
+      }}>
+        <option value="spl_token">Solana token (SPL)</option>
+        <option value="sol">SOL (native)</option>
+      </Select>
+      {form.reward_type==="sol" && <div style={{fontSize:12,color:T.muted,marginBottom:12}}>Paid in SOL from the treasury wallet. There is a per-claim safety limit (default 1 SOL). Check the amount: it is per person who claims.</div>}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <Input label="Reward Amount *" type="number" required value={form.reward_amount} onChange={e=>set("reward_amount",e.target.value)}/>
-        <Input label="Token Mint" value={form.reward_token_mint||""} onChange={e=>set("reward_token_mint",e.target.value)}/>
-        <Input label="Token Symbol * (shown to users, e.g. BONK)" required value={form.reward_symbol||""} onChange={e=>set("reward_symbol",e.target.value)}/>
-        <div>
+        <Input label={form.reward_type==="sol"?"Reward Amount (SOL) *":"Reward Amount *"} type="number" step="any" required value={form.reward_amount} onChange={e=>set("reward_amount",e.target.value)}/>
+        {form.reward_type!=="sol" && <Input label="Token Mint" value={form.reward_token_mint||""} onChange={e=>set("reward_token_mint",e.target.value)}/>}
+        {form.reward_type!=="sol" && <Input label="Token Symbol * (shown to users, e.g. BONK)" required value={form.reward_symbol||""} onChange={e=>set("reward_symbol",e.target.value)}/>}
+        {form.reward_type!=="sol" && <div>
           <div style={{fontSize:11,color:T.dim,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Token logo (optional)</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {form.reward_logo_url && <img src={form.reward_logo_url} alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"contain",background:T.surface,border:`1px solid ${T.border}`}}/>}
@@ -99,7 +109,7 @@ function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
             </label>
             {form.reward_logo_url && <button type="button" onClick={()=>set("reward_logo_url","")} style={{background:"transparent",border:`1px solid ${T.border}`,color:T.muted,borderRadius:999,padding:"8px 14px",fontSize:12,cursor:"pointer"}}>Remove</button>}
           </div>
-        </div>
+        </div>}
         <Input label="Reveal Radius (m)" type="number" value={form.reveal_radius_m} onChange={e=>set("reveal_radius_m",Number(e.target.value))}/>
         <Input label="Claim Radius (m)" type="number" value={form.claim_radius_m} onChange={e=>set("claim_radius_m",Number(e.target.value))}/>
         <Input label="Starts At (UTC)" type="datetime-local" value={form.starts_at||""} onChange={e=>set("starts_at",e.target.value)}/>

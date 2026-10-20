@@ -1,5 +1,6 @@
 // pages/api/wago-drops/admin/update-campaign.js
 import { createClient } from "@supabase/supabase-js";
+import { validateReward } from "../../../../utils/wagoPayout.mjs";
 import { RARITIES } from "../../../../utils/wagoProofBonus";
 
 const supabase = createClient(
@@ -16,7 +17,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!isAdmin(req)) return res.status(401).json({ error: "Unauthorized" });
 
-  const { id, name, description, image_url, reward_symbol, reward_logo_url, reward_amount, reward_token_mint,
+  const { id, name, description, image_url, reward_type, reward_symbol, reward_logo_url, reward_amount, reward_token_mint,
           reveal_radius_m, claim_radius_m, starts_at, ends_at, status,
           proof_bonus_enabled, proof_bonus_amount,
           rarity, proof_bonus_tickets } = req.body;
@@ -27,10 +28,20 @@ export default async function handler(req, res) {
   if (name !== undefined) updates.name = name;
   if (description !== undefined) updates.description = description;
   if (image_url !== undefined) updates.image_url = image_url || null;
-  if (reward_symbol !== undefined) updates.reward_symbol = String(reward_symbol || "").trim().slice(0, 20) || null;
   if (reward_logo_url !== undefined) updates.reward_logo_url = reward_logo_url || null;
-  if (reward_amount !== undefined) updates.reward_amount = reward_amount;
-  if (reward_token_mint !== undefined) updates.reward_token_mint = reward_token_mint;
+  if ([reward_type, reward_symbol, reward_amount, reward_token_mint].some(v => v !== undefined)) {
+    const { data: cur, error: curErr } = await supabase.from("wago_drop_campaigns")
+      .select("reward_type, reward_amount, reward_token_mint, reward_symbol").eq("id", id).single();
+    if (curErr || !cur) return res.status(404).json({ error: "Campaign not found" });
+    const rv = validateReward({
+      reward_type:       reward_type       !== undefined ? reward_type       : cur.reward_type,
+      reward_amount:     reward_amount     !== undefined ? reward_amount     : cur.reward_amount,
+      reward_token_mint: reward_token_mint !== undefined ? reward_token_mint : cur.reward_token_mint,
+      reward_symbol:     reward_symbol     !== undefined ? reward_symbol     : cur.reward_symbol,
+    }, process.env);
+    if (!rv.ok) return res.status(400).json({ error: rv.error });
+    Object.assign(updates, rv.reward);
+  }
   if (reveal_radius_m !== undefined) updates.reveal_radius_m = Number(reveal_radius_m);
   if (claim_radius_m !== undefined) updates.claim_radius_m = Number(claim_radius_m);
   if (starts_at !== undefined) updates.starts_at = starts_at || null;

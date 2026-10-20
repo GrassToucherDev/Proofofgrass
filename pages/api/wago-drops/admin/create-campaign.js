@@ -1,4 +1,5 @@
 // pages/api/wago-drops/admin/create-campaign.js
+import { validateReward } from "../../../../utils/wagoPayout.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { RARITIES } from "../../../../utils/wagoProofBonus";
 
@@ -29,6 +30,8 @@ export default async function handler(req, res) {
 
   if (!name) return res.status(400).json({ error: "name is required" });
   if (!reward_type) return res.status(400).json({ error: "reward_type is required" });
+  const rv = validateReward({ reward_type, reward_amount, reward_token_mint, reward_symbol }, process.env);
+  if (!rv.ok) return res.status(400).json({ error: rv.error });
 
   const { data, error } = await supabase
     .from("wago_drop_campaigns")
@@ -36,11 +39,11 @@ export default async function handler(req, res) {
       name,
       description:         description || null,
       image_url:           image_url || null,
-      reward_symbol:       String(reward_symbol || "").trim().slice(0, 20) || null,
+      reward_symbol:       rv.reward.reward_symbol,
       reward_logo_url:     reward_logo_url || null,
-      reward_type:         reward_type || "spl_token",
-      reward_amount:       reward_amount ? Number(reward_amount) : null,
-      reward_token_mint:   reward_token_mint || null,
+      reward_type:         rv.reward.reward_type,
+      reward_amount:       rv.reward.reward_amount,
+      reward_token_mint:   rv.reward.reward_token_mint,
       reward_metadata:     reward_metadata || {},
       proof_bonus_enabled: !!proof_bonus_enabled,
       proof_bonus_amount:  proof_bonus_amount ? Number(proof_bonus_amount) : null,
