@@ -118,7 +118,7 @@ export default function GrovesPage() {
               style={{ display: "block", width: "100%", maxWidth: 700, height: "auto", margin: "0 auto 8px" }} />
           </h1>
           <p style={{ color: V2.textBody, marginTop: 0, marginBottom: 20, textAlign: "center" }}>
-            Team up with 2–5 friends. When at least two thirds of your grove post a proof, the grove's streak grows. Gift shields to keep each other going.
+            Team up with friends to build a shared streak. A grove needs at least 3 members to count, and holds up to 6. Once you have 3 or more, the grove streak grows each day that at least two thirds of members post a proof. Gift shields to keep each other going.
           </p>
 
           {msg.text && (
@@ -163,7 +163,7 @@ export default function GrovesPage() {
               )}
               <div className="gv-card">
                 <div className="gv-h" style={{ fontSize: 20 }}>Start a grove</div>
-                <p style={{ margin: "0 0 12px", color: V2.textBody, fontSize: 14 }}>Pick a name, then share your invite link. A grove needs 3 members to start counting.</p>
+                <p style={{ margin: "0 0 12px", color: V2.textBody, fontSize: 14 }}>Pick a name, then share your invite link. A grove needs at least 3 members (you plus 2 friends, up to 6) before its streak starts counting.</p>
                 <input className="gv-in" aria-label="Grove name" placeholder="Grove name (3–30 characters)" maxLength={30} value={name} onChange={e => setName(e.target.value)} />
                 <button disabled={busy === "create" || name.trim().length < 3} onClick={() => act("create", "/api/groves/create", { name }, "Grove created! Share the invite link with your friends.")}
                   style={{ ...V2Styles.btnPrimary, padding: "12px 22px", marginTop: 12, opacity: name.trim().length < 3 ? 0.6 : 1 }}>
@@ -188,7 +188,7 @@ export default function GrovesPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
                   <div>
                     <div className="gv-h" style={{ fontSize: 24 }}>{grove.name}</div>
-                    <div style={{ fontSize: 14, color: V2.textSecondary }}>{data.members.length} of {grove.slots} members</div>
+                    <div style={{ fontSize: 14, color: V2.textSecondary }}>{data.members.length} of {grove.slots} members · needs 3+ to count</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: 36, fontWeight: 900, color: V2.forestGreen, lineHeight: 1 }}>{streak?.streak ?? 0}</div>
@@ -197,7 +197,7 @@ export default function GrovesPage() {
                 </div>
                 <div style={{ marginTop: 14, fontSize: 14, color: V2.textBody }}>
                   {streak?.today_needed == null
-                    ? `Invite ${Math.max(0, 3 - data.members.length)} more ${3 - data.members.length === 1 ? "member" : "members"} to start your grove streak.`
+                    ? `Not counting yet: a grove needs at least 3 members. Invite ${Math.max(0, 3 - data.members.length)} more ${3 - data.members.length === 1 ? "friend" : "friends"} to start your grove streak.`
                     : streak.today_complete
                       ? `✓ Today counts! ${streak.today_locked} of ${streak.today_members} posted.`
                       : `${streak.today_locked} of ${streak.today_needed} needed have posted today.`}
@@ -258,7 +258,7 @@ export default function GrovesPage() {
           <div className="gv-card">
             <div className="gv-h" style={{ fontSize: 20 }}>🏆 Top groves</div>
             {board.length === 0 ? (
-              <p style={{ margin: 0, color: V2.textMuted, fontSize: 14 }}>No groves on the board yet. Groves with 3+ members and a running streak appear here.</p>
+              <p style={{ margin: 0, color: V2.textMuted, fontSize: 14 }}>No groves on the board yet. Groves with 3 or more members and a running streak appear here.</p>
             ) : board.map((g, i) => (
               <div className="gv-row" key={g.id}>
                 <span style={{ width: 24, fontWeight: 800, color: V2.textMuted }}>{i + 1}</span>
