@@ -443,10 +443,15 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
     if(!canvas||!imageSrc) return;
     const ctx=canvas.getContext("2d");
     const W=1600,H=900;
+    // Each run owns the (shared) canvas until a newer run starts. A stale run whose image
+    // finishes loading late must NOT draw or publish its result, otherwise an old streak
+    // number ends up on the card after the new one was drawn.
+    let cancelled=false;
+    sharableFileRef.current=null;      // never reuse a file built from an earlier render
     canvas.width=W;canvas.height=H;
     const img=new Image();
     img.onerror=()=>{console.error("[canvas] failed to load imageSrc:",imageSrc);};
-    img.onload=()=>{try{
+    img.onload=()=>{if(cancelled) return; try{
       const scale=Math.max(W/img.width,H/img.height);
       const dw=img.width*scale,dh=img.height*scale;
       const overflow=dw-W;
@@ -524,17 +529,20 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       // Logo
       const logo=new Image();
       const cacheForPreview=(dataUrl)=>{
+        if(cancelled) return;
         setDownloadUrl(dataUrl);
-        // Pre-build result card file for sharing
+        // Pre-build result card file for sharing (only if this render is still the current one)
         try{fetch(dataUrl).then(res=>res.blob()).then(blob=>{
+          if(cancelled) return;
           sharableFileRef.current=new File([blob],"proof-of-grass.png",{type:"image/png"});
         });}catch(e){console.warn("[photo] preview cache failed:",e?.message);}
       };
-      logo.onload=()=>{ctx.save();ctx.globalAlpha=0.55;ctx.drawImage(logo,BL_X-4,BL_BASE-72,36,36);ctx.restore();cacheForPreview(canvas.toDataURL("image/png"));};
-      logo.onerror=()=>cacheForPreview(canvas.toDataURL("image/png"));
+      logo.onload=()=>{if(cancelled) return;ctx.save();ctx.globalAlpha=0.55;ctx.drawImage(logo,BL_X-4,BL_BASE-72,36,36);ctx.restore();cacheForPreview(canvas.toDataURL("image/png"));};
+      logo.onerror=()=>{if(!cancelled) cacheForPreview(canvas.toDataURL("image/png"));};
       logo.src="/touchgrass-transparent.png";
-    }catch(canvasErr){console.error("[canvas] render error:",canvasErr?.message,canvasErr);try{setDownloadUrl(canvas.toDataURL("image/png"));}catch{}}};
+    }catch(canvasErr){console.error("[canvas] render error:",canvasErr?.message,canvasErr);if(!cancelled){try{setDownloadUrl(canvas.toDataURL("image/png"));}catch{}}}};
     img.src=imageSrc;
+    return ()=>{cancelled=true;};
   },[imageSrc,dateStr,currentStreak,selectedTheme]);
 
   // ── V2 UI constants ───────────────────────────────────────────────────────
