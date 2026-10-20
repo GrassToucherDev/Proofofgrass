@@ -16,8 +16,6 @@
 --   with the Google account that has claimed that username (see username_claims.sql, which must
 --   be applied BEFORE this file's API is used). Never expose these functions to the anon key.
 
-create extension if not exists pgcrypto;
-
 -- ── Tables ───────────────────────────────────────────────────────────────────
 create table if not exists groves (
   id           uuid primary key default gen_random_uuid(),
@@ -152,7 +150,9 @@ begin
 
   insert into groves (name, created_by) values (btrim(p_name), u) returning id into v_id;
   insert into grove_members (grove_id, username) values (v_id, u);
-  v_code := lower(encode(gen_random_bytes(5), 'hex'));
+  -- 10 hex chars from core Postgres only (no pgcrypto: on Supabase it lives in the `extensions`
+  -- schema, which this function's search_path does not include).
+  v_code := substr(replace(gen_random_uuid()::text, '-', ''), 1, 10);
   insert into grove_invites (code, grove_id, created_by) values (v_code, v_id, u);
   return jsonb_build_object('ok', true, 'grove_id', v_id, 'invite_code', v_code);
 end $$;
