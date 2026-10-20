@@ -1,474 +1,284 @@
-import { useState, useEffect } from "react";
+// pages/spotlight.js — Community Spotlight (V2 design).
+// Data + selection logic are unchanged: CommunitySpotlights (status "active") + Profiles avatars,
+// "this week" = the current UTC Monday. Only the presentation is new.
+import { useState, useEffect, useId } from "react";
+import Head from "next/head";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { supabase } from "../utils/supabase";
-import { SPOTLIGHT_BADGES, getSpotlightBadge } from "../utils/spotlightBadges";
+import V2Nav from "../components/V2Nav";
+import V2BottomNav from "../components/V2BottomNav";
+import { V2, V2GlobalCSS } from "../utils/v2Theme";
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const T = {
-  bg:"#080a06", bg2:"#0e100b", bg3:"#141710", bg4:"#1a1e13",
-  border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)",
-  borderGold:"rgba(200,168,75,0.35)",
-  olive:"#93a85a", gold:"#c8a84b",
-  white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
-};
+// Category presentation. Keys match SPOTLIGHT_BADGES / the CommunitySpotlights.category column.
+const CATEGORIES = [
+  { key: "community_mvp",   emoji: "🔥", name: "Community MVP",   accent: "#c2410c", tint: "#ffe9df", desc: "The community member who showed up most for the community this week." },
+  { key: "meme_lord",       emoji: "😂", name: "Meme Lord",       accent: "#92700c", tint: "#fdf0cf", desc: "Best meme, recap, or creative content related to Touch Grass." },
+  { key: "biggest_shiller", emoji: "📣", name: "Biggest Shiller", accent: "#2d6b1a", tint: "#e3f3d4", desc: "Most active community builder, referrer, or promoter." },
+  { key: "space_warrior",   emoji: "🎧", name: "Space Warrior",   accent: "#5b3fc4", tint: "#ece7fb", desc: "Most active participant in Touch Grass Twitter Spaces." },
+];
 
-// ─── Category config — uses SPOTLIGHT_BADGES as single source of truth ────────
-const CATEGORIES = Object.values(SPOTLIGHT_BADGES).map(b => ({
-  key:   b.key,
-  emoji: b.emoji,
-  name:  b.title,
-  label: b.title,
-  color: b.color,
-  image: b.image,
-}));
-
-function getCat(key) {
-  return CATEGORIES.find(c => c.key === key) ?? CATEGORIES[0];
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Date helpers (UTC, same rule as before) ─────────────────────────────────
 function getMondayOf(date) {
   const d = new Date(date);
   const day = d.getUTCDay();
   d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
   return d.toISOString().slice(0, 10);
 }
+function addDays(iso, n) {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
 function fmtWeek(start, end) {
   const s = new Date(start + "T00:00:00Z");
-  const e = new Date(end   + "T00:00:00Z");
-  const opts = { month:"short", day:"numeric", timeZone:"UTC" };
-  return `${s.toLocaleDateString("en-US", opts)} – ${e.toLocaleDateString("en-US", { ...opts, year:"numeric" })}`;
-}
-function isThisWeek(week_start) {
-  return getMondayOf(new Date().toISOString().slice(0,10)) === week_start;
+  const e = new Date((end || addDays(start, 6)) + "T00:00:00Z");
+  const o = { month: "short", day: "numeric", timeZone: "UTC" };
+  return `${s.toLocaleDateString("en-US", o)} – ${e.toLocaleDateString("en-US", { ...o, year: "numeric" })}`;
 }
 
-// ─── Avatar component ─────────────────────────────────────────────────────────
-function SpotlightAvatar({ winner, size = 64, color = T.gold }) {
+// ─── Avatar ──────────────────────────────────────────────────────────────────
+function Avatar({ winner, size, accent }) {
   const url = winner?.avatar_url || winner?.profile_avatar_url;
-  const initial = (winner?.username ?? "?")[0].toUpperCase();
-  return url ? (
-    <img src={url} alt="" loading="lazy"
-      style={{ width:size, height:size, borderRadius:"50%", objectFit:"cover",
-        border:`2px solid ${color}`, flexShrink:0, background:T.bg3 }} />
-  ) : (
-    <div style={{ width:size, height:size, borderRadius:"50%", flexShrink:0,
-      background:T.bg3, border:`2px solid ${color}`,
-      display:"flex", alignItems:"center", justifyContent:"center",
-      fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:size*0.38,
-      fontWeight:700, color }}>
-      {initial}
-    </div>
-  );
-}
-
-// ─── Winner card (large, for spotlight page) ──────────────────────────────────
-function WinnerCard({ winner, current, viewer }) {
-  const cat = getCat(winner?.category);
-  const empty = !winner;
-  return (
-    <div style={{
-      background: empty ? T.bg2 : `linear-gradient(145deg,${T.bg2},${T.bg3})`,
-      border:`1px solid ${empty ? T.border : T.borderGold}`,
-      borderRadius:16,
-      padding:"24px 20px",
-      display:"flex", flexDirection:"column", gap:14,
-      boxShadow: empty ? "none" : `0 0 28px rgba(200,168,75,0.12)`,
-      position:"relative", overflow:"hidden",
-    }}>
-      {!empty && (
-        <div style={{ position:"absolute", top:0, left:0, right:0, height:2,
-          background:`linear-gradient(90deg,transparent,${cat.color},transparent)`,
-          opacity:0.7 }} />
-      )}
-
-      {/* Badge image + category header */}
-      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-        {cat.image ? (
-          <img src={cat.image} alt={cat.name}
-            style={{ width:40, height:40, objectFit:"contain", flexShrink:0,
-              filter:`drop-shadow(0 0 8px ${cat.color}60)`,
-              opacity: empty ? 0.35 : 1 }} />
-        ) : (
-          <span style={{ fontSize:20 }}>{cat.emoji}</span>
-        )}
-        <div>
-          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.16em",
-            textTransform:"uppercase", color:cat.color }}>{cat.name}</div>
-          {current && (
-            <div style={{ fontSize:8, color:T.dim, letterSpacing:"0.1em",
-              textTransform:"uppercase" }}>This Week</div>
-          )}
-        </div>
-        {!empty && (
-          <span style={{ marginLeft:"auto", fontSize:9, fontWeight:700,
-            letterSpacing:"0.1em", textTransform:"uppercase",
-            padding:"2px 8px", borderRadius:4,
-            background:"rgba(200,168,75,0.12)", color:T.gold,
-            border:`1px solid ${T.borderGold}` }}>
-            ✦ Winner
-          </span>
-        )}
+  const base = { width: size, height: size, borderRadius: "50%", flexShrink: 0, border: `2px solid ${accent || V2.borderSoft}` };
+  if (!winner) {
+    return (
+      <div aria-hidden="true" style={{ ...base, border: `2px solid ${V2.borderSoft}`, background: "#eef1ea", display: "flex", alignItems: "flex-end", justifyContent: "center", overflow: "hidden" }}>
+        <svg viewBox="0 0 24 24" width={size * 0.62} height={size * 0.62} fill="#b9c1b2"><circle cx="12" cy="8.5" r="4.2" /><path d="M3.5 22c0-4.7 3.8-8 8.5-8s8.5 3.3 8.5 8z" /></svg>
       </div>
+    );
+  }
+  return url ? (
+    <img src={url} alt="" loading="lazy" style={{ ...base, objectFit: "cover", background: "#fff" }} />
+  ) : (
+    <div aria-hidden="true" style={{ ...base, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: size * 0.4, color: accent }}>
+      {(winner.username || "?")[0].toUpperCase()}
+    </div>
+  );
+}
 
-      {/* Winner info or placeholder */}
-      {empty ? (
-        <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
-          gap:8, padding:"16px 0", opacity:0.4 }}>
-          <span style={{ fontSize:32 }}>🏆</span>
-          <span style={{ fontSize:12, color:T.dim }}>No Winner Yet</span>
-        </div>
-      ) : (
-        <>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <SpotlightAvatar winner={winner} size={56} color={cat.color} />
-            <div style={{ minWidth:0 }}>
-              <Link href={`/u/${winner.username}`}
-                style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                  fontSize:20, fontWeight:700, color:T.white, textDecoration:"none",
-                  display:"block", overflow:"hidden", textOverflow:"ellipsis",
-                  whiteSpace:"nowrap" }}
-                onMouseEnter={e => e.currentTarget.style.color = T.gold}
-                onMouseLeave={e => e.currentTarget.style.color = T.white}>
-                @{winner.display_name || winner.username}
-              </Link>
-              <div style={{ fontSize:11, color:cat.color, fontWeight:600, marginTop:2 }}>
-                {cat.label}
-              </div>
-            </div>
-          </div>
-
-          {winner.description && (
-            <div style={{ fontSize:12, color:T.muted, lineHeight:1.6,
-              borderLeft:`2px solid ${cat.color}40`, paddingLeft:12 }}>
-              {winner.description}
-            </div>
+// ─── Winner card (this week) ─────────────────────────────────────────────────
+function WinnerCard({ cat, winner, viewer }) {
+  const empty = !winner;
+  const shown = winner ? `@${winner.display_name || winner.username}` : "No winner yet";
+  return (
+    <article className="sp-winner" aria-label={`${cat.name}: ${empty ? "no winner yet" : shown}`}>
+      <div className="sp-winner-top">
+        <span className="sp-pill" style={{ background: cat.tint, color: cat.accent }}>
+          <span aria-hidden="true">{cat.emoji}</span> {cat.name}
+        </span>
+        {!empty && <span className="sp-crown" role="img" aria-label="Winner" title="Winner">👑</span>}
+      </div>
+      <div className="sp-winner-body">
+        <Avatar winner={winner} size={56} accent={cat.accent} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          {empty ? (
+            <div className="sp-name sp-name-empty">No winner yet</div>
+          ) : (
+            <Link href={`/u/${winner.username}`} className="sp-name">{shown}</Link>
           )}
-
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
-            {winner.x_link && (
-              <a href={winner.x_link} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize:10, color:T.dim, textDecoration:"none",
-                  padding:"4px 10px", borderRadius:6, border:`1px solid ${T.border}`,
-                  transition:"color 0.15s" }}
-                onMouseEnter={e => e.currentTarget.style.color = T.white}
-                onMouseLeave={e => e.currentTarget.style.color = T.dim}>
-                𝕏 View Post
-              </a>
-            )}
-            {winner.proof_link && (
-              <a href={winner.proof_link} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize:10, color:T.dim, textDecoration:"none",
-                  padding:"4px 10px", borderRadius:6, border:`1px solid ${T.border}` }}>
-                🔗 Proof
-              </a>
-            )}
-            {/* Generate Spotlight Card — only shown to the winner themselves */}
+          <p className="sp-desc">{cat.desc}</p>
+        </div>
+      </div>
+      {!empty && (winner.description || winner.x_link || winner.proof_link || (viewer && viewer === winner.username)) && (
+        <div className="sp-extra">
+          {winner.description && <p className="sp-note">{winner.description}</p>}
+          <div className="sp-links">
+            {winner.x_link && <a href={winner.x_link} target="_blank" rel="noopener noreferrer" className="sp-link">𝕏 View post</a>}
+            {winner.proof_link && <a href={winner.proof_link} target="_blank" rel="noopener noreferrer" className="sp-link">🔗 Proof</a>}
             {viewer && viewer === winner.username && (
-              <a href={`/spotlight-card/${winner.username}`}
-                style={{ fontSize:10, fontWeight:700, color:T.gold,
-                  textDecoration:"none", padding:"4px 10px", borderRadius:6,
-                  background:"rgba(200,168,75,0.1)",
-                  border:`1px solid rgba(200,168,75,0.35)`,
-                  marginLeft:"auto" }}>
-                🏆 Generate Spotlight Card
-              </a>
-            )}
-            {(!viewer || viewer !== winner.username) && winner.week_start && (
-              <span style={{ fontSize:10, color:T.dim, marginLeft:"auto" }}>
-                {fmtWeek(winner.week_start, winner.week_end)}
-              </span>
+              <Link href={`/spotlight-card/${winner.username}`} className="sp-link sp-link-strong">🏆 Generate Spotlight Card</Link>
             )}
           </div>
-        </>
+        </div>
+      )}
+    </article>
+  );
+}
+
+// ─── Previous week accordion ─────────────────────────────────────────────────
+function PastWeek({ week, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const id = useId();
+  const byCat = Object.fromEntries(week.winners.map(w => [w.category, w]));
+  return (
+    <div className="sp-acc">
+      <h3 style={{ margin: 0 }}>
+        <button type="button" className="sp-acc-btn" aria-expanded={open} aria-controls={id} onClick={() => setOpen(o => !o)}>
+          <span>{fmtWeek(week.week_start, week.week_end)}</span>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .15s", flexShrink: 0 }}><path d="M6 9l6 6 6-6" /></svg>
+        </button>
+      </h3>
+      {open && (
+        <div id={id} role="region" className="sp-past-grid">
+          {CATEGORIES.map(cat => {
+            const w = byCat[cat.key];
+            return (
+              <div key={cat.key} className="sp-past-cell">
+                <div className="sp-past-cat" style={{ color: cat.accent }}><span aria-hidden="true">{cat.emoji}</span> {cat.name}</div>
+                <div className="sp-past-who">
+                  <Avatar winner={w || null} size={34} accent={cat.accent} />
+                  {w ? <Link href={`/u/${w.username}`} className="sp-past-name">@{w.display_name || w.username}</Link>
+                     : <span className="sp-past-name sp-muted">No winner yet</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Page ────────────────────────────────────────────────────────────────────
 export default function SpotlightPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
   const [currentWinners, setCurrentWinners] = useState([]);
-  const [pastWinners,    setPastWinners]    = useState([]);
-  const [loading,        setLoading]        = useState(true);
-  const [viewer,         setViewer]         = useState(null); // logged-in username
+  const [pastWinners, setPastWinners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("pog_username");
-      if (saved) setViewer(saved.replace(/@/g,"").toLowerCase().trim());
-    }
+    try { const u = localStorage.getItem("pog_username"); if (u) setUsername(u.replace(/@/g, "").toLowerCase().trim()); } catch {}
   }, []);
+
+  const thisMonday = getMondayOf(new Date().toISOString().slice(0, 10));
 
   useEffect(() => {
     (async () => {
-      const thisMonday = getMondayOf(new Date().toISOString().slice(0,10));
-
-      // Fetch all spotlights + profile avatars in parallel
-      const { data: spotlights } = await supabase
-        .from("CommunitySpotlights")
-        .select("*")
-        .eq("status", "active")
-        .order("week_start", { ascending: false });
-
-      if (!spotlights?.length) { setLoading(false); return; }
-
-      // Fetch profile avatars for all winners
-      const usernames = [...new Set(spotlights.map(s => s.username))];
-      const { data: profiles } = await supabase
-        .from("Profiles")
-        .select("username, avatar_url")
-        .in("username", usernames);
-
-      const avatarMap = Object.fromEntries((profiles ?? []).map(p => [p.username, p.avatar_url]));
-
-      // Merge avatar: admin override > profile avatar > null
-      const enriched = spotlights.map(s => ({
-        ...s,
-        profile_avatar_url: avatarMap[s.username] ?? null,
-        // s.avatar_url = admin override, profile_avatar_url = from Profiles
-      }));
-
-      setCurrentWinners(enriched.filter(s => s.week_start === thisMonday));
-      setPastWinners(enriched.filter(s => s.week_start !== thisMonday));
+      try {
+        const { data: spotlights, error } = await supabase
+          .from("CommunitySpotlights").select("*").eq("status", "active").order("week_start", { ascending: false });
+        if (error) throw error;
+        if (!spotlights?.length) { setLoading(false); return; }
+        const names = [...new Set(spotlights.map(s => s.username))];
+        const { data: profiles } = await supabase.from("Profiles").select("username, avatar_url").in("username", names);
+        const avatarMap = Object.fromEntries((profiles ?? []).map(p => [p.username, p.avatar_url]));
+        const enriched = spotlights.map(s => ({ ...s, profile_avatar_url: avatarMap[s.username] ?? null }));
+        const monday = getMondayOf(new Date().toISOString().slice(0, 10));
+        setCurrentWinners(enriched.filter(s => s.week_start === monday));
+        setPastWinners(enriched.filter(s => s.week_start !== monday));
+      } catch (e) { console.warn("spotlight load failed:", e); setFailed(true); }
       setLoading(false);
     })();
   }, []);
 
-  // Build a map of current winners by category for the 4-card grid
   const currentMap = Object.fromEntries(currentWinners.map(w => [w.category, w]));
-
-  // Group past winners by week
   const pastByWeek = pastWinners.reduce((acc, w) => {
-    const key = w.week_start;
-    if (!acc[key]) acc[key] = { week_start: w.week_start, week_end: w.week_end, winners: [] };
-    acc[key].winners.push(w);
+    (acc[w.week_start] ||= { week_start: w.week_start, week_end: w.week_end, winners: [] }).winners.push(w);
     return acc;
   }, {});
-  const pastWeeks = Object.values(pastByWeek).sort((a,b) => b.week_start.localeCompare(a.week_start));
+  const pastWeeks = Object.values(pastByWeek).sort((a, b) => b.week_start.localeCompare(a.week_start));
 
-  const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html{scroll-behavior:smooth;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
-    ::-webkit-scrollbar{width:4px;height:4px;}
-    ::-webkit-scrollbar-track{background:${T.bg};}
-    ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
-    .nav-links{display:flex;gap:24px;align-items:center;}
-    @media(max-width:640px){
-      .nav-links{display:none!important;}
-      .winner-grid{grid-template-columns:1fr!important;}
-      .past-grid{grid-template-columns:1fr 1fr!important;}
-    }
-    @media(max-width:400px){
-      .past-grid{grid-template-columns:1fr!important;}
-    }
+  const css = V2GlobalCSS + `
+    .sp-bg { min-height:100vh; background:
+      linear-gradient(180deg, rgba(197,227,247,.55) 0%, rgba(232,244,253,.35) 45%, rgba(240,248,238,.75) 100%),
+      url('/hero-landscape.png') center bottom / cover no-repeat fixed, ${V2.skyBlue}; }
+    .sp-wrap { max-width:920px; margin:0 auto; padding:28px 16px calc(110px + env(safe-area-inset-bottom)); }
+    .sp-eyebrow { display:flex; align-items:center; gap:10px; font-size:12px; font-weight:700; letter-spacing:.3em; text-transform:uppercase; color:${V2.grassDark}; margin-bottom:6px; }
+    .sp-eyebrow i { width:8px; height:8px; border-radius:50%; background:${V2.grassLime}; display:block; }
+    .sp-h1 { font-family:${V2.fontSans}; font-weight:800; font-size:clamp(32px,8vw,56px); line-height:1.02; letter-spacing:-.02em; color:${V2.forestGreen}; margin:0 0 10px; }
+    .sp-sub { font-size:clamp(15px,3.6vw,19px); color:${V2.forestLight}; font-weight:500; line-height:1.45; max-width:560px; margin:0 0 22px; }
+    .sp-card { background:rgba(255,255,255,.94); border:1px solid ${V2.borderWhite}; border-radius:24px; padding:clamp(14px,3.5vw,24px); margin-bottom:16px; box-shadow:0 4px 22px rgba(26,74,10,.09); }
+    .sp-card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+    .sp-h2 { display:flex; align-items:center; gap:10px; font-family:${V2.fontSans}; font-weight:800; font-size:clamp(20px,5vw,28px); color:${V2.forestGreen}; margin:0; letter-spacing:-.01em; }
+    .sp-h2 span[aria-hidden] { font-size:1.15em; }
+    .sp-range { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:${V2.grassDark}; background:#e6f3d6; border-radius:999px; padding:8px 14px; white-space:nowrap; }
+    .sp-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    @media (max-width:619px){ .sp-grid { grid-template-columns:1fr; } }
+    .sp-winner { background:#fff; border:1px solid ${V2.borderSoft}; border-radius:18px; padding:12px; box-shadow:0 1px 6px rgba(26,74,10,.05); min-width:0; }
+    .sp-winner-top { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:10px; }
+    .sp-pill { white-space:nowrap; display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:7px 11px; border-radius:999px; min-width:0; }
+    .sp-crown { font-size:22px; line-height:1; flex-shrink:0; }
+    .sp-winner-body { display:flex; gap:10px; align-items:flex-start; }
+    .sp-name { display:block; font-weight:800; font-size:clamp(15px,3.9vw,18px); color:${V2.forestGreen}; text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:2px; }
+    .sp-name-empty { color:${V2.textMuted}; }
+    a.sp-name:hover { text-decoration:underline; }
+    .sp-desc { font-size:12.5px; line-height:1.4; font-weight:500; color:${V2.forestLight}; opacity:.85; margin:0; }
+    .sp-extra { border-top:1px solid ${V2.borderSoft}; margin-top:10px; padding-top:8px; }
+    .sp-note { font-size:12px; font-weight:500; color:${V2.forestLight}; margin:0 0 6px; line-height:1.45; overflow-wrap:anywhere; }
+    .sp-links { display:flex; flex-wrap:wrap; gap:6px; }
+    .sp-link { font-size:12px; font-weight:700; color:${V2.forestMid}; text-decoration:none; padding:8px 12px; min-height:36px; display:inline-flex; align-items:center; border-radius:999px; border:1px solid ${V2.borderSoft}; background:#fff; }
+    .sp-link-strong { background:#e6f3d6; border-color:#c9e4ad; }
+    .sp-chosen-row { display:grid; grid-template-columns:auto minmax(110px,170px) 1fr; gap:6px 14px; align-items:center; padding:14px 0; border-top:1px solid ${V2.borderSoft}; }
+    .sp-chosen-row:first-of-type { border-top:0; }
+    .sp-chosen-ico { font-size:28px; width:36px; text-align:center; }
+    .sp-chosen-name { font-weight:800; font-size:16px; }
+    .sp-chosen-desc { font-size:14px; font-weight:500; color:${V2.forestLight}; line-height:1.45; }
+    @media (max-width:520px){ .sp-chosen-row { grid-template-columns:auto 1fr; } .sp-chosen-desc { grid-column:2; } }
+    .sp-acc { border:1px solid ${V2.borderSoft}; border-radius:16px; background:#fff; margin-bottom:10px; overflow:hidden; }
+    .sp-acc-btn { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:52px; padding:0 16px; background:#eef7e6; border:0; cursor:pointer; font-family:${V2.fontSans}; font-weight:800; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:${V2.forestMid}; text-align:left; }
+    .sp-acc-btn[aria-expanded="false"] { background:#fff; }
+    .sp-past-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px 14px; padding:14px 16px 16px; }
+    @media (max-width:760px){ .sp-past-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:420px){ .sp-past-grid { grid-template-columns:1fr; } }
+    .sp-past-cat { font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; margin-bottom:6px; }
+    .sp-past-who { display:flex; align-items:center; gap:8px; min-width:0; }
+    .sp-past-name { font-weight:700; font-size:14px; color:${V2.forestGreen}; text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+    .sp-muted { color:${V2.textMuted}; font-weight:600; }
+    .sp-skel { height:150px; border-radius:18px; background:#eef1ea; animation:sp-pulse 1.2s ease-in-out infinite; }
+    @keyframes sp-pulse { 50% { opacity:.55; } }
+    .sp-wrap a:focus-visible, .sp-wrap button:focus-visible { outline:3px solid ${V2.grassLime}; outline-offset:2px; border-radius:12px; }
+    @media (prefers-reduced-motion: reduce){ .sp-skel{animation:none;} }
   `;
+
+  const weekLabel = fmtWeek(thisMonday, addDays(thisMonday, 6));
+  const nothingAtAll = !loading && !failed && !pastWeeks.length && !currentWinners.length;
 
   return (
     <>
+      <Head><title>Community Spotlight | Proof of Grass</title></Head>
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div style={{ minHeight:"100vh", background:T.bg }}>
+      <div className="sp-bg">
+        <V2Nav username={username} onUsernameChange={setUsername} showUpload={() => { window.location.href = "/#upload"; }} />
+        <main className="sp-wrap">
+          <header>
+            <div className="sp-eyebrow"><i aria-hidden="true" />Community</div>
+            <h1 className="sp-h1">Community Spotlight</h1>
+            <p className="sp-sub">Every week we celebrate the standout members of the Touch Grass community.</p>
+          </header>
 
-        {/* NAV */}
-        <nav style={{ position:"sticky", top:0, zIndex:100, display:"flex",
-          alignItems:"center", justifyContent:"space-between",
-          padding:"0 clamp(14px,4vw,48px)", height:56,
-          background:`${T.bg}ec`, backdropFilter:"blur(18px)",
-          borderBottom:`1px solid ${T.border}`, gap:12 }}>
-          <Link href="/" style={{ display:"flex", alignItems:"center", gap:9,
-            textDecoration:"none", flexShrink:0 }}>
-            <img src="/touchgrass-transparent.png" alt=""
-              style={{ width:26, height:26, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-              fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
-          </Link>
-          <div className="nav-links">
-            <Link href="/"           style={{ fontSize:13, color:T.dim, textDecoration:"none" }}>Dashboard</Link>
-            <Link href="/leaderboard" style={{ fontSize:13, color:T.dim, textDecoration:"none" }}>Leaderboard</Link>
-            <span style={{ fontSize:13, color:T.gold, fontWeight:600 }}>Spotlight</span>
-          </div>
-          <Link href="/" style={{ fontSize:11, color:T.olive, textDecoration:"none",
-            letterSpacing:"0.06em", flexShrink:0, whiteSpace:"nowrap" }}>← Back</Link>
-        </nav>
-
-        {/* HERO */}
-        <div style={{ padding:"48px clamp(14px,5vw,64px) 32px",
-          borderBottom:`1px solid ${T.border}` }}>
-          <div style={{ fontSize:10, letterSpacing:"0.22em", color:T.gold,
-            textTransform:"uppercase", marginBottom:12, fontWeight:600 }}>Community</div>
-          <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize:"clamp(36px,6vw,72px)", fontWeight:700, color:T.white,
-            lineHeight:1, letterSpacing:"-0.02em", marginBottom:12 }}>
-            Community<br />Spotlight
-          </h1>
-          <p style={{ fontSize:14, color:T.dim, fontWeight:300,
-            maxWidth:440, lineHeight:1.7 }}>
-            Every week we celebrate the standout members of the Touch Grass community.
-          </p>
-        </div>
-
-        <div style={{ padding:"36px clamp(14px,5vw,64px)" }}>
-
-          {/* CURRENT WEEK */}
-          <div style={{ marginBottom:48 }}>
-            <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:20 }}>
-              <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                fontSize:24, fontWeight:700, color:T.white }}>
-                This Week's Winners
-              </h2>
-              {currentWinners.length > 0 && (
-                <span style={{ fontSize:10, color:T.dim }}>
-                  {fmtWeek(currentWinners[0].week_start, currentWinners[0].week_end)}
-                </span>
-              )}
+          <section className="sp-card" aria-labelledby="sp-this-week">
+            <div className="sp-card-head">
+              <h2 className="sp-h2" id="sp-this-week"><span aria-hidden="true">🏆</span> This Week's Winners</h2>
+              <span className="sp-range">{weekLabel}</span>
             </div>
-
             {loading ? (
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",
-                gap:16 }} className="winner-grid">
-                {[1,2,3,4].map(i => (
-                  <div key={i} style={{ height:200, borderRadius:16, background:T.bg2,
-                    border:`1px solid ${T.border}`, opacity:0.5 }} />
-                ))}
-              </div>
+              <div className="sp-grid" aria-busy="true">{[1, 2, 3, 4].map(i => <div key={i} className="sp-skel" />)}</div>
             ) : (
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",
-                gap:16 }} className="winner-grid">
-                {CATEGORIES.map(cat => (
-                  <WinnerCard key={cat.key}
-                    winner={currentMap[cat.key] ?? null}
-                    current={true}
-                    viewer={viewer} />
-                ))}
+              <div className="sp-grid">
+                {CATEGORIES.map(cat => <WinnerCard key={cat.key} cat={cat} winner={currentMap[cat.key] ?? null} viewer={username} />)}
               </div>
             )}
-          </div>
+            {failed && <p role="alert" style={{ margin: "12px 0 0", fontSize: 14, color: "#b3261e" }}>Couldn't load winners right now. Please try again shortly.</p>}
+          </section>
 
-          {/* HOW WINNERS ARE CHOSEN */}
-          <div style={{ background:T.bg2, border:`1px solid ${T.borderG}`, borderRadius:16,
-            padding:"28px 24px", marginBottom:48 }}>
-            <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:20,
-              fontWeight:700, color:T.white, marginBottom:16 }}>How Winners Are Chosen</h2>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",
-              gap:16 }}>
+          <section className="sp-card" aria-labelledby="sp-how">
+            <h2 className="sp-h2" id="sp-how" style={{ marginBottom: 6 }}><span aria-hidden="true">🌿</span> How Winners Are Chosen</h2>
+            <div>
               {CATEGORIES.map(cat => (
-                <div key={cat.key} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
-                  <span style={{ fontSize:20, flexShrink:0 }}>{cat.emoji}</span>
-                  <div>
-                    <div style={{ fontSize:12, fontWeight:700, color:cat.color,
-                      marginBottom:4 }}>{cat.name}</div>
-                    <div style={{ fontSize:11, color:T.dim, lineHeight:1.5 }}>
-                      {cat.key === "community_mvp" && "The community member who showed up most for the community that week."}
-                      {cat.key === "meme_lord"      && "Best meme, recap, or creative content related to Touch Grass."}
-                      {cat.key === "biggest_shiller" && "Most active community builder, referrer, or promoter."}
-                      {cat.key === "space_warrior"   && "Most active participant in Touch Grass Twitter Spaces."}
-                    </div>
-                  </div>
+                <div key={cat.key} className="sp-chosen-row">
+                  <span className="sp-chosen-ico" aria-hidden="true">{cat.emoji}</span>
+                  <span className="sp-chosen-name" style={{ color: cat.accent }}>{cat.name}</span>
+                  <span className="sp-chosen-desc">{cat.desc.replace("this week", "that week")}</span>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
 
-          {/* PAST WINNERS */}
           {pastWeeks.length > 0 && (
-            <div>
-              <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:24,
-                fontWeight:700, color:T.white, marginBottom:20 }}>Previous Winners</h2>
-              <div style={{ display:"flex", flexDirection:"column", gap:32 }}>
-                {pastWeeks.map(week => (
-                  <div key={week.week_start}>
-                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.14em",
-                      textTransform:"uppercase", color:T.dim, marginBottom:12 }}>
-                      {fmtWeek(week.week_start, week.week_end)}
-                    </div>
-                    <div style={{ display:"grid",
-                      gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",
-                      gap:12 }} className="past-grid">
-                      {week.winners.map(w => {
-                        const cat = getCat(w.category);
-                        const avatarUrl = w.avatar_url || w.profile_avatar_url;
-                        const pastBadge = getSpotlightBadge(w.category);
-                        return (
-                          <Link key={w.id} href={`/u/${w.username}`}
-                            style={{ textDecoration:"none",
-                              background:T.bg2, border:`1px solid ${T.border}`,
-                              borderRadius:12, padding:"14px 16px",
-                              display:"flex", alignItems:"center", gap:10,
-                              transition:"border-color 0.15s" }}
-                            onMouseEnter={e => e.currentTarget.style.borderColor = T.borderGold}
-                            onMouseLeave={e => e.currentTarget.style.borderColor = T.border}>
-                            {/* Badge image */}
-                            {pastBadge?.image && (
-                              <img src={pastBadge.image} alt={pastBadge.title} loading="lazy"
-                                style={{ width:32, height:32, objectFit:"contain", flexShrink:0,
-                                  filter:`drop-shadow(0 0 5px ${cat.color}50)` }} />
-                            )}
-                            {/* Avatar */}
-                            {avatarUrl ? (
-                              <img src={avatarUrl} alt="" loading="lazy"
-                                style={{ width:30, height:30, borderRadius:"50%",
-                                  objectFit:"cover", flexShrink:0, border:`1px solid ${cat.color}` }} />
-                            ) : (
-                              <div style={{ width:30, height:30, borderRadius:"50%",
-                                flexShrink:0, background:T.bg3, border:`1px solid ${cat.color}`,
-                                display:"flex", alignItems:"center", justifyContent:"center",
-                                fontSize:12, fontWeight:700, color:cat.color }}>
-                                {w.username[0].toUpperCase()}
-                              </div>
-                            )}
-                            <div style={{ minWidth:0, flex:1 }}>
-                              <div style={{ fontSize:8, color:cat.color,
-                                letterSpacing:"0.08em", textTransform:"uppercase",
-                                fontWeight:700 }}>{cat.name}</div>
-                              <div style={{ fontSize:13, fontWeight:600, color:T.white,
-                                overflow:"hidden", textOverflow:"ellipsis",
-                                whiteSpace:"nowrap" }}>
-                                @{w.display_name || w.username}
-                              </div>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <section className="sp-card" aria-labelledby="sp-prev">
+              <h2 className="sp-h2" id="sp-prev" style={{ marginBottom: 14 }}><span aria-hidden="true">🕘</span> Previous Winners</h2>
+              {pastWeeks.map((w, i) => <PastWeek key={w.week_start} week={w} defaultOpen={i === 0} />)}
+            </section>
           )}
 
-          {!loading && pastWeeks.length === 0 && currentWinners.length === 0 && (
-            <div style={{ textAlign:"center", padding:"48px 0" }}>
-              <div style={{ fontSize:42, marginBottom:16 }}>🏆</div>
-              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-                fontSize:22, color:T.white, marginBottom:8 }}>
-                Spotlight Coming Soon
-              </div>
-              <div style={{ fontSize:13, color:T.dim }}>
-                Winners will be announced weekly.
-              </div>
-            </div>
+          {nothingAtAll && (
+            <p style={{ textAlign: "center", color: V2.forestLight, fontSize: 14, fontWeight: 500 }}>Winners will be announced weekly.</p>
           )}
-
-        </div>
-
-        {/* FOOTER */}
-        <footer style={{ borderTop:`1px solid ${T.border}`,
-          padding:"20px clamp(14px,4vw,48px)",
-          display:"flex", alignItems:"center", justifyContent:"space-between",
-          flexWrap:"wrap", gap:12 }}>
-          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
-            fontSize:13, color:T.dim }}>touch grass © 2024</span>
-          <div style={{ display:"flex", gap:22 }}>
-            {[["Dashboard","/"],["Leaderboard","/leaderboard"],
-              ["X","https://twitter.com/XTouchGrass"]].map(([l,h]) => (
-              <Link key={l} href={h}
-                style={{ fontSize:10, color:T.dim, textDecoration:"none",
-                  letterSpacing:"0.08em", textTransform:"uppercase" }}>{l}</Link>
-            ))}
-          </div>
-        </footer>
+        </main>
+        <V2BottomNav username={username} onLogProof={() => router.push("/#upload")} onMore={() => {}} />
       </div>
     </>
   );

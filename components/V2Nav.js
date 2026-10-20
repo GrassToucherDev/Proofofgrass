@@ -146,6 +146,12 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
     .v2menu-item span.icon { font-size: 18px; width: 24px; text-align: center; }
     .v2menu-divider { height: 1px; background: rgba(200,220,190,0.4); margin: 8px 24px; }
     /* Responsive */
+    @media (max-width: 1240px) {
+      .v2nav-myprofile { display: none; }
+    }
+    @media (max-width: 1120px) {
+      .v2nav-links { display: none; }
+    }
     @media (max-width: 768px) {
       .v2nav-links { display: none; }
       .v2nav { gap: 12px; }
@@ -156,6 +162,12 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
     }
     @media (max-width: 480px) {
       .v2nav-logo-sub { display: none; }
+    }
+    @media (max-width: 360px) {
+      .v2nav { padding-left: 12px; padding-right: 12px; gap: 8px; }
+      .v2nav-logo { min-width: 0; }
+      .v2nav-input { width: 72px; padding: 7px 10px; }
+      .v2nav-input:focus { width: 90px; }
     }
   `;
 
