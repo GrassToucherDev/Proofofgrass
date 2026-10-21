@@ -177,6 +177,10 @@ export default function GrovesPage() {
     .gv-av b{color:#2d6b1a}
     .gv-av i{position:absolute;right:-4px;bottom:-4px;width:18px;height:18px;border-radius:50%;font-size:11px;font-style:normal;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
     .gv-av i.ok{background:#5ba622}.gv-av i.no{background:#9aa58f}
+    .gv-stack{display:inline-flex}
+    .gv-mini{width:30px;height:30px;border-radius:50%;background:#dcefc9;border:2px solid #fff;margin-left:-8px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;font-size:13px;color:#2d6b1a;box-shadow:0 0 0 1px #cfdcc4}
+    .gv-mini:first-child{margin-left:0}
+    .gv-mini img{width:100%;height:100%;object-fit:cover}
     .gv-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
     .gv-tile{border:2px solid ${V2.borderSoft};border-radius:14px;padding:8px}
     .gv-tile.on{border-color:${V2.grassGreen};box-shadow:0 0 0 2px rgba(91,166,34,.18)}
@@ -426,10 +430,23 @@ export default function GrovesPage() {
               <p style={{ margin: 0, color: V2.textMuted, fontSize: 14 }}>No groves on the board yet. Groves with 3 or more members and a running streak appear here.</p>
             ) : board.map((g, i) => (
               <div className="gv-row" key={g.id}>
-                <span style={{ width: 24, fontWeight: 800, color: V2.textMuted }}>{i + 1}</span>
-                <span style={{ flex: 1, fontWeight: 700, color: V2.forestGreen, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{g.name}</span>
-                <span style={{ fontSize: 13, color: V2.textMuted }}>{g.members} members</span>
-                <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10" }}>{g.streak}d</span>
+                <span style={{ width: 24, fontWeight: 800, color: V2.textMuted, alignSelf: "flex-start", paddingTop: 2 }}>{i + 1}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: V2.forestGreen, overflowWrap: "anywhere" }}>{g.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                    {(g.member_list || []).length > 0 && (
+                      <span className="gv-stack" aria-label={`Members: ${(g.member_list || []).map(m => "@" + m.username).join(", ")}`}>
+                        {g.member_list.map(m => (
+                          <span key={m.username} className="gv-mini" title={`@${m.username}`}>
+                            {m.avatar_url && !badAv[m.username] ? <img src={m.avatar_url} alt="" onError={() => setBadAv(x => ({ ...x, [m.username]: true }))} /> : <b>{m.username[0]?.toUpperCase()}</b>}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 13, color: V2.textMuted }}>{g.members} members</span>
+                  </div>
+                </div>
+                <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10", alignSelf: "flex-start" }}>{g.streak}d</span>
               </div>
             ))}
           </div>
