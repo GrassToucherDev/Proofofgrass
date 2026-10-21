@@ -8,6 +8,8 @@ import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 import V2Nav from "../components/V2Nav";
 import GroveBanner from "../components/GroveBanner";
+import SecureUsernameCard from "../components/SecureUsernameCard";
+import { signIn } from "next-auth/react";
 import { BANNER_PURCHASE_NOTICE } from "../utils/groveBanners";
 const BURN_ADDR       = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const TOUCHGRASS_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
@@ -605,12 +607,47 @@ function GrovesPanel({ username, price, tokensFor, onBuy, reloadKey }) {
     </div>
   );
 }
+// Individual purchases need a username secured by the signed-in Google account (the server enforces it too).
+// This is checked BEFORE the wallet opens so nobody pays and then fails verification.
+function BuyGate({ username, status, item, onClose, onReady }) {
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(0,0,0,0.5)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div role="dialog" aria-label="Secure your username" style={{ background:"white", borderRadius:20, padding:"26px 22px", maxWidth:420, width:"100%", boxShadow:"0 20px 60px rgba(26,74,10,0.25)" }}>
+        <div style={{ fontFamily:V2.fontSans, fontWeight:800, fontSize:20, color:V2.forestGreen, marginBottom:8 }}>Secure your username to buy</div>
+        {!username ? (
+          <p style={{ fontSize:14, color:V2.textBody, lineHeight:1.6 }}>Enter your username in the top bar first.</p>
+        ) : status?.claimed && status?.signedIn && !status?.mine ? (
+          <p style={{ fontSize:14, color:V2.textBody, lineHeight:1.6 }}>@{username} belongs to a different Google account. Sign in with the account that secured it.</p>
+        ) : status?.claimed ? (
+          <>
+            <p style={{ fontSize:14, color:V2.textBody, lineHeight:1.6, margin:"0 0 14px" }}>@{username} is secured by a Google account. Sign in with it to buy {item?.name}. This makes sure purchases always land on the right account.</p>
+            <button onClick={()=>signIn("google")} style={{ ...V2Styles.btnPrimary, padding:"10px 20px" }}>Continue with Google</button>
+          </>
+        ) : (
+          <>
+            <p style={{ fontSize:14, color:V2.textBody, lineHeight:1.6, margin:"0 0 14px" }}>Purchases are tied to a username secured with your Google account, so nobody else can claim your payment. It takes a few seconds.</p>
+            <SecureUsernameCard username={username} onClaimed={onReady} />
+          </>
+        )}
+        <button onClick={onClose} style={{ ...V2Styles.btnSecondary, marginTop:14, fontSize:13, padding:"8px 18px" }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
 // ── Main Marketplace ───────────────────────────────────────────────────────────
 export default function Marketplace() {
   const [tab,          setTab]          = useState("featured");
   const [username,     setUsername]     = useState(null);
   const [inventory,    setInventory]    = useState([]);
-  const [buyingItem,   setBuyingItem]   = useState(null);
+  const [buyingItem,   setBuyingItemRaw] = useState(null);
+  const [gate,         setGate]         = useState(null);   // { item, status } while a secured username is needed
+  const setBuyingItem = (item)=>{
+    if(!item || item.groveBanner){ setBuyingItemRaw(item); return; }   // banners are gated server-side before any payment
+    if(!username){ setGate({ item, status:null }); return; }
+    fetch(`/api/username/status?username=${encodeURIComponent(username)}`).then(r=>r.json())
+      .then(st=>{ if(st?.mine) setBuyingItemRaw(item); else setGate({ item, status:st }); })
+      .catch(()=>setGate({ item, status:{} }));
+  };
   const [previewItem,  setPreviewItem]  = useState(null);
   const [purchased,    setPurchased]    = useState(false);
   const [walletSuccess,setWalletSuccess]= useState(null);
@@ -800,13 +837,18 @@ export default function Marketplace() {
         </div>
       </div>
       {/* MODALS */}
+      {gate && (
+        <BuyGate username={username} status={gate.status} item={gate.item}
+          onClose={()=>setGate(null)}
+          onReady={()=>{ const it=gate.item; setGate(null); setBuyingItemRaw(it); }} />
+      )}
       {buyingItem && (
         <WalletPurchaseModal
           item={buyingItem}
           tokens={tokensFor(buyingItem.usdPrice)}
           price={buyingItem.groveBanner?buyingItem.usdPrice:price}
           username={username}
-          onClose={()=>setBuyingItem(null)}
+          onClose={()=>setBuyingItemRaw(null)}
           {...(buyingItem.groveBanner ? {
             verifyUrl:"/api/groves/banners/verify",
             verifyBody:({signature,walletAddress})=>({ username, intentId:buyingItem.intentId, signature, walletAddress }),
@@ -816,7 +858,7 @@ export default function Marketplace() {
           } : {})}
           onSuccess={(data)=>{
             if(buyingItem.groveBanner){ setGroveReload(n=>n+1); return; }   // keep the modal open on its success screen
-            setPurchased(true); setWalletSuccess(data); setBuyingItem(null);
+            setPurchased(true); setWalletSuccess(data); setBuyingItemRaw(null);
             if(username){
               supabase.from("UserInventory").select("item_id,owned").eq("username",username).eq("owned",true)
                 .then(({data:inv})=>setInventory((inv??[]).map(r=>r.item_id)));

@@ -1,5 +1,6 @@
 // pages/api/marketplace/verify-purchase.js
 import { MARKET_PRICES_USD, MARKET_ITEM_NAMES } from "../../../utils/marketplaceCatalog";
+import { requireOwner } from "../../../utils/requireOwner";
 const MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const BURN = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const RPC  = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
@@ -57,6 +58,10 @@ export default async function handler(req, res) {
   if (!signature || !username || !itemId || !walletAddress) {
     return res.status(400).json({ error:"Missing required fields" });
   }
+  // Purchases are credited only to a username the signed-in Google account has secured, so nobody can
+  // claim someone else's payment for their own username. (The UI checks this BEFORE opening the wallet.)
+  const who = await requireOwner(req, res, username);
+  if (!who) return;
   // Price and name come from the server, never from the request.
   const usdPrice = MARKET_PRICES_USD[itemId];
   if (!usdPrice) return res.status(400).json({ error:"Unknown item." });
