@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
+// Identifies this build. Baked into the client bundle (NEXT_PUBLIC_BUILD_ID) and returned by
+// /api/version, so an old copy of the app can tell a newer one has been deployed.
+const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || `local-${Date.now()}`;
+
 const nextConfig = {
   reactStrictMode: true,
+  env: { NEXT_PUBLIC_BUILD_ID: BUILD_ID },
   serverExternalPackages: ["@solana/web3.js", "@solana/spl-token", "rpc-websockets", "bs58"],
   transpilePackages: [
     "@solana/wallet-adapter-react",
