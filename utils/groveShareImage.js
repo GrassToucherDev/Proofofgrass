@@ -4,7 +4,7 @@ import { bannerSrc, bannerFallbackUrl } from "./groveBanners";
 
 export const GROVE_CARD = { w: 1200, h: 630, bannerH: 420 };
 
-function cover(ctx, img, x, y, w, h, fx = 0.72) {
+function cover(ctx, img, x, y, w, h, fx = 0.5) {
   const s = Math.max(w / img.width, h / img.height), dw = img.width * s, dh = img.height * s;
   ctx.drawImage(img, x - (dw - w) * fx, y - (dh - h) / 2, dw, dh);
 }
@@ -32,9 +32,15 @@ export async function renderGroveCard({ grove, streak, members, banner }) {
 
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
   cover(ctx, art, 0, 0, W, BH);
-  const g = ctx.createLinearGradient(0, 0, W * 0.75, 0);
+  // readability scrim behind the name, fading out toward the bottom so art in the lower-left (e.g. the default banner's logo) stays bright
+  const sc = document.createElement("canvas"); sc.width = W; sc.height = BH; const sx = sc.getContext("2d");
+  const g = sx.createLinearGradient(0, 0, W * 0.75, 0);
   g.addColorStop(0, "rgba(6,24,4,0.72)"); g.addColorStop(0.55, "rgba(6,24,4,0.42)"); g.addColorStop(1, "rgba(6,24,4,0)");
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, BH);
+  sx.fillStyle = g; sx.fillRect(0, 0, W, BH);
+  const mk = sx.createLinearGradient(0, 0, 0, BH);
+  mk.addColorStop(0, "#000"); mk.addColorStop(0.55, "#000"); mk.addColorStop(0.85, "rgba(0,0,0,0)");
+  sx.globalCompositeOperation = "destination-in"; sx.fillStyle = mk; sx.fillRect(0, 0, W, BH);
+  ctx.drawImage(sc, 0, 0);
 
   // name + streak on the banner (live text, never part of the art)
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = "#fff";

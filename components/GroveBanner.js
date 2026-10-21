@@ -13,7 +13,8 @@ export default function GroveBanner({ banner, height = 200, children, scrim = fa
       <img src={src} alt="" draggable={false}
         onError={() => { if (!fallback) { setSrc(bannerFallbackUrl(id)); setFallback(true); } }}
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "72% 50%" }} />
-      {scrim && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,rgba(6,24,4,.72) 0%,rgba(6,24,4,.45) 42%,rgba(6,24,4,0) 75%)" }} />}
+      {scrim && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,rgba(6,24,4,.72) 0%,rgba(6,24,4,.45) 42%,rgba(6,24,4,0) 75%)",
+        WebkitMaskImage: "linear-gradient(180deg,#000 0%,#000 55%,transparent 85%)", maskImage: "linear-gradient(180deg,#000 0%,#000 55%,transparent 85%)" }} />}
       {showTag && fallback && (
         <span style={{ position: "absolute", top: 8, right: 8, fontSize: 10, fontWeight: 800, letterSpacing: ".06em", textTransform: "uppercase", background: "rgba(0,0,0,.55)", color: "#fff", padding: "3px 8px", borderRadius: 10 }}>Placeholder art</span>
       )}

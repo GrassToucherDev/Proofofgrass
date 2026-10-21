@@ -583,7 +583,7 @@ function GrovesPanel({ username, price, tokensFor, onBuy, reloadKey }) {
           return (
             <div key={b.id} style={{ background:"white", borderRadius:18, overflow:"hidden", border:`1px solid ${V2.borderSoft}`, boxShadow:"0 4px 18px rgba(26,74,10,0.08)" }}>
               <GroveBanner banner={b} height={150} scrim showTag radius={0}>
-                <div style={{ position:"absolute", left:14, bottom:10, right:14, color:"#fff", fontWeight:900, fontSize:20, textShadow:"0 2px 6px rgba(0,0,0,.45)", overflowWrap:"anywhere" }}>
+                <div style={{ position:"absolute", left:14, top:"40%", transform:"translateY(-50%)", right:14, color:"#fff", fontWeight:900, fontSize:20, textShadow:"0 2px 6px rgba(0,0,0,.45)", overflowWrap:"anywhere" }}>
                   {bn.grove_name || "Your Grove"}
                 </div>
               </GroveBanner>

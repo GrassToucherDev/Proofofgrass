@@ -284,7 +284,7 @@ export default function GrovesPage() {
             <>
               <div className="gv-card" style={{ padding: 0, overflow: "hidden" }}>
                 <GroveBanner banner={activeBanner} height={220} scrim showTag radius={0} style={{ minHeight: 200 }}>
-                  <div style={{ position: "absolute", left: 20, right: 20, bottom: 16, color: "#fff" }}>
+                  <div style={{ position: "absolute", left: 20, right: 20, top: "42%", transform: "translateY(-50%)", color: "#fff" }}>
                     <div style={{ fontFamily: V2.fontSans, fontWeight: 900, fontSize: "clamp(26px,6vw,40px)", lineHeight: 1.05, textShadow: "0 2px 8px rgba(0,0,0,.4)", overflowWrap: "anywhere" }}>{grove.name}</div>
                   </div>
                 </GroveBanner>
