@@ -197,9 +197,17 @@ export default function GrovesPage() {
             <img src="/groves-logo.webp" alt="Groves" width={700} height={233}
               style={{ display: "block", width: "100%", maxWidth: 700, height: "auto", margin: "0 auto 8px" }} />
           </h1>
-          <p style={{ color: V2.textBody, marginTop: 0, marginBottom: 20, textAlign: "center" }}>
-            Team up with friends to build a shared streak. A grove needs at least 3 members to count, and holds up to 6. Once you have 3 or more, the grove streak grows each day that at least two thirds of members post a proof. Gift shields to keep each other going.
-          </p>
+          <div style={{ maxWidth: 640, margin: "0 auto 22px", textAlign: "center" }}>
+            <p style={{ color: V2.textBody, margin: "0 0 12px", lineHeight: 1.6 }}>
+              Team up with friends to build a shared streak. A grove needs at least 3 members to count and holds up to 6.
+            </p>
+            <p style={{ color: V2.textBody, margin: "0 0 16px", lineHeight: 1.6 }}>
+              Once you have 3 or more, the grove streak grows each day that at least two thirds of members post a proof. Gift shields to keep each other going, and unlock banners to make your grove your own.
+            </p>
+            <Link href="/marketplace?tab=groves" style={{ ...V2Styles.btnPrimary, display: "inline-flex", textDecoration: "none", padding: "11px 22px", fontSize: 14 }}>
+              🌳 Browse grove banners
+            </Link>
+          </div>
 
           {msg.text && (
             <div role={msg.type === "err" ? "alert" : "status"} className="gv-card"
