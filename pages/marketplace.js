@@ -561,7 +561,7 @@ function GrovesPanel({ username, price, tokensFor, onBuy, reloadKey }) {
   return (
     <div>
       <div style={{ marginBottom:18 }}>
-        <div style={{ fontSize:18, fontWeight:800, color:V2.forestGreen }}>Grove banners</div>
+        <div style={{ fontSize:18, fontWeight:800, color:V2.forestGreen }}>Grove Banners</div>
         <div style={{ fontSize:13, color:V2.textBody, lineHeight:1.6, maxWidth:620 }}>
           Illustrated banners for your Grove's card and share image. {BANNER_PURCHASE_NOTICE} Cosmetic only: banners never change streaks, shields or rankings.
         </div>

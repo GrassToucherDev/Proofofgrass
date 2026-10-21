@@ -209,7 +209,7 @@ export default function GrovesPage() {
               Once you have 3 or more, the grove streak grows each day that at least two thirds of members post a proof. Gift shields to keep each other going, and unlock banners to make your grove your own.
             </p>
             <Link href="/marketplace?tab=groves" style={{ ...V2Styles.btnPrimary, display: "inline-flex", textDecoration: "none", padding: "11px 22px", fontSize: 14 }}>
-              🌳 Browse grove banners
+              🌳 Browse Grove Banners
             </Link>
           </div>
 
@@ -321,7 +321,7 @@ export default function GrovesPage() {
               </div>
 
               <div className="gv-card" id="gv-appearance">
-                <div className="gv-h" style={{ fontSize: 20 }}>🖼️ Grove appearance</div>
+                <div className="gv-h" style={{ fontSize: 20 }}>🖼️ Grove Appearance</div>
                 <p style={{ margin: "0 0 12px", fontSize: 13, color: V2.textMuted }}>Unlocked for {grove.name}</p>
                 <div className="gv-tiles">
                   {(bn?.banners || []).map(b => {
@@ -425,7 +425,7 @@ export default function GrovesPage() {
 
           {/* Leaderboard */}
           <div className="gv-card">
-            <div className="gv-h" style={{ fontSize: 20 }}>🏆 Top groves</div>
+            <div className="gv-h" style={{ fontSize: 20 }}>🏆 Top Groves</div>
             {board.length === 0 ? (
               <p style={{ margin: 0, color: V2.textMuted, fontSize: 14 }}>No groves on the board yet. Groves with 3 or more members and a running streak appear here.</p>
             ) : board.map((g, i) => (
