@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { adminFetch } from "../../utils/adminClient";
 import { supabase } from "../../utils/supabase";
+import SpotlightAnnouncement from "../../components/SpotlightAnnouncement";
 
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710", bg4:"#1a1e13",
@@ -356,6 +357,8 @@ export default function AdminSpotlight() {
               </a>
             </div>
           </div>
+
+          <SpotlightAnnouncement spotlights={spotlights} />
 
           <div style={{ background:T.bg2, border:`1px solid ${T.border}`,
             borderRadius:14, overflow:"auto" }}>
