@@ -30,8 +30,13 @@ insert into grove_banners (id, name, description, art_path, is_default, sort_ord
   ('default',        'Default',        'The free Grove meadow.',                      '/grove-banners/default.webp',        true,  0),
   ('campfire_crew',  'Campfire Crew',  'A cozy woodland campsite at night.',          '/grove-banners/campfire-crew.webp',  false, 1),
   ('trailblazers',   'Trailblazers',   'A mountain trail at sunrise.',                '/grove-banners/trailblazers.webp',   false, 2),
-  ('rooted_together','Rooted Together','A lush woodland clearing.',                   '/grove-banners/rooted-together.webp',false, 3)
-on conflict (id) do nothing;      -- never overwrites prices you have configured
+  ('rooted_together','Rooted Together','A lush woodland clearing.',                   '/grove-banners/rooted-together.webp',false, 3),
+  ('sunset_shores',  'Sunset Shores',  'A sunny beach at golden hour.',               '/grove-banners/sunset-shores.webp',  false, 4)
+on conflict (id) do nothing;      -- never overwrites anything you have configured
+
+-- Launch price: $5.00 USD per paid banner. Only fills banners that have NO price yet, so re-running this
+-- file never overwrites a price you changed later. Change one with: update grove_banners set price_usd = 7.5 where id = 'campfire_crew';
+update grove_banners set price_usd = 5.00 where not is_default and price_usd is null;
 
 -- ── Grove columns ────────────────────────────────────────────────────────────
 alter table groves add column if not exists owner_username text;
