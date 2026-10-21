@@ -7,6 +7,8 @@ import Head from "next/head";
 import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 import V2Nav from "../components/V2Nav";
+import GroveBanner from "../components/GroveBanner";
+import { BANNER_PURCHASE_NOTICE } from "../utils/groveBanners";
 const BURN_ADDR       = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const TOUCHGRASS_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const SUPABASE_URL    = "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public";
@@ -96,6 +98,7 @@ const CATEGORIES = [
   { id:"featured",   label:"⭐ Featured",     icon:"⭐" },
   { id:"cosmetics",  label:"🎨 Cosmetics",    icon:"🎨" },
   { id:"utility",    label:"⚡ Utility",      icon:"⚡" },
+  { id:"groves",     label:"🌳 Groves",       icon:"🌳" },
   { id:"proofstyle", label:"🎭 Proof Styles", icon:"🎭", comingSoon:true },
   { id:"limited",    label:"💎 Collectibles", icon:"💎", comingSoon:true },
 ];
@@ -520,6 +523,88 @@ function BurnStats() {
     </div>
   );
 }
+// ── Groves category: banners a Grove unlocks (owned by the Grove, bought by any member) ──────────
+const GROVE_ERRORS = {
+  not_in_grove: "Create or join a Grove before buying a banner.",
+  purchase_in_progress: "A teammate is already unlocking this banner for your Grove. Try again in a few minutes.",
+  already_unlocked: "Your Grove already has this banner.",
+  price_not_set: "This banner isn't available to buy yet.",
+  unavailable: "This banner isn't available to buy.",
+  not_signed_in: "Sign in with Google to buy banners.",
+  unclaimed: "Secure your username on the Groves page first.",
+  not_owner: "This username belongs to another account.",
+};
+function GrovesPanel({ username, price, tokensFor, onBuy, reloadKey }) {
+  const [bn, setBn] = useState(null);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState("");
+  useEffect(()=>{
+    let dead=false;
+    setErr("");
+    fetch(`/api/groves/banners${username?`?username=${encodeURIComponent(username)}`:""}`)
+      .then(async r=>{ const d=await r.json().catch(()=>({})); if(dead) return; if(r.ok) setBn(d); else { setBn({ banners:[], grove_id:null }); setErr(GROVE_ERRORS[d.code]||d.error||"Couldn't load banners."); } })
+      .catch(()=>{ if(!dead){ setBn({ banners:[], grove_id:null }); setErr("Couldn't load banners."); } });
+    return ()=>{ dead=true; };
+  },[username, reloadKey]);
+  const start = async (b)=>{
+    setBusy(b.id); setErr("");
+    try {
+      const r = await fetch("/api/groves/banners/intent",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ username, bannerId:b.id }) });
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok || d.ok===false){ setErr(GROVE_ERRORS[d.error]||GROVE_ERRORS[d.code]||d.error||"Couldn't start checkout."); return; }
+      onBuy({ id:`grove_banner_${b.id}`, name:`${b.name} for ${d.grove_name}`, groveBanner:true, intentId:d.intent_id, usdPrice:Number(d.price_usd), groveName:d.grove_name });
+    } finally { setBusy(""); }
+  };
+  if(!bn) return <div style={{ textAlign:"center", padding:"60px 0", color:V2.midGray }}>Loading…</div>;
+  const paid = bn.banners.filter(b=>!b.is_default);
+  const hasGrove = !!bn.grove_id;
+  return (
+    <div>
+      <div style={{ marginBottom:18 }}>
+        <div style={{ fontSize:18, fontWeight:800, color:V2.forestGreen }}>Grove banners</div>
+        <div style={{ fontSize:13, color:V2.textBody, lineHeight:1.6, maxWidth:620 }}>
+          Illustrated banners for your Grove's card and share image. {BANNER_PURCHASE_NOTICE} Cosmetic only: banners never change streaks, shields or rankings.
+        </div>
+      </div>
+      {err && <div role="alert" style={{ background:"#fff", border:"1px solid #e5a29c", color:"#b3261e", borderRadius:12, padding:"10px 14px", marginBottom:14, fontSize:13 }}>{err}</div>}
+      {!username && <div style={{ background:"white", borderRadius:14, padding:16, marginBottom:16, fontSize:14, color:V2.textBody }}>Enter your username in the top bar to buy a banner for your Grove.</div>}
+      {username && !hasGrove && !err && (
+        <div style={{ background:"white", borderRadius:14, padding:16, marginBottom:16, fontSize:14, color:V2.textBody }}>
+          You're not in a Grove yet. <Link href="/groves" style={{ color:V2.forestGreen, fontWeight:700 }}>Create or join one</Link> to unlock banners.
+        </div>
+      )}
+      <div className="mp-pack-grid">
+        {paid.map(b=>{
+          const tokens = b.purchasable ? tokensFor(Number(b.price_usd)) : null;
+          const label = b.unlocked ? "Unlocked ✓" : b.pending ? "Purchase in progress" : !b.purchasable ? "Price coming soon" : !hasGrove ? "Join a Grove first" : `Unlock for ${bn.grove_name}`;
+          const disabled = b.unlocked || b.pending || !b.purchasable || !hasGrove || !username || busy===b.id || !tokens;
+          return (
+            <div key={b.id} style={{ background:"white", borderRadius:18, overflow:"hidden", border:`1px solid ${V2.borderSoft}`, boxShadow:"0 4px 18px rgba(26,74,10,0.08)" }}>
+              <GroveBanner banner={b} height={150} scrim showTag radius={0}>
+                <div style={{ position:"absolute", left:14, bottom:10, right:14, color:"#fff", fontWeight:900, fontSize:20, textShadow:"0 2px 6px rgba(0,0,0,.45)", overflowWrap:"anywhere" }}>
+                  {bn.grove_name || "Your Grove"}
+                </div>
+              </GroveBanner>
+              <div style={{ padding:"14px 16px 16px" }}>
+                <div style={{ fontWeight:800, color:V2.forestGreen, fontSize:16 }}>{b.name}</div>
+                <div style={{ fontSize:12, color:V2.textMuted, margin:"2px 0 10px", minHeight:32 }}>{b.description} <span style={{ opacity:.8 }}>Preview applied to {bn.grove_name || "your Grove"}.</span></div>
+                <div style={{ fontSize:13, fontWeight:700, color:V2.forestGreen, marginBottom:10 }}>
+                  {b.purchasable ? (tokens ? `${tokens.toLocaleString()} $TOUCHGRASS` : "Loading price…") : "Price not set"}
+                  {b.purchasable && <span style={{ fontWeight:500, color:V2.textMuted }}> · ${Number(b.price_usd).toFixed(2)}</span>}
+                </div>
+                <button disabled={disabled} onClick={()=>start(b)}
+                  style={{ ...V2Styles.btnPrimary, width:"100%", justifyContent:"center", fontSize:13, opacity:disabled?0.55:1, cursor:disabled?"default":"pointer" }}>
+                  {busy===b.id ? "Starting…" : label}
+                </button>
+                {b.unlocked && <div style={{ fontSize:11, color:V2.textMuted, marginTop:8 }}>Unlocked by @{b.unlocked_by}. <Link href="/groves" style={{ color:V2.forestGreen }}>Set it on the Groves page</Link> (owner only).</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 // ── Main Marketplace ───────────────────────────────────────────────────────────
 export default function Marketplace() {
   const [tab,          setTab]          = useState("featured");
@@ -529,8 +614,10 @@ export default function Marketplace() {
   const [previewItem,  setPreviewItem]  = useState(null);
   const [purchased,    setPurchased]    = useState(false);
   const [walletSuccess,setWalletSuccess]= useState(null);
+  const [groveReload, setGroveReload] = useState(0);
   const { price, loading:priceLoading, tokensFor } = useTouchgrassPrice();
   useEffect(()=>{
+    try { if (new URLSearchParams(window.location.search).get("tab")==="groves") setTab("groves"); } catch {}
     const u = getUsername();
     setUsername(u);
     if(u){
@@ -662,7 +749,10 @@ export default function Marketplace() {
               <YourFlexPanel username={username} inventory={inventory} />
             </>
           )}
-          {tab!=="featured" && (
+          {tab==="groves" && (
+            <GrovesPanel username={username} price={price} tokensFor={tokensFor} onBuy={setBuyingItem} reloadKey={groveReload} />
+          )}
+          {tab!=="featured" && tab!=="groves" && (
             <>
               {filteredItems.length>0 ? (
                 <div className="mp-pack-grid">
@@ -714,10 +804,18 @@ export default function Marketplace() {
         <WalletPurchaseModal
           item={buyingItem}
           tokens={tokensFor(buyingItem.usdPrice)}
-          price={price}
+          price={buyingItem.groveBanner?buyingItem.usdPrice:price}
           username={username}
           onClose={()=>setBuyingItem(null)}
+          {...(buyingItem.groveBanner ? {
+            verifyUrl:"/api/groves/banners/verify",
+            verifyBody:({signature,walletAddress})=>({ username, intentId:buyingItem.intentId, signature, walletAddress }),
+            notice:BANNER_PURCHASE_NOTICE,
+            payLabel:`Unlock for ${buyingItem.groveName} →`,
+            successText:`${buyingItem.name} is unlocked. The Grove owner can set it as the active banner on the Groves page.`,
+          } : {})}
           onSuccess={(data)=>{
+            if(buyingItem.groveBanner){ setGroveReload(n=>n+1); return; }   // keep the modal open on its success screen
             setPurchased(true); setWalletSuccess(data); setBuyingItem(null);
             if(username){
               supabase.from("UserInventory").select("item_id,owned").eq("username",username).eq("owned",true)

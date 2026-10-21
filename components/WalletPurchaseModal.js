@@ -48,6 +48,14 @@ export default function WalletPurchaseModal({
   username,
   onClose,
   onSuccess,
+  // Optional: bound purchases (Grove banners). verifyUrl/verifyBody replace the default verify call, `notice`
+  // is shown before paying, and once a payment has been sent a failed verification offers "Retry verification"
+  // instead of a second payment.
+  verifyUrl,
+  verifyBody,
+  notice,
+  payLabel,
+  successText,
 }) {
   const { connection }                = useConnection();
   const { publicKey, sendTransaction, connected, connecting } = useWallet();
@@ -57,6 +65,47 @@ export default function WalletPurchaseModal({
   const [txSig,   setTxSig]   = useState("");
 
 
+
+  const failWith = useCallback((e) => {
+    console.error("[WalletPurchaseModal]", e);
+    if (e?.name === "WalletSignTransactionError" || e?.message?.includes("rejected")) {
+      setError("Transaction cancelled.");
+    } else {
+      setError(e?.message || "Transaction failed. Please try again.");
+    }
+    setStep("error");
+  }, []);
+
+  const runVerify = useCallback(async (signature) => {
+    setStep("verifying");
+    const body = verifyBody
+      ? verifyBody({ signature, walletAddress: publicKey.toString() })
+      : {
+          signature,
+          username,
+          itemId:         item.id,
+          itemName:       item.name,
+          expectedAmount: tokens,
+          walletAddress:  publicKey.toString(),
+        };
+    const res = await fetch(verifyUrl || "/api/marketplace/verify-purchase", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || "Verification failed");
+    }
+    setStep("success");
+    onSuccess?.({ signature, unlockedCovers: data.coverSlugs, ...data });
+  }, [publicKey, verifyUrl, verifyBody, username, item, tokens, onSuccess]);
+
+  const retryVerify = useCallback(async () => {
+    if (!txSig) return;
+    setError("");
+    try { await runVerify(txSig); } catch (e) { failWith(e); }
+  }, [txSig, runVerify, failWith]);
 
   const handlePurchase = useCallback(async () => {
     if (!publicKey || !tokens) return;
@@ -161,39 +210,12 @@ export default function WalletPurchaseModal({
         "confirmed"
       );
 
-      // ── Verify server-side ───────────────────────────────────────────────
-      setStep("verifying");
-      const res = await fetch("/api/marketplace/verify-purchase", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          signature,
-          username,
-          itemId:         item.id,
-          itemName:       item.name,
-          expectedAmount: tokens,
-          walletAddress:  publicKey.toString(),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Verification failed");
-      }
-
-      setStep("success");
-      onSuccess?.({ signature, unlockedCovers: data.coverSlugs });
+      await runVerify(signature);
 
     } catch(e) {
-      console.error("[WalletPurchaseModal]", e);
-      if (e?.name === "WalletSignTransactionError" || e?.message?.includes("rejected")) {
-        setError("Transaction cancelled.");
-      } else {
-        setError(e?.message || "Transaction failed. Please try again.");
-      }
-      setStep("error");
+      failWith(e);
     }
-  }, [publicKey, connection, sendTransaction, tokens, item, username, onSuccess]);
+  }, [publicKey, connection, sendTransaction, tokens, runVerify, failWith]);
 
   const stepLabel = STEPS[step];
   const isProcessing = !["idle","error","success"].includes(step);
@@ -252,6 +274,11 @@ export default function WalletPurchaseModal({
 
         </div>
 
+        {notice && step !== "success" && (
+          <div style={{background:"rgba(147,168,90,0.08)",border:`1px solid ${T.borderG}`,borderRadius:10,
+            padding:"12px 14px",marginBottom:16,fontSize:12,color:T.white,lineHeight:1.6}}>{notice}</div>
+        )}
+
         {/* Success state */}
         {step === "success" && (
           <div style={{textAlign:"center",padding:"16px 0"}}>
@@ -260,7 +287,7 @@ export default function WalletPurchaseModal({
               Purchase Complete!
             </div>
             <div style={{fontSize:12,color:T.muted,lineHeight:1.7,marginBottom:16}}>
-              <strong style={{color:T.white}}>{item.name}</strong> has been unlocked for your account instantly.
+              {successText || <><strong style={{color:T.white}}>{item.name}</strong> has been unlocked for your account instantly.</>}
             </div>
             {txSig && (
               <a href={`https://solscan.io/tx/${txSig}`} target="_blank" rel="noopener noreferrer"
@@ -347,8 +374,14 @@ export default function WalletPurchaseModal({
                 )}
 
                 {/* Purchase button */}
+                {txSig && verifyUrl && step === "error" && (
+                  <div style={{fontSize:11,color:T.muted,lineHeight:1.6,marginBottom:10}}>
+                    Your payment was sent. Don't pay again — retry verification{" "}
+                    <a href={`https://solscan.io/tx/${txSig}`} target="_blank" rel="noopener noreferrer" style={{color:T.olive}}>(view transaction)</a>.
+                  </div>
+                )}
                 <button
-                  onClick={handlePurchase}
+                  onClick={txSig && verifyUrl ? retryVerify : handlePurchase}
                   disabled={!connected}
                   style={{
                     width:"100%",padding:"14px",borderRadius:10,cursor:"pointer",
@@ -359,7 +392,7 @@ export default function WalletPurchaseModal({
                     opacity: 1,
                     marginBottom:12,
                   }}>
-                  Pay {tokens?.toLocaleString()} $TOUCHGRASS →
+                  {txSig && verifyUrl ? "Retry verification →" : (payLabel || `Pay ${tokens?.toLocaleString()} $TOUCHGRASS →`)}
                 </button>
 
                 <div style={{fontSize:10,color:T.dim,textAlign:"center",lineHeight:1.6}}>
