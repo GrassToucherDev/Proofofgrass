@@ -96,9 +96,9 @@ const CATALOGUE = [
 ];
 const CATEGORIES = [
   { id:"featured",   label:"⭐ Featured",     icon:"⭐" },
+  { id:"groves",     label:"🌳 Groves",       icon:"🌳" },
   { id:"cosmetics",  label:"🎨 Cosmetics",    icon:"🎨" },
   { id:"utility",    label:"⚡ Utility",      icon:"⚡" },
-  { id:"groves",     label:"🌳 Groves",       icon:"🌳" },
   { id:"proofstyle", label:"🎭 Proof Styles", icon:"🎭", comingSoon:true },
   { id:"limited",    label:"💎 Collectibles", icon:"💎", comingSoon:true },
 ];
