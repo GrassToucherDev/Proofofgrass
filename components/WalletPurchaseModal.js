@@ -49,8 +49,8 @@ export default function WalletPurchaseModal({
   onClose,
   onSuccess,
   // Optional: bound purchases (Grove banners). verifyUrl/verifyBody replace the default verify call, `notice`
-  // is shown before paying, and once a payment has been sent a failed verification offers "Retry verification"
-  // instead of a second payment.
+  // is shown before paying. For every purchase, once a payment has been sent a failed verification offers
+  // "Retry verification" instead of a second payment.
   verifyUrl,
   verifyBody,
   notice,
@@ -374,14 +374,14 @@ export default function WalletPurchaseModal({
                 )}
 
                 {/* Purchase button */}
-                {txSig && verifyUrl && step === "error" && (
+                {txSig && step === "error" && (
                   <div style={{fontSize:11,color:T.muted,lineHeight:1.6,marginBottom:10}}>
                     Your payment was sent. Don't pay again — retry verification{" "}
                     <a href={`https://solscan.io/tx/${txSig}`} target="_blank" rel="noopener noreferrer" style={{color:T.olive}}>(view transaction)</a>.
                   </div>
                 )}
                 <button
-                  onClick={txSig && verifyUrl ? retryVerify : handlePurchase}
+                  onClick={txSig ? retryVerify : handlePurchase}
                   disabled={!connected}
                   style={{
                     width:"100%",padding:"14px",borderRadius:10,cursor:"pointer",
@@ -392,7 +392,7 @@ export default function WalletPurchaseModal({
                     opacity: 1,
                     marginBottom:12,
                   }}>
-                  {txSig && verifyUrl ? "Retry verification →" : (payLabel || `Pay ${tokens?.toLocaleString()} $TOUCHGRASS →`)}
+                  {txSig ? "Retry verification →" : (payLabel || `Pay ${tokens?.toLocaleString()} $TOUCHGRASS →`)}
                 </button>
 
                 <div style={{fontSize:10,color:T.dim,textAlign:"center",lineHeight:1.6}}>
