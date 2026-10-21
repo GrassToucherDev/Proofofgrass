@@ -107,7 +107,7 @@ export default function GrovesPage() {
       .then(({ data: rows }) => setAvatars(Object.fromEntries((rows || []).map(r => [r.username, r.avatar_url]))));
   }, [memberKey]);
 
-  const activeBanner = bn?.banners?.find(b => b.id === (data?.grove?.active_banner || bn?.active)) || { id: "default", art_path: "/grove-banners/sunset-shores.webp" };
+  const activeBanner = bn?.banners?.find(b => b.id === (data?.grove?.active_banner || bn?.active)) || { id: "default", art_path: "/grove-banners/default.webp" };
 
   // The share card preview IS the exported image (same renderer), rebuilt from real data whenever it changes.
   const cardKey = JSON.stringify([data?.grove?.name, data?.streak, (data?.members || []).map(m => [m.username, m.locked_today, avatars[m.username]]), activeBanner.id, activeBanner.art_path]);

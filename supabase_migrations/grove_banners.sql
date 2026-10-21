@@ -26,17 +26,18 @@ create table if not exists grove_banners (
   available   boolean not null default true,
   sort_order  int not null default 0
 );
--- Four banners: three paid + Sunset Shores as the FREE default (every Grove starts with it).
+-- Free default + four paid banners.
 insert into grove_banners (id, name, description, art_path, is_default, sort_order) values
+  ('default',        'Default',        'The free Grove meadow.',                      '/grove-banners/default.webp',        true,  0),
   ('campfire_crew',  'Campfire Crew',  'A cozy woodland campsite at night.',          '/grove-banners/campfire-crew.webp',  false, 1),
   ('trailblazers',   'Trailblazers',   'A mountain trail at sunrise.',                '/grove-banners/trailblazers.webp',   false, 2),
-  ('rooted_together','Rooted Together','A lush woodland clearing.',                   '/grove-banners/rooted-together.webp',false, 3)
+  ('rooted_together','Rooted Together','A lush woodland clearing.',                   '/grove-banners/rooted-together.webp',false, 3),
+  ('sunset_shores',  'Sunset Shores',  'A sunny beach at golden hour.',               '/grove-banners/sunset-shores.webp',  false, 4)
 on conflict (id) do nothing;      -- never overwrites anything you have configured
-insert into grove_banners (id, name, description, art_path, is_default, sort_order) values
-  ('default',        'Sunset Shores',  'A sunny beach at golden hour. Free for every Grove.', '/grove-banners/sunset-shores.webp', true, 4)
-on conflict (id) do update set name = excluded.name, description = excluded.description, art_path = excluded.art_path, sort_order = excluded.sort_order;
+-- (if an earlier draft renamed the default to "Sunset Shores", put it back)
+update grove_banners set name = 'Default', description = 'The free Grove meadow.', art_path = '/grove-banners/default.webp', sort_order = 0 where id = 'default';
 
--- Launch price: $5.00 USD per paid banner (the free default stays free). Only fills banners that have NO price yet, so re-running this
+-- Launch price: $5.00 USD per paid banner. Only fills banners that have NO price yet, so re-running this
 -- file never overwrites a price you changed later. Change one with: update grove_banners set price_usd = 7.5 where id = 'campfire_crew';
 update grove_banners set price_usd = 5.00 where not is_default and price_usd is null;
 
@@ -86,9 +87,6 @@ create table if not exists grove_banner_unlocks (
   unlocked_at           timestamptz not null default now(),
   primary key (grove_id, banner_id)                            -- each banner unlocks once per Grove
 );
-
--- tidy-up from an earlier draft that listed Sunset Shores as a separate paid banner
-delete from grove_banners where id = 'sunset_shores' and not exists (select 1 from grove_banner_unlocks u where u.banner_id = 'sunset_shores');
 
 alter table grove_banners          enable row level security;
 alter table grove_banner_purchases enable row level security;
