@@ -1,6 +1,6 @@
 // Step 2 of a purchase: after the wallet payment confirms, verify it on-chain and unlock the banner for the
 // Grove that was bound at checkout (NOT whatever Grove the buyer is in now).
-import { requireOwner, adminClient } from "../../../../utils/requireOwner";
+import { adminClient } from "../../../../utils/requireOwner";
 import { verifyBannerPayment, PaymentError } from "../../../../utils/solanaPayment";
 
 export default async function handler(req, res) {
@@ -8,13 +8,13 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const { intentId, signature, walletAddress } = req.body || {};
   if (!intentId || !signature || !walletAddress || !/^[0-9a-f-]{36}$/i.test(String(intentId))) return res.status(400).json({ error: "Missing required fields" });
-  const who = await requireOwner(req, res, req.body?.username);
-  if (!who) return;
+  // No Google session needed here: the intent was created by the signed-in member (grove_banner_intent) and fixes
+  // the buyer, Grove, banner and price. This lets the wallet step run in Phantom's in-app browser.
   const db = adminClient();
 
   const { data: intent, error: iErr } = await db.from("grove_banner_purchases").select("*").eq("id", intentId).maybeSingle();
   if (iErr) return res.status(500).json({ error: "Could not load this purchase." });
-  if (!intent || intent.buyer !== who.username) return res.status(404).json({ error: "Purchase not found." });
+  if (!intent) return res.status(404).json({ error: "Purchase not found." });
   if (intent.status === "completed") {
     return intent.transaction_signature === signature
       ? res.status(200).json({ success: true, alreadyProcessed: true, groveId: intent.grove_id, bannerId: intent.banner_id })
