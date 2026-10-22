@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "../utils/supabase";
+import { yardError } from "../utils/yardErrors";
 
 const T = {
   bg:"#0a0b08", bg2:"#111209", bg3:"#181a12",
@@ -10,11 +10,6 @@ const T = {
 };
 
 function norm(v) { return String(v??"").replace(/@/g,"").toLowerCase().trim(); }
-
-function makeSlug(a, b, days) {
-  const ts = Date.now().toString(36);
-  return `${norm(a)}-vs-${norm(b)}-${days}d-${ts}`;
-}
 
 export default function ChallengeModal({ targetUsername, viewerUsername, onClose }) {
   const router = useRouter();
@@ -30,28 +25,16 @@ export default function ChallengeModal({ targetUsername, viewerUsername, onClose
     if (norm(viewerUsername) === norm(targetUsername)) { setError("You can't challenge yourself."); return; }
     setSending(true); setError("");
 
-    const newSlug = makeSlug(viewerUsername, targetUsername, duration);
-
-    const { error: insertErr } = await supabase.from("Challenges").insert([{
-      slug:          newSlug,
-      challenger:    norm(viewerUsername),
-      challenged:    norm(targetUsername),
-      duration_days: duration,
-      message:       message.trim() || null,
-      status:        "pending",
-    }]);
-
-    if (insertErr) {
-      setError("Failed to send — try again.");
-      setSending(false);
-      return;
-    }
-
-    await supabase.from("ChallengeEvents").insert([{
-      challenge_id: null, // will be updated via trigger or can be fetched
-      username: norm(viewerUsername),
-      event_type: "sent",
-    }]);
+    let d = {};
+    try {
+      const r = await fetch("/api/yard/challenge/create", {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ username: norm(viewerUsername), target: norm(targetUsername), days: duration, message: message.trim() }),
+      });
+      d = await r.json().catch(() => ({}));
+      if (!r.ok || d.ok === false || !d.slug) { setError(yardError(d, "Failed to send — try again.")); setSending(false); return; }
+    } catch { setError("Failed to send — try again."); setSending(false); return; }
+    const newSlug = d.slug;
 
     setSlug(newSlug);
     setSent(true);

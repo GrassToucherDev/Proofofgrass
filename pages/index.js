@@ -9,6 +9,7 @@ import V2BottomNav from "../components/V2BottomNav";
 import V2Ticker from "../components/V2Ticker";
 import { supabase } from "../utils/supabase";
 import WagoCard from "../components/WagoCard";
+import { yardError } from "../utils/yardErrors";
 import SecureUsernameCard from "../components/SecureUsernameCard";
 import { getSpotlightBadge, getSpotlightFeedText, SPOTLIGHT_BADGES } from "../utils/spotlightBadges";
 import { V2, V2Styles, V2GlobalCSS, V2_TIERS, getV2Tier } from "../utils/v2Theme";
@@ -492,6 +493,7 @@ export default function Home() {
   const [mounted,              setMounted]              = useState(false);
   const [pendingChallenges,    setPendingChallenges]    = useState([]);
   const [challengeActioning,   setChallengeActioning]   = useState(null);
+  const [challengeError,      setChallengeError]      = useState("");
   const uploadSectionRef = useRef(null);
 
   // ── Effects — all preserved from V1 ─────────────────────────────────────
@@ -604,7 +606,7 @@ export default function Home() {
         } catch {}
 
         supabase.from("Challenges").select("id,slug,challenger,challenged,duration_days,message,created_at")
-          .eq("challenged",username).eq("status","pending").order("created_at",{ascending:false})
+          .eq("challenged",username).eq("status","pending").gte("created_at",new Date(Date.now()-7*864e5).toISOString()).order("created_at",{ascending:false})
           .then(({ data }) => setPendingChallenges(data ?? []));
 
       } catch(e) { setStreakTone("neutral"); setStreakStatus(""); }
@@ -657,19 +659,13 @@ export default function Home() {
   const handleChallengeAction = useCallback(async (challenge, action) => {
     setChallengeActioning(challenge.id);
     try {
-      if (action === "accept") {
-        const now = new Date().toISOString();
-        const endsAt = new Date(Date.now() + challenge.duration_days * 86400000).toISOString();
-        await supabase.from("Challenges").update({ status:"active", started_at:now, ends_at:endsAt }).eq("id",challenge.id);
-        await supabase.from("ChallengeProgress").upsert([
-          { challenge_id:challenge.id, username:challenge.challenger, days_complete:0, status:"active" },
-          { challenge_id:challenge.id, username:challenge.challenged, days_complete:0, status:"active" },
-        ], { onConflict:"challenge_id,username" });
-        await supabase.from("ChallengeEvents").insert([{ challenge_id:challenge.id, username, event_type:"accepted" }]);
-      } else {
-        await supabase.from("Challenges").update({ status:"declined" }).eq("id",challenge.id);
-        await supabase.from("ChallengeEvents").insert([{ challenge_id:challenge.id, username, event_type:"declined" }]);
-      }
+      const r = await fetch("/api/yard/challenge/respond", {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ username, slug: challenge.slug, action }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.ok === false) { setChallengeError(yardError(d)); setChallengeActioning(null); return; }
+      setChallengeError("");
       setPendingChallenges(prev => prev.filter(c => c.id !== challenge.id));
     } catch(e) { console.error("challenge action failed",e); }
     setChallengeActioning(null);
@@ -880,6 +876,7 @@ export default function Home() {
         {/* ── PENDING CHALLENGES ───────────────────────────────────────────── */}
         {pendingChallenges.length > 0 && (
           <div style={{ padding: "16px clamp(14px,4vw,40px)" }}>
+            {challengeError && <div role="alert" style={{ fontSize: 12, color: V2.danger, marginBottom: 10 }}>{challengeError}</div>}
             {pendingChallenges.map(ch => (
               <div key={ch.id} style={{
                 ...V2Styles.glassCard,

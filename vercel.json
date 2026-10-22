@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/yard/settle", "schedule": "15 4 * * *" }
+  ]
+}
