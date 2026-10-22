@@ -4,6 +4,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { V2 } from "../utils/v2Theme";
 import {
   PublicKey,
   Transaction,
@@ -20,13 +21,18 @@ const MINT_STR      = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const BURN_ADDRESS  = new PublicKey("GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K");
 const TOKEN_DECIMALS = 6;
 
+// Matches the V2 (light, grass-green) design used across the Marketplace.
 const T = {
-  bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
-  border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)",
-  borderGold:"rgba(200,168,75,0.35)",
-  olive:"#93a85a", gold:"#c8a84b",
-  white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
-  red:"#ef4444",
+  bg:"#ffffff", bg2:"#ffffff", bg3:"#f4f9ee",
+  border:"rgba(13,42,5,0.10)", borderG:"rgba(91,166,34,0.30)",
+  borderGold:"rgba(13,42,5,0.10)",
+  olive:"#3d7a12", gold:"#a8690e",
+  white:"#0d2a05", muted:"#4a6a38", dim:"#6b7d60",
+  red:"#c0392b",
+};
+const BTN = {
+  background:V2.gradientGrassBtn, color:"#fff", border:"none", borderRadius:999,
+  fontFamily:V2.fontSans, fontWeight:700, letterSpacing:"0.03em", cursor:"pointer", boxShadow:V2.shadowGlow,
 };
 
 // Steps shown to user
@@ -255,24 +261,24 @@ export default function WalletPurchaseModal({
     <>
       {/* Backdrop */}
       <div onClick={!isProcessing ? onClose : undefined}
-        style={{position:"fixed",inset:0,zIndex:998,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(4px)"}} />
+        style={{position:"fixed",inset:0,zIndex:998,background:"rgba(13,42,5,0.45)",backdropFilter:"blur(6px)"}} />
 
       {/* Modal */}
       <div style={{
         position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",
         zIndex:999,width:"min(480px,94vw)",maxHeight:"90vh",overflowY:"auto",
         background:T.bg2,border:`1px solid ${T.borderGold}`,
-        borderRadius:20,padding:"28px 24px",
-        boxShadow:"0 24px 80px rgba(0,0,0,0.8)",
+        borderRadius:24,padding:"28px 24px",fontFamily:V2.fontSans,
+        boxShadow:"0 24px 70px rgba(26,74,10,0.28)",
       }}>
 
         {/* Header */}
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:20}}>
           <div>
-            <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:T.gold,marginBottom:4}}>
+            <div style={{fontSize:10,letterSpacing:"0.16em",textTransform:"uppercase",fontWeight:700,color:T.olive,marginBottom:4}}>
               Marketplace Purchase
             </div>
-            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:700,color:T.white}}>
+            <div style={{fontFamily:V2.fontSans,fontSize:21,fontWeight:800,lineHeight:1.25,color:T.white}}>
               {item.name}
             </div>
           </div>
@@ -314,7 +320,7 @@ export default function WalletPurchaseModal({
         {step === "success" && (
           <div style={{textAlign:"center",padding:"16px 0"}}>
             <div style={{fontSize:44,marginBottom:14}}>🎉</div>
-            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:700,color:T.white,marginBottom:8}}>
+            <div style={{fontFamily:V2.fontSans,fontSize:21,fontWeight:800,lineHeight:1.25,color:T.white,marginBottom:8}}>
               Purchase Complete!
             </div>
             <div style={{fontSize:12,color:T.muted,lineHeight:1.7,marginBottom:16}}>
@@ -322,14 +328,13 @@ export default function WalletPurchaseModal({
             </div>
             {txSig && (
               <a href={`https://solscan.io/tx/${txSig}`} target="_blank" rel="noopener noreferrer"
-                style={{fontSize:10,color:T.olive,display:"block",marginBottom:20,wordBreak:"break-all"}}>
+                style={{fontSize:12,fontWeight:600,color:T.olive,display:"block",marginBottom:20,wordBreak:"break-all"}}>
                 View transaction on Solscan ↗
               </a>
             )}
             <button onClick={onClose}
-              style={{padding:"12px 32px",borderRadius:9,cursor:"pointer",
-                background:T.olive,border:"none",color:"#0a0c08",
-                fontSize:13,fontWeight:800,letterSpacing:"0.04em"}}>
+              style={{padding:"12px 36px",
+                ...BTN,fontSize:14}}>
               Done
             </button>
           </div>
@@ -364,8 +369,7 @@ export default function WalletPurchaseModal({
                 </div>
                 <a href={`https://phantom.app/ul/browse/${encodeURIComponent(handoffUrl)}?ref=${encodeURIComponent(window.location.origin)}`}
                   onClick={() => setWaitingHandoff(true)}
-                  style={{display:"inline-block",background:`linear-gradient(135deg,${T.gold},#a88c38)`,color:"#0a0800",borderRadius:10,
-                    fontSize:13,fontWeight:800,padding:"12px 24px",textDecoration:"none",letterSpacing:"0.04em"}}>
+                  style={{display:"inline-block",...BTN,display:"inline-block",fontSize:14,padding:"13px 26px",textDecoration:"none"}}>
                   Open in Phantom to pay →
                 </a>
                 {waitingHandoff && (
@@ -385,10 +389,8 @@ export default function WalletPurchaseModal({
                 </div>
                 <div style={{display:"flex",justifyContent:"center"}}>
                   <WalletMultiButton style={{
-                    background:`linear-gradient(135deg,${T.gold},#a88c38)`,
-                    color:"#0a0800",borderRadius:10,
-                    fontSize:13,fontWeight:800,padding:"12px 24px",
-                    border:"none",letterSpacing:"0.04em",
+                    ...BTN, height:"auto", lineHeight:1.2,
+                    fontSize:14,padding:"13px 26px",
                   }} />
                 </div>
               </div>
@@ -435,13 +437,8 @@ export default function WalletPurchaseModal({
                   onClick={txSig ? retryVerify : handlePurchase}
                   disabled={!connected}
                   style={{
-                    width:"100%",padding:"14px",borderRadius:10,cursor:"pointer",
-                    background:`linear-gradient(135deg,${T.gold},#a88c38)`,
-                    border:"none",color:"#0a0800",fontSize:14,fontWeight:900,
-                    letterSpacing:"0.04em",
-                    boxShadow:"0 4px 20px rgba(200,168,75,0.35)",
-                    opacity: 1,
-                    marginBottom:12,
+                    ...BTN, width:"100%", padding:"15px", fontSize:15, marginBottom:12,
+                    opacity: connected ? 1 : 0.5, cursor: connected ? "pointer" : "default",
                   }}>
                   {txSig ? "Retry verification →" : (payLabel || `Pay ${tokens?.toLocaleString()} $TOUCHGRASS →`)}
                 </button>
