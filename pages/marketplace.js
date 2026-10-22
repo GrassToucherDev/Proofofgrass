@@ -557,6 +557,16 @@ function GrovesPanel({ username, price, tokensFor, onBuy, reloadKey }) {
       onBuy({ id:`grove_banner_${b.id}`, name:`${b.name} for ${d.grove_name}`, groveBanner:true, intentId:d.intent_id, usdPrice:Number(d.price_usd), groveName:d.grove_name });
     } finally { setBusy(""); }
   };
+  const cancel = async (b)=>{
+    setBusy(b.id); setErr("");
+    try {
+      const r = await fetch("/api/groves/banners/cancel",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ username, bannerId:b.id }) });
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok || d.ok===false){ setErr(d.error||"Couldn't cancel the checkout."); return; }
+      const fresh = await fetch(`/api/groves/banners?username=${encodeURIComponent(username)}`).then(x=>x.json()).catch(()=>null);
+      if(fresh && fresh.banners) setBn(fresh);
+    } finally { setBusy(""); }
+  };
   if(!bn) return <div style={{ textAlign:"center", padding:"60px 0", color:V2.midGray }}>Loading…</div>;
   const paid = bn.banners.filter(b=>!b.is_default);
   const hasGrove = !!bn.grove_id;
@@ -578,8 +588,8 @@ function GrovesPanel({ username, price, tokensFor, onBuy, reloadKey }) {
       <div className="mp-pack-grid">
         {paid.map(b=>{
           const tokens = b.purchasable ? tokensFor(Number(b.price_usd)) : null;
-          const label = b.unlocked ? "Unlocked ✓" : b.pending ? "Purchase in progress" : !b.purchasable ? "Price coming soon" : !hasGrove ? "Join a Grove first" : `Unlock for ${bn.grove_name}`;
-          const disabled = b.unlocked || b.pending || !b.purchasable || !hasGrove || !username || busy===b.id || !tokens;
+          const label = b.unlocked ? "Unlocked ✓" : b.pending_mine ? "Continue purchase" : b.pending ? "Checkout in progress" : !b.purchasable ? "Price coming soon" : !hasGrove ? "Join a Grove first" : `Unlock for ${bn.grove_name}`;
+          const disabled = b.unlocked || (b.pending && !b.pending_mine) || !b.purchasable || !hasGrove || !username || busy===b.id || !tokens;
           return (
             <div key={b.id} style={{ background:"white", borderRadius:18, overflow:"hidden", border:`1px solid ${V2.borderSoft}`, boxShadow:"0 4px 18px rgba(26,74,10,0.08)" }}>
               <GroveBanner banner={b} height={150} scrim showTag radius={0}>
@@ -598,6 +608,16 @@ function GrovesPanel({ username, price, tokensFor, onBuy, reloadKey }) {
                   style={{ ...V2Styles.btnPrimary, width:"100%", justifyContent:"center", fontSize:13, opacity:disabled?0.55:1, cursor:disabled?"default":"pointer" }}>
                   {busy===b.id ? "Starting…" : label}
                 </button>
+                {b.pending_mine && !b.unlocked && (
+                  <div style={{ fontSize:11, color:V2.textMuted, marginTop:8 }}>
+                    You started this checkout. Finish it, or <button type="button" onClick={()=>cancel(b)} disabled={busy===b.id} style={{ background:"none", border:"none", padding:0, color:V2.forestGreen, fontWeight:700, textDecoration:"underline", cursor:"pointer", fontSize:11 }}>cancel it and start over</button>.
+                  </div>
+                )}
+                {b.pending && !b.pending_mine && !b.unlocked && (
+                  <div style={{ fontSize:11, color:V2.textMuted, marginTop:8 }}>
+                    @{b.pending_by} is unlocking this for your Grove. If they don't finish, it frees up{b.pending_until ? ` around ${new Date(b.pending_until).toLocaleTimeString([], { hour:"numeric", minute:"2-digit" })}` : " within 30 minutes"}.
+                  </div>
+                )}
                 {b.unlocked && <div style={{ fontSize:11, color:V2.textMuted, marginTop:8 }}>Unlocked by @{b.unlocked_by}. <Link href="/groves" style={{ color:V2.forestGreen }}>Set it on the Groves page</Link> (owner only).</div>}
               </div>
             </div>

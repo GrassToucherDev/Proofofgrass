@@ -60,9 +60,12 @@ export default function WalletPurchaseModal({
   const { connection }                = useConnection();
   const { publicKey, sendTransaction, connected, connecting } = useWallet();
 
-  const [step,    setStep]    = useState("idle");
-  const [error,   setError]   = useState("");
-  const [txSig,   setTxSig]   = useState("");
+  // Bound purchases remember a sent-but-unverified payment per checkout, so closing the modal can't strand a paid member.
+  const sigKey = item?.intentId ? `pog_txsig_${item.intentId}` : null;
+  const savedSig = (() => { try { return sigKey ? localStorage.getItem(sigKey) || "" : ""; } catch { return ""; } })();
+  const [step,    setStep]    = useState(savedSig ? "error" : "idle");
+  const [error,   setError]   = useState(savedSig ? "A payment was already sent for this checkout. Retry verification. You will not be charged again." : "");
+  const [txSig,   setTxSig]   = useState(savedSig);
 
 
 
@@ -97,9 +100,10 @@ export default function WalletPurchaseModal({
     if (!res.ok || !data.success) {
       throw new Error(data.error || "Verification failed");
     }
+    try { if (sigKey) localStorage.removeItem(sigKey); } catch {}
     setStep("success");
     onSuccess?.({ signature, unlockedCovers: data.coverSlugs, ...data });
-  }, [publicKey, verifyUrl, verifyBody, username, item, tokens, onSuccess]);
+  }, [publicKey, verifyUrl, verifyBody, username, item, tokens, onSuccess, sigKey]);
 
   const retryVerify = useCallback(async () => {
     if (!txSig) return;
@@ -202,6 +206,7 @@ export default function WalletPurchaseModal({
         preflightCommitment: "confirmed",
       });
       setTxSig(signature);
+      try { if (sigKey) localStorage.setItem(sigKey, signature); } catch {}
 
       // ── Wait for confirmation ─────────────────────────────────────────────
       setStep("confirming");
@@ -215,7 +220,7 @@ export default function WalletPurchaseModal({
     } catch(e) {
       failWith(e);
     }
-  }, [publicKey, connection, sendTransaction, tokens, runVerify, failWith]);
+  }, [publicKey, connection, sendTransaction, tokens, runVerify, failWith, sigKey]);
 
   const stepLabel = STEPS[step];
   const isProcessing = !["idle","error","success"].includes(step);

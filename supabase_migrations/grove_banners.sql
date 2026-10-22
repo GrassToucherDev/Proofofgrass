@@ -196,7 +196,10 @@ begin
         'purchasable', (not b.is_default and b.available and b.price_usd is not null),
         'unlocked', (b.is_default or u.grove_id is not null),
         'unlocked_by', u.purchased_by,
-        'pending', exists (select 1 from grove_banner_purchases p where p.grove_id = v_grove and p.banner_id = b.id and p.status = 'pending' and p.expires_at > now())
+        'pending', exists (select 1 from grove_banner_purchases p where p.grove_id = v_grove and p.banner_id = b.id and p.status = 'pending' and p.expires_at > now()),
+        'pending_mine', exists (select 1 from grove_banner_purchases p where p.grove_id = v_grove and p.banner_id = b.id and p.status = 'pending' and p.expires_at > now() and lower(p.buyer) = lower(btrim(p_username))),
+        'pending_by', (select p.buyer from grove_banner_purchases p where p.grove_id = v_grove and p.banner_id = b.id and p.status = 'pending' and p.expires_at > now() limit 1),
+        'pending_until', (select p.expires_at from grove_banner_purchases p where p.grove_id = v_grove and p.banner_id = b.id and p.status = 'pending' and p.expires_at > now() limit 1)
       ) order by b.sort_order)
       from grove_banners b left join grove_banner_unlocks u on u.banner_id = b.id and u.grove_id = v_grove
       where b.available or b.is_default or u.grove_id is not null), '[]'::jsonb));
@@ -248,6 +251,20 @@ begin
                             'banner_name', b.name, 'price_usd', b.price_usd, 'expires_at', now() + interval '30 minutes');
 end $$;
 
+-- ── Cancel your own unpaid checkout so you can start over (or free the slot for a teammate) ──
+create or replace function grove_banner_cancel(p_username text, p_banner text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare u text := lower(btrim(p_username)); v_grove uuid; v_n int;
+begin
+  v_grove := grove_of(u);
+  if v_grove is null then return jsonb_build_object('ok', false, 'error', 'not_in_grove'); end if;
+  -- only the buyer's own checkout, and only while no payment signature is attached to it
+  update grove_banner_purchases set status = 'expired', note = 'Cancelled by buyer'
+   where grove_id = v_grove and banner_id = p_banner and status = 'pending' and lower(buyer) = u and transaction_signature is null;
+  get diagnostics v_n = row_count;
+  return jsonb_build_object('ok', true, 'cancelled', v_n);
+end $$;
+
 -- ── Fulfil a VERIFIED payment for the bound Grove (called only after on-chain verification) ──
 create or replace function grove_banner_fulfill(p_intent uuid, p_signature text, p_tokens numeric)
 returns jsonb language plpgsql security definer set search_path = public as $$
@@ -277,7 +294,7 @@ do $$
 declare f text;
 begin
   foreach f in array array['grove_of(text)','grove_transfer_owner(text,text)','grove_leave(text,text)','grove_get(text)',
-    'grove_banners_get(text)','grove_equip_banner(text,text)','grove_banner_intent(text,text)','grove_banner_fulfill(uuid,text,numeric)']
+    'grove_banners_get(text)','grove_equip_banner(text,text)','grove_banner_intent(text,text)','grove_banner_cancel(text,text)','grove_banner_fulfill(uuid,text,numeric)']
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
     execute format('grant execute on function %s to service_role', f);
