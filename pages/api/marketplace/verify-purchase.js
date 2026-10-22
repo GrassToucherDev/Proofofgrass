@@ -52,16 +52,24 @@ function mintDelta(tx, owner) {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error:"Method not allowed" });
 
-  const { signature, itemId, walletAddress } = req.body || {};
-  const username = String(req.body?.username || "").replace(/@/g, "").toLowerCase().trim();
-
-  if (!signature || !username || !itemId || !walletAddress) {
+  const { signature, walletAddress } = req.body || {};
+  const checkoutId = String(req.body?.checkoutId || "").replace(/^m_/, "");
+  if (!signature || !walletAddress || !/^[0-9a-f-]{36}$/i.test(checkoutId)) {
     return res.status(400).json({ error:"Missing required fields" });
   }
-  // Purchases are credited only to a username the signed-in Google account has secured, so nobody can
-  // claim someone else's payment for their own username. (The UI checks this BEFORE opening the wallet.)
-  const who = await requireOwner(req, res, username);
-  if (!who) return;
+  // The checkout was created by the signed-in Google account that secured the username (see /api/marketplace/checkout).
+  // It fixes WHO is buying and WHAT, so this step needs no session: the wallet step can run in Phantom's in-app browser.
+  const { createClient: mk } = await import("@supabase/supabase-js");
+  const db = mk(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const { data: checkout, error: cErr } = await db.from("marketplace_checkouts").select("*").eq("id", checkoutId).maybeSingle();
+  if (cErr) return res.status(500).json({ error:"Could not load this checkout." });
+  if (!checkout) return res.status(404).json({ error:"Checkout not found." });
+  if (checkout.status === "completed" && checkout.transaction_signature !== signature) {
+    return res.status(409).json({ error:"This checkout was already completed. Start a new purchase." });
+  }
+  const username = String(checkout.username).toLowerCase();
+  const itemId = checkout.item_id;
+  const markDone = () => db.from("marketplace_checkouts").update({ status:"completed", transaction_signature:signature, completed_at:new Date().toISOString() }).eq("id", checkoutId).eq("status","pending");
   // Price and name come from the server, never from the request.
   const usdPrice = MARKET_PRICES_USD[itemId];
   if (!usdPrice) return res.status(400).json({ error:"Unknown item." });
@@ -78,6 +86,10 @@ export default async function handler(req, res) {
     if (tx.meta?.err) return res.status(400).json({ error:"Transaction failed on-chain." });
     if (!tx.blockTime || Date.now()/1000 - tx.blockTime > MAX_TX_AGE_SEC) {
       return res.status(400).json({ error:"This payment is too old to verify. Contact support with your transaction signature." });
+    }
+
+    if (tx.blockTime * 1000 < new Date(checkout.created_at).getTime() - 60 * 1000) {
+      return res.status(400).json({ error:"This payment was made before this checkout started, so it can't be applied to it." });
     }
 
     // ── 2. Verify who paid, who got paid, and how much ────────────────────
@@ -132,12 +144,15 @@ export default async function handler(req, res) {
         const { data:prev } = await supabase.from("MarketplacePurchases")
           .select("username,item_id").eq("transaction_signature", signature).maybeSingle();
         if (prev && prev.username?.toLowerCase() === username && prev.item_id === itemId) {
+          await markDone();
           return res.status(200).json({ success:true, itemId, alreadyProcessed:true, coverSlugs:COVER_UNLOCKS[itemId] ?? [], consumable:CONSUMABLE_ITEMS[itemId] || null });
         }
         return res.status(400).json({ error:"This transaction has already been used." });
       }
       throw claimErr;
     }
+
+    await markDone();
 
     // ── 7. Write to UserInventory (burn stats read tokens_spent from here) ──
     // Consumables can be bought repeatedly, so accumulate tokens_spent instead of overwriting.

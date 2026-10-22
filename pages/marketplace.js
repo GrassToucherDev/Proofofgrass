@@ -554,7 +554,7 @@ function GrovesPanel({ username, price, tokensFor, onBuy, reloadKey }) {
       const r = await fetch("/api/groves/banners/intent",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ username, bannerId:b.id }) });
       const d = await r.json().catch(()=>({}));
       if(!r.ok || d.ok===false){ setErr(GROVE_ERRORS[d.error]||GROVE_ERRORS[d.code]||d.error||"Couldn't start checkout."); return; }
-      onBuy({ id:`grove_banner_${b.id}`, name:`${b.name} for ${d.grove_name}`, groveBanner:true, intentId:d.intent_id, usdPrice:Number(d.price_usd), groveName:d.grove_name });
+      onBuy({ id:`grove_banner_${b.id}`, name:`${b.name} for ${d.grove_name}`, groveBanner:true, intentId:d.intent_id, checkoutRef:`b_${d.intent_id}`, usdPrice:Number(d.price_usd), groveName:d.grove_name });
     } finally { setBusy(""); }
   };
   const cancel = async (b)=>{
@@ -661,12 +661,28 @@ export default function Marketplace() {
   const [inventory,    setInventory]    = useState([]);
   const [buyingItem,   setBuyingItemRaw] = useState(null);
   const [gate,         setGate]         = useState(null);   // { item, status } while a secured username is needed
+  const [checkoutNote, setCheckoutNote] = useState("");
+  // Individual items get a server-side checkout (needs the signed-in secured username) BEFORE the wallet opens,
+  // so the wallet step can finish in another browser (Phantom's) without a Google session.
+  const openItemCheckout = async (item)=>{
+    try {
+      const r = await fetch("/api/marketplace/checkout",{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ username, itemId:item.id }) });
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok || !d.checkoutId){ setCheckoutNote(d.error||"Couldn't start checkout. Please try again."); return; }
+      setCheckoutNote("");
+      setBuyingItemRaw({ ...item, checkoutRef:d.checkoutId });
+    } catch { setCheckoutNote("Couldn't start checkout. Please try again."); }
+  };
   const setBuyingItem = (item)=>{
-    if(!item || item.groveBanner){ setBuyingItemRaw(item); return; }   // banners are gated server-side before any payment
+    if(!item || item.groveBanner){ setBuyingItemRaw(item); return; }   // banners already have a checkout (intent)
     if(!username){ setGate({ item, status:null }); return; }
     fetch(`/api/username/status?username=${encodeURIComponent(username)}`).then(r=>r.json())
-      .then(st=>{ if(st?.mine) setBuyingItemRaw(item); else setGate({ item, status:st }); })
+      .then(st=>{ if(st?.mine) openItemCheckout(item); else setGate({ item, status:st }); })
       .catch(()=>setGate({ item, status:{} }));
+  };
+  const closeBuying = ()=>{
+    setBuyingItemRaw(null);
+    try { if(new URLSearchParams(window.location.search).get("checkout")) window.history.replaceState(null,"","/marketplace"); } catch {}
   };
   const [previewItem,  setPreviewItem]  = useState(null);
   const [purchased,    setPurchased]    = useState(false);
@@ -675,6 +691,20 @@ export default function Marketplace() {
   const { price, loading:priceLoading, tokensFor } = useTouchgrassPrice();
   useEffect(()=>{
     try { if (new URLSearchParams(window.location.search).get("tab")==="groves") setTab("groves"); } catch {}
+    try {
+      const ref = new URLSearchParams(window.location.search).get("checkout");
+      if(ref){
+        fetch(`/api/checkout/info?id=${encodeURIComponent(ref)}`).then(r=>r.json()).then(d=>{
+          if(d.status==="pending"){
+            if(d.kind==="banner") setTab("groves");
+            setBuyingItemRaw(d.kind==="banner"
+              ? { id:"grove_banner", name:`${d.bannerName} for ${d.groveName}`, groveBanner:true, intentId:ref.slice(2), checkoutRef:ref, usdPrice:d.usdPrice, groveName:d.groveName }
+              : { id:d.itemId, name:d.itemName, usdPrice:d.usdPrice, checkoutRef:ref });
+          } else if(d.status==="completed") setCheckoutNote("This purchase is already complete. Nothing more to pay.");
+          else setCheckoutNote("This checkout expired or wasn't found. Start the purchase again from the Marketplace.");
+        }).catch(()=>setCheckoutNote("Couldn't load this checkout. Please try again."));
+      }
+    } catch {}
     const u = getUsername();
     setUsername(u);
     if(u){
@@ -856,11 +886,14 @@ export default function Marketplace() {
           </div>
         </div>
       </div>
+      {checkoutNote && (
+        <div role="alert" onClick={()=>setCheckoutNote("")} style={{ position:"fixed", left:16, right:16, bottom:20, zIndex:450, background:"#fff", border:"1px solid #e5a29c", color:"#b3261e", borderRadius:12, padding:"12px 16px", fontSize:13, boxShadow:"0 8px 30px rgba(0,0,0,.2)", maxWidth:520, margin:"0 auto" }}>{checkoutNote} <span style={{ opacity:.6 }}>(tap to dismiss)</span></div>
+      )}
       {/* MODALS */}
       {gate && (
         <BuyGate username={username} status={gate.status} item={gate.item}
           onClose={()=>setGate(null)}
-          onReady={()=>{ const it=gate.item; setGate(null); setBuyingItemRaw(it); }} />
+          onReady={()=>{ const it=gate.item; setGate(null); openItemCheckout(it); }} />
       )}
       {buyingItem && (
         <WalletPurchaseModal
@@ -868,10 +901,15 @@ export default function Marketplace() {
           tokens={tokensFor(buyingItem.usdPrice)}
           price={buyingItem.groveBanner?buyingItem.usdPrice:price}
           username={username}
-          onClose={()=>setBuyingItemRaw(null)}
+          onClose={closeBuying}
+          handoffUrl={buyingItem.checkoutRef ? `${typeof window!=="undefined"?window.location.origin:""}/marketplace?checkout=${buyingItem.checkoutRef}` : undefined}
+          statusUrl={buyingItem.checkoutRef ? `/api/checkout/info?id=${buyingItem.checkoutRef}` : undefined}
+          {...(!buyingItem.groveBanner ? {
+            verifyBody:({signature,walletAddress})=>({ checkoutId:buyingItem.checkoutRef, signature, walletAddress }),
+          } : {})}
           {...(buyingItem.groveBanner ? {
             verifyUrl:"/api/groves/banners/verify",
-            verifyBody:({signature,walletAddress})=>({ username, intentId:buyingItem.intentId, signature, walletAddress }),
+            verifyBody:({signature,walletAddress})=>({ intentId:buyingItem.intentId, signature, walletAddress }),
             notice:BANNER_PURCHASE_NOTICE,
             payLabel:`Unlock for ${buyingItem.groveName} →`,
             successText:`${buyingItem.name} is unlocked. The Grove owner can set it as the active banner on the Groves page.`,

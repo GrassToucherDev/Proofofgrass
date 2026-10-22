@@ -56,6 +56,10 @@ export default function WalletPurchaseModal({
   notice,
   payLabel,
   successText,
+  // Phone browsers with no wallet: handoffUrl is this checkout's link, opened inside Phantom's in-app browser.
+  // statusUrl is polled so this tab notices when the payment finishes over there.
+  handoffUrl,
+  statusUrl,
 }) {
   const { connection }                = useConnection();
   const { publicKey, sendTransaction, connected, connecting } = useWallet();
@@ -68,6 +72,28 @@ export default function WalletPurchaseModal({
   const [txSig,   setTxSig]   = useState(savedSig);
 
 
+
+  const [needsPhantomApp, setNeedsPhantomApp] = useState(false);
+  const [waitingHandoff,  setWaitingHandoff]  = useState(false);
+  useEffect(() => {
+    if (!handoffUrl || typeof window === "undefined") return;
+    const mobile  = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const injected = !!(window.phantom?.solana || window.solana || window.solflare || window.backpack);
+    setNeedsPhantomApp(mobile && !injected);
+  }, [handoffUrl]);
+  useEffect(() => {
+    if (!waitingHandoff || !statusUrl || step === "success") return;
+    let stop = false;
+    const tick = async () => {
+      try {
+        const r = await fetch(statusUrl, { cache: "no-store" });
+        const d = await r.json().catch(() => ({}));
+        if (!stop && d.status === "completed") { setStep("success"); onSuccess?.({ fromHandoff: true }); }
+      } catch {}
+    };
+    const t = setInterval(tick, 4000);
+    return () => { stop = true; clearInterval(t); };
+  }, [waitingHandoff, statusUrl, step, onSuccess]);
 
   const failWith = useCallback((e) => {
     console.error("[WalletPurchaseModal]", e);
@@ -331,7 +357,27 @@ export default function WalletPurchaseModal({
         {(step === "idle" || step === "error") && (
           <>
             {/* Wallet connect */}
-            {!connected ? (
+            {!connected && needsPhantomApp ? (
+              <div style={{textAlign:"center",marginBottom:20}}>
+                <div style={{fontSize:12,color:T.muted,marginBottom:16,lineHeight:1.7}}>
+                  Payments happen in your wallet app. Tap below to continue this exact purchase in Phantom's browser. You don't need to sign in again there.
+                </div>
+                <a href={`https://phantom.app/ul/browse/${encodeURIComponent(handoffUrl)}?ref=${encodeURIComponent(window.location.origin)}`}
+                  onClick={() => setWaitingHandoff(true)}
+                  style={{display:"inline-block",background:`linear-gradient(135deg,${T.gold},#a88c38)`,color:"#0a0800",borderRadius:10,
+                    fontSize:13,fontWeight:800,padding:"12px 24px",textDecoration:"none",letterSpacing:"0.04em"}}>
+                  Open in Phantom to pay →
+                </a>
+                {waitingHandoff && (
+                  <div style={{fontSize:11,color:T.dim,marginTop:14,lineHeight:1.7}}>
+                    Waiting for your payment in Phantom. This screen updates by itself when it's done.
+                  </div>
+                )}
+                <div style={{fontSize:10,color:T.dim,marginTop:12,lineHeight:1.6}}>
+                  Using another wallet app? Open this page from inside that app's browser instead.
+                </div>
+              </div>
+            ) : !connected ? (
               <div style={{textAlign:"center",marginBottom:20}}>
                 <div style={{fontSize:12,color:T.muted,marginBottom:16,lineHeight:1.7}}>
                   Connect your Solana wallet to purchase with $TOUCHGRASS.
