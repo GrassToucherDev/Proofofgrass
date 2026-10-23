@@ -4,7 +4,7 @@ import Link from "next/link";
 import { T } from "../../utils/wagoTheme";
 import { uploadCover } from "../../utils/wagoCoverUpload";
 
-const BLANK = { title: "", value_text: "", description: "", image_url: "", sponsor_name: "", sponsor_url: "", sponsor_logo_url: "", lat: "", lng: "", hint: "", quantity: 1, claim_radius_m: 25, reveal_radius_m: 100, ends_at: "", status: "draft" };
+const BLANK = { title: "", value_text: "", description: "", image_url: "", sponsor_name: "", sponsor_url: "", sponsor_logo_url: "", spots: [{ lat: "", lng: "", hint: "", quantity: 1 }], claim_radius_m: 25, reveal_radius_m: 100, ends_at: "", status: "draft" };
 const inp = { width: "100%", boxSizing: "border-box", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 12px", fontSize: 13, color: T.white };
 
 function F({ label, children }) {
@@ -17,6 +17,9 @@ export default function AdminPrizes() {
   const [f, setF] = useState(BLANK);
   const [codes, setCodes] = useState(null);
   const [err, setErr] = useState("");
+  const setSpot = (i, k, v) => setF(x => ({ ...x, spots: x.spots.map((s, j) => (j === i ? { ...s, [k]: v } : s)) }));
+  const addSpot = () => setF(x => ({ ...x, spots: [...x.spots, { lat: "", lng: "", hint: "", quantity: 1 }] }));
+  const delSpot = i => setF(x => ({ ...x, spots: x.spots.filter((_, j) => j !== i) }));
   const set = k => e => setF(x => ({ ...x, [k]: e.target.value }));
   const [up, setUp] = useState("");
   async function pick(key, logo, e) {
@@ -40,13 +43,13 @@ export default function AdminPrizes() {
     const r = await fetch("/api/wago-drops/admin/prizes", { method: "POST", headers: H, body: JSON.stringify(f) });
     const d = await r.json();
     if (!r.ok) return setErr(d.error || "Failed");
-    setCodes({ title: d.prize.title, codes: d.codes }); setF(BLANK); load();
+    setCodes({ title: d.prize.title, spots: d.spots }); setF(BLANK); load();
   }
   async function patch(body) {
     const r = await fetch("/api/wago-drops/admin/prizes", { method: "PATCH", headers: H, body: JSON.stringify(body) });
     const d = await r.json();
     if (!r.ok) return setErr(d.error || "Failed");
-    if (d.codes?.length) setCodes({ title: "New codes", codes: d.codes });
+    if (d.codes?.length) setCodes({ title: "New codes", spots: [{ spot: "", hint: "", codes: d.codes }] });
     load();
   }
 
@@ -65,7 +68,12 @@ export default function AdminPrizes() {
         {codes && (
           <div style={{ background: "#fffbe6", border: "1px solid #e6d27a", borderRadius: 12, padding: 14, marginBottom: 16 }}>
             <b>{codes.title}: copy these codes now. They can't be shown again.</b>
-            <pre style={{ margin: "8px 0 0", fontSize: 15, whiteSpace: "pre-wrap", userSelect: "all" }}>{codes.codes.join("\n") || "(none)"}</pre>
+            {codes.spots.map((sp, i) => (
+              <div key={i} style={{ marginTop: 8 }}>
+                {sp.spot !== "" && <div style={{ fontSize: 12.5, color: T.muted }}>Spot {sp.spot}{sp.hint ? ` (${sp.hint})` : ""}</div>}
+                <pre style={{ margin: "2px 0 0", fontSize: 15, whiteSpace: "pre-wrap", userSelect: "all" }}>{sp.codes.join("\n") || "(none)"}</pre>
+              </div>
+            ))}
             <button onClick={() => setCodes(null)} style={{ marginTop: 8, fontSize: 12 }}>I've saved them</button>
           </div>
         )}
@@ -78,15 +86,27 @@ export default function AdminPrizes() {
                 <div style={{ fontSize: 12.5, color: T.muted, margin: "4px 0 8px" }}>{p.remaining} of {p.total} left · <a href={`/wago-drops/prize/${p.id}`} style={{ color: T.green }}>open</a></div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {["draft", "active", "ended"].filter(s => s !== p.status).map(s => <button key={s} onClick={() => patch({ id: p.id, status: s })}>Set {s}</button>)}
-                  <button onClick={() => patch({ id: p.id, addCodes: 5 })}>+5 codes</button>
                 </div>
+                {(p.spots || []).map((sp, i) => (
+                  <div key={sp.id} style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${T.border}`, fontSize: 12.5 }}>
+                    <b>Spot {i + 1}</b> {sp.hint ? `· ${sp.hint} ` : ""}· {sp.remaining}/{sp.total} left · <b style={{ color: sp.status === "hidden" ? T.red : T.green }}>{sp.status}</b>
+                    {sp.gone_reports > 0 && <span style={{ color: T.red }}> · {sp.gone_reports} "gone" report{sp.gone_reports > 1 ? "s" : ""}</span>}
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                      {sp.status === "hidden"
+                        ? <button onClick={() => patch({ spotId: sp.id, spotStatus: "active" })}>Restocked, show again</button>
+                        : <button onClick={() => patch({ spotId: sp.id, spotStatus: "active" })}>I checked: it's there</button>}
+                      {sp.status !== "hidden" && <button onClick={() => patch({ spotId: sp.id, spotStatus: "hidden" })}>Hide</button>}
+                      <button onClick={() => patch({ spotId: sp.id, addCodes: 1 })}>+1 code</button>
+                    </div>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
         )}
 
         <h2 style={{ fontSize: 18 }}>New prize</h2>
-        <p style={{ fontSize: 12.5, color: T.muted, marginTop: 0 }}>Any kind of prize: cards, merch, cash, vouchers. Quantity = how many are hidden (one single-use code each).</p>
+        <p style={{ fontSize: 12.5, color: T.muted, marginTop: 0 }}>Any kind of prize: cards, merch, cash, vouchers. Each spot is a place, and its quantity is how many are hidden there.</p>
         <F label="Title"><input style={inp} value={f.title} onChange={set("title")} placeholder="Holo Charizard card" /></F>
         <F label="Value / what it is (shown to everyone)"><input style={inp} value={f.value_text} onChange={set("value_text")} placeholder="Pokémon card, $20 cash, T-shirt…" /></F>
         <F label="Description"><textarea style={inp} rows={3} value={f.description} onChange={set("description")} /></F>
@@ -102,13 +122,21 @@ export default function AdminPrizes() {
           <input type="file" accept="image/*" onChange={e => pick("sponsor_logo_url", true, e)} />
           {up === "sponsor_logo_url" && <span style={{ fontSize: 12, color: T.dim }}> Uploading…</span>}
         </F>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 10 }}>
-          <F label="Latitude"><input style={inp} value={f.lat} onChange={set("lat")} inputMode="decimal" /></F>
-          <F label="Longitude"><input style={inp} value={f.lng} onChange={set("lng")} inputMode="decimal" /></F>
-        </div>
-        <F label="Hint (shown only when close)"><input style={inp} value={f.hint} onChange={set("hint")} placeholder="Under the bench by the fountain" /></F>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 10 }}>
-          <F label="Quantity"><input style={inp} type="number" min="1" value={f.quantity} onChange={set("quantity")} /></F>
+        <h3 style={{ fontSize: 15, margin: "14px 0 6px" }}>Spots</h3>
+        <p style={{ fontSize: 12.5, color: T.muted, margin: "0 0 10px" }}>One spot per place a prize is hidden. Each prize at a spot gets its own single-use code.</p>
+        {f.spots.map((sp, i) => (
+          <div key={i} style={{ border: `1px solid ${T.border}`, borderRadius: 12, padding: 12, marginBottom: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) 70px", gap: 8 }}>
+              <F label="Latitude"><input style={inp} value={sp.lat} onChange={e => setSpot(i, "lat", e.target.value)} inputMode="decimal" /></F>
+              <F label="Longitude"><input style={inp} value={sp.lng} onChange={e => setSpot(i, "lng", e.target.value)} inputMode="decimal" /></F>
+              <F label="Qty"><input style={inp} type="number" min="1" value={sp.quantity} onChange={e => setSpot(i, "quantity", e.target.value)} /></F>
+            </div>
+            <F label="Hint (shown only when close)"><input style={inp} value={sp.hint} onChange={e => setSpot(i, "hint", e.target.value)} placeholder="Under the bench by the fountain" /></F>
+            {f.spots.length > 1 && <button onClick={() => delSpot(i)} style={{ fontSize: 12 }}>Remove spot {i + 1}</button>}
+          </div>
+        ))}
+        <button onClick={addSpot} style={{ marginBottom: 14 }}>+ Add another spot</button>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
           <F label="Claim radius m"><input style={inp} type="number" value={f.claim_radius_m} onChange={set("claim_radius_m")} /></F>
           <F label="Reveal radius m"><input style={inp} type="number" value={f.reveal_radius_m} onChange={set("reveal_radius_m")} /></F>
         </div>
