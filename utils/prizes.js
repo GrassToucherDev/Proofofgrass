@@ -36,32 +36,42 @@ export async function hasConsent(supabase, googleId) {
   return !!data;
 }
 
-// Shape a prize for the public. Exact spot + hint only when the viewer is within reveal radius.
-export function publicPrize(p, counts, pos) {
+// A prize is a set of spots; each spot has its own codes. Spots reported gone by 2+ people are hidden until restocked.
+export async function loadSpots(supabase, prizeIds) {
+  const out = { spots: {}, codes: {} };
+  if (!prizeIds.length) return out;
+  const [{ data: sp }, { data: cd }] = await Promise.all([
+    supabase.from("wago_prize_spots").select("*").in("prize_id", prizeIds),
+    supabase.from("wago_prize_codes").select("prize_id, spot_id, claimed_at").in("prize_id", prizeIds),
+  ]);
+  (sp || []).forEach(x => (out.spots[x.prize_id] ||= []).push(x));
+  (cd || []).forEach(c => (out.codes[c.prize_id] ||= []).push(c));
+  return out;
+}
+
+// Shape a prize for the public. A spot's exact location and hint show only within the reveal radius.
+export function publicPrize(p, spots = [], codes = [], pos) {
   const reveal = p.reveal_radius_m || 100;
-  const d = pos ? haversineM(pos.lat, pos.lng, p.lat, p.lng) : Infinity;
-  const revealed = d <= reveal;
+  const left = {}, tot = {};
+  codes.forEach(c => { tot[c.spot_id] = (tot[c.spot_id] || 0) + 1; if (!c.claimed_at) left[c.spot_id] = (left[c.spot_id] || 0) + 1; });
+  const live = spots.filter(s => s.status === "active");
+  const shaped = live.map(s => {
+    const revealed = pos ? haversineM(pos.lat, pos.lng, s.lat, s.lng) <= reveal : false;
+    return {
+      id: s.id, total: tot[s.id] || 0, remaining: left[s.id] || 0, last_seen_at: s.last_seen_at || null, revealed,
+      hint: revealed ? s.hint : null,
+      lat: revealed ? s.lat : jitter(s.lat, reveal * 1.5),
+      lng: revealed ? s.lng : jitter(s.lng, reveal * 1.5),
+    };
+  });
   return {
     id: p.id, kind: p.kind, title: p.title, description: p.description || null,
     image_url: p.image_url || null, value_text: p.value_text || null,
     sponsor_name: p.sponsor_name, sponsor_url: p.sponsor_url || null, sponsor_logo_url: p.sponsor_logo_url || null,
     reveal_radius_m: reveal, claim_radius_m: p.claim_radius_m || 25, ends_at: p.ends_at || null,
-    total: counts?.total ?? 0, remaining: counts?.remaining ?? 0,
-    hint: revealed ? p.hint : null,
-    lat: revealed ? p.lat : jitter(p.lat, reveal * 1.5),
-    lng: revealed ? p.lng : jitter(p.lng, reveal * 1.5),
+    total: codes.length, remaining: shaped.reduce((n, s) => n + s.remaining, 0),
+    spots: shaped,
   };
-}
-
-export async function prizeCounts(supabase, ids) {
-  const out = {};
-  if (!ids.length) return out;
-  const { data } = await supabase.from("wago_prize_codes").select("prize_id, claimed_at").in("prize_id", ids);
-  (data || []).forEach(r => {
-    const c = (out[r.prize_id] ||= { total: 0, remaining: 0 });
-    c.total++; if (!r.claimed_at) c.remaining++;
-  });
-  return out;
 }
 
 export function parsePos(q) {

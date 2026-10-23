@@ -27,16 +27,23 @@ export default async function handler(req, res) {
   if (!(await hasConsent(supabase, gid).catch(() => true)))
     return res.status(403).json({ error: "Please accept the terms to claim prizes.", code: "consent_required" });
 
-  const { data: p } = await supabase.from("wago_prizes").select("id, lat, lng, claim_radius_m, status, ends_at").eq("id", prizeId).maybeSingle();
+  const { data: p } = await supabase.from("wago_prizes").select("id, claim_radius_m, status, ends_at").eq("id", prizeId).maybeSingle();
   if (!p || p.status !== "active" || (p.ends_at && new Date(p.ends_at) < new Date()))
     return res.status(404).json({ error: MSG.not_available });
 
-  const dist = haversineM(Number(userLat), Number(userLng), p.lat, p.lng);
+  // The code belongs to one spot: you must be at that spot. A wrong code still requires being at some spot.
+  const hash = hashCode(prizeId, code2);
+  const [{ data: spots }, { data: row }] = await Promise.all([
+    supabase.from("wago_prize_spots").select("id, lat, lng").eq("prize_id", prizeId),
+    supabase.from("wago_prize_codes").select("spot_id").eq("prize_id", prizeId).eq("code_hash", hash).maybeSingle(),
+  ]);
   const radius = p.claim_radius_m || 25;
-  if (!(dist <= radius)) return res.status(400).json({ error: `You need to be within ${radius}m. You're about ${Math.round(dist)}m away.` });
+  const pool = row?.spot_id ? (spots || []).filter(s => s.id === row.spot_id) : (spots || []);
+  const dist = Math.min(...pool.map(s => haversineM(Number(userLat), Number(userLng), s.lat, s.lng)), Infinity);
+  if (!(dist <= radius)) return res.status(400).json({ error: `You need to be within ${radius}m of the prize. Move closer and try again.` });
 
   const { data, error } = await supabase.rpc("wago_prize_claim", {
-    p_prize_id: prizeId, p_code_hash: hashCode(prizeId, code2), p_google_id: gid, p_name: firstName(session.user.name),
+    p_prize_id: prizeId, p_code_hash: hash, p_google_id: gid, p_name: firstName(session.user.name),
   });
   if (error) return res.status(500).json({ error: "Something went wrong. Try again." });
   if (!data?.ok) return res.status(data.error === "too_many_attempts" ? 429 : 409).json({ error: MSG[data.error] || "Could not claim.", reason: data.error });
