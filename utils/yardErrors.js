@@ -1,7 +1,7 @@
 // Friendly text for the error codes returned by /api/yard/* (and requireOwner).
 const MSG = {
-  not_signed_in: "Sign in with Google on your dashboard first. Challenges are tied to your secured username.",
-  unclaimed: "Secure your username on your dashboard first, so only you can send and answer challenges.",
+  not_signed_in: "Sign in with Google first. The Yard is tied to your secured username.",
+  unclaimed: "Secure your username on your dashboard first, so only you can act as you in The Yard.",
   not_owner: "That username belongs to a different Google account.",
   self: "You can't challenge yourself.",
   bad_duration: "Pick 7, 14 or 30 days.",
@@ -19,6 +19,8 @@ const MSG = {
   challenger_too_small: "The challenging Grove no longer has 3 members.",
   unknown_grove: "We couldn't find that Grove.",
   self_grove: "You can't challenge your own Grove.",
+  not_open: "This event isn't open for entries.",
+  already_entered: "You're already in.",
   missing: "Missing details.",
 };
 export function yardError(d, fallback = "Something went wrong. Please try again.") {
