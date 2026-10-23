@@ -1,6 +1,7 @@
 // pages/u/[username]/index.js — V2 Profile Page (Mockup Match)
 import { useState, useEffect, useRef, useCallback } from "react";
 import ChallengeModal from "../../../components/ChallengeModal";
+import YardRecordCard from "../../../components/yard/YardRecordCard";
 import WalletVerify from "../../../components/WalletVerify";
 import Link from "next/link";
 import Head from "next/head";
@@ -768,6 +769,9 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* Yard record: only appears once they have Yard history */}
+          <YardRecordCard username={username} />
 
           {/* Row 2: About Me | Stats Overview | Skin/Theme + Account */}
           <div className="pf-two-one-col">
