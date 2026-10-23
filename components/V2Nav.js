@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: "/",            label: "Dashboard"    },
   { href: "#upload",      label: "Log Proof",  internal: true },
   { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/yard",        label: "The Yard"    },
   { href: "/grass-draw",  label: "Grass Draw"  },
   { href: "/marketplace", label: "Marketplace" },
   { href: "https://harvest.touchgrass.today", label: "Harvest", external: true },
@@ -24,7 +25,7 @@ const MENU_LINKS = [
   { href: "/groves",       label: "Groves",       icon: "🌳" },
   { href: "/field-guide",  label: "Field Guide",  icon: "📖" },
   { href: "/spotlight",    label: "Spotlight",    icon: "🌟" },
-  { href: "/challenges",   label: "Challenges",   icon: "⚡" },
+  { href: "/yard",         label: "The Yard",     icon: "⚔️" },
   { href: "https://harvest.touchgrass.today", label: "Harvest", icon: "🌾", external: true },
 ];
 
@@ -188,7 +189,7 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
         {/* Desktop nav links */}
         <div className="v2nav-links">
           {NAV_LINKS.map(link => {
-            const active = !link.internal && !link.external && router.pathname === link.href;
+            const active = !link.internal && !link.external && (router.pathname === link.href || (link.href !== "/" && router.pathname.startsWith(link.href + "/")));
             if (link.external) return (
               <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer"
                 className={`v2nav-link${active ? " active" : ""}`}>
