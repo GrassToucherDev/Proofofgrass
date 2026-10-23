@@ -5,15 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import V2Nav from "../../components/V2Nav";
 import { V2, V2Styles, V2GlobalCSS } from "../../utils/v2Theme";
-import { useYard } from "../../hooks/useYard";
+import { useYard, useYardGroves } from "../../hooks/useYard";
 import { yardCSS, StatCard, FeatureCard, ChallengeCard, WagoEmpty, Avatar } from "../../components/yard/YardUI";
 import CreateChallengeSheet from "../../components/yard/CreateChallengeSheet";
+import { GroveChallengeCard } from "../../components/yard/GroveYardUI";
 
 export default function Yard() {
   const router = useRouter();
   const { username, data, error, ready, reload } = useYard();
   const [creating, setCreating] = useState(false);
   const [preset, setPreset] = useState("");
+  const [mode, setMode] = useState("");
+  const gv = useYardGroves(username);
   const [board, setBoard] = useState(null);
 
   useEffect(() => {
@@ -27,7 +30,9 @@ export default function Yard() {
   const you = data?.you;
   const rec = you?.record;
   const stats = data?.stats;
-  const open = () => { setPreset(""); setCreating(true); };
+  const open = () => { setPreset(""); setMode(""); setCreating(true); };
+  const openGrove = () => { setPreset(""); setMode("grove"); setCreating(true); };
+  const grove = gv.data?.grove;
 
   return (
     <>
@@ -61,7 +66,7 @@ export default function Yard() {
 
         <div className="yd-features">
           <FeatureCard art="/yard/card1.webp" title="1v1 Challenges" copy="Go head to head with another user." cta="Start a Challenge" onClick={open} />
-          <FeatureCard art="/yard/card2.webp" title="Grove vs Grove" copy="Bring your squad and compete together." soon />
+          <FeatureCard art="/yard/card2.webp" title="Grove vs Grove" copy="Bring your squad and compete together." cta="Challenge a Grove" onClick={openGrove} />
           <FeatureCard art="/yard/card3.webp" title="Seasonal Events" copy="Special challenges, bigger rewards." soon />
         </div>
 
@@ -71,6 +76,19 @@ export default function Yard() {
           <section className="yd-section" aria-labelledby="yd-in">
             <h2 id="yd-in" className="yd-h2">Challenges waiting for you <span className="yd-pill" style={{ background: "#fef3d8", color: "#8a5a00" }}>⏳ {you.incoming.length}</span></h2>
             <div className="yd-grid">{you.incoming.slice(0, 6).map((c) => <ChallengeCard key={c.id} ch={c} viewer={username} kind="incoming" onChange={reload} />)}</div>
+          </section>
+        )}
+
+        {!!grove?.incoming?.length && (
+          <section className="yd-section" aria-labelledby="yd-gin">
+            <h2 id="yd-gin" className="yd-h2">Grove challenges waiting <span className="yd-pill" style={{ background: "#fef3d8", color: "#8a5a00" }}>⏳ {grove.incoming.length}</span></h2>
+            <div className="yd-grid">{grove.incoming.slice(0, 4).map((c) => <GroveChallengeCard key={c.id} ch={c} grove={grove} kind="incoming" onChange={gv.reload} />)}</div>
+          </section>
+        )}
+        {!!grove?.active?.length && (
+          <section className="yd-section" aria-labelledby="yd-gact">
+            <h2 id="yd-gact" className="yd-h2">{grove.name} in The Yard <Link href="/yard/challenges" style={{ fontSize: 14, fontWeight: 700, color: V2.forestLight }}>All challenges →</Link></h2>
+            <div className="yd-grid">{grove.active.slice(0, 2).map((c) => <GroveChallengeCard key={c.id} ch={c} grove={grove} kind="active" onChange={gv.reload} />)}</div>
           </section>
         )}
 
@@ -99,7 +117,7 @@ export default function Yard() {
           </div>
         </section>
       </main>
-      {creating && <CreateChallengeSheet viewer={username} presetOpponent={preset} onClose={() => { setCreating(false); if (router.query.new) router.replace("/yard", undefined, { shallow: true }); }} onSent={reload} />}
+      {creating && <CreateChallengeSheet viewer={username} presetOpponent={preset} presetMode={mode} onClose={() => { setCreating(false); if (router.query.new) router.replace("/yard", undefined, { shallow: true }); }} onSent={() => { reload(); gv.reload(); }} />}
     </>
   );
 }

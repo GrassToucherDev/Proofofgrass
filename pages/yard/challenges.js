@@ -4,22 +4,32 @@ import Head from "next/head";
 import Link from "next/link";
 import V2Nav from "../../components/V2Nav";
 import { V2, V2Styles, V2GlobalCSS } from "../../utils/v2Theme";
-import { useYard } from "../../hooks/useYard";
+import { useYard, useYardGroves } from "../../hooks/useYard";
 import { yardCSS, ChallengeCard, WagoEmpty } from "../../components/yard/YardUI";
 import CreateChallengeSheet from "../../components/yard/CreateChallengeSheet";
+import { GroveChallengeCard } from "../../components/yard/GroveYardUI";
 
 const TABS = [["pending", "Pending"], ["active", "Active"], ["completed", "Completed"], ["history", "History"]];
 
 export default function YardChallenges() {
   const { username, data, error, ready, reload } = useYard();
   const [tab, setTab] = useState("active");
+  const [kindTab, setKindTab] = useState("1v1");
+  const gv = useYardGroves(username);
+  const grove = gv.data?.grove;
   const [creating, setCreating] = useState(false);
   const you = data?.you;
   useEffect(() => { if (you?.incoming?.length) setTab("pending"); }, [you?.incoming?.length]);
+  useEffect(() => { if (kindTab === "grove" && grove?.incoming?.length) setTab("pending"); }, [kindTab, grove?.incoming?.length]);
 
   const past = you?.history || [];
   const completed = past.filter((c) => c.result);
   const rest = past.filter((c) => !c.result);
+  const gp = grove ? [...grove.incoming, ...grove.outgoing] : [];
+  const gPast = grove?.history || [];
+  const gCompleted = gPast.filter((c) => c.result);
+  const gRest = gPast.filter((c) => !c.result);
+  const gcounts = { pending: gp.length, active: grove?.active?.length || 0, completed: gCompleted.length, history: gRest.length };
   const counts = { pending: (you?.incoming?.length || 0) + (you?.outgoing?.length || 0), active: you?.active?.length || 0, completed: completed.length, history: rest.length };
   const newBtn = <button type="button" onClick={() => setCreating(true)} style={{ ...V2Styles.btnPrimary, minHeight: 48 }}>Create a Challenge</button>;
 
@@ -40,10 +50,27 @@ export default function YardChallenges() {
         {error && <div role="alert" className="yd-card" style={{ color: V2.danger, fontWeight: 600, marginTop: 14 }}>{error}</div>}
         {username && (
           <>
-            <div className="yd-tabs" role="tablist" aria-label="Challenge lists" style={{ marginTop: 16 }}>
-              {TABS.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className="yd-tab" onClick={() => setTab(k)}>{l} ({counts[k]})</button>)}
+            <div className="yd-tabs" role="group" aria-label="Challenge type" style={{ marginTop: 16 }}>
+              {[["1v1", "⚔️ 1v1"], ["grove", "🌳 Grove vs Grove"]].map(([k, l]) => <button key={k} aria-pressed={kindTab === k} className="yd-tab" style={kindTab === k ? { background: "#e6f5d8", color: "#2d6b1a", borderColor: "#7dc832" } : {}} onClick={() => setKindTab(k)}>{l}</button>)}
             </div>
-            {!ready ? <div className="yd-card">Loading…</div> : (
+            <div className="yd-tabs" role="tablist" aria-label="Challenge lists">
+              {TABS.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className="yd-tab" onClick={() => setTab(k)}>{l} ({(kindTab === "grove" ? gcounts : counts)[k]})</button>)}
+            </div>
+            {kindTab === "grove" ? (!gv.ready ? <div className="yd-card">Loading…</div> : !grove ? (
+              <WagoEmpty title="You're not in a Grove" copy="Join or create a Grove (3 to 6 members) to take on other Groves." cta={<Link href="/groves" style={{ ...V2Styles.btnPrimary, textDecoration: "none", minHeight: 48 }}>Go to Groves</Link>} />
+            ) : (
+              <div role="tabpanel">
+                {tab === "pending" && (gcounts.pending ? (
+                  <>
+                    {!!grove.incoming.length && <><h2 className="yd-h2">Waiting for {grove.name}</h2><div className="yd-grid">{grove.incoming.map((c) => <GroveChallengeCard key={c.id} ch={c} grove={grove} kind="incoming" onChange={gv.reload} />)}</div></>}
+                    {!!grove.outgoing.length && <><h2 className="yd-h2" style={{ marginTop: 24 }}>Sent by {grove.name}</h2><div className="yd-grid">{grove.outgoing.map((c) => <GroveChallengeCard key={c.id} ch={c} grove={grove} kind="outgoing" />)}</div></>}
+                  </>
+                ) : <WagoEmpty title="Nothing pending" copy="No Grove challenges waiting. Only the Grove owner can send them." cta={newBtn} />)}
+                {tab === "active" && (gcounts.active ? <div className="yd-grid">{grove.active.map((c) => <GroveChallengeCard key={c.id} ch={c} grove={grove} kind="active" />)}</div> : <WagoEmpty title="No Active Grove Challenges" copy="Rally your Grove and call out another one." cta={newBtn} />)}
+                {tab === "completed" && (gcounts.completed ? <div className="yd-grid">{gCompleted.map((c) => <GroveChallengeCard key={c.id} ch={c} grove={grove} kind="past" />)}</div> : <WagoEmpty title="No finished Grove challenges yet" copy="Results show up here as soon as a challenge ends." />)}
+                {tab === "history" && (gcounts.history ? <div className="yd-grid">{gRest.map((c) => <GroveChallengeCard key={c.id} ch={c} grove={grove} kind="past" />)}</div> : <WagoEmpty title="Nothing here" copy="Declined and expired Grove challenges show up here." />)}
+              </div>
+            )) : !ready ? <div className="yd-card">Loading…</div> : (
               <div role="tabpanel">
                 {tab === "pending" && (counts.pending ? (
                   <>
@@ -59,7 +86,7 @@ export default function YardChallenges() {
           </>
         )}
       </main>
-      {creating && <CreateChallengeSheet viewer={username} onClose={() => setCreating(false)} onSent={reload} />}
+      {creating && <CreateChallengeSheet viewer={username} presetMode={kindTab === "grove" ? "grove" : ""} onClose={() => setCreating(false)} onSent={() => { reload(); gv.reload(); }} />}
     </>
   );
 }

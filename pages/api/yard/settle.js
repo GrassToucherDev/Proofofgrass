@@ -29,5 +29,8 @@ export default async function handler(req, res) {
   const args = admin && req.query.all ? { p_since: "-infinity", p_limit: 1000 } : {};
   const { data, error } = await db.rpc("yard_settle_due", args);
   if (error) { console.error("[yard/settle]", error); return res.status(500).json({ error: "Settlement failed." }); }
-  return res.status(200).json({ ok: true, ...data });
+  // Grove vs Grove runs in the same pass. A failure here must not hide the 1v1 result.
+  const g = await db.rpc("yard_grove_settle_due", args);
+  if (g.error) console.error("[yard/settle] groves", g.error);
+  return res.status(200).json({ ok: true, ...data, ...(g.data || {}), ...(g.error ? { grove_error: true } : {}) });
 }
