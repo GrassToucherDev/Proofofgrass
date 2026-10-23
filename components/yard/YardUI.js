@@ -18,11 +18,11 @@ export const yardCSS = `
   .yd-lead { font-size: clamp(15px,2vw,18px); font-weight: 500; line-height: 1.5; color:${V2.textBody}; max-width: 520px; }
   .yd-ctas { display:flex; gap:12px; flex-wrap:wrap; margin-top: 22px; }
   .yd-btn { min-height: 48px; }
-  .yd-stats { position: relative; z-index: 3; display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: -64px 0 0; padding: 0 clamp(10px,2vw,24px); }
+  .yd-stats { position: relative; z-index: 3; display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: -64px 0 0; padding: 0 clamp(10px,2vw,24px); }
   .yd-stat { background:#fff; border-radius:20px; padding:16px 18px; display:flex; align-items:center; gap:14px; box-shadow:${V2.shadowMd}; min-height:84px; }
   .yd-stat-n { font-size: 26px; font-weight: 800; line-height: 1.05; color:${V2.forestGreen}; }
   .yd-stat-l { font-size: 11px; font-weight: 700; letter-spacing:.12em; text-transform:uppercase; color:${V2.dimGray}; margin-top:2px; }
-  .yd-features { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-top: 22px; }
+  .yd-features { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:16px; margin-top: 22px; }
   .yd-feature { background:#fff; border-radius:22px; overflow:hidden; display:flex; box-shadow:${V2.shadowSm}; min-height:150px; }
   .yd-feature-art { width: 40%; flex: none; background-size: cover; background-position: center; -webkit-mask-image: linear-gradient(90deg,#000 70%,transparent); mask-image: linear-gradient(90deg,#000 70%,transparent); }
   .yd-feature-body { padding: 16px 16px 16px 6px; display:flex; flex-direction:column; gap:6px; justify-content:center; min-width:0; }
@@ -45,7 +45,7 @@ export const yardCSS = `
     .yd-features { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; gap:12px; padding-bottom:6px; margin-right:calc(-1 * clamp(14px,4vw,32px)); padding-right:clamp(14px,4vw,32px); scrollbar-width:none; }
     .yd-features::-webkit-scrollbar { display:none; }
     .yd-feature { flex: 0 0 84%; scroll-snap-align:start; }
-    .yd-stats { grid-template-columns: repeat(2, 1fr); }
+    .yd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 640px) {
     .yd-hero { min-height: 0; }
@@ -57,7 +57,7 @@ export const yardCSS = `
     .yd-stat-n { font-size: 22px; }
     .yd-sheet-bg { align-items:flex-end; padding:0; }
     .yd-sheet { max-width:none; border-radius:26px 26px 0 0; padding-bottom: calc(26px + env(safe-area-inset-bottom)); }
-    .yd-grid { grid-template-columns: 1fr; }
+    .yd-grid { grid-template-columns: minmax(0, 1fr); }
   }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; transition:none !important; animation:none !important; } }
 `;
