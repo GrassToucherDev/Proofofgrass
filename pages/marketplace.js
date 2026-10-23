@@ -9,6 +9,7 @@ import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 import V2Nav from "../components/V2Nav";
 import GroveBanner from "../components/GroveBanner";
 import SecureUsernameCard from "../components/SecureUsernameCard";
+import MarketplaceAccountBar from "../components/MarketplaceAccountBar";
 import { signIn } from "next-auth/react";
 import { BANNER_PURCHASE_NOTICE } from "../utils/groveBanners";
 const BURN_ADDR       = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
@@ -791,6 +792,7 @@ export default function Marketplace() {
             </div>
           </div>
         </div>
+        <MarketplaceAccountBar username={username} />
         {/* TABS */}
         <div style={{ background:"white", borderBottom:`1px solid ${V2.borderSoft}`,
           padding:"16px clamp(14px,4vw,48px)",
