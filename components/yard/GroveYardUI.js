@@ -105,7 +105,7 @@ export function GroveChallengeCard({ ch, grove, kind, onChange, detail }) {
 
 // Expandable "who is in this Grove" list. Loads lazily on first open. Initials stand in for missing pictures.
 // Pass `slug` inside a challenge to see the roster that was locked when it started.
-export function GroveMembers({ groveId, slug, count, label = "Members", compact }) {
+export function GroveMembers({ groveId, slug, eventSlug, count, label = "Members", compact }) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState({ loading: false, members: null, locked: false, error: "" });
   const toggle = async () => {
@@ -113,13 +113,13 @@ export function GroveMembers({ groveId, slug, count, label = "Members", compact 
     if (!next || state.members || state.loading) return;
     setState((s) => ({ ...s, loading: true, error: "" }));
     try {
-      const r = await fetch(`/api/yard/groves/members?id=${encodeURIComponent(groveId)}${slug ? `&slug=${encodeURIComponent(slug)}` : ""}`);
+      const r = await fetch(`/api/yard/groves/members?id=${encodeURIComponent(groveId)}${slug ? `&slug=${encodeURIComponent(slug)}` : ""}${eventSlug ? `&event=${encodeURIComponent(eventSlug)}` : ""}`);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Could not load members.");
       setState({ loading: false, members: d.members, locked: d.locked, error: "" });
     } catch (e) { setState({ loading: false, members: null, locked: false, error: e.message || "Could not load members." }); }
   };
-  const panel = `yd-mem-${groveId}${slug ? "-" + slug : ""}`;
+  const panel = `yd-mem-${groveId}${slug ? "-" + slug : ""}${eventSlug ? "-e-" + eventSlug : ""}`;
   return (
     <div style={{ marginTop: compact ? 4 : 8 }}>
       <button type="button" onClick={toggle} aria-expanded={open} aria-controls={panel}
@@ -133,7 +133,7 @@ export function GroveMembers({ groveId, slug, count, label = "Members", compact 
           {state.error && <div role="alert" style={{ fontSize: 13, color: V2.danger, padding: "4px 4px 8px" }}>{state.error}</div>}
           {state.members && (
             <>
-              {state.locked && <p style={{ fontSize: 12, fontWeight: 600, color: V2.dimGray, margin: "0 4px 6px" }}>Roster locked when the challenge started.</p>}
+              {state.locked && <p style={{ fontSize: 12, fontWeight: 600, color: V2.dimGray, margin: "0 4px 6px" }}>Roster locked when {eventSlug ? "the Grove entered" : "the challenge started"}.</p>}
               <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
                 {state.members.map((m) => (
                   <li key={m.username} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 44, padding: "2px 4px" }}>

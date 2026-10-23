@@ -1,4 +1,4 @@
-// GET ?id=<grove uuid>[&slug=<challenge slug>] — who is in a Grove: username, picture, owner flag. Public data only.
+// GET ?id=<grove uuid>[&slug=<challenge slug> | &event=<event slug>] — who is in a Grove: username, picture, owner flag. Public data only.
 // With a slug, an active/finished challenge returns the roster that was LOCKED at the start (what the score uses).
 import { adminClient } from "../../../../utils/requireOwner";
 import { loadAvatars } from "../../../../utils/yardData";
@@ -16,7 +16,11 @@ export default async function handler(req, res) {
     const { data: live } = await db.from("grove_members").select("username, joined_at").eq("grove_id", id).is("left_at", null).order("joined_at");
     const current = (live || []).map((m) => String(m.username).toLowerCase());
     let names = current, locked = false;
-    if (req.query.slug) {
+    if (req.query.event) {   // Grove event: the roster frozen when the Grove entered
+      const { data: ev } = await db.from("yard_events").select("id").eq("slug", String(req.query.event).slice(0, 60)).neq("status", "draft").maybeSingle();
+      const { data: en } = ev ? await db.from("yard_event_entries").select("roster").eq("event_id", ev.id).eq("grove_id", id).maybeSingle() : { data: null };
+      if (en?.roster?.length) { names = en.roster.map((n) => String(n).toLowerCase()); locked = true; }
+    } else if (req.query.slug) {
       const { data: c } = await db.from("grove_challenges").select("challenger_grove, challenged_grove, roster_challenger, roster_challenged").eq("slug", String(req.query.slug).slice(0, 60)).maybeSingle();
       const roster = c ? (c.challenger_grove === id ? c.roster_challenger : c.challenged_grove === id ? c.roster_challenged : null) : null;
       if (roster?.length) { names = roster.map((n) => String(n).toLowerCase()); locked = true; }

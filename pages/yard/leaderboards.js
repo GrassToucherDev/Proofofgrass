@@ -5,6 +5,7 @@ import Link from "next/link";
 import V2Nav from "../../components/V2Nav";
 import { V2, V2GlobalCSS } from "../../utils/v2Theme";
 import { getYardUser } from "../../hooks/useYard";
+import { EventCard } from "../../components/yard/EventUI";
 import { yardCSS, Avatar, WagoEmpty } from "../../components/yard/YardUI";
 import GroveBanner from "../../components/GroveBanner";
 import { GroveMembers } from "../../components/yard/GroveYardUI";
@@ -20,6 +21,11 @@ export default function YardLeaderboards() {
   const [me, setMe] = useState("");
   const [groves, setGroves] = useState(null);
   const [gMetric, setGMetric] = useState("wins");
+  const [events, setEvents] = useState(null);
+  useEffect(() => {
+    if (tab !== "seasonal") return;
+    fetch("/api/yard/events").then((r) => r.json()).then((d) => setEvents(d.events || [])).catch(() => setEvents([]));
+  }, [tab]);
   useEffect(() => setMe(getYardUser()), []);
   useEffect(() => {
     if (tab !== "individual") return;
@@ -105,7 +111,9 @@ export default function YardLeaderboards() {
             )}
           </>
         )}
-        {tab === "seasonal" && <WagoEmpty title="No Seasonal Event" copy="The Yard is between events. Check back soon." />}
+        {tab === "seasonal" && (events === null ? <div className="yd-card">Loading…</div> : events.length === 0
+          ? <WagoEmpty title="No Seasonal Event" copy="The Yard is between events. Check back soon." />
+          : <div className="yd-grid">{events.filter((e) => e.phase !== "upcoming").concat(events.filter((e) => e.phase === "upcoming")).map((e) => <EventCard key={e.id} ev={e} />)}</div>)}
       </main>
     </>
   );

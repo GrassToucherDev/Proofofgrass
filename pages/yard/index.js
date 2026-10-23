@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import V2Nav from "../../components/V2Nav";
 import { V2, V2Styles, V2GlobalCSS } from "../../utils/v2Theme";
-import { useYard, useYardGroves } from "../../hooks/useYard";
+import { useYard, useYardGroves, getYardUser } from "../../hooks/useYard";
 import { yardCSS, StatCard, FeatureCard, ChallengeCard, WagoEmpty, Avatar } from "../../components/yard/YardUI";
 import CreateChallengeSheet from "../../components/yard/CreateChallengeSheet";
 import { GroveChallengeCard } from "../../components/yard/GroveYardUI";
+import { EventCard } from "../../components/yard/EventUI";
 
 export default function Yard() {
   const router = useRouter();
@@ -18,9 +19,14 @@ export default function Yard() {
   const [mode, setMode] = useState("");
   const gv = useYardGroves(username);
   const [board, setBoard] = useState(null);
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
     fetch("/api/yard/leaderboard?metric=wins").then((r) => r.json()).then((d) => setBoard(d.players || [])).catch(() => setBoard([]));
+  }, []);
+  useEffect(() => {
+    const u = getYardUser();
+    fetch(`/api/yard/events${u ? `?username=${encodeURIComponent(u)}` : ""}`, { cache: "no-store" }).then((r) => r.json()).then((d) => setEvents(d.events || [])).catch(() => {});
   }, []);
   useEffect(() => {
     if (!router.isReady) return;
@@ -67,7 +73,7 @@ export default function Yard() {
         <div className="yd-features">
           <FeatureCard art="/yard/card1.webp" title="1v1 Challenges" copy="Go head to head with another user." cta="Start a Challenge" onClick={open} />
           <FeatureCard art="/yard/card2.webp" title="Grove vs Grove" copy="Bring your squad and compete together." cta="Challenge a Grove" onClick={openGrove} />
-          <FeatureCard art="/yard/card3.webp" title="Seasonal Events" copy="Special challenges, bigger rewards." soon />
+          <FeatureCard art="/yard/card3.webp" title="Seasonal Events" copy="Special challenges, bigger rewards." cta={events.some((e) => e.phase === "live") ? "Join the event" : "See events"} href="/yard/events" />
         </div>
 
         {error && <div role="alert" className="yd-card" style={{ marginTop: 22, color: V2.danger, fontWeight: 600 }}>{error}</div>}
@@ -78,6 +84,13 @@ export default function Yard() {
             <div className="yd-grid">{you.incoming.slice(0, 6).map((c) => <ChallengeCard key={c.id} ch={c} viewer={username} kind="incoming" onChange={reload} />)}</div>
           </section>
         )}
+
+        {events.filter((e) => e.phase === "live").slice(0, 1).map((e) => (
+          <section className="yd-section" key={e.id} aria-label="Live seasonal event">
+            <h2 className="yd-h2">Live seasonal event <Link href="/yard/events" style={{ fontSize: 14, fontWeight: 700, color: V2.forestLight }}>All events →</Link></h2>
+            <div style={{ maxWidth: 520 }}><EventCard ev={e} /></div>
+          </section>
+        ))}
 
         {!!grove?.incoming?.length && (
           <section className="yd-section" aria-labelledby="yd-gin">
