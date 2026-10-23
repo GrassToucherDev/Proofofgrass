@@ -67,7 +67,7 @@ export default function YardChallenges() {
                   </>
                 ) : <WagoEmpty title="Nothing pending" copy="No Grove challenges waiting. Only the Grove owner can send them." cta={newBtn} />)}
                 {tab === "active" && (gcounts.active ? <div className="yd-grid">{grove.active.map((c) => <GroveChallengeCard key={c.id} ch={c} grove={grove} kind="active" />)}</div> : <WagoEmpty title="No Active Grove Challenges" copy="Rally your Grove and call out another one." cta={newBtn} />)}
-                {tab === "completed" && (gcounts.completed ? <div className="yd-grid">{gCompleted.map((c) => <GroveChallengeCard key={c.id} ch={c} grove={grove} kind="past" />)}</div> : <WagoEmpty title="No finished Grove challenges yet" copy="Results show up here as soon as a challenge ends." />)}
+                {tab === "completed" && (gcounts.completed ? <div className="yd-grid">{gCompleted.map((c) => <GroveChallengeCard key={c.id} ch={c} grove={grove} kind="past" />)}</div> : <WagoEmpty pose="trophy" title="No finished Grove challenges yet" copy="Results show up here as soon as a challenge ends." />)}
                 {tab === "history" && (gcounts.history ? <div className="yd-grid">{gRest.map((c) => <GroveChallengeCard key={c.id} ch={c} grove={grove} kind="past" />)}</div> : <WagoEmpty title="Nothing here" copy="Declined and expired Grove challenges show up here." />)}
               </div>
             )) : !ready ? <div className="yd-card">Loading…</div> : (
@@ -79,7 +79,7 @@ export default function YardChallenges() {
                   </>
                 ) : <WagoEmpty title="Nothing pending" copy="Looks quiet in The Yard. Call someone out." cta={newBtn} />)}
                 {tab === "active" && (counts.active ? <div className="yd-grid">{you.active.map((c) => <ChallengeCard key={c.id} ch={c} viewer={username} kind="active" />)}</div> : <WagoEmpty title="No Active Challenges" copy="Looks quiet in The Yard. Call someone out." cta={newBtn} />)}
-                {tab === "completed" && (counts.completed ? <div className="yd-grid">{completed.map((c) => <ChallengeCard key={c.id} ch={c} viewer={username} kind="past" />)}</div> : <WagoEmpty title="No finished challenges yet" copy="Results show up here as soon as a challenge ends." />)}
+                {tab === "completed" && (counts.completed ? <div className="yd-grid">{completed.map((c) => <ChallengeCard key={c.id} ch={c} viewer={username} kind="past" />)}</div> : <WagoEmpty pose="trophy" title="No finished challenges yet" copy="Results show up here as soon as a challenge ends." />)}
                 {tab === "history" && (counts.history ? <div className="yd-grid">{rest.map((c) => <ChallengeCard key={c.id} ch={c} viewer={username} kind="past" />)}</div> : <WagoEmpty title="Nothing here" copy="Declined, expired and older challenges show up here." />)}
               </div>
             )}

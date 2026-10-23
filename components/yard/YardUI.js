@@ -10,7 +10,7 @@ export const yardCSS = `
   .yd-wrap { max-width: 1180px; margin: 0 auto; padding: 0 clamp(14px,4vw,32px) 80px; }
   .yd-hero { position: relative; border-radius: 28px; overflow: hidden; min-height: 330px; margin-top: 12px;
     background: ${V2.gradientSky}; box-shadow: ${V2.shadowMd}; }
-  .yd-hero-art { position: absolute; inset: 0 0 0 30%; background: url(/yard/hero.webp) right center / cover no-repeat; }
+  .yd-hero-art { position: absolute; inset: 0 0 0 38%; background: url(/yard/hero.webp) right center / cover no-repeat; }
   .yd-hero-art { -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.55) 22%, #000 52%); mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.55) 22%, #000 52%); }
   .yd-hero-copy { position: relative; z-index: 2; padding: 34px clamp(20px,4vw,44px) 96px; max-width: 580px; }
   .yd-eyebrow { display:inline-flex; align-items:center; gap:8px; background:#fff; border-radius:9999px; padding:8px 16px; font-size:11px; font-weight:700; letter-spacing:.16em; color:${V2.forestLight}; box-shadow:${V2.shadowSm}; }
@@ -112,10 +112,10 @@ export function FeatureCard({ art, title, copy, cta, onClick, href, soon }) {
   );
 }
 
-export function WagoEmpty({ title, copy, cta }) {
+export function WagoEmpty({ title, copy, cta, pose = "cheer" }) {
   return (
     <div className="yd-card" style={{ textAlign: "center", padding: "28px 18px" }}>
-      <img src="/images/wago/wago-cheer.png" alt="" width={84} height={84} style={{ objectFit: "contain", margin: "0 auto 8px", display: "block" }} />
+      <img src={pose === "trophy" ? "/images/wago/wago-trophy.webp" : "/images/wago/wago-cheer.png"} alt="" width={84} height={84} style={{ objectFit: "contain", margin: "0 auto 8px", display: "block" }} />
       <div style={{ fontSize: 17, fontWeight: 800, color: V2.forestGreen }}>{title}</div>
       <p style={{ fontSize: 14, fontWeight: 500, color: V2.textBody, margin: "6px 0 0" }}>{copy}</p>
       {cta && <div style={{ marginTop: 14 }}>{cta}</div>}
