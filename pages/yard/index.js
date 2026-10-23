@@ -36,6 +36,8 @@ export default function Yard() {
   const you = data?.you;
   const rec = you?.record;
   const stats = data?.stats;
+  // Only show the two newer numbers when the server could compute them from real data.
+  const realExtras = stats && stats.grovesCompeting != null && stats.proofsThisWeek != null;
   const open = () => { setPreset(""); setMode(""); setCreating(true); };
   const openGrove = () => { setPreset(""); setMode("grove"); setCreating(true); };
   const grove = gv.data?.grove;
@@ -65,9 +67,19 @@ export default function Yard() {
 
         <section className="yd-stats" aria-label="Yard stats">
           <StatCard icon="⚔️" value={stats ? stats.activeChallenges.toLocaleString() : null} label="Active challenges" />
-          <StatCard icon="🏆" value={stats ? stats.players.toLocaleString() : null} label="Players ranked" />
-          <StatCard icon="📋" value={you ? (you.record.completed ? `${rec.wins}-${rec.losses}-${rec.ties}` : "None yet") : "Sign in"} label="Your record" />
-          <StatCard icon="📊" value={you?.rank ? `#${you.rank}` : "–"} label="Your Yard rank" />
+          {realExtras ? (
+            <>
+              <StatCard icon="🌳" value={stats.grovesCompeting.toLocaleString()} label="Groves competing" />
+              <StatCard icon="🌿" value={stats.proofsThisWeek.toLocaleString()} label="Yard proofs this week" />
+              <StatCard icon="📋" value={you ? (you.record.completed ? `${rec.wins}-${rec.losses}-${rec.ties}` : "None yet") : "Sign in"} label={you?.rank ? `Your record · #${you.rank}` : "Your record"} />
+            </>
+          ) : (
+            <>
+              <StatCard icon="🏆" value={stats ? stats.players.toLocaleString() : null} label="Players ranked" />
+              <StatCard icon="📋" value={you ? (you.record.completed ? `${rec.wins}-${rec.losses}-${rec.ties}` : "None yet") : "Sign in"} label="Your record" />
+              <StatCard icon="📊" value={you?.rank ? `#${you.rank}` : "–"} label="Your Yard rank" />
+            </>
+          )}
         </section>
 
         <div className="yd-features">

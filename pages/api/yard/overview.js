@@ -18,7 +18,10 @@ export default async function handler(req, res) {
     ]);
     const map = tally(settled || []);
     const ranked = rankPlayers(map, "wins");
-    const out = { stats: { activeChallenges: active ?? 0, settledChallenges: (settled || []).length, players: ranked.length }, you: null };
+    // Real-data-only extras. If the stats function isn't there (or errors) these stay null and the UI omits them.
+    const ys = await db.rpc("yard_stats");
+    const extra = ys.error || !ys.data ? { grovesCompeting: null, proofsThisWeek: null } : { grovesCompeting: ys.data.groves_competing, proofsThisWeek: ys.data.proofs_week };
+    const out = { stats: { activeChallenges: active ?? 0, settledChallenges: (settled || []).length, players: ranked.length, ...extra }, you: null };
     if (!me) return res.status(200).json(out);
 
     const { data: mine } = await db.from("Challenges").select("*")
