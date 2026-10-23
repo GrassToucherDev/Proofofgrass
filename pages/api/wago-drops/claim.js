@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { createClient } from "@supabase/supabase-js";
 import { ticketsForCampaign, PROOF_WINDOW_HOURS } from "../../../utils/wagoProofBonus";
+import { hasConsent } from "../../../utils/prizes";
 import { MAX_CLAIMS_PER_DAY, MAX_TRAVEL_KMH, GPS_TOLERANCE_M } from "../../../utils/wagoPayout.mjs";
 
 const supabase = createClient(
@@ -30,6 +31,10 @@ export default async function handler(req, res) {
   }
 
   const googleId = session.user.google_id;
+
+  if (!(await hasConsent(supabase, googleId).catch(() => true))) {
+    return res.status(403).json({ error: "Please accept the terms to claim drops.", code: "consent_required" });
+  }
 
   // Load location
   const { data: loc, error: locErr } = await supabase
