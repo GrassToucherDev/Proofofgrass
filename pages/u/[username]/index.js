@@ -512,28 +512,29 @@ export default function ProfilePage() {
       background: white; border-radius: 16px;
       border: 1px solid ${V2.borderSoft};
       box-shadow: 0 2px 16px rgba(26,74,10,0.07);
-      padding: 20px;
+      padding: 20px; min-width: 0;
     }
     .pf-stats-row {
-      display: grid; grid-template-columns: repeat(6,1fr); gap: 10px;
+      display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 10px;
     }
     .pf-three-col {
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;
+      display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px;
     }
     .pf-two-one-col {
-      display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 16px;
+      display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.4fr) minmax(0,1fr); gap: 16px;
     }
+    .pf-three-col > *, .pf-two-one-col > * { min-width: 0; }
     .skel { background: rgba(200,220,190,0.3); border-radius:6px; animation:v2Shimmer 1.4s ease-in-out infinite; }
     .pf-proof-scroll { display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; scrollbar-width:none; }
     .pf-proof-scroll::-webkit-scrollbar { display:none; }
     @media(max-width:900px) {
-      .pf-three-col { grid-template-columns: 1fr 1fr !important; }
-      .pf-two-one-col { grid-template-columns: 1fr 1fr !important; }
+      .pf-three-col { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+      .pf-two-one-col { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
     }
     @media(max-width:640px) {
-      .pf-stats-row { grid-template-columns: repeat(2,1fr) !important; }
-      .pf-three-col { grid-template-columns: 1fr !important; }
-      .pf-two-one-col { grid-template-columns: 1fr !important; }
+      .pf-stats-row { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+      .pf-three-col { grid-template-columns: minmax(0,1fr) !important; }
+      .pf-two-one-col { grid-template-columns: minmax(0,1fr) !important; }
       .pf-streak-card-desktop { display: none !important; }
     }
     .pf-action-btn {
