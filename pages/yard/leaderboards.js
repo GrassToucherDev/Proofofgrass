@@ -53,7 +53,7 @@ export default function YardLeaderboards() {
             {metric === "rate" && <p style={{ fontSize: 12, fontWeight: 600, color: V2.dimGray, margin: "0 2px 8px" }}>Win rate counts players with 3 or more finished challenges.</p>}
             {err && <div role="alert" className="yd-card" style={{ color: V2.danger, fontWeight: 600 }}>{err}</div>}
             {rows === null && !err ? <div className="yd-card">Loading…</div> : rows && rows.length === 0 ? (
-              <WagoEmpty title="No results yet" copy="The first finished challenge puts someone on the board." />
+              <WagoEmpty pose="trophy" title="No results yet" copy="The first finished challenge puts someone on the board." />
             ) : rows && (
               <div className="yd-card" style={{ padding: "6px 14px" }}>
                 <div role="table" aria-label="Individual Yard leaderboard">
@@ -82,7 +82,7 @@ export default function YardLeaderboards() {
             </div>
             {gMetric === "rate" && <p style={{ fontSize: 12, fontWeight: 600, color: V2.dimGray, margin: "0 2px 8px" }}>Win rate counts Groves with 3 or more finished challenges.</p>}
             {groves === null ? <div className="yd-card">Loading…</div> : groves.length === 0 ? (
-              <WagoEmpty title="No Grove results yet" copy="Your Grove hasn't stepped into The Yard yet. The first finished Grove challenge puts a Grove on the board." cta={<Link href="/yard" style={{ color: V2.forestLight, fontWeight: 700 }}>Challenge a Grove →</Link>} />
+              <WagoEmpty pose="trophy" title="No Grove results yet" copy="Your Grove hasn't stepped into The Yard yet. The first finished Grove challenge puts a Grove on the board." cta={<Link href="/yard" style={{ color: V2.forestLight, fontWeight: 700 }}>Challenge a Grove →</Link>} />
             ) : (
               <div className="yd-card" style={{ padding: "6px 14px" }}>
                 <div role="table" aria-label="Grove Yard leaderboard">
