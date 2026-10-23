@@ -2,6 +2,7 @@ import { useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { T } from "../../utils/wagoTheme";
+import { uploadCover } from "../../utils/wagoCoverUpload";
 
 const BLANK = { title: "", value_text: "", description: "", image_url: "", sponsor_name: "", sponsor_url: "", sponsor_logo_url: "", lat: "", lng: "", hint: "", quantity: 1, claim_radius_m: 25, reveal_radius_m: 100, ends_at: "", status: "draft" };
 const inp = { width: "100%", boxSizing: "border-box", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 12px", fontSize: 13, color: T.white };
@@ -17,6 +18,14 @@ export default function AdminPrizes() {
   const [codes, setCodes] = useState(null);
   const [err, setErr] = useState("");
   const set = k => e => setF(x => ({ ...x, [k]: e.target.value }));
+  const [up, setUp] = useState("");
+  async function pick(key, logo, e) {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUp(key); setErr("");
+    try { const url = await uploadCover(file, { logo }); setF(x => ({ ...x, [key]: url })); }
+    catch (ex) { setErr(ex.message); }
+    setUp("");
+  }
   const H = { "Content-Type": "application/json", "x-wago-admin-secret": secret };
 
   async function load() {
@@ -81,10 +90,18 @@ export default function AdminPrizes() {
         <F label="Title"><input style={inp} value={f.title} onChange={set("title")} placeholder="Holo Charizard card" /></F>
         <F label="Value / what it is (shown to everyone)"><input style={inp} value={f.value_text} onChange={set("value_text")} placeholder="Pokémon card, $20 cash, T-shirt…" /></F>
         <F label="Description"><textarea style={inp} rows={3} value={f.description} onChange={set("description")} /></F>
-        <F label="Image URL"><input style={inp} value={f.image_url} onChange={set("image_url")} /></F>
+        <F label="Prize photo (what the prize looks like)">
+          {f.image_url && <img src={f.image_url} alt="" style={{ width: 120, height: 120, objectFit: "contain", background: T.surface, borderRadius: 10, display: "block", marginBottom: 8 }} />}
+          <input type="file" accept="image/*" onChange={e => pick("image_url", false, e)} />
+          {up === "image_url" && <span style={{ fontSize: 12, color: T.dim }}> Uploading…</span>}
+        </F>
         <F label="Sponsor name"><input style={inp} value={f.sponsor_name} onChange={set("sponsor_name")} /></F>
         <F label="Sponsor website"><input style={inp} value={f.sponsor_url} onChange={set("sponsor_url")} /></F>
-        <F label="Sponsor logo URL"><input style={inp} value={f.sponsor_logo_url} onChange={set("sponsor_logo_url")} /></F>
+        <F label="Sponsor logo (optional)">
+          {f.sponsor_logo_url && <img src={f.sponsor_logo_url} alt="" style={{ width: 48, height: 48, objectFit: "contain", display: "block", marginBottom: 8 }} />}
+          <input type="file" accept="image/*" onChange={e => pick("sponsor_logo_url", true, e)} />
+          {up === "sponsor_logo_url" && <span style={{ fontSize: 12, color: T.dim }}> Uploading…</span>}
+        </F>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 10 }}>
           <F label="Latitude"><input style={inp} value={f.lat} onChange={set("lat")} inputMode="decimal" /></F>
           <F label="Longitude"><input style={inp} value={f.lng} onChange={set("lng")} inputMode="decimal" /></F>
@@ -97,7 +114,7 @@ export default function AdminPrizes() {
         </div>
         <F label="Ends (optional)"><input style={inp} type="datetime-local" value={f.ends_at} onChange={set("ends_at")} /></F>
         <F label="Status"><select style={inp} value={f.status} onChange={set("status")}><option value="draft">Draft (hidden)</option><option value="active">Active (live)</option></select></F>
-        <button onClick={create} style={{ background: T.olive, color: "#fff", border: "none", borderRadius: 999, padding: "12px 24px", fontWeight: 700, fontSize: 15 }}>Create prize and codes</button>
+        <button onClick={create} disabled={!!up} style={{ background: T.olive, color: "#fff", border: "none", borderRadius: 999, padding: "12px 24px", fontWeight: 700, fontSize: 15 }}>Create prize and codes</button>
       </div>
     </div>
   );

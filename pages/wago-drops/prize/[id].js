@@ -63,7 +63,7 @@ export default function PrizePage() {
         {p && (
           <div style={{ marginTop: 12 }}>
             <div style={card}>
-              {p.image_url && <img src={p.image_url} alt={p.title} style={{ width: "100%", maxHeight: 240, objectFit: "cover", borderRadius: 10, marginBottom: 12 }} />}
+              {p.image_url && <img src={p.image_url} alt={p.title} style={{ width: "100%", maxHeight: 300, objectFit: "contain", background: T.surface, borderRadius: 10, marginBottom: 12 }} />}
               <h1 style={{ fontSize: 24, margin: "0 0 4px", lineHeight: 1.2, wordBreak: "break-word" }}>{p.title}</h1>
               {p.value_text && <div style={{ fontSize: 15, color: T.green, fontWeight: 700, marginBottom: 6 }}>{p.value_text}</div>}
               {p.description && <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.5, margin: "0 0 10px" }}>{p.description}</p>}

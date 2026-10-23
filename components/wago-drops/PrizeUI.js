@@ -15,7 +15,7 @@ export function PrizeCard({ p }) {
   return (
     <Link href={`/wago-drops/prize/${p.id}`} style={{ display: "flex", gap: 12, textDecoration: "none", color: T.white, background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: 12, opacity: gone ? 0.6 : 1 }}>
       <div style={{ width: 72, height: 72, borderRadius: 10, background: T.surface, flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30 }}>
-        {p.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🎁"}
+        {p.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : "🎁"}
       </div>
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.25, wordBreak: "break-word" }}>{p.title}</div>
