@@ -9,6 +9,7 @@ import V2Nav from "../components/V2Nav";
 import SecureUsernameCard from "../components/SecureUsernameCard";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 import GroveBanner from "../components/GroveBanner";
+import { GroveMembers } from "../components/yard/GroveYardUI";
 import { supabase } from "../utils/supabase";
 import { renderGroveCard } from "../utils/groveShareImage";
 import { BANNER_PERMISSION_NOTE } from "../utils/groveBanners";
@@ -445,6 +446,7 @@ export default function GrovesPage() {
                     )}
                     <span style={{ fontSize: 13, color: V2.textMuted }}>{g.members} members</span>
                   </div>
+                  <GroveMembers groveId={g.id} count={g.members} label="Members" compact />
                 </div>
                 <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10", alignSelf: "flex-start" }}>{g.streak}d</span>
               </div>
