@@ -7,6 +7,7 @@ import { yardError } from "../../utils/yardErrors";
 import { yardPost } from "../../hooks/useYard";
 import { Avatar } from "./YardUI";
 import GroveBanner from "../GroveBanner";
+import { GroveMembers } from "./GroveYardUI";
 
 const DURATIONS = [{ d: 7, note: "A quick sprint" }, { d: 14, note: "Two solid weeks" }, { d: 30, note: "The full month" }];
 const clean = (v) => String(v || "").replace(/@/g, "").trim();
@@ -157,6 +158,7 @@ export default function CreateChallengeSheet({ viewer, presetOpponent = "", pres
                   ))}
                 </ul>
                 {gPicked && <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "12px 0 0", padding: "10px 12px", background: "#e6f5d8", borderRadius: 14, color: "#2d6b1a", fontWeight: 700, fontSize: 14 }}>🌳 Challenging {gPicked.name}</div>}
+                {gPicked && <GroveMembers groveId={gPicked.id} count={gPicked.size} label="See who's in this Grove" />}
                 <button type="button" disabled={!gPicked} onClick={() => setStep(3)} style={{ ...V2Styles.btnPrimary, width: "100%", justifyContent: "center", minHeight: 52, marginTop: 18, opacity: gPicked ? 1 : .5 }}>Continue</button>
               </>
             )}

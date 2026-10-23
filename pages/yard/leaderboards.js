@@ -7,6 +7,7 @@ import { V2, V2GlobalCSS } from "../../utils/v2Theme";
 import { getYardUser } from "../../hooks/useYard";
 import { yardCSS, Avatar, WagoEmpty } from "../../components/yard/YardUI";
 import GroveBanner from "../../components/GroveBanner";
+import { GroveMembers } from "../../components/yard/GroveYardUI";
 
 const TABS = [["individual", "Individual"], ["groves", "Groves"], ["seasonal", "Seasonal"]];
 const METRICS = [["wins", "Most wins"], ["rate", "Win rate"], ["completed", "Most played"]];
@@ -86,7 +87,7 @@ export default function YardLeaderboards() {
               <div className="yd-card" style={{ padding: "6px 14px" }}>
                 <div role="table" aria-label="Grove Yard leaderboard">
                   {groves.map((g) => (
-                    <div role="row" className="yd-row" key={g.id}>
+                    <div role="row" className="yd-row" key={g.id} style={{ flexWrap: "wrap" }}>
                       <span role="cell" aria-label={`Rank ${g.rank}`} style={{ width: 34, fontWeight: 800, textAlign: "center" }}>{["🥇", "🥈", "🥉"][g.rank - 1] || `#${g.rank}`}</span>
                       <GroveBanner banner={g.banner} height={40} radius={10} style={{ width: 64, flex: "none" }} />
                       <span role="cell" style={{ flex: 1, minWidth: 0 }}>
@@ -96,6 +97,7 @@ export default function YardLeaderboards() {
                       <span role="cell" style={{ textAlign: "right", fontWeight: 800, color: V2.forestGreen }}>
                         {gMetric === "wins" ? `${g.wins} wins` : gMetric === "rate" ? `${g.winRate}%` : `${g.completed} played`}
                       </span>
+                      <div style={{ flexBasis: "100%", paddingLeft: 46 }}><GroveMembers groveId={g.id} count={g.size} compact /></div>
                     </div>
                   ))}
                 </div>

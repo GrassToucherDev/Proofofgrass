@@ -6,6 +6,7 @@ import GroveBanner from "../GroveBanner";
 import { fmtDate } from "../../utils/yardStatus";
 import { yardError } from "../../utils/yardErrors";
 import { yardPost } from "../../hooks/useYard";
+import { Avatar } from "./YardUI";
 
 
 export function GroveBadge({ g, align = "left" }) {
@@ -71,6 +72,10 @@ export function GroveChallengeCard({ ch, grove, kind, onChange, detail }) {
         <div aria-hidden="true" style={{ alignSelf: "center", fontWeight: 800, color: V2.forestLight, fontSize: 14 }}>VS</div>
         <GroveBadge g={b} />
       </div>
+      <div style={{ marginTop: 6 }}>
+        <GroveMembers groveId={a.id} slug={ch.slug} count={a.size} label={`${a.name} members`} />
+        <GroveMembers groveId={b.id} slug={ch.slug} count={b.size} label={`${b.name} members`} />
+      </div>
       {ch.message && <p style={{ fontSize: 13, fontWeight: 500, color: V2.textBody, margin: "12px 0 0", fontStyle: "italic", overflowWrap: "anywhere" }}>“{ch.message}” <span style={{ fontStyle: "normal", color: V2.dimGray }}>· from {a.name}</span></p>}
       {showScore && (
         <div role="group" aria-label="Days the daily target was hit" style={{ display: "flex", gap: 10, marginTop: 12 }}>
@@ -95,5 +100,54 @@ export function GroveChallengeCard({ ch, grove, kind, onChange, detail }) {
       {err && <div role="alert" style={{ fontSize: 12, color: V2.danger, marginTop: 8 }}>{err}</div>}
       {!detail && <div style={{ marginTop: 12 }}><Link href={`/yard/grove/${ch.slug}`} style={{ fontSize: 13, fontWeight: 700, color: V2.forestLight }}>View challenge →</Link></div>}
     </article>
+  );
+}
+
+// Expandable "who is in this Grove" list. Loads lazily on first open. Initials stand in for missing pictures.
+// Pass `slug` inside a challenge to see the roster that was locked when it started.
+export function GroveMembers({ groveId, slug, count, label = "Members", compact }) {
+  const [open, setOpen] = useState(false);
+  const [state, setState] = useState({ loading: false, members: null, locked: false, error: "" });
+  const toggle = async () => {
+    const next = !open; setOpen(next);
+    if (!next || state.members || state.loading) return;
+    setState((s) => ({ ...s, loading: true, error: "" }));
+    try {
+      const r = await fetch(`/api/yard/groves/members?id=${encodeURIComponent(groveId)}${slug ? `&slug=${encodeURIComponent(slug)}` : ""}`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Could not load members.");
+      setState({ loading: false, members: d.members, locked: d.locked, error: "" });
+    } catch (e) { setState({ loading: false, members: null, locked: false, error: e.message || "Could not load members." }); }
+  };
+  const panel = `yd-mem-${groveId}${slug ? "-" + slug : ""}`;
+  return (
+    <div style={{ marginTop: compact ? 4 : 8 }}>
+      <button type="button" onClick={toggle} aria-expanded={open} aria-controls={panel}
+        style={{ minHeight: 44, padding: "0 4px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: V2.forestLight, display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <span aria-hidden="true" style={{ display: "inline-block", transition: "transform .15s", transform: open ? "rotate(90deg)" : "none" }}>▸</span>
+        {open ? `Hide ${label}` : `${label}${count != null ? ` (${count})` : ""}`}
+      </button>
+      {open && (
+        <div id={panel} role="region" aria-label={label} style={{ marginTop: 2 }}>
+          {state.loading && <div style={{ fontSize: 13, color: V2.dimGray, padding: "4px 4px 8px" }}>Loading…</div>}
+          {state.error && <div role="alert" style={{ fontSize: 13, color: V2.danger, padding: "4px 4px 8px" }}>{state.error}</div>}
+          {state.members && (
+            <>
+              {state.locked && <p style={{ fontSize: 12, fontWeight: 600, color: V2.dimGray, margin: "0 4px 6px" }}>Roster locked when the challenge started.</p>}
+              <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                {state.members.map((m) => (
+                  <li key={m.username} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 44, padding: "2px 4px" }}>
+                    <Avatar name={m.username} src={m.avatar_url} size={32} />
+                    <Link href={`/u/${m.username}`} style={{ fontWeight: 700, fontSize: 14, color: V2.forestGreen, textDecoration: "none", overflowWrap: "break-word", wordBreak: "break-word", flex: 1, minWidth: 0 }}>@{m.username}</Link>
+                    {m.is_owner && <span className="yd-pill" style={{ background: "#fef3d8", color: "#8a5a00", padding: "3px 10px" }}><span aria-hidden="true">👑</span>Owner</span>}
+                    {m.left && <span className="yd-pill" style={{ background: "#eef2ea", color: "#566650", padding: "3px 10px" }}>Left</span>}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
