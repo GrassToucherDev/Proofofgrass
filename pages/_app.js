@@ -2,6 +2,7 @@
 import "../styles/globals.css";
 import { useState, useEffect } from "react";
 import { SessionProvider } from "next-auth/react";
+import ConsentGate from "../components/ConsentGate";
 import VersionGuard from "../components/VersionGuard";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
@@ -32,6 +33,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
         <WalletProvider wallets={wallets} autoConnect>
           <WalletModalProvider>
             <Component {...pageProps} />
+            <ConsentGate />
             <VersionGuard />
           </WalletModalProvider>
         </WalletProvider>
