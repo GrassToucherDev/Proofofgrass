@@ -402,20 +402,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           }
         }
       }catch(convErr){console.warn("[referral] conversion non-fatal:",convErr?.message);}
-      // Challenge progress
-      try{
-        const todayUTC=new Date().toISOString().slice(0,10);
-        const{data:activeChals}=await supabase.from("Challenges").select("id").or(`challenger.eq.${username},challenged.eq.${username}`).eq("status","active");
-        if(activeChals?.length){
-          for(const ch of activeChals){
-            const{data:prog}=await supabase.from("ChallengeProgress").select("id,days_complete,last_checked").eq("challenge_id",ch.id).eq("username",username).maybeSingle();
-            if(prog&&prog.last_checked!==todayUTC){
-              await supabase.from("ChallengeProgress").update({days_complete:(prog.days_complete??0)+1,last_checked:todayUTC}).eq("id",prog.id);
-              await supabase.from("ChallengeEvents").insert([{challenge_id:ch.id,username,event_type:"day_logged"}]);
-            }
-          }
-        }
-      }catch(chalErr){console.warn("challenge progress update failed",chalErr);}
+      // Challenge progress is no longer written from the browser: results are counted server-side from real proofs (see yard_settle_challenge).
     }catch(err){console.error("lock_in_streak exception",err);setSubmitError("Something went wrong — tap again.");setSubmitStatus("error");}
   },[username,currentStreak,onStreakUpdate,locationMode,gpsLat,gpsLng,locationCity,locationRegion,locationCountry]);
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { yardError } from "../../utils/yardErrors";
 import { supabase } from "../../utils/supabase";
 
 const T = {
@@ -29,6 +30,7 @@ function StatusBadge({ status }) {
     failed:    { label:"FAILED",    bg:"rgba(239,68,68,0.12)",   color:T.red   },
     pending:   { label:"PENDING",   bg:"rgba(255,255,255,0.08)", color:T.dim   },
     declined:  { label:"DECLINED",  bg:"rgba(239,68,68,0.10)",   color:T.red   },
+    expired:   { label:"EXPIRED",   bg:"rgba(255,255,255,0.08)", color:T.dim   },
   };
   const s = map[status] ?? map.pending;
   return (
@@ -124,6 +126,7 @@ export default function ChallengePage() {
   const [viewer,    setViewer]      = useState("");
   const [accepting, setAccepting]   = useState(false);
   const [declining, setDeclining]   = useState(false);
+  const [actionError, setActionError] = useState("");
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("pog_username") : null;
@@ -138,6 +141,14 @@ export default function ChallengePage() {
       const { data: ch } = await supabase
         .from("Challenges").select("*").eq("slug", challengeId).maybeSingle();
       if (!ch) { setLoading(false); return; }
+      // A finished challenge is settled server-side from real proofs (idempotent), then reloaded once.
+      if (ch.status === "active" && ch.ends_at && new Date(ch.ends_at) <= new Date()) {
+        try {
+          const r = await fetch("/api/yard/challenge/settle-one", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ slug: ch.slug }) });
+          const d = await r.json().catch(() => ({}));
+          if (d.settled) { router.reload(); return; }
+        } catch {}
+      }
       setChallenge(ch);
 
       const [{ data: prog }, { data: evts }] = await Promise.all([
@@ -154,13 +165,13 @@ export default function ChallengePage() {
           .select("created_at")
           .eq("username", ch.challenger)
           .in("status", ["pending","approved"])
-          .gte("created_at", ch.started_at) : Promise.resolve({ data: [] }),
+          .gte("created_at", ch.started_at).lte("created_at", ch.ends_at || new Date().toISOString()) : Promise.resolve({ data: [] }),
         // Count actual submissions since challenge started for challenged
         ch.started_at ? supabase.from("Submissions")
           .select("created_at")
           .eq("username", ch.challenged)
           .in("status", ["pending","approved"])
-          .gte("created_at", ch.started_at) : Promise.resolve({ data: [] }),
+          .gte("created_at", ch.started_at).lte("created_at", ch.ends_at || new Date().toISOString()) : Promise.resolve({ data: [] }),
       ]);
 
       // Count unique days submitted since challenge start
@@ -177,7 +188,8 @@ export default function ChallengePage() {
         const actualDays = norm(p.username) === norm(ch.challenger) ? challDays : challedDays;
         return {
           ...p,
-          days_complete: Math.max(p.days_complete ?? 0, actualDays),
+          // Settled challenges show their recorded final score; live ones show real proof days so far.
+          days_complete: ch.status === "completed" && p.days_complete != null ? p.days_complete : actualDays,
         };
       });
 
@@ -199,37 +211,21 @@ export default function ChallengePage() {
     })();
   }, [challengeId]);
 
-  const handleAccept = async () => {
+  const respond = async (action, setBusy) => {
     if (!challenge) return;
-    setAccepting(true);
-    const now     = new Date().toISOString();
-    const endsAt  = new Date(Date.now() + challenge.duration_days * 86400000).toISOString();
-
-    await supabase.from("Challenges").update({
-      status: "active", started_at: now, ends_at: endsAt,
-    }).eq("id", challenge.id);
-
-    await supabase.from("ChallengeProgress").upsert([
-      { challenge_id: challenge.id, username: challenge.challenger, days_complete: 0, status: "active" },
-      { challenge_id: challenge.id, username: challenge.challenged, days_complete: 0, status: "active" },
-    ], { onConflict: "challenge_id,username" });
-
-    await supabase.from("ChallengeEvents").insert([
-      { challenge_id: challenge.id, username: viewer, event_type: "accepted" },
-    ]);
-
-    router.reload();
+    setBusy(true);
+    try {
+      const r = await fetch("/api/yard/challenge/respond", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: viewer, slug: challenge.slug, action }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.ok === false) { setActionError(yardError(d)); setBusy(false); return; }
+      router.reload();
+    } catch { setActionError("Something went wrong. Please try again."); setBusy(false); }
   };
-
-  const handleDecline = async () => {
-    if (!challenge) return;
-    setDeclining(true);
-    await supabase.from("Challenges").update({ status: "declined" }).eq("id", challenge.id);
-    await supabase.from("ChallengeEvents").insert([
-      { challenge_id: challenge.id, username: viewer, event_type: "declined" },
-    ]);
-    router.reload();
-  };
+  const handleAccept  = () => respond("accept",  setAccepting);
+  const handleDecline = () => respond("decline", setDeclining);
 
   if (loading) return (
     <div style={{ minHeight:"100vh", background:T.bg, display:"flex",
@@ -342,6 +338,7 @@ export default function ChallengePage() {
               <div style={{ fontSize:13, color:T.muted }}>
                 <strong style={{ color:T.white }}>@{challenge.challenger}</strong> challenged you to a {challenge.duration_days}-day outdoor streak. Do you accept?
               </div>
+              {actionError && <div role="alert" style={{ fontSize:12, color:"#ef4444" }}>{actionError}</div>}
               <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
                 <button className="btn-olive" onClick={handleAccept} disabled={accepting}>
                   {accepting ? "Accepting…" : "✓ Accept Challenge"}
@@ -409,10 +406,12 @@ export default function ChallengePage() {
               <div style={{ fontSize:32, marginBottom:8 }}>🏆</div>
               <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
                 fontSize:28, fontWeight:700, color:T.gold, marginBottom:6 }}>
-                Challenge Complete
+                {challenge.result === "won" ? `@${challenge.winner} won` : challenge.result === "tied" ? "It's a tie" : challenge.result === "no_finish" ? "No proofs this time" : challenge.winner ? `@${challenge.winner} won` : "Challenge Complete"}
               </div>
               <div style={{ fontSize:13, color:T.muted }}>
-                Both users stayed consistent for {challenge.duration_days} days.
+                {challenge.challenger_days != null
+                  ? `Final proof days: @${challenge.challenger} ${challenge.challenger_days} · @${challenge.challenged} ${challenge.challenged_days}`
+                  : `${challenge.duration_days}-day challenge finished.`}
               </div>
             </div>
           )}
