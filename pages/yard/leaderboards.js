@@ -6,6 +6,7 @@ import V2Nav from "../../components/V2Nav";
 import { V2, V2GlobalCSS } from "../../utils/v2Theme";
 import { getYardUser } from "../../hooks/useYard";
 import { yardCSS, Avatar, WagoEmpty } from "../../components/yard/YardUI";
+import GroveBanner from "../../components/GroveBanner";
 
 const TABS = [["individual", "Individual"], ["groves", "Groves"], ["seasonal", "Seasonal"]];
 const METRICS = [["wins", "Most wins"], ["rate", "Win rate"], ["completed", "Most played"]];
@@ -16,12 +17,20 @@ export default function YardLeaderboards() {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [me, setMe] = useState("");
+  const [groves, setGroves] = useState(null);
+  const [gMetric, setGMetric] = useState("wins");
   useEffect(() => setMe(getYardUser()), []);
   useEffect(() => {
     if (tab !== "individual") return;
     setRows(null); setErr("");
     fetch(`/api/yard/leaderboard?metric=${metric}`).then((r) => r.json()).then((d) => d.players ? setRows(d.players) : setErr(d.error || "Could not load the leaderboard.")).catch(() => setErr("Could not load the leaderboard."));
   }, [tab, metric]);
+
+  useEffect(() => {
+    if (tab !== "groves") return;
+    setGroves(null);
+    fetch(`/api/yard/groves/leaderboard?metric=${gMetric}`).then((r) => r.json()).then((d) => setGroves(d.groves || [])).catch(() => setGroves([]));
+  }, [tab, gMetric]);
 
   return (
     <>
@@ -31,7 +40,7 @@ export default function YardLeaderboards() {
       <main className="yd-wrap" style={{ paddingTop: 22 }}>
         <Link href="/yard" style={{ fontSize: 13, fontWeight: 700, color: V2.forestLight }}>← The Yard</Link>
         <h1 style={{ fontSize: 34, fontWeight: 800, color: V2.forestGreen }}>Yard Leaderboards</h1>
-        <p style={{ fontSize: 14, fontWeight: 500, color: V2.textBody, maxWidth: 560 }}>Competitive results only: finished 1v1 challenges. This is separate from the main Proof of Grass leaderboard.</p>
+        <p style={{ fontSize: 14, fontWeight: 500, color: V2.textBody, maxWidth: 560 }}>Competitive results only: finished 1v1 and Grove vs Grove challenges. This is separate from the main Proof of Grass leaderboard.</p>
         <div className="yd-tabs" role="tablist" aria-label="Leaderboard type" style={{ marginTop: 14 }}>
           {TABS.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className="yd-tab" onClick={() => setTab(k)}>{l}</button>)}
         </div>
@@ -65,7 +74,35 @@ export default function YardLeaderboards() {
             )}
           </>
         )}
-        {tab === "groves" && <WagoEmpty title="Grove competition is coming" copy="Your Grove hasn't stepped into The Yard yet. Grove vs Grove arrives soon." />}
+        {tab === "groves" && (
+          <>
+            <div className="yd-tabs" role="group" aria-label="Sort by">
+              {METRICS.map(([k, l]) => <button key={k} aria-pressed={gMetric === k} className="yd-tab" style={gMetric === k ? { background: "#e6f5d8", color: "#2d6b1a", borderColor: "#7dc832" } : {}} onClick={() => setGMetric(k)}>{l}</button>)}
+            </div>
+            {gMetric === "rate" && <p style={{ fontSize: 12, fontWeight: 600, color: V2.dimGray, margin: "0 2px 8px" }}>Win rate counts Groves with 3 or more finished challenges.</p>}
+            {groves === null ? <div className="yd-card">Loading…</div> : groves.length === 0 ? (
+              <WagoEmpty title="No Grove results yet" copy="Your Grove hasn't stepped into The Yard yet. The first finished Grove challenge puts a Grove on the board." cta={<Link href="/yard" style={{ color: V2.forestLight, fontWeight: 700 }}>Challenge a Grove →</Link>} />
+            ) : (
+              <div className="yd-card" style={{ padding: "6px 14px" }}>
+                <div role="table" aria-label="Grove Yard leaderboard">
+                  {groves.map((g) => (
+                    <div role="row" className="yd-row" key={g.id}>
+                      <span role="cell" aria-label={`Rank ${g.rank}`} style={{ width: 34, fontWeight: 800, textAlign: "center" }}>{["🥇", "🥈", "🥉"][g.rank - 1] || `#${g.rank}`}</span>
+                      <GroveBanner banner={g.banner} height={40} radius={10} style={{ width: 64, flex: "none" }} />
+                      <span role="cell" style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 800, color: V2.forestGreen, overflowWrap: "anywhere" }}>{g.name}</span>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: V2.dimGray }}>{g.wins}W · {g.losses}L · {g.ties}T · {g.size} members</div>
+                      </span>
+                      <span role="cell" style={{ textAlign: "right", fontWeight: 800, color: V2.forestGreen }}>
+                        {gMetric === "wins" ? `${g.wins} wins` : gMetric === "rate" ? `${g.winRate}%` : `${g.completed} played`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
         {tab === "seasonal" && <WagoEmpty title="No Seasonal Event" copy="The Yard is between events. Check back soon." />}
       </main>
     </>

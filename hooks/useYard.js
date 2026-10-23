@@ -29,3 +29,21 @@ export async function yardPost(path, body) {
   const d = await r.json().catch(() => ({}));
   return { ok: r.ok && d.ok !== false, data: d };
 }
+
+// The viewer's Grove and its Grove vs Grove challenges. `data.grove` is null when they are not in a Grove.
+export function useYardGroves(username) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [ready, setReady] = useState(false);
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/yard/groves/overview${username ? `?username=${encodeURIComponent(username)}` : ""}`, { cache: "no-store" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Could not load Grove challenges.");
+      setData(d); setError("");
+    } catch (e) { setError(e.message || "Could not load Grove challenges."); }
+    setReady(true);
+  }, [username]);
+  useEffect(() => { load(); }, [load]);
+  return { data, error, ready, reload: load };
+}
