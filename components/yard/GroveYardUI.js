@@ -103,6 +103,8 @@ export function GroveChallengeCard({ ch, grove, kind, onChange, detail }) {
   );
 }
 
+const PILL = { display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 9999, padding: "3px 10px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" };
+
 // Expandable "who is in this Grove" list. Loads lazily on first open. Initials stand in for missing pictures.
 // Pass `slug` inside a challenge to see the roster that was locked when it started.
 export function GroveMembers({ groveId, slug, eventSlug, count, label = "Members", compact }) {
@@ -139,8 +141,8 @@ export function GroveMembers({ groveId, slug, eventSlug, count, label = "Members
                   <li key={m.username} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 44, padding: "2px 4px" }}>
                     <Avatar name={m.username} src={m.avatar_url} size={32} />
                     <Link href={`/u/${m.username}`} style={{ fontWeight: 700, fontSize: 14, color: V2.forestGreen, textDecoration: "none", overflowWrap: "break-word", wordBreak: "break-word", flex: 1, minWidth: 0 }}>@{m.username}</Link>
-                    {m.is_owner && <span className="yd-pill" style={{ background: "#fef3d8", color: "#8a5a00", padding: "3px 10px" }}><span aria-hidden="true">👑</span>Owner</span>}
-                    {m.left && <span className="yd-pill" style={{ background: "#eef2ea", color: "#566650", padding: "3px 10px" }}>Left</span>}
+                    {m.is_owner && <span style={{ ...PILL, background: "#fef3d8", color: "#8a5a00" }}><span aria-hidden="true">👑</span>Owner</span>}
+                    {m.left && <span style={{ ...PILL, background: "#eef2ea", color: "#566650" }}>Left</span>}
                   </li>
                 ))}
               </ul>
