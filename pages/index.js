@@ -863,10 +863,10 @@ export default function Home() {
           />
           <FeatureCard
             icon="/icons/challenges.png"
-            title="Challenges"
-            desc="Take on challenges. Compete. Win. Earn more Grass Draw entries."
-            cta="View Challenges"
-            href="/challenges"
+            title="The Yard"
+            desc="Challenge other users, compete and see where you stand."
+            cta="Enter The Yard"
+            href="/yard"
           />
         </div>
 

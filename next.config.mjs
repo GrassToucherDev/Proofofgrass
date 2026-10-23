@@ -13,6 +13,9 @@ const nextConfig = {
     "@solana/wallet-adapter-wallets",
     "@solana/wallet-adapter-base",
   ],
+  async redirects() {
+    return [{ source: "/challenges", destination: "/yard", permanent: false }];
+  },
   async headers() {
     return [
       {
