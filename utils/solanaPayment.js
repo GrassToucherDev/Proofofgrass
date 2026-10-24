@@ -1,8 +1,8 @@
 // Server-side $TOUCHGRASS payment check for Grove banners. Mirrors the checks in
 // pages/api/marketplace/verify-purchase.js (same mint, same burn-wallet recipient, same 80% price
 // tolerance, same 2h window) without changing that route.
-const MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
-const BURN = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
+export const MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
+export const BURN = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const RPC  = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 const TOKEN_PRICE_TOLERANCE = 0.8;
 const MAX_TX_AGE_SEC = 2 * 60 * 60;
@@ -17,7 +17,7 @@ async function rpcCall(method, params) {
   if (data.error) throw new Error(data.error.message);
   return data.result;
 }
-async function currentTokenPriceUsd() {
+export async function currentTokenPriceUsd() {
   const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${MINT}`, { headers: { Accept: "application/json" } });
   if (!r.ok) throw new Error("price_unavailable");
   const d = await r.json();

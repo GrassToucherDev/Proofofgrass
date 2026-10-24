@@ -15,12 +15,25 @@ export default async function handler(req, res) {
       .order("created_at", { ascending: false })
       .limit(10);
     if (error) throw error;
-    const items = (data || []).map(r => ({
+    // WAGO Wheel wins (public wheels only). Only username, prize name, rarity and time leave the server.
+    let spins = [];
+    try {
+      const { data: ws } = await sb.from("wheel_spins").select("username, rarity, prize_snapshot, created_at, wheels!inner(visibility)")
+        .eq("wheels.visibility", "public").order("created_at", { ascending: false }).limit(10);
+      spins = (ws || []).map(r => {
+        const hi = ["rare", "epic", "legendary"].includes(r.rarity);
+        const cap = r.rarity.charAt(0).toUpperCase() + r.rarity.slice(1);
+        return { username: String(r.username || "").replace(/^@/, ""), item: hi ? `${r.rarity === "epic" ? "an" : "a"} ${cap}: ${r.prize_snapshot?.name}` : (r.prize_snapshot?.name || "a prize"),
+          action: hi ? "pulled" : "won", emoji: hi ? "✨" : "🎁", item_id: "wago_wheel", at: r.created_at };
+      });
+    } catch {}
+    const purchases = (data || []).map(r => ({
       username: String(r.username || "").replace(/^@/, ""),
       item: MARKET_ITEM_NAMES[r.item_id] || r.item_name || r.item_id,
       item_id: r.item_id,
       at: r.created_at,
     }));
+    const items = [...purchases, ...spins].sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 10);
     res.setHeader("Cache-Control", "s-maxage=30, stale-while-revalidate=120");
     return res.status(200).json({ items });
   } catch (e) {

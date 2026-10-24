@@ -5,9 +5,15 @@ import { adminClient } from "../../../utils/requireOwner";
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
-  const m = /^([mb])_([0-9a-f-]{36})$/i.exec(String(req.query.id || ""));
+  const m = /^([mbw])_([0-9a-f-]{36})$/i.exec(String(req.query.id || ""));
   if (!m) return res.status(400).json({ error: "Bad checkout link." });
   const db = adminClient();
+  if (m[1].toLowerCase() === "w") {
+    const { data: i } = await db.from("wheel_intents").select("*").eq("id", m[2]).maybeSingle();
+    if (!i) return res.status(404).json({ error: "Checkout not found." });
+    const expired = i.status === "pending" && new Date(i.expires_at).getTime() < Date.now();
+    return res.status(200).json({ kind: "wheel", status: i.status === "settled" ? "completed" : expired ? "expired" : "pending", username: i.username, itemId: "wago_wheel", itemName: "WAGO Wheel spin", tokens: Number(i.price_tokens), usdPrice: i.price_usd == null ? null : Number(i.price_usd) });
+  }
   if (m[1].toLowerCase() === "m") {
     const { data: c } = await db.from("marketplace_checkouts").select("*").eq("id", m[2]).maybeSingle();
     if (!c) return res.status(404).json({ error: "Checkout not found." });
