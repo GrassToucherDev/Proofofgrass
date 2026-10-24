@@ -10,6 +10,7 @@ import V2Nav from "../components/V2Nav";
 import GroveBanner from "../components/GroveBanner";
 import SecureUsernameCard from "../components/SecureUsernameCard";
 import MarketplaceAccountBar from "../components/MarketplaceAccountBar";
+import WheelHero from "../components/wheel/WheelHero";
 import { signIn } from "next-auth/react";
 import { BANNER_PURCHASE_NOTICE } from "../utils/groveBanners";
 const BURN_ADDR       = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
@@ -154,7 +155,7 @@ function ActivityTicker() {
     const load = () => fetch("/api/marketplace/recent-activity")
       .then(r=>r.ok?r.json():null)
       .then(d=>{ if(alive && d) setItems((d.items||[]).map(i=>({
-        avatar: ITEM_EMOJI[i.item_id] || "🎨", name: i.username, action:"bought", item: i.item, time: timeAgo(i.at),
+        avatar: i.emoji || ITEM_EMOJI[i.item_id] || "🎨", name: i.username, action: i.action || "bought", item: i.item, time: timeAgo(i.at),
       }))); })
       .catch(()=>{});
     load();
@@ -681,6 +682,14 @@ export default function Marketplace() {
       .then(st=>{ if(st?.mine) openItemCheckout(item); else setGate({ item, status:st }); })
       .catch(()=>setGate({ item, status:{} }));
   };
+  // WAGO Wheel: the same "secured username" gate as item purchases, then run `cb`.
+  const [wheelHandoff, setWheelHandoff] = useState(null);
+  const requireSecured = (item, cb)=>{
+    if(!username){ setGate({ item, status:null, after:cb }); return; }
+    fetch(`/api/username/status?username=${encodeURIComponent(username)}`).then(r=>r.json())
+      .then(st=>{ if(st?.mine) cb(); else setGate({ item, status:st, after:cb }); })
+      .catch(()=>setGate({ item, status:{}, after:cb }));
+  };
   const closeBuying = ()=>{
     setBuyingItemRaw(null);
     try { if(new URLSearchParams(window.location.search).get("checkout")) window.history.replaceState(null,"","/marketplace"); } catch {}
@@ -696,7 +705,9 @@ export default function Marketplace() {
       const ref = new URLSearchParams(window.location.search).get("checkout");
       if(ref){
         fetch(`/api/checkout/info?id=${encodeURIComponent(ref)}`).then(r=>r.json()).then(d=>{
-          if(d.status==="pending"){
+          if(d.status==="pending" && d.kind==="wheel"){
+            setWheelHandoff({ checkoutId:ref, tokens:d.tokens, usd:d.usdPrice });
+          } else if(d.status==="pending"){
             if(d.kind==="banner") setTab("groves");
             setBuyingItemRaw(d.kind==="banner"
               ? { id:"grove_banner", name:`${d.bannerName} for ${d.groveName}`, groveBanner:true, intentId:ref.slice(2), checkoutRef:ref, usdPrice:d.usdPrice, groveName:d.groveName }
@@ -747,6 +758,7 @@ export default function Marketplace() {
         <V2Nav username={username||""} onUsernameChange={setUsername} showUpload={()=>{ window.location.href="/#upload"; }} />
         {/* Activity ticker */}
         <ActivityTicker />
+        <WheelHero username={username} requireSecured={requireSecured} handoff={wheelHandoff} />
         {/* HERO */}
         <div style={{ position:"relative", overflow:"hidden", padding:"40px clamp(14px,4vw,48px) 48px",
           background:"linear-gradient(160deg,#c5e3f7 0%,#d8f0e8 50%,#e8f4fd 100%)" }}>
@@ -895,7 +907,7 @@ export default function Marketplace() {
       {gate && (
         <BuyGate username={username} status={gate.status} item={gate.item}
           onClose={()=>setGate(null)}
-          onReady={()=>{ const it=gate.item; setGate(null); openItemCheckout(it); }} />
+          onReady={()=>{ const it=gate.item, after=gate.after; setGate(null); if(after) after(); else openItemCheckout(it); }} />
       )}
       {buyingItem && (
         <WalletPurchaseModal
