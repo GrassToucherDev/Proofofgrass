@@ -171,7 +171,7 @@ export default function InstallPrompt({ streak = 0, proofCount = 0 }) {
               <button onClick={handleInstall} style={{
                 flex:1, padding:"13px 0", background:T.olive, color:"#080a06",
                 border:"none", borderRadius:10, fontSize:14, fontWeight:700,
-                cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                cursor:"pointer", fontFamily:"'Nunito',sans-serif",
                 letterSpacing:"0.04em",
               }}>
                 {platform === "ios" ? "Show Me How" : "Install"}
@@ -180,7 +180,7 @@ export default function InstallPrompt({ streak = 0, proofCount = 0 }) {
                 padding:"13px 18px", background:"transparent",
                 border:`1px solid ${T.border}`, borderRadius:10,
                 fontSize:13, fontWeight:600, color:T.dim,
-                cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                cursor:"pointer", fontFamily:"'Nunito',sans-serif",
               }}>
                 Maybe Later
               </button>
@@ -225,7 +225,7 @@ export default function InstallPrompt({ streak = 0, proofCount = 0 }) {
               width:"100%", padding:"12px 0", marginTop:12,
               background:"transparent", border:`1px solid ${T.border}`,
               borderRadius:10, fontSize:13, color:T.dim, cursor:"pointer",
-              fontFamily:"'DM Sans',sans-serif",
+              fontFamily:"'Nunito',sans-serif",
             }}>Back</button>
           </>
         )}
@@ -262,7 +262,7 @@ function InstallSuccess({ onClose }) {
           width:"100%", padding:"13px 0", background:T.olive,
           color:"#080a06", border:"none", borderRadius:10,
           fontSize:14, fontWeight:700, cursor:"pointer",
-          fontFamily:"'DM Sans',sans-serif",
+          fontFamily:"'Nunito',sans-serif",
         }}>
           Let's Go 🌿
         </button>
@@ -336,13 +336,13 @@ export function InstallBanner({ streak = 0 }) {
           background:"#93a85a", color:"#080a06", border:"none",
           borderRadius:7, padding:"6px 12px", fontSize:11,
           fontWeight:700, cursor:"pointer",
-          fontFamily:"'DM Sans',sans-serif",
+          fontFamily:"'Nunito',sans-serif",
         }}>Install</button>
         <button onClick={handleDismiss} style={{
           background:"transparent", color:"rgba(240,239,234,0.4)",
           border:"1px solid rgba(255,255,255,0.08)",
           borderRadius:7, padding:"6px 10px", fontSize:11,
-          cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+          cursor:"pointer", fontFamily:"'Nunito',sans-serif",
         }}>✕</button>
       </div>
     </div>

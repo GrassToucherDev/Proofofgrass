@@ -54,7 +54,7 @@ export default function AdminPrizes() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'DM Sans',sans-serif", padding: "24px 16px 80px" }}>
+    <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'Nunito',sans-serif", padding: "24px 16px 80px" }}>
       <Head><title>Prizes admin</title><meta name="robots" content="noindex" /></Head>
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <Link href="/wago-drops/admin" style={{ fontSize: 13, color: T.green, textDecoration: "none" }}>← WAGO admin</Link>

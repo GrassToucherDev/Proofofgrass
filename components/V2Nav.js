@@ -229,7 +229,7 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
               <button className="v2nav-profile-btn" onClick={lockIn}
                 style={{ background:"linear-gradient(135deg,#7dc832,#5ba622)", color:"white",
                   border:"none", borderRadius:20, padding:"6px 14px", fontSize:12,
-                  fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"DM Sans,sans-serif" }}>
+                  fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"Nunito,sans-serif" }}>
                 ✓ Go
               </button>
             )}

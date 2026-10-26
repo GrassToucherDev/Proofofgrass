@@ -48,7 +48,7 @@ function StatCard({ icon, value, label, sub, accent, last }) {
     }}>
       <span style={{ fontSize: 16, opacity: 0.45, marginBottom: 2 }}>{icon}</span>
       <span style={{
-        fontFamily: "'Cormorant Garamond', Georgia, serif",
+        fontFamily: "'Fredoka',system-ui,sans-serif",
         fontSize: "clamp(26px,3.5vw,38px)", fontWeight: 700,
         color: accent ? T.gold : T.white, lineHeight: 1, letterSpacing: "-0.02em",
       }}>{value ?? "—"}</span>
@@ -94,7 +94,7 @@ function LBRow({ rank, username, streak, tier }) {
         background: `linear-gradient(135deg, ${T.bg3}, ${T.olive}30)`,
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: 14, flexShrink: 0, border: `1px solid ${T.border}`,
-        fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 700,
+        fontFamily: "'Fredoka',system-ui,sans-serif", fontWeight: 700,
         color: T.muted,
       }}>
         {username?.[0]?.toUpperCase() ?? "?"}
@@ -103,7 +103,7 @@ function LBRow({ rank, username, streak, tier }) {
         @{username}
       </span>
       <div style={{ textAlign: "right", flexShrink: 0 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: T.white, fontFamily: "'Cormorant Garamond', Georgia, serif", lineHeight: 1 }}>{streak}d</div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: T.white, fontFamily: "'Fredoka',system-ui,sans-serif", lineHeight: 1 }}>{streak}d</div>
         <div style={{ fontSize: 9, color: col, letterSpacing: "0.1em", textTransform: "uppercase" }}>{tier}</div>
       </div>
     </div>
@@ -132,7 +132,7 @@ function ProofCard({ username, streak, created_at }) {
       </div>
       <div style={{ textAlign: "right", flexShrink: 0 }}>
         <div style={{ fontSize: 9, color: T.dim, letterSpacing: "0.1em", textTransform: "uppercase" }}>DAY</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: streak >= 50 ? T.gold : T.white, fontFamily: "'Cormorant Garamond', Georgia, serif", lineHeight: 1 }}>{streak}</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: streak >= 50 ? T.gold : T.white, fontFamily: "'Fredoka',system-ui,sans-serif", lineHeight: 1 }}>{streak}</div>
         <div style={{ fontSize: 8, color: col, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tier}</div>
       </div>
     </div>
@@ -161,11 +161,11 @@ function ResultCardPreview({ day }) {
         display: "flex", flexDirection: "column", justifyContent: "center",
       }}>
         <div style={{ fontSize: 5, letterSpacing: "0.2em", color: "rgba(147,168,90,0.65)", textTransform: "uppercase", marginBottom: 3 }}>✦ OFFICIAL CERTIFICATE ✦</div>
-        <div style={{ fontSize: 15, fontWeight: 900, color: T.white, fontFamily: "'Cormorant Garamond', Georgia, serif", lineHeight: 1 }}>VERIFIED</div>
+        <div style={{ fontSize: 15, fontWeight: 900, color: T.white, fontFamily: "'Fredoka',system-ui,sans-serif", lineHeight: 1 }}>VERIFIED</div>
         <div style={{ fontSize: 9, fontWeight: 700, color: T.olive, marginBottom: 6 }}>GRASS TOUCHER</div>
         <div style={{ height: "0.5px", background: `linear-gradient(90deg, transparent, ${T.olive}50, transparent)`, marginBottom: 6 }} />
         <div style={{ fontSize: 5, letterSpacing: "0.14em", color: "rgba(147,168,90,0.45)", textTransform: "uppercase", marginBottom: 2 }}>CURRENT STREAK</div>
-        <div style={{ fontSize: 24, fontWeight: 900, color: isLegendary ? T.gold : T.white, fontFamily: "'Cormorant Garamond', Georgia, serif", lineHeight: 1, textShadow: isLegendary ? `0 0 14px ${T.gold}50` : "none" }}>DAY {day}</div>
+        <div style={{ fontSize: 24, fontWeight: 900, color: isLegendary ? T.gold : T.white, fontFamily: "'Fredoka',system-ui,sans-serif", lineHeight: 1, textShadow: isLegendary ? `0 0 14px ${T.gold}50` : "none" }}>DAY {day}</div>
         <div style={{ marginTop: "auto", fontSize: 5, color: "rgba(255,255,255,0.2)", letterSpacing: "0.1em" }}>proofofgrass.vercel.app</div>
       </div>
       <div style={{ position: "absolute", bottom: 6, left: 8, fontSize: 6, color: "rgba(255,255,255,0.25)", letterSpacing: "0.06em" }}>CERTIFIED BY TOUCH GRASS</div>
@@ -342,14 +342,14 @@ export default function Dashboard() {
   const heroTierColor = currentStreak ? tierColor : getTierColor(heroTier ?? "LEGENDARY");
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body { background: ${T.bg}; color: ${T.white}; font-family: 'DM Sans', sans-serif; }
+    body { background: ${T.bg}; color: ${T.white}; font-family: 'Nunito', sans-serif; }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: ${T.bg}; }
     ::-webkit-scrollbar-thumb { background: ${T.olive}40; border-radius: 2px; }
-    input, textarea { font-family: 'DM Sans', sans-serif; }
+    input, textarea { font-family: 'Nunito', sans-serif; }
     @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
     .fade-1 { animation: fadeUp 0.65s 0.05s ease both; }
     .fade-2 { animation: fadeUp 0.65s 0.18s ease both; }
@@ -360,7 +360,7 @@ export default function Dashboard() {
     .btn-primary {
       display:inline-flex; align-items:center; gap:8px;
       background:${T.olive}; color:${T.bg}; border:none;
-      font-family:'DM Sans',sans-serif; font-size:13px; font-weight:700;
+      font-family:'Nunito',sans-serif; font-size:13px; font-weight:700;
       letter-spacing:0.12em; text-transform:uppercase;
       padding:13px 24px; border-radius:8px; cursor:pointer;
       text-decoration:none; transition:all 0.2s;
@@ -369,7 +369,7 @@ export default function Dashboard() {
     .btn-secondary {
       display:inline-flex; align-items:center; gap:8px;
       background:transparent; color:${T.white}; border:1px solid ${T.border};
-      font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+      font-family:'Nunito',sans-serif; font-size:13px; font-weight:600;
       letter-spacing:0.1em; text-transform:uppercase;
       padding:13px 24px; border-radius:8px; cursor:pointer;
       text-decoration:none; transition:all 0.2s;
@@ -413,7 +413,7 @@ export default function Dashboard() {
         }}>
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width: 26, height: 26, objectFit: "contain" }} />
-            <span style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, fontWeight: 700, color: T.white }}>touch grass</span>
+            <span style={{ fontFamily: "'Fredoka',system-ui,sans-serif", fontSize: 17, fontWeight: 700, color: T.white }}>touch grass</span>
           </Link>
           <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
             <a href="#upload" className="nav-link active">Dashboard</a>
@@ -449,7 +449,7 @@ export default function Dashboard() {
               Verified Outdoors
             </div>
             <h1 className="fade-2" style={{
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontFamily: "'Fredoka',system-ui,sans-serif",
               fontSize: "clamp(48px,7vw,92px)", fontWeight: 700,
               color: T.white, lineHeight: 0.94, letterSpacing: "-0.02em", marginBottom: 22,
             }}>
@@ -473,7 +473,7 @@ export default function Dashboard() {
             <div style={{ fontSize: 9, letterSpacing: "0.2em", color: T.dim, textTransform: "uppercase", marginBottom: 8 }}>
               {username ? "Your Streak" : "Top Streak"}
             </div>
-            <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "clamp(60px,8vw,106px)", fontWeight: 700, color: T.white, lineHeight: 0.9, letterSpacing: "-0.03em" }}>
+            <div style={{ fontFamily: "'Fredoka',system-ui,sans-serif", fontSize: "clamp(60px,8vw,106px)", fontWeight: 700, color: T.white, lineHeight: 0.9, letterSpacing: "-0.03em" }}>
               <span style={{ fontSize: "0.42em", color: T.muted, verticalAlign: "top", lineHeight: 2.4 }}>DAY </span>
               {heroDay}
             </div>
@@ -641,7 +641,7 @@ export default function Dashboard() {
           <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 560, height: 560, borderRadius: "50%", background: `radial-gradient(circle, ${T.olive}10 0%, transparent 70%)`, pointerEvents: "none" }} />
           <div style={{ position: "relative" }}>
             <div style={{ fontSize: 10, letterSpacing: "0.22em", color: T.olive, textTransform: "uppercase", marginBottom: 20, fontWeight: 600 }}>Join the movement</div>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "clamp(34px,5.5vw,70px)", fontWeight: 700, color: T.white, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 14 }}>
+            <h2 style={{ fontFamily: "'Fredoka',system-ui,sans-serif", fontSize: "clamp(34px,5.5vw,70px)", fontWeight: 700, color: T.white, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 14 }}>
               Go outside.<br />
               <span style={{ color: T.olive }}>Prove it.</span><br />
               Make a difference.
@@ -655,7 +655,7 @@ export default function Dashboard() {
         <footer style={{ borderTop: `1px solid ${T.border}`, padding: "22px clamp(16px,4vw,48px)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14, background: T.bg }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width: 18, height: 18, opacity: 0.5 }} />
-            <span style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: T.dim }}>touch grass</span>
+            <span style={{ fontFamily: "'Fredoka',system-ui,sans-serif", fontSize: 14, color: T.dim }}>touch grass</span>
             <span style={{ fontSize: 11, color: T.dim, marginLeft: 4 }}>© 2024</span>
           </div>
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>

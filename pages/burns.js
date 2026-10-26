@@ -122,7 +122,7 @@ function PurchaseModal({ item, username, isPremium, onClose }) {
         <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
           <span style={{ fontSize:32 }}>{item.icon}</span>
           <div style={{ flex:1 }}>
-            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
               fontSize:20, fontWeight:700, color:T.white }}>{item.label}</div>
             <div style={{ fontSize:12, fontWeight:700, color:item.color }}>{item.costLabel}</div>
           </div>
@@ -300,10 +300,10 @@ export default function BurnsPage() {
     consumed:T.fire, activated:T.amber, admin_adjusted:"#a78bfa" }[t]||T.dim);
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{overflow-x:hidden;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:${T.bg};}
     ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
@@ -312,7 +312,7 @@ export default function BurnsPage() {
     .item-card{transition:transform 0.18s;}
     .item-card:hover{transform:translateY(-2px);}
     .page-tab{padding:10px 24px;border-radius:10px;border:none;cursor:pointer;
-      font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
+      font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;
       letter-spacing:0.04em;transition:all 0.2s;}
   `;
 
@@ -339,7 +339,7 @@ export default function BurnsPage() {
             gap:9, textDecoration:"none" }}>
             <img src="/touchgrass-transparent.png" alt=""
               style={{ width:24, height:24, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
               fontSize:16, fontWeight:700, color:T.white }}>Touch Grass</span>
           </Link>
           <Link href="/" style={{ fontSize:12, color:T.dim, textDecoration:"none" }}>
@@ -357,7 +357,7 @@ export default function BurnsPage() {
             textAlign:"center" }} className="fade">
             <div style={{ fontSize:10, letterSpacing:"0.22em", textTransform:"uppercase",
               color:T.olive, fontWeight:600, marginBottom:14 }}>Proof of Grass</div>
-            <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
               fontSize:"clamp(36px,6vw,64px)", fontWeight:700, color:T.white,
               lineHeight:1, letterSpacing:"-0.02em", marginBottom:14 }}>
               Shields & Premium+
@@ -408,7 +408,7 @@ export default function BurnsPage() {
                     <span style={{ fontSize:22 }}>{c.icon}</span>
                     <div>
                       <div style={{ fontSize:10, color:T.dim }}>{c.label}</div>
-                      <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                      <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                         fontSize:24, fontWeight:700, color:c.color, lineHeight:1 }}>
                         {loading ? "—" : (inventory[c.type] ?? 0)}
                       </div>
@@ -466,7 +466,7 @@ export default function BurnsPage() {
                       <div style={{ flex:1, minWidth:180 }}>
                         <div style={{ display:"flex", alignItems:"center",
                           gap:10, flexWrap:"wrap", marginBottom:6 }}>
-                          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                          <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                             fontSize:22, fontWeight:700, color:T.white }}>{c.label}</span>
                           <span style={{ fontSize:12, fontWeight:700, color:c.color,
                             fontFamily:"monospace" }}>{c.costLabel}</span>
@@ -606,7 +606,7 @@ export default function BurnsPage() {
                         <div key={label} style={{ background:T.bg3,
                           border:`1px solid ${T.border}`, borderRadius:10,
                           padding:"12px 16px", flex:"1 1 120px" }}>
-                          <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                          <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                             fontSize:22, fontWeight:700,
                             color:"rgba(200,168,75,0.65)" }}>{val}</div>
                           <div style={{ fontSize:9, color:T.dim,
@@ -678,7 +678,7 @@ export default function BurnsPage() {
                         <div>
                           <div style={{ display:"flex", alignItems:"center",
                             gap:10, flexWrap:"wrap", marginBottom:4 }}>
-                            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                               fontSize:24, fontWeight:700, color:T.white }}>{p.label}</span>
                             <span style={{ fontSize:9, fontWeight:700,
                               letterSpacing:"0.12em", textTransform:"uppercase",

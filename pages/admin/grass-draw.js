@@ -86,14 +86,14 @@ export default function AdminGrassDraw() {
 
   return (
     <div style={{minHeight:"100vh",background:T.bg}}>
-      <style>{`*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}`}</style>
+      <style>{`*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}`}</style>
       <div style={{maxWidth:960,margin:"0 auto",padding:"28px 16px 80px"}}>
 
         {/* Header */}
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:28,flexWrap:"wrap",gap:12}}>
           <div>
             <div style={{fontSize:10,letterSpacing:"0.2em",textTransform:"uppercase",color:T.gold,marginBottom:8}}>Admin</div>
-            <h1 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:32,fontWeight:700,color:T.white}}>Grass Draw</h1>
+            <h1 style={{fontFamily:"'Fredoka',system-ui,sans-serif",fontSize:32,fontWeight:700,color:T.white}}>Grass Draw</h1>
             {cycle && <div style={{fontSize:12,color:T.dim,marginTop:4}}>{cycle.name} · {cycle.status.toUpperCase()}</div>}
           </div>
           <Link href="/admin/marketplace" style={{fontSize:11,color:T.dim,textDecoration:"none"}}>← Admin</Link>
@@ -477,7 +477,7 @@ function LeaderboardTab({ totals, cycle }) {
         ].map(s=>(
           <div key={s.label} style={{background:T.bg2,border:`1px solid ${T.border}`,borderRadius:10,padding:"14px 16px"}}>
             <div style={{fontSize:9,color:T.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>{s.label}</div>
-            <div style={{fontSize:22,fontWeight:700,color:T.white,fontFamily:"'Cormorant Garamond',Georgia,serif"}}>{s.value}</div>
+            <div style={{fontSize:22,fontWeight:700,color:T.white,fontFamily:"'Fredoka',system-ui,sans-serif"}}>{s.value}</div>
           </div>
         ))}
       </div>

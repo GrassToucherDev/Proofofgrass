@@ -31,7 +31,7 @@ export default function MyTrails() {
         <WagoDropsNav session={session} />
         <WagoDropsBottomNav />
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "26px clamp(14px,4vw,32px) 90px" }}>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 34, fontWeight: 700, color: T.white, marginBottom: 14 }}>My Trails</div>
+          <div style={{ fontFamily: "'Fredoka',serif", fontSize: 34, fontWeight: 700, color: T.white, marginBottom: 14 }}>My Trails</div>
           {status !== "loading" && !session && (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
               <Wago pose="wave" size={140} />

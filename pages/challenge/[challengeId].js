@@ -63,7 +63,7 @@ function ParticipantCard({ username, progress, streakRow, duration }) {
             border:`1.5px solid ${tier.color}`,
             display:"flex", alignItems:"center", justifyContent:"center",
             fontSize:16, fontWeight:700, color:T.white,
-            fontFamily:"'Cormorant Garamond',Georgia,serif" }}>
+            fontFamily:"'Fredoka',system-ui,sans-serif" }}>
             {username[0]?.toUpperCase()}
           </div>
           <div>
@@ -81,7 +81,7 @@ function ParticipantCard({ username, progress, streakRow, duration }) {
       <div style={{ marginBottom:10 }}>
         <div style={{ display:"flex", justifyContent:"space-between",
           alignItems:"baseline", marginBottom:6 }}>
-          <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+          <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
             fontSize:32, fontWeight:700, color: done ? T.gold : failed ? T.red : T.white,
             lineHeight:1 }}>
             {progress.days_complete}
@@ -258,18 +258,18 @@ export default function ChallengePage() {
   const copyLink = () => navigator.clipboard.writeText(shareUrl).catch(() => {});
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{scroll-behavior:smooth;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:${T.bg};}
     ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
-    .btn-olive{background:${T.olive};border:none;border-radius:8px;padding:12px 24px;color:#0e1108;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;}
+    .btn-olive{background:${T.olive};border:none;border-radius:8px;padding:12px 24px;color:#0e1108;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;}
     .btn-olive:hover{background:#a8be6a;transform:translateY(-1px);}
-    .btn-ghost{background:transparent;border:1px solid ${T.border};border-radius:8px;padding:12px 24px;color:${T.white};font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;}
+    .btn-ghost{background:transparent;border:1px solid ${T.border};border-radius:8px;padding:12px 24px;color:${T.white};font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;}
     .btn-ghost:hover{border-color:${T.olive};color:${T.olive};}
-    .btn-red{background:transparent;border:1px solid ${T.red}40;border-radius:8px;padding:12px 24px;color:${T.red};font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+    .btn-red{background:transparent;border:1px solid ${T.red}40;border-radius:8px;padding:12px 24px;color:${T.red};font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;}
     .btn-red:hover{border-color:${T.red};background:rgba(239,68,68,0.06);}
     .nav-lk{color:${T.dim};font-size:13px;font-weight:500;text-decoration:none;transition:color 0.2s;}
     .nav-lk:hover{color:${T.white};}
@@ -292,7 +292,7 @@ export default function ChallengePage() {
           borderBottom:`1px solid ${T.border}` }}>
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:26, height:26, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
           </Link>
           <div className="nav-links" style={{ display:"flex", gap:24 }}>
             <Link href="/" className="nav-lk">Dashboard</Link>
@@ -315,7 +315,7 @@ export default function ChallengePage() {
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:16,
               flexWrap:"wrap", marginBottom:12 }}>
-              <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+              <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                 fontSize:"clamp(32px,5vw,56px)", fontWeight:700, color:T.white,
                 lineHeight:1, letterSpacing:"-0.02em" }}>
                 @{challenge.challenger} vs @{challenge.challenged}
@@ -363,7 +363,7 @@ export default function ChallengePage() {
                   borderRadius:12, padding:"18px 14px", textAlign:"center" }}>
                   <div style={{ fontSize:9, letterSpacing:"0.14em", color:T.dim,
                     textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
-                  <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                  <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                     fontSize:36, fontWeight:700, color:T.white, lineHeight:1 }}>{s.value}</div>
                   <div style={{ fontSize:10, color:T.dim, marginTop:4 }}>{s.sub}</div>
                 </div>
@@ -404,7 +404,7 @@ export default function ChallengePage() {
             <div style={{ background:`${T.gold}0e`, border:`1px solid ${T.gold}40`,
               borderRadius:14, padding:24, textAlign:"center", marginBottom:24 }}>
               <div style={{ fontSize:32, marginBottom:8 }}>🏆</div>
-              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+              <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                 fontSize:28, fontWeight:700, color:T.gold, marginBottom:6 }}>
                 {challenge.result === "won" ? `@${challenge.winner} won` : challenge.result === "tied" ? "It's a tie" : challenge.result === "no_finish" ? "No proofs this time" : challenge.winner ? `@${challenge.winner} won` : "Challenge Complete"}
               </div>
@@ -484,7 +484,7 @@ export default function ChallengePage() {
           flexWrap:"wrap", gap:12, background:T.bg, marginTop:40 }}>
           <div style={{ display:"flex", alignItems:"center", gap:7 }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:15, height:15, opacity:0.4 }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:12, color:T.dim }}>touch grass © 2024</span>
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:12, color:T.dim }}>touch grass © 2024</span>
           </div>
           <div style={{ display:"flex", gap:20 }}>
             {[["Dashboard","/"],["Leaderboard","/leaderboard"]].map(([l,h])=>(

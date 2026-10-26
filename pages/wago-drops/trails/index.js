@@ -33,7 +33,7 @@ export default function TrailsBrowse() {
         <div style={{ maxWidth: 760, margin: "0 auto", padding: "26px clamp(14px,4vw,32px) 90px" }}>
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 18 }}>
             <div>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 38, fontWeight: 700, color: T.white, lineHeight: 1 }}>WAGO Trails</div>
+              <div style={{ fontFamily: "'Fredoka',serif", fontSize: 38, fontWeight: 700, color: T.white, lineHeight: 1 }}>WAGO Trails</div>
               <div style={{ fontSize: 14, color: T.muted, marginTop: 6, maxWidth: 420 }}>Walk a curated route, claim every stop in real life, and earn a bonus when you finish.</div>
             </div>
             <div className="v2-desktop-only"><Wago pose="point" size={110} /></div>

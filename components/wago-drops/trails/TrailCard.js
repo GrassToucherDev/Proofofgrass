@@ -20,7 +20,7 @@ export default function TrailCard({ trail, stopCount, status, done, total, href 
           {trail.window === "upcoming" && <span style={{ position: "absolute", top: 12, right: 12, background: "#e8f4fd", color: "#0d2a5a", fontSize: 12, fontWeight: 800, padding: "4px 11px", borderRadius: 999 }}>Opens {new Date(trail.starts_at).toLocaleDateString()}</span>}
         </TrailCover>
         <div style={{ padding: "14px 16px 16px", display: "grid", gap: 8 }}>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: T.white, lineHeight: 1.1 }}>{trail.name}</div>
+          <div style={{ fontFamily: "'Fredoka',serif", fontSize: 24, fontWeight: 700, color: T.white, lineHeight: 1.1 }}>{trail.name}</div>
           <Meta trail={trail} stopCount={stopCount ?? total} />
           <RewardChips trail={trail} />
           {status === "active" && total ? (

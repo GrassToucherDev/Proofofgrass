@@ -76,13 +76,13 @@ async function generateMeme({ template, topText, bottomText }) {
 
   // Top branding
   ctx.textAlign = "center";
-  ctx.font = "600 16px 'DM Sans',sans-serif";
+  ctx.font = "600 16px 'Nunito',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.4)";
   ctx.letterSpacing = "0.2em";
   ctx.fillText("TOUCH GRASS", W/2, 70);
 
   // Top text
-  ctx.font = "800 64px 'DM Sans',sans-serif";
+  ctx.font = "800 64px 'Nunito',sans-serif";
   ctx.fillStyle = "#f0efea";
   ctx.letterSpacing = "0";
   const topLines = wrapText(ctx, topText.toUpperCase(), W - 140);
@@ -95,14 +95,14 @@ async function generateMeme({ template, topText, bottomText }) {
   ctx.fillText("✦", W/2, H/2 + 14);
 
   // Bottom text
-  ctx.font = "800 64px 'DM Sans',sans-serif";
+  ctx.font = "800 64px 'Nunito',sans-serif";
   ctx.fillStyle = template.accent;
   const bottomLines = wrapText(ctx, bottomText.toUpperCase(), W - 140);
   let by = H * 0.68 - (bottomLines.length - 1) * 38;
   bottomLines.forEach(line => { ctx.fillText(line, W/2, by); by += 76; });
 
   // Bottom branding
-  ctx.font = "500 16px 'DM Sans',sans-serif";
+  ctx.font = "500 16px 'Nunito',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.25)";
   ctx.letterSpacing = "0.1em";
   ctx.fillText("ProofOfGrass.app", W/2, H - 56);
@@ -171,11 +171,11 @@ export default function MemeTool() {
   const FOOTER_TEXT = `🌿 ${selected.label}\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nhttps://proofofgrass.app`;
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{overflow-x:hidden;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
-    input{font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
+    input{font-family:'Nunito',sans-serif;}
     .tpl-btn{ background:${T.bg3}; border:1px solid ${T.border}; color:${T.dim};
       padding:10px 12px; border-radius:9px; cursor:pointer; font-size:11px; font-weight:600;
       text-align:left; transition:all 0.15s; width:100%; }
@@ -183,7 +183,7 @@ export default function MemeTool() {
     .inp{ width:100%; background:${T.bg3}; border:1px solid ${T.border}; color:${T.white};
       padding:10px 12px; border-radius:8px; font-size:13px; outline:none; }
     .inp:focus{ border-color:${T.olive}; }
-    .btn{ border:none; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700;
+    .btn{ border:none; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700;
       font-size:13px; border-radius:10px; padding:13px 24px; }
     .tpl-grid{ display:grid; grid-template-columns:1fr; gap:6px; max-height:340px; overflow-y:auto; }
     @media(min-width:900px){ .layout{ display:grid; grid-template-columns:280px 1fr; gap:24px; } }
@@ -199,7 +199,7 @@ export default function MemeTool() {
           background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}` }}>
           <Link href="/create" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:24,height:24,objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:16, fontWeight:700, color:T.white }}>Creator Hub</span>
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:16, fontWeight:700, color:T.white }}>Creator Hub</span>
           </Link>
           <Link href="/create" style={{ fontSize:11, color:T.olive, textDecoration:"none" }}>← All Tools</Link>
         </nav>
@@ -207,7 +207,7 @@ export default function MemeTool() {
         <div style={{ maxWidth:1000, margin:"0 auto", padding:"32px clamp(14px,5vw,32px) 64px" }}>
           <div style={{ textAlign:"center", marginBottom:28 }}>
             <div style={{ fontSize:36, marginBottom:10 }}>😂</div>
-            <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(26px,5vw,38px)",
+            <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:"clamp(26px,5vw,38px)",
               fontWeight:700, color:T.white, marginBottom:6 }}>Meme Tool</h1>
             <p style={{ fontSize:12.5, color:T.dim }}>Pick a template, edit the text, share it.</p>
           </div>

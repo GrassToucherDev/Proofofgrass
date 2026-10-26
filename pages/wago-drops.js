@@ -375,7 +375,7 @@ function WalletLinkView({ googleId, onLinked, needsVerify = false }) {
     <div style={{ maxWidth: 480, margin: "60px auto", padding: "0 20px", textAlign: "center" }}>
       <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}><Wago pose="ticket" size={120} float /></div>
       <h2 style={{
-        fontFamily: "'Cormorant Garamond',Georgia,serif",
+        fontFamily: "'Fredoka',system-ui,sans-serif",
         fontSize: 28, fontWeight: 700, color: T.white, margin: "0 0 10px",
       }}>{needsVerify ? "Verify your wallet" : "Connect your wallet"}</h2>
       <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.6, margin: "0 0 28px" }}>
@@ -652,7 +652,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
           <div className="map-sidebar-head" style={{ padding: "18px 20px 14px", borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <div style={{
-                fontFamily: "'Cormorant Garamond',Georgia,serif",
+                fontFamily: "'Fredoka',system-ui,sans-serif",
                 fontSize: 17, fontWeight: 700, color: T.white,
               }}>Nearby Drops</div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1035,7 +1035,7 @@ export default function WagoDropsPage() {
         <link rel="icon" type="image/png" sizes="192x192" href="/images/wago/icon-192.png" />
         <link rel="apple-touch-icon" href="/images/wago/apple-touch-icon.png" />
         <meta name="twitter:card" content="summary_large_image" />
-        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
       </Head>
       <div style={{ minHeight: "100vh", background: !session ? V2.skyBlue : T.surface, color: T.white, fontFamily: V2.fontSans }}>
         <style>{V2GlobalCSS}</style>

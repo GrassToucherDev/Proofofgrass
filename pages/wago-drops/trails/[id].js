@@ -130,7 +130,7 @@ export default function TrailDetail() {
       <TrailCover src={trail.cover_image_url} height={230} radius={22}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(13,42,5,0) 40%, rgba(13,42,5,0.65) 100%)" }} />
         <div style={{ position: "absolute", left: 16, right: 16, bottom: 14, color: "#fff" }}>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 34, fontWeight: 700, lineHeight: 1.05, textShadow: "0 2px 10px rgba(0,0,0,.4)" }}>{trail.name}</div>
+          <div style={{ fontFamily: "'Fredoka',serif", fontSize: 34, fontWeight: 700, lineHeight: 1.05, textShadow: "0 2px 10px rgba(0,0,0,.4)" }}>{trail.name}</div>
           <div style={{ fontSize: 13, fontWeight: 600, opacity: 0.95 }}>{[trail.city, trail.completion_mode === "ordered" ? "Follow in order" : "Any order"].filter(Boolean).join("  ·  ")}</div>
         </div>
       </TrailCover>

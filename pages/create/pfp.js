@@ -162,14 +162,14 @@ export default function PFPTool() {
   };
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{overflow-x:hidden;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
     .ov-btn{ background:${T.bg3}; border:1px solid ${T.border}; padding:12px;
       border-radius:10px; cursor:pointer; text-align:left; transition:all 0.15s; width:100%; }
     .ov-btn.active{ background:rgba(147,168,90,0.08); border-color:${T.borderG}; }
-    .btn{ border:none; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700;
+    .btn{ border:none; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700;
       font-size:13px; border-radius:10px; padding:13px 24px; }
     .drop-zone{ border:2px dashed ${T.border}; border-radius:14px; padding:40px 20px;
       text-align:center; cursor:pointer; transition:border-color 0.15s; }
@@ -188,7 +188,7 @@ export default function PFPTool() {
           background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}` }}>
           <Link href="/create" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:24,height:24,objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:16, fontWeight:700, color:T.white }}>Creator Hub</span>
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:16, fontWeight:700, color:T.white }}>Creator Hub</span>
           </Link>
           <Link href="/create" style={{ fontSize:11, color:T.olive, textDecoration:"none" }}>← All Tools</Link>
         </nav>
@@ -196,7 +196,7 @@ export default function PFPTool() {
         <div style={{ maxWidth:560, margin:"0 auto", padding:"32px clamp(14px,5vw,32px) 64px" }}>
           <div style={{ textAlign:"center", marginBottom:28 }}>
             <div style={{ fontSize:36, marginBottom:10 }}>🖼️</div>
-            <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(26px,5vw,38px)",
+            <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:"clamp(26px,5vw,38px)",
               fontWeight:700, color:T.white, marginBottom:6 }}>PFP Tool</h1>
             <p style={{ fontSize:12.5, color:T.dim }}>Upload your photo, add a Touch Grass frame.</p>
           </div>

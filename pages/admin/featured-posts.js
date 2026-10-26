@@ -86,7 +86,7 @@ export default function FeaturedPostsAdmin() {
     outline:"none", boxSizing:"border-box", marginBottom:10,
   };
 
-  const css = `*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}`;
+  const css = `*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}`;
 
   if(!authed) return (
     <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -115,7 +115,7 @@ export default function FeaturedPostsAdmin() {
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:28,flexWrap:"wrap",gap:12}}>
             <div>
               <div style={{fontSize:10,letterSpacing:"0.2em",textTransform:"uppercase",color:T.gold,marginBottom:8}}>Admin</div>
-              <h1 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:32,fontWeight:700,color:T.white}}>
+              <h1 style={{fontFamily:"'Fredoka',system-ui,sans-serif",fontSize:32,fontWeight:700,color:T.white}}>
                 Featured Posts
               </h1>
               <div style={{fontSize:12,color:T.dim,marginTop:6}}>

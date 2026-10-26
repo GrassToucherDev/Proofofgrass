@@ -58,7 +58,7 @@ function CircularProgress({ pct, size = 90, stroke = 6 }) {
         style={{ transition:"stroke-dasharray 1.2s ease" }} />
       <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central"
         fill={T.white} fontSize={size * 0.2} fontWeight={700}
-        fontFamily="'Cormorant Garamond',Georgia,serif"
+        fontFamily="'Fredoka',system-ui,sans-serif"
         style={{ transform:"rotate(90deg)", transformOrigin:"center" }}>
         {pct}%
       </text>
@@ -175,7 +175,7 @@ function StatPill({ icon, value, label }) {
       alignItems:"center", gap:4, padding:"16px 8px",
       borderRight:`1px solid ${T.border}` }}>
       <span style={{ fontSize:20 }}>{icon}</span>
-      <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+      <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
         fontSize:"clamp(22px,4vw,32px)", fontWeight:700, color:T.white, lineHeight:1 }}>{value}</span>
       <span style={{ fontSize:9, color:T.dim, letterSpacing:"0.12em",
         textTransform:"uppercase", textAlign:"center" }}>{label}</span>
@@ -317,10 +317,10 @@ export default function QuestsPage() {
   });
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{scroll-behavior:smooth;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:${T.bg};}
     ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
@@ -331,7 +331,7 @@ export default function QuestsPage() {
     .nav-lk{color:${T.dim};font-size:13px;font-weight:500;text-decoration:none;transition:color 0.2s;}
     .nav-lk:hover{color:${T.white};}
     .nav-lk.active{color:${T.olive};}
-    .filter-btn{padding:8px 16px;border-radius:6px;border:1px solid ${T.border};cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;transition:all 0.2s;background:transparent;color:${T.dim};}
+    .filter-btn{padding:8px 16px;border-radius:6px;border:1px solid ${T.border};cursor:pointer;font-family:'Nunito',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;transition:all 0.2s;background:transparent;color:${T.dim};}
     .filter-btn:hover{border-color:${T.olive};color:${T.olive};}
     .filter-active{background:${T.olive}!important;color:#0e1108!important;border-color:${T.olive}!important;}
     .card{background:${T.bg2};border:1px solid ${T.border};border-radius:14px;padding:22px;}
@@ -358,7 +358,7 @@ export default function QuestsPage() {
           borderBottom:`1px solid ${T.border}` }}>
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:26, height:26, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
           </Link>
           <div className="nav-links" style={{ display:"flex", gap:24, alignItems:"center" }}>
             <Link href="/" className="nav-lk">Dashboard</Link>
@@ -390,7 +390,7 @@ export default function QuestsPage() {
             <div style={{ flex:1, minWidth:0 }}>
               <div className="fade" style={{ fontSize:10, letterSpacing:"0.22em", color:T.olive,
                 textTransform:"uppercase", marginBottom:10, fontWeight:600 }}>Community</div>
-              <h1 className="fade" style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+              <h1 className="fade" style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                 fontSize:"clamp(48px,7vw,88px)", fontWeight:700, color:T.white,
                 lineHeight:0.92, letterSpacing:"-0.02em", marginBottom:14 }}>Quests</h1>
               <p className="fade2" style={{ fontSize:14, color:T.muted, lineHeight:1.7,
@@ -423,7 +423,7 @@ export default function QuestsPage() {
               <div style={{ flex:1, minWidth:180 }}>
                 <div style={{ fontSize:9, letterSpacing:"0.18em", color:T.dim,
                   textTransform:"uppercase", marginBottom:6 }}>Community Progress</div>
-                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                   fontSize:"clamp(28px,5vw,42px)", fontWeight:700, color:T.white,
                   lineHeight:1, letterSpacing:"-0.02em", marginBottom:4 }}>
                   {communityCount.toLocaleString()}
@@ -439,7 +439,7 @@ export default function QuestsPage() {
               <div style={{ textAlign:"right", flexShrink:0 }}>
                 <div style={{ fontSize:9, letterSpacing:"0.16em", color:T.dim,
                   textTransform:"uppercase", marginBottom:6 }}>Weekly Goal</div>
-                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                   fontSize:32, fontWeight:700, color:T.gold, lineHeight:1,
                   marginBottom:6 }}>{WEEKLY_GOAL.toLocaleString()}</div>
                 <div style={{ fontSize:11, color:T.dim }}>🌿 TouchGrass Together</div>
@@ -489,7 +489,7 @@ export default function QuestsPage() {
               textTransform:"uppercase", marginBottom:8, fontWeight:700 }}>
               ✦ Community Quest
             </div>
-            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
               fontSize:"clamp(26px,4vw,40px)", fontWeight:700, color:T.white,
               lineHeight:1.1, marginBottom:8 }}>10K Outside</div>
             <div style={{ fontSize:13, color:T.muted, marginBottom:16, maxWidth:320, lineHeight:1.6 }}>
@@ -499,7 +499,7 @@ export default function QuestsPage() {
               gap:16, flexWrap:"wrap" }}>
               <div style={{ flex:1, minWidth:200 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                  <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                  <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                     fontSize:22, fontWeight:700, color:T.white }}>
                     {totalProofs.toLocaleString()}
                     <span style={{ fontSize:14, color:T.dim }}> / {MONTHLY_GOAL.toLocaleString()}</span>
@@ -525,7 +525,7 @@ export default function QuestsPage() {
             </div>
             <div style={{ display:"flex", gap:16, alignItems:"flex-start", flexWrap:"wrap" }}>
               <div style={{ flex:1, minWidth:200 }}>
-                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                   fontSize:22, fontWeight:700, color:T.white, marginBottom:6 }}>
                   Invite a Friend
                 </div>
@@ -555,7 +555,7 @@ export default function QuestsPage() {
                       background:"transparent", border:`1px solid ${T.borderG}`,
                       borderRadius:7, padding:"8px 12px", fontSize:10,
                       fontWeight:600, color:T.olive, cursor:"pointer", flexShrink:0,
-                      fontFamily:"'DM Sans',sans-serif",
+                      fontFamily:"'Nunito',sans-serif",
                     }}>Copy</button>
                   </div>
                   <div style={{ fontSize:10, color:T.dim, marginTop:6 }}>
@@ -623,7 +623,7 @@ export default function QuestsPage() {
           flexWrap:"wrap", gap:12, background:T.bg }}>
           <div style={{ display:"flex", alignItems:"center", gap:7 }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:15, height:15, opacity:0.4 }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:12, color:T.dim }}>touch grass © 2024</span>
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:12, color:T.dim }}>touch grass © 2024</span>
           </div>
           <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
             {[["Dashboard","/"],["Leaderboard","/leaderboard"],["Website","https://touchgrass.today"]].map(([l,h])=>(

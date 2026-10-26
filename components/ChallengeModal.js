@@ -75,7 +75,7 @@ export default function ChallengeModal({ targetUsername, viewerUsername, onClose
           <>
             <div style={{ textAlign:"center" }}>
               <div style={{ fontSize:36, marginBottom:12 }}>🌿</div>
-              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+              <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                 fontSize:24, fontWeight:700, color:T.white, marginBottom:8 }}>
                 Challenge Sent
               </div>
@@ -97,13 +97,13 @@ export default function ChallengeModal({ targetUsername, viewerUsername, onClose
               <button onClick={copyLink} style={{
                 flex:1, background:"transparent", border:`1px solid ${T.border}`,
                 borderRadius:8, padding:"11px 0", color:T.white,
-                fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:600,
+                fontFamily:"'Nunito',sans-serif", fontSize:12, fontWeight:600,
                 cursor:"pointer", transition:"all 0.2s",
               }}>Copy Link</button>
               <button onClick={goToChallenge} style={{
                 flex:1, background:T.olive, border:"none",
                 borderRadius:8, padding:"11px 0", color:"#0e1108",
-                fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700,
+                fontFamily:"'Nunito',sans-serif", fontSize:12, fontWeight:700,
                 cursor:"pointer", letterSpacing:"0.06em",
               }}>View Challenge</button>
             </div>
@@ -124,7 +124,7 @@ export default function ChallengeModal({ targetUsername, viewerUsername, onClose
                   textTransform:"uppercase", fontWeight:600, marginBottom:4 }}>
                   New Challenge
                 </div>
-                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                   fontSize:22, fontWeight:700, color:T.white }}>
                   Challenge @{norm(targetUsername)}
                 </div>
@@ -145,7 +145,7 @@ export default function ChallengeModal({ targetUsername, viewerUsername, onClose
                 {[7, 14, 30].map(d => (
                   <button key={d} onClick={() => setDuration(d)} style={{
                     flex:1, padding:"11px 0", borderRadius:8, cursor:"pointer",
-                    fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:700,
+                    fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:700,
                     transition:"all 0.2s",
                     background: duration === d ? T.olive : "transparent",
                     color:      duration === d ? "#0e1108" : T.dim,
@@ -176,7 +176,7 @@ export default function ChallengeModal({ targetUsername, viewerUsername, onClose
                   width:"100%", background:T.bg3,
                   border:`1px solid ${T.border}`, borderRadius:8,
                   padding:"10px 13px", color:T.white,
-                  fontFamily:"'DM Sans',sans-serif", fontSize:13,
+                  fontFamily:"'Nunito',sans-serif", fontSize:13,
                   outline:"none", resize:"none",
                 }}
               />
@@ -198,13 +198,13 @@ export default function ChallengeModal({ targetUsername, viewerUsername, onClose
               <button onClick={onClose} style={{
                 flex:1, background:"transparent", border:`1px solid ${T.border}`,
                 borderRadius:8, padding:"12px 0", color:T.white,
-                fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:600,
+                fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:600,
                 cursor:"pointer",
               }}>Cancel</button>
               <button onClick={handleSend} disabled={sending} style={{
                 flex:2, background:T.olive, border:"none",
                 borderRadius:8, padding:"12px 0", color:"#0e1108",
-                fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:700,
+                fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:700,
                 cursor:"pointer", letterSpacing:"0.08em", textTransform:"uppercase",
                 opacity: sending ? 0.7 : 1,
               }}>

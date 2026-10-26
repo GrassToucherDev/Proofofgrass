@@ -265,7 +265,7 @@ export default function AdminBurns() {
   });
 
   return (
-    <div style={{minHeight:"100vh",background:T.bg,color:T.white,fontFamily:"'DM Sans',sans-serif"}}>
+    <div style={{minHeight:"100vh",background:T.bg,color:T.white,fontFamily:"'Nunito',sans-serif"}}>
       <div style={{maxWidth:900,margin:"0 auto",padding:"32px 16px 64px"}}>
 
         <div style={{marginBottom:28}}>

@@ -291,7 +291,7 @@ function drawParticipantBadge(ctx, W, cardNumber) {
 
   const cx = bx+bw/2;
   ctx.textAlign = "center";
-  ctx.font = "600 9px 'DM Sans', sans-serif";
+  ctx.font = "600 9px 'Nunito', sans-serif";
   ctx.fillStyle = "rgba(200,160,48,0.85)"; ctx.letterSpacing = "0.12em";
   ctx.fillText("PARTICIPANT", cx, by+18); ctx.fillText("CARD", cx, by+30);
 
@@ -359,11 +359,11 @@ function drawDoubleBurnerBadge(ctx, W) {
 
   ctx.textAlign = "center";
   ctx.font = "16px serif"; ctx.fillText("🛡", bx-50, by+24);
-  ctx.font = "700 13px 'DM Sans', sans-serif"; ctx.fillStyle = "#7ed957";
+  ctx.font = "700 13px 'Nunito', sans-serif"; ctx.fillStyle = "#7ed957";
   ctx.shadowColor = "rgba(126,217,87,0.8)"; ctx.shadowBlur = 6;
   ctx.fillText("DOUBLE", bx-18, by+24);
   ctx.font = "16px serif"; ctx.fillText("🔥", bx+22, by+24);
-  ctx.font = "700 13px 'DM Sans', sans-serif"; ctx.fillStyle = "#f97316";
+  ctx.font = "700 13px 'Nunito', sans-serif"; ctx.fillStyle = "#f97316";
   ctx.shadowColor = "rgba(249,115,22,0.8)"; ctx.shadowBlur = 6;
   ctx.fillText("BURNER", bx+55, by+24);
   ctx.shadowBlur = 0;
@@ -403,7 +403,7 @@ function drawHeroStat(ctx, W, totalBurned) {
   ctx.shadowColor = "rgba(249,115,22,1)"; ctx.shadowBlur = 30;
   ctx.fillText(numText, W/2, cy+68);
 
-  ctx.font = "700 13px 'DM Sans', sans-serif"; ctx.fillStyle = "#f0c84a";
+  ctx.font = "700 13px 'Nunito', sans-serif"; ctx.fillStyle = "#f0c84a";
   ctx.shadowColor = "rgba(240,180,40,0.7)"; ctx.shadowBlur = 8;
   ctx.letterSpacing = "0.18em";
   ctx.fillText("TOTAL BURNED", W/2, cy+96);
@@ -423,7 +423,7 @@ function drawLeftPanel(ctx, theme, shieldCount) {
 
   const cx = px+pw/2;
   ctx.textAlign = "center";
-  ctx.font = "600 10px 'DM Sans', sans-serif";
+  ctx.font = "600 10px 'Nunito', sans-serif";
   ctx.fillStyle = "rgba(240,180,40,0.7)"; ctx.letterSpacing = "0.2em";
   ctx.fillText("· TIER ·", cx, py+22);
 
@@ -449,7 +449,7 @@ function drawLeftPanel(ctx, theme, shieldCount) {
 
   const tierLabel = (theme.label ?? theme.title ?? "").toUpperCase();
   const tierLines = tierLabel.split(" ");
-  ctx.font = "700 12px 'DM Sans', sans-serif";
+  ctx.font = "700 12px 'Nunito', sans-serif";
   ctx.fillStyle = theme.accent ?? "#f97316";
   ctx.shadowColor = `${theme.accent ?? "#f97316"}cc`; ctx.shadowBlur = 8;
   tierLines.forEach((line, i) => ctx.fillText(line, cx, py+140+i*16));
@@ -458,10 +458,10 @@ function drawLeftPanel(ctx, theme, shieldCount) {
   ctx.beginPath(); ctx.moveTo(px+12,divY); ctx.lineTo(px+pw-12,divY);
   ctx.strokeStyle = "rgba(200,150,30,0.4)"; ctx.lineWidth = 1; ctx.stroke();
 
-  ctx.font = "600 11px 'DM Sans', sans-serif"; ctx.fillStyle = "#f0c84a";
+  ctx.font = "600 11px 'Nunito', sans-serif"; ctx.fillStyle = "#f0c84a";
   ctx.shadowColor = "rgba(240,180,40,0.6)"; ctx.shadowBlur = 5;
   ctx.fillText(`TIER ${RARITY_TIERS.find(t=>t.key===theme.key)?.minShields ?? ""}`, cx, divY+19);
-  ctx.font = "500 10px 'DM Sans', sans-serif"; ctx.fillStyle = "rgba(240,239,234,0.6)"; ctx.shadowBlur = 0;
+  ctx.font = "500 10px 'Nunito', sans-serif"; ctx.fillStyle = "rgba(240,239,234,0.6)"; ctx.shadowBlur = 0;
   ctx.fillText(`${shieldCount} Shield${shieldCount !== 1 ? "s" : ""}`, cx, divY+33);
   ctx.fillText("Burned", cx, divY+47);
 }
@@ -479,7 +479,7 @@ function drawRightPanel(ctx, W, quote) {
 
   const cx = px+pw/2;
   ctx.textAlign = "center";
-  ctx.font = "600 9px 'DM Sans', sans-serif"; ctx.fillStyle = "rgba(200,150,30,0.7)"; ctx.letterSpacing = "0.16em";
+  ctx.font = "600 9px 'Nunito', sans-serif"; ctx.fillStyle = "rgba(200,150,30,0.7)"; ctx.letterSpacing = "0.16em";
   ctx.fillText("EVENT QUOTE", cx, py+22);
 
   ctx.font = "italic 32px 'Georgia', serif"; ctx.fillStyle = "rgba(200,150,30,0.5)";
@@ -496,9 +496,9 @@ function drawRightPanel(ctx, W, quote) {
   ctx.beginPath(); ctx.moveTo(px+12,divY); ctx.lineTo(px+pw-12,divY);
   ctx.strokeStyle = "rgba(200,150,30,0.4)"; ctx.lineWidth = 1; ctx.stroke();
 
-  ctx.font = "600 8px 'DM Sans', sans-serif"; ctx.fillStyle = "rgba(200,150,30,0.6)"; ctx.letterSpacing = "0.12em";
+  ctx.font = "600 8px 'Nunito', sans-serif"; ctx.fillStyle = "rgba(200,150,30,0.6)"; ctx.letterSpacing = "0.12em";
   ctx.fillText("$TOUCHGRASS BURNED", cx, py+153);
-  ctx.font = "700 11px 'DM Sans', sans-serif"; ctx.fillStyle = "#f0c84a"; ctx.letterSpacing = "0.06em";
+  ctx.font = "700 11px 'Nunito', sans-serif"; ctx.fillStyle = "#f0c84a"; ctx.letterSpacing = "0.06em";
   ctx.fillText("DOUBLE BURN EVENT", cx, py+167);
 }
 
@@ -528,12 +528,12 @@ function drawBottomStats(ctx, W, H, grassScore, shieldsBurned) {
     ctx.shadowColor = `${stat.color}80`; ctx.shadowBlur = 10;
     ctx.fillText(stat.value, cx+10, statsY+36);
     ctx.shadowBlur = 0;
-    ctx.font = "600 9px 'DM Sans', sans-serif"; ctx.fillStyle = "rgba(240,239,234,0.55)"; ctx.letterSpacing = "0.1em";
+    ctx.font = "600 9px 'Nunito', sans-serif"; ctx.fillStyle = "rgba(240,239,234,0.55)"; ctx.letterSpacing = "0.1em";
     ctx.fillText(stat.label, cx, statsY+52);
   });
 
   ctx.textAlign = "center";
-  ctx.font = "500 11px 'DM Sans', sans-serif"; ctx.fillStyle = "rgba(240,239,234,0.3)"; ctx.letterSpacing = "0.08em";
+  ctx.font = "500 11px 'Nunito', sans-serif"; ctx.fillStyle = "rgba(240,239,234,0.3)"; ctx.letterSpacing = "0.08em";
   ctx.fillText("THANK YOU FOR BURNING.  🌿  THANK YOU FOR GROWING.", W/2, H-28);
 }
 
@@ -547,7 +547,7 @@ function drawTouchGrassLogo(ctx) {
   ctx.fillStyle = bg; ctx.fill(); ctx.strokeStyle = "#4a9a28"; ctx.lineWidth = 1.5; ctx.stroke();
   ctx.restore();
   ctx.font = "20px serif"; ctx.textAlign = "center"; ctx.fillText("🌿", lx+22, ly+30);
-  ctx.font = "700 9px 'DM Sans', sans-serif"; ctx.fillStyle = "#7ed957"; ctx.letterSpacing = "0.06em";
+  ctx.font = "700 9px 'Nunito', sans-serif"; ctx.fillStyle = "#7ed957"; ctx.letterSpacing = "0.06em";
   ctx.fillText("TOUCH", lx+22, ly+52); ctx.fillText("GRASS", lx+22, ly+63);
 }
 
@@ -777,10 +777,10 @@ export default function BurnerCollectionPage() {
   const reroll = () => setQuote(getRandomBurnQuote());
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{overflow-x:hidden;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:${T.bg};}
     ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
@@ -789,11 +789,11 @@ export default function BurnerCollectionPage() {
       border:2px solid ${T.border};aspect-ratio:4/5;transition:border-color 0.15s;background:${T.bg3};}
     .theme-card.active{border-color:${T.borderGold};}
     .theme-card.locked{opacity:0.32;cursor:default;filter:grayscale(0.6);}
-    .btn{border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;
+    .btn{border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;
       font-size:13px;border-radius:10px;padding:13px 24px;}
     .btn-share{display:inline-flex;align-items:center;justify-content:center;gap:7px;
       background:${T.white};color:${T.bg};border:none;border-radius:10px;padding:13px 24px;
-      font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;
+      font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;
       transition:all 0.2s;letter-spacing:0.04em;width:100%;}
     .btn-share:hover{background:#e8e7e2;transform:translateY(-1px);}
     .btn-share:disabled{opacity:0.6;cursor:default;transform:none;}
@@ -810,7 +810,7 @@ export default function BurnerCollectionPage() {
           background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}` }}>
           <Link href="/burns" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:24,height:24,objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:16, fontWeight:700, color:T.white }}>Shields & Burns</span>
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:16, fontWeight:700, color:T.white }}>Shields & Burns</span>
           </Link>
           <Link href="/burns" style={{ fontSize:11, color:T.olive, textDecoration:"none" }}>← Back</Link>
         </nav>
@@ -819,7 +819,7 @@ export default function BurnerCollectionPage() {
 
           <div style={{ textAlign:"center", marginBottom:28 }}>
             <div style={{ fontSize:36, marginBottom:10 }}>🔥</div>
-            <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(26px,5vw,40px)",
+            <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:"clamp(26px,5vw,40px)",
               fontWeight:700, color:T.white, marginBottom:6 }}>Double Burner Collection</h1>
             <p style={{ fontSize:12.5, color:T.dim }}>Exclusive share cards for Double Burner badge holders.</p>
           </div>
@@ -835,7 +835,7 @@ export default function BurnerCollectionPage() {
             <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:16,
               padding:"56px 24px", textAlign:"center" }}>
               <div style={{ fontSize:42, marginBottom:16, opacity:0.4 }}>🔒</div>
-              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:20,
+              <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:20,
                 color:T.white, marginBottom:10 }}>
                 🔥 Earn the Double Burner badge to unlock this collection.
               </div>
@@ -857,13 +857,13 @@ export default function BurnerCollectionPage() {
                 display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
                 <div>
                   <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:T.gold, marginBottom:4 }}>Participant</div>
-                  <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:700, color:T.white }}>
+                  <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:22, fontWeight:700, color:T.white }}>
                     {formatCardNumber(userData?.cardNumber)}
                   </div>
                 </div>
                 <div style={{ textAlign:"right" }}>
                   <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:T.fire, marginBottom:4 }}>Total Burned</div>
-                  <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:700, color:T.white }}>
+                  <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:22, fontWeight:700, color:T.white }}>
                     {fmtBurned(userData?.totalBurned)} $TOUCHGRASS
                   </div>
                 </div>

@@ -53,7 +53,7 @@ function coverDraw(ctx, img, x, y, w, h) {
 
 async function drawCard(canvas, { photoUrl, campaignName, rewardText, rarity, tickets }) {
   const ctx = canvas.getContext("2d");
-  const font = "'DM Sans', -apple-system, 'Segoe UI', sans-serif";
+  const font = "'Nunito', -apple-system, 'Segoe UI', sans-serif";
   try { await document.fonts?.ready; } catch {}
 
   // Sky background

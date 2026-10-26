@@ -7,7 +7,7 @@ const P = { fontSize: 14.5, lineHeight: 1.6, margin: "0 0 8px", color: "rgba(13,
 
 export default function PrizeRules() {
   return (
-    <div style={{ minHeight: "100vh", background: "#fff", fontFamily: "'DM Sans',-apple-system,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#fff", fontFamily: "'Nunito',-apple-system,sans-serif" }}>
       <Head><title>Prize Rules — Proof of Grass</title></Head>
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "32px 18px 80px" }}>
         <Link href="/" style={{ color: V2.grassDark, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>← Proof of Grass</Link>

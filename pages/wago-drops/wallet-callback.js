@@ -49,7 +49,7 @@ export default function WalletCallback() {
           <div style={{ display: "flex", justifyContent: "center" }}>
             <Wago pose={phase === "done" ? "cheer" : phase === "error" ? "shrug" : "ticket"} size={130} float={phase !== "error"} />
           </div>
-          <h2 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 26, margin: "10px 0 8px" }}>
+          <h2 style={{ fontFamily: "'Fredoka',system-ui,sans-serif", fontSize: 26, margin: "10px 0 8px" }}>
             {phase === "done" ? "You're all set!" : phase === "error" ? "Hmm, that didn't work" : "Linking your wallet…"}
           </h2>
           <p style={{ fontSize: 14, color: phase === "error" ? T.red : T.muted, lineHeight: 1.6 }}>{msg}</p>

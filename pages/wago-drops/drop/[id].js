@@ -136,10 +136,10 @@ export default function DropDetail() {
         <meta name="description" content={drop?.hint
           ? `Claim this WAGO Drop: ${drop.hint}. Earn ${drop.reward_amount} ${drop.reward_type?.toUpperCase()}.`
           : "A real-world WAGO Drop. Go outside and claim it."} />
-        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
       </Head>
 
-      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'Nunito',-apple-system,BlinkMacSystemFont,sans-serif" }}>
 
         {/* Nav */}
         <WagoDropsNav session={session} />
@@ -199,7 +199,7 @@ export default function DropDetail() {
                 </div>
 
                 <div style={{
-                  fontFamily: "'Cormorant Garamond',Georgia,serif",
+                  fontFamily: "'Fredoka',system-ui,sans-serif",
                   fontSize: "clamp(22px,5vw,30px)", fontWeight: 700,
                   color: drop.hint ? T.white : T.muted,
                   marginBottom: 8, lineHeight: 1.2,

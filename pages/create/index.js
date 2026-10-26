@@ -82,10 +82,10 @@ export default function CreateHub() {
   }, []);
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{overflow-x:hidden;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:${T.bg};}
     ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
@@ -114,7 +114,7 @@ export default function CreateHub() {
           borderBottom:`1px solid ${T.border}` }}>
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:26,height:26,objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
           </Link>
           <Link href="/" style={{ fontSize:11, color:T.olive, textDecoration:"none", letterSpacing:"0.06em" }}>← Dashboard</Link>
         </nav>
@@ -124,7 +124,7 @@ export default function CreateHub() {
           <div style={{ fontSize:10, letterSpacing:"0.22em", color:T.gold, textTransform:"uppercase", marginBottom:12, fontWeight:600 }}>
             Touch Grass
           </div>
-          <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(36px,6vw,64px)",
+          <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:"clamp(36px,6vw,64px)",
             fontWeight:700, color:T.white, lineHeight:1, letterSpacing:"-0.02em", marginBottom:14 }}>
             Creator Hub
           </h1>
@@ -160,7 +160,7 @@ export default function CreateHub() {
                     )}
                   </div>
                   <div>
-                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:21, fontWeight:700, color:T.white, marginBottom:6 }}>
+                    <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:21, fontWeight:700, color:T.white, marginBottom:6 }}>
                       {tool.title}
                     </div>
                     <div style={{ fontSize:12.5, color:T.dim, lineHeight:1.55 }}>

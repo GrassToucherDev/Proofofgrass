@@ -90,7 +90,7 @@ export default function AdminMarketplace() {
 
   const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
 
-  const css = `*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}`;
+  const css = `*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}`;
 
   if (!authed) return (
     <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -118,7 +118,7 @@ export default function AdminMarketplace() {
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:28,flexWrap:"wrap",gap:12}}>
             <div>
               <div style={{fontSize:10,letterSpacing:"0.2em",textTransform:"uppercase",color:T.gold,marginBottom:8}}>Admin</div>
-              <h1 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:32,fontWeight:700,color:T.white}}>Marketplace Purchases</h1>
+              <h1 style={{fontFamily:"'Fredoka',system-ui,sans-serif",fontSize:32,fontWeight:700,color:T.white}}>Marketplace Purchases</h1>
             </div>
             <div style={{display:"flex",gap:8}}>
               <button onClick={loadData} style={{background:"transparent",border:`1px solid ${T.borderG}`,color:T.olive,borderRadius:8,padding:"9px 18px",fontSize:12,cursor:"pointer"}}>
@@ -137,7 +137,7 @@ export default function AdminMarketplace() {
           {/* Pending */}
           <div style={{marginBottom:32}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:700,color:T.white}}>Pending</h2>
+              <h2 style={{fontFamily:"'Fredoka',system-ui,sans-serif",fontSize:22,fontWeight:700,color:T.white}}>Pending</h2>
               <div style={{fontSize:11,fontWeight:700,color:T.gold,background:"rgba(200,168,75,0.1)",border:`1px solid rgba(200,168,75,0.3)`,borderRadius:20,padding:"2px 10px"}}>
                 {pending.length}
               </div>
@@ -183,7 +183,7 @@ export default function AdminMarketplace() {
 
           {/* Recent approved/rejected */}
           <div>
-            <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:700,color:T.white,marginBottom:14}}>Recent</h2>
+            <h2 style={{fontFamily:"'Fredoka',system-ui,sans-serif",fontSize:22,fontWeight:700,color:T.white,marginBottom:14}}>Recent</h2>
             {approved.length === 0 ? (
               <div style={{background:T.bg2,border:`1px solid ${T.border}`,borderRadius:12,padding:"24px",textAlign:"center",fontSize:12,color:T.dim}}>
                 No completed purchases yet.

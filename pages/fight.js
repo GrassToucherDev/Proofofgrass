@@ -128,16 +128,16 @@ export default function FightPage() {
   const previewPoints = getPoints(points);
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{overflow-x:hidden;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:${T.bg};}
     ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
     @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
     .fade{animation:fadeUp 0.5s ease both;}
-    input,textarea{font-family:'DM Sans',sans-serif;}
+    input,textarea{font-family:'Nunito',sans-serif;}
   `;
 
   return (
@@ -155,7 +155,7 @@ export default function FightPage() {
             gap:9, textDecoration:"none" }}>
             <img src="/touchgrass-transparent.png" alt=""
               style={{ width:24, height:24, objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
               fontSize:16, fontWeight:700, color:T.white }}>Touch Grass</span>
           </Link>
           <Link href="/" style={{ fontSize:12, color:T.dim, textDecoration:"none" }}>
@@ -173,7 +173,7 @@ export default function FightPage() {
             className="fade">
             <div style={{ fontSize:10, letterSpacing:"0.22em", textTransform:"uppercase",
               color:T.fire, fontWeight:600, marginBottom:14 }}>Crypto Fight Club × Touch Grass</div>
-            <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
               fontSize:"clamp(36px,6vw,68px)", fontWeight:700, color:T.white,
               lineHeight:1, letterSpacing:"-0.02em", marginBottom:16 }}>
               🥊 Grass Jab
@@ -246,7 +246,7 @@ export default function FightPage() {
                   ["Current Tier", tier ? tier.label : "None yet", tier?.color || T.dim],
                 ].map(([label, val, col]) => (
                   <div key={label}>
-                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                    <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                       fontSize:26, fontWeight:700, color:col, lineHeight:1 }}>{val}</div>
                     <div style={{ fontSize:10, color:T.dim, textTransform:"uppercase",
                       letterSpacing:"0.08em", marginTop:4 }}>{label}</div>

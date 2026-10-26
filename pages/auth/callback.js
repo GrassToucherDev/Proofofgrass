@@ -57,7 +57,7 @@ export default function AuthCallback() {
       alignItems: "center",
       justifyContent: "center",
       gap: 16,
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: "'Nunito', sans-serif",
     }}>
       <img
         src="/touchgrass-transparent.png"
