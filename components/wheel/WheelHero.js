@@ -112,8 +112,8 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
         {canSpin && <div style={{ textAlign: "center", fontSize: 12, color: V2.textBody, marginTop: 6 }}>
           {quote.usd != null && <>≈ ${Number(quote.usd).toFixed(2)} USD · </>}{wheel.lock_pct}% ({fmt(quote.lock_amount)}) to lock · {wheel.eco_pct}% ({fmt(quote.eco_amount)}) to ecosystem</div>}
 
-        <div style={{ display: "grid", gap: 10, gridTemplateColumns: "minmax(0,1.5fr) minmax(0,1fr)", marginTop: 14 }}>
-          <div style={{ ...pill, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "grid", gap: 10, gridTemplateColumns: wheel.meter_enabled ? "minmax(0,1.5fr) minmax(0,1fr)" : "minmax(0,1fr)", marginTop: 14 }}>
+          {wheel.meter_enabled && <div style={{ ...pill, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 24 }}>🌱</span>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 12, fontWeight: 800 }}>WAGO METER</div>
@@ -124,7 +124,7 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
                 <div style={{ fontSize: 11, color: V2.midGray }}>{meter.count} / {meter.required} · every {meter.required}th spin is a guaranteed {minR}+</div>
               </> : <div style={{ fontSize: 11, color: V2.midGray }}>{wheel.meter_enabled ? `Sign in to track your meter. Every ${wheel.meter_spins}th spin is a guaranteed ${minR}+.` : "Meter is off for this wheel."}</div>}
             </div>
-          </div>
+          </div>}
           <button onClick={() => setSheet("prizes")} style={{ ...pill, cursor: "pointer", fontFamily: V2.fontSans, fontWeight: 700, fontSize: 14, color: V2.forestGreen, padding: "10px 8px" }}>🎁 View Prizes ›</button>
         </div>
         <div style={{ textAlign: "center", marginTop: 10 }}>
