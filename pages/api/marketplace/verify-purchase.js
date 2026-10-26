@@ -160,23 +160,34 @@ export default async function handler(req, res) {
 
     await markDone();
 
-    // ── 7. Write to UserInventory (burn stats read tokens_spent from here) ──
-    // Consumables can be bought repeatedly, so accumulate tokens_spent instead of overwriting.
-    let spent = actualAmount;
-    if (isConsumable) {
-      const { data:prevInv } = await supabase.from("UserInventory")
-        .select("tokens_spent").ilike("username", username).eq("item_id", itemId).maybeSingle();
-      spent += Number(prevInv?.tokens_spent || 0);
-    }
-    const { error:invErr } = await supabase.from("UserInventory").upsert([{
+    // ── 7. Write to UserInventory ──────────────────────────────────────────
+    // The ownership record is written with the basic columns first, so a problem with an optional column
+    // can never leave a paid purchase without an "owned" row. The spend total (burn stats) is added after.
+    // Consumables can be bought repeatedly, so that total accumulates instead of overwriting.
+    let invOk = true;
+    const { error: invErr } = await supabase.from("UserInventory").upsert([{
       username,
       item_id:      itemId,
       owned:        true,
       equipped:     false,
-      tokens_spent: spent,
       purchased_at: new Date().toISOString(),
     }], { onConflict:"username,item_id" });
-    if (invErr) console.error("[verify-purchase] inventory write failed", signature, invErr);
+    if (invErr) {
+      invOk = false;
+      console.error("[verify-purchase] INVENTORY WRITE FAILED", signature, username, itemId, invErr.message || invErr);
+    } else {
+      try {
+        let spent = actualAmount;
+        if (isConsumable) {
+          const { data:prevInv } = await supabase.from("UserInventory")
+            .select("tokens_spent").ilike("username", username).eq("item_id", itemId).maybeSingle();
+          spent += Number(prevInv?.tokens_spent || 0);
+        }
+        const { error: spErr } = await supabase.from("UserInventory").update({ tokens_spent: spent })
+          .eq("username", username).eq("item_id", itemId);
+        if (spErr) console.error("[verify-purchase] tokens_spent not recorded", signature, spErr.message || spErr);
+      } catch (e) { console.error("[verify-purchase] tokens_spent error", signature, e?.message || e); }
+    }
 
     // ── 8. Unlock covers ──────────────────────────────────────────────────
     const coverSlugs = COVER_UNLOCKS[itemId] ?? [];
