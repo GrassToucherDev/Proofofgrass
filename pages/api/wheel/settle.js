@@ -32,7 +32,7 @@ export default async function handler(req, res) {
 
   let amount;
   try {
-    ({ amount } = await verifyWheelPayment({ signature, walletAddress, minTokens: intent.price_tokens, notBeforeMs: new Date(intent.created_at).getTime(), checkoutId: intent.id }));
+    ({ amount } = await verifyWheelPayment({ signature, walletAddress, minTokens: intent.price_tokens, notBeforeMs: new Date(intent.created_at).getTime(), notAfterMs: intent.expires_at ? new Date(intent.expires_at).getTime() + 5 * 60 * 1000 : undefined, checkoutId: intent.id }));
   } catch (e) {
     if (e instanceof PaymentError) return res.status(e.status).json({ error: e.message, code: e.code });
     console.error("[wheel/settle] verify", e);
