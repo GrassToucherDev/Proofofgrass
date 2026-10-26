@@ -444,29 +444,18 @@ export default function ProfilePage() {
     })();
   },[username]);
 
-  useEffect(()=>{
-    if(typeof window==="undefined") return;
-    const params=new URLSearchParams(window.location.search);
-    if(params.get("wallet_verify")!=="1") return;
-    const pubkey=params.get("publicKey");
-    if(!pubkey||!username) return;
-    (async()=>{
-      const{error}=await supabase.from("Profiles").upsert({username,wallet_address:pubkey,wallet_verified:true,wallet_verified_at:new Date().toISOString(),holder_tier:"none",wallet_last_checked_at:new Date().toISOString()},{onConflict:"username"});
-      if(!error){setWalletAddr(pubkey);setWalletVerified(true);window.history.replaceState({},"",`/u/${username}`);}
-    })();
-  },[username]);
-
   const saveField=async(field,value)=>{
+    const before=profileRow?.[field];
     setProfileRow(prev=>({...prev,[field]:value}));
-    await supabase.from("Profiles").upsert({username,[field]:value},{onConflict:"username"});
+    try{
+      const r=await fetch("/api/profile/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,field,value})});
+      if(!r.ok){setProfileRow(prev=>({...prev,[field]:before}));const j=await r.json().catch(()=>({}));if(typeof window!=="undefined"&&j?.error) window.alert(j.code==="unclaimed"?"Secure your username with Google first to edit your profile.":j.code==="not_signed_in"?"Sign in with Google to edit your profile.":j.error);}
+    }catch{setProfileRow(prev=>({...prev,[field]:before}));}
   };
   const disconnectWallet = async () => {
     setDisconnecting(true);
     try {
-      await supabase.from('Profiles').update({
-        wallet_address: null, wallet_verified: false,
-        wallet_verified_at: null, wallet_last_checked_at: null,
-      }).ilike('username', username);
+      await fetch('/api/profile/wallet',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});
       setWalletAddr(null); setWalletVerified(false); setDisconnectConfirm(false);
     } catch(e) { console.error('[wallet] disconnect failed:', e); }
     setDisconnecting(false);

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../utils/supabase";
+import { adminDb } from "../../utils/adminDb";
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
@@ -40,7 +41,7 @@ export default function FeaturedPostsAdmin() {
     if(!form.tweet_url || !form.tweet_text) return flash("URL and tweet text are required.");
     setSaving(true);
     if(editing) {
-      const { error } = await supabase.from("FeaturedPosts").update({
+      const { error } = await adminDb.from("FeaturedPosts").update({
         tweet_url: form.tweet_url.trim(),
         tweet_text: form.tweet_text.trim(),
         sort_order: parseInt(form.sort_order)||0,
@@ -49,7 +50,7 @@ export default function FeaturedPostsAdmin() {
       if(error) flash("Error: "+error.message);
       else { flash("✓ Updated"); setEditing(null); setForm(EMPTY_FORM); }
     } else {
-      const { error } = await supabase.from("FeaturedPosts").insert([{
+      const { error } = await adminDb.from("FeaturedPosts").insert([{
         tweet_url: form.tweet_url.trim(),
         tweet_text: form.tweet_text.trim(),
         sort_order: parseInt(form.sort_order)||0,
@@ -70,12 +71,12 @@ export default function FeaturedPostsAdmin() {
 
   const handleDelete = async (id) => {
     if(!confirm("Delete this post?")) return;
-    await supabase.from("FeaturedPosts").delete().eq("id", id);
+    await adminDb.from("FeaturedPosts").delete().eq("id", id);
     flash("Deleted"); load();
   };
 
   const toggleActive = async (id, current) => {
-    await supabase.from("FeaturedPosts").update({ active: !current }).eq("id", id);
+    await adminDb.from("FeaturedPosts").update({ active: !current }).eq("id", id);
     load();
   };
 

@@ -37,6 +37,27 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    // ── 0. Who may award what ───────────────────────────────────────────────
+    // challenge_win / referral_convert are uncapped and can't be verified from a request, so they are admin or
+    // server-to-server only. field_guide must point at a real, approved entry that belongs to this username.
+    // flex_card needs a real account (a streak row); it is capped per week below.
+    const internal = req.headers['x-internal-secret'] && req.headers['x-internal-secret'] === process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (['challenge_win', 'referral_convert'].includes(entry_type) && !isAdminRequest(req) && !internal) {
+      return res.status(401).json({ error: 'Admin authorization required' });
+    }
+    if (['field_guide', 'flex_card'].includes(entry_type)) {
+      const { data: acct } = await supabase.from('Streaks').select('username').ilike('username', username).maybeSingle();
+      if (!acct) return res.status(400).json({ error: 'Unknown user.' });
+    }
+    if (entry_type === 'field_guide') {
+      const entryId = String(source_id || '').replace(/^field_guide_/, '');
+      if (!/^[0-9a-f-]{8,40}$/i.test(entryId) && !/^\d+$/.test(entryId)) return res.status(400).json({ error: 'A real field guide entry is required.' });
+      const { data: fg } = await supabase.from('FieldGuideEntries').select('id,status,submitted_at')
+        .eq('id', entryId).ilike('username', username).maybeSingle();
+      if (!fg || fg.status !== 'approved') return res.status(400).json({ error: 'A real field guide entry is required.' });
+      if (Date.now() - new Date(fg.submitted_at).getTime() > 24 * 3600 * 1000) return res.status(400).json({ error: 'That entry is too old to award.' });
+    }
+
     // ── 1. Get active cycle ─────────────────────────────────────────────────
     let activeCycleId = cycle_id;
     if (!activeCycleId) {

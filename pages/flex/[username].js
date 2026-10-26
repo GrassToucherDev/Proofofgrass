@@ -1265,9 +1265,8 @@ export default function FlexCardPage() {
               <button
                 onClick={async()=>{
                   // Save active cover to profile
-                  const { error: applyErr } = await supabase.from("Profiles")
-                    .upsert({ username, active_cover_id:previewCover.slug }, { onConflict:"username" });
-                  if (applyErr) { console.warn("[flex] apply cover failed:", applyErr.message); return; }
+                  const applyRes = await fetch("/api/profile/update", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ username, field:"active_cover_id", value: previewCover.slug }) });
+                  if (!applyRes.ok) { console.warn("[flex] apply cover failed:", applyRes.status); return; }
                   // Keep local data in step with the DB so the card and Share use the new cover immediately
                   setProfileRow(prev => ({ ...(prev || {}), active_cover_id: previewCover.slug }));
                   setPreviewCover(null);

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { adminFetch } from "../../utils/adminClient";
 import { supabase } from "../../utils/supabase";
+import { adminDb } from "../../utils/adminDb";
 import SpotlightAnnouncement from "../../components/SpotlightAnnouncement";
 
 const T = {
@@ -125,10 +126,10 @@ export default function AdminSpotlight() {
 
     let err;
     if (editId) {
-      ({ error: err } = await supabase.from("CommunitySpotlights")
+      ({ error: err } = await adminDb.from("CommunitySpotlights")
         .update(payload).eq("id", editId));
     } else {
-      ({ error: err } = await supabase.from("CommunitySpotlights")
+      ({ error: err } = await adminDb.from("CommunitySpotlights")
         .upsert(payload, { onConflict: "category,week_start" }));
     }
 
@@ -158,13 +159,13 @@ export default function AdminSpotlight() {
   };
 
   const archive = async (id) => {
-    await supabase.from("CommunitySpotlights")
+    await adminDb.from("CommunitySpotlights")
       .update({ status:"archived" }).eq("id", id);
     loadSpotlights();
   };
 
   const restore = async (id) => {
-    await supabase.from("CommunitySpotlights")
+    await adminDb.from("CommunitySpotlights")
       .update({ status:"active" }).eq("id", id);
     loadSpotlights();
   };
