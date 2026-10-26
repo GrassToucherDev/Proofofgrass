@@ -2,6 +2,7 @@
 // Server-side weighted random draw engine
 // Auditable, seed-based, excludes ineligible users per draw order rules
 
+import crypto from "crypto";
 import { isAdminRequest } from "../../../utils/adminApi";
 
 export default async function handler(req, res) {
@@ -59,6 +60,12 @@ export default async function handler(req, res) {
       .select('username, reward_type, major_reward')
       .eq('cycle_id', cycle_id)
       .eq('voided', false);
+
+    // One draw per reward type per cycle. (Void the winners first if you need to re-draw.)
+    const alreadyDrawn = (existingWinners || []).filter(w => w.reward_type === draw_type).length;
+    if (alreadyDrawn > 0 && !dry_run) {
+      return res.status(409).json({ error: `${draw_type} has already been drawn for this cycle (${alreadyDrawn} winner${alreadyDrawn === 1 ? '' : 's'}). Void them first if you need to re-draw.` });
+    }
 
     const majorWinnerSet = new Set(
       (existingWinners || [])
@@ -166,33 +173,36 @@ export default async function handler(req, res) {
     }
 
     // ── 6. Generate draw seed ─────────────────────────────────────────────────
-    const draw_seed = `${cycle_id}::${draw_type}::${Date.now()}::${Math.random().toString(36).slice(2)}`;
+    // The seed is derived from the cycle, the draw type and the exact pool (usernames + entries), plus how many
+    // times this type has been drawn or voided before. So a dry run and the real draw give the SAME winners
+    // (no re-rolling until you like the result), and anyone holding the saved pool_snapshot can recompute them.
     const draw_timestamp = new Date().toISOString();
 
     // ── 7. Snapshot eligible pool at draw time ────────────────────────────────
-    const pool_snapshot = pool.map(t => ({
-      username:      t.username,
-      entries:       t.total_active_entries,
-      proof_entries: parseFloat(t.proof_entries),
-      bonus_entries: parseFloat(t.active_bonus_entries),
-    }));
+    const pool_snapshot = pool
+      .map(t => ({
+        username:      t.username,
+        entries:       t.total_active_entries,
+        proof_entries: parseFloat(t.proof_entries),
+        bonus_entries: parseFloat(t.active_bonus_entries),
+      }))
+      .sort((a, b) => a.username.localeCompare(b.username));
 
     const total_weight = pool.reduce((s, t) => s + t.total_active_entries, 0);
 
-    // ── 8. Weighted random draw (seeded via simple LCG for reproducibility) ───
-    // Simple LCG seeded from the draw_seed hash
-    function hashSeed(str) {
-      let h = 0;
-      for (let i = 0; i < str.length; i++) {
-        h = Math.imul(31, h) + str.charCodeAt(i) | 0;
-      }
-      return Math.abs(h);
-    }
+    const { count: priorRuns } = await supabase
+      .from('grass_draw_winners').select('id', { count: 'exact', head: true })
+      .eq('cycle_id', cycle_id).eq('reward_type', draw_type);
+    const pool_hash = crypto.createHash('sha256')
+      .update(pool_snapshot.map(p => `${p.username.toLowerCase()}:${p.entries}`).join('|')).digest('hex');
+    const draw_seed = crypto.createHash('sha256')
+      .update(`${cycle_id}::${draw_type}::${pool_hash}::${priorRuns || 0}`).digest('hex');
 
-    let lcg_state = hashSeed(draw_seed);
+    // ── 8. Weighted random draw: sha256(seed:counter) -> uniform [0,1) ────────
+    let counter = 0;
     function lcg_rand() {
-      lcg_state = (Math.imul(1664525, lcg_state) + 1013904223) >>> 0;
-      return lcg_state / 0x100000000;
+      const h = crypto.createHash('sha256').update(`${draw_seed}:${counter++}`).digest();
+      return h.readUIntBE(0, 6) / 281474976710656;   // 48 bits
     }
 
     const winners = [];
@@ -232,6 +242,7 @@ export default async function handler(req, res) {
         draw_type,
         draw_qty,
         draw_seed,
+        pool_hash,
         draw_timestamp,
         total_weight,
         pool_size:     pool.length,
@@ -282,6 +293,9 @@ export default async function handler(req, res) {
       voided:               false,
       metadata: {
         draw_seed,
+        pool_hash,
+        pool_snapshot,
+        algorithm:      'sha256(seed:counter) 48-bit, weighted without replacement',
         draw_timestamp,
         draw_log,
         pool_size:      pool.length,
@@ -301,9 +315,11 @@ export default async function handler(req, res) {
     if (draw_type === 'grass_score') {
       const scoreAmount = reward.reward_value?.amount || 250;
       for (const w of winners) {
-        await supabase.from('Profiles')
-          .update({ grass_score: supabase.rpc('increment', { x: scoreAmount }) })
+        const { data: prof } = await supabase.from('Profiles').select('grass_score').ilike('username', w.username).maybeSingle();
+        const { error: gsErr } = await supabase.from('Profiles')
+          .update({ grass_score: (prof?.grass_score || 0) + scoreAmount })
           .ilike('username', w.username);
+        if (gsErr) { console.error('[execute-draw] grass_score credit failed', w.username, gsErr.message); continue; }   // leave undelivered so it can be retried
         await supabase.from('ScoreEvents').insert([{
           username:   w.username,
           event_type: 'grass_draw_win',

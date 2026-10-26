@@ -36,6 +36,17 @@ export default async function handler(req, res) {
 
     const { username, reward_type, reward_reference, reward_value, cycle_id } = winner;
 
+    // Take a short exclusive hold so a double-click or two admins can't deliver the same prize twice.
+    if (winner.reward_type !== 'nft') {
+      const stamp = new Date().toISOString();
+      const { data: held } = await supabase.from('grass_draw_winners')
+        .update({ metadata: { ...winner.metadata, delivering_at: stamp } })
+        .eq('id', winner_id).eq('delivered', false)
+        .or(`metadata->>delivering_at.is.null,metadata->>delivering_at.lt.${new Date(Date.now() - 120000).toISOString()}`)   // a stuck hold frees itself after 2 min
+        .select('id').maybeSingle();
+      if (!held) return res.status(409).json({ error: 'Delivery already in progress or done for this winner.' });
+    }
+
     // ── 2. Deliver by type ────────────────────────────────────────────────────
 
     // ── SHIELD ────────────────────────────────────────────────────────────────
