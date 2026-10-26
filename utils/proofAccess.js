@@ -8,6 +8,10 @@ import { authOptions } from "../pages/api/auth/[...nextauth]";
 export const MAX_ATTEMPTS_PER_HOUR = 60;
 export const MAX_NEW_USERNAMES_PER_DAY = 5;
 export const BUCKET = "proof-photos";
+// Older usernames can contain spaces and other characters, so only block what could break the storage path:
+// slashes, "..", control characters and URL-special characters.
+export const isSafeProofUsername = (u) =>
+  typeof u === "string" && u.length >= 1 && u.length <= 64 && u === u.trim() && !u.includes("..") && !/[\/\\?#%\u0000-\u001f]/.test(u);
 export const todayUTC = () => new Date().toISOString().slice(0, 10);
 export const proofPath = (username, day = todayUTC()) => `${username}/${day}.png`;
 
