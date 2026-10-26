@@ -1,3 +1,4 @@
+import { wagoSecretOk } from "../../../../utils/wagoAdminAuth";
 // pages/api/wago-drops/admin/trails.js — Trail Builder API (header x-wago-admin-secret).
 //   GET                                   → all Trails with stops + participation counts
 //   POST { action: "save", trail, stops } → create/update. Stops (3–5) are only editable before anyone starts.
@@ -9,8 +10,8 @@ import { sb, loadStops } from "../../../../utils/wagoTrailsServer";
 import { routeDistanceM, estimateMinutes, TRAIL_MIN_STOPS, TRAIL_MAX_STOPS } from "../../../../utils/wagoTrails";
 
 const isAdmin = req => {
-  const s = req.headers["x-wago-admin-secret"] || req.query._s;
-  return !!s && s === process.env.WAGO_ADMIN_SECRET;
+  const s = req.headers["x-wago-admin-secret"];
+  return !!s && wagoSecretOk(s, req);
 };
 
 const FIELDS = ["name", "description", "city", "cover_image_url", "completion_mode", "starts_at", "ends_at",

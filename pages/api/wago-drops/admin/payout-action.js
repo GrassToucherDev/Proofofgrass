@@ -2,6 +2,7 @@
 // POST { claimId, action: "retry" | "mark_paid", txSignature? }  (header x-wago-admin-secret)
 //   retry     — failed → pending (clears the error) so the next payout run picks it up
 //   mark_paid — mark a claim paid by hand (e.g. you sent it manually); needs a tx signature
+import { wagoSecretOk } from "../../../../utils/wagoAdminAuth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -12,7 +13,7 @@ const supabase = createClient(
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const secret = req.headers["x-wago-admin-secret"];
-  if (!secret || secret !== process.env.WAGO_ADMIN_SECRET) return res.status(401).json({ error: "Unauthorized" });
+  if (!secret || !wagoSecretOk(secret, req)) return res.status(401).json({ error: "Unauthorized" });
 
   const { claimId, action, txSignature, trailProgressId } = req.body || {};
 

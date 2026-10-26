@@ -6,6 +6,7 @@
 //   completed = paid (tx_signature)
 // The treasury key never touches the web app: payouts are sent by
 // scripts/process-wago-claims.mjs. "Retry" here just re-queues a failed claim.
+import { wagoSecretOk } from "../../../../utils/wagoAdminAuth";
 import { createClient } from "@supabase/supabase-js";
 import { payoutEligibility } from "../../../../utils/wagoPayout.mjs";
 import { rewardSymbol } from "../../../../utils/wagoReward";
@@ -16,8 +17,8 @@ const supabase = createClient(
 );
 
 function isAdmin(req) {
-  const secret = req.headers["x-wago-admin-secret"] || req.query._s;
-  return !!secret && secret === process.env.WAGO_ADMIN_SECRET;
+  const secret = req.headers["x-wago-admin-secret"];
+  return !!secret && wagoSecretOk(secret, req);
 }
 
 export default async function handler(req, res) {

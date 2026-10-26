@@ -18,6 +18,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { createClient } from "@supabase/supabase-js";
+import { looksLikeImage } from "../../../utils/proofAccess";
 import { PROOF_RADIUS_M, PROOF_WINDOW_HOURS, ticketsForCampaign } from "../../../utils/wagoProofBonus";
 
 const supabase = createClient(
@@ -110,12 +111,15 @@ export default async function handler(req, res) {
     });
   }
 
-  // ── Photo must actually exist in the proof-photos bucket ─────────────────
-  const { data: signed, error: storageErr } = await supabase.storage
-    .from("proof-photos")
-    .createSignedUrl(photoPath, 60);
-  if (storageErr || !signed?.signedUrl) {
+  // ── Photo must exist in the bucket AND be a real image ───────────────────
+  const { data: blob, error: storageErr } = await supabase.storage.from("proof-photos").download(photoPath);
+  if (storageErr || !blob) {
     return res.status(400).json({ error: "Proof photo not found in storage. Upload it first." });
+  }
+  const head = Buffer.from(await blob.slice(0, 16).arrayBuffer());
+  if (!looksLikeImage(head) || blob.size > 15 * 1024 * 1024) {
+    await supabase.storage.from("proof-photos").remove([photoPath]);
+    return res.status(400).json({ error: "That file isn't a valid photo. Please upload a picture." });
   }
 
   // ── Resolve Proof of Grass username via verified wallet (Profiles) ───────

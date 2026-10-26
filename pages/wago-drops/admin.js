@@ -61,7 +61,7 @@ function CampaignForm({initial, onSave, adminSecret, submitLabel="Save"}){
     try{
       const isEdit = !!initial?.id;
       const url = isEdit ? "/api/wago-drops/admin/update-campaign" : "/api/wago-drops/admin/create-campaign";
-      const res = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,_adminSecret:adminSecret})});
+      const res = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-wago-admin-secret":adminSecret},body:JSON.stringify({...form})});
       const data = await res.json();
       if(!res.ok) throw new Error(data.error||"Failed");
       setMsg({ok:true,text:isEdit?"Campaign updated.":"Campaign created."});
@@ -278,7 +278,7 @@ function PinManager({campaigns, adminSecret}){
   async function loadLocations(campId){
     if(!campId) return;
     setLoadingLocs(true);
-    const res = await fetch(`/api/wago-drops/admin/locations-by-campaign?campaignId=${campId}&_s=${encodeURIComponent(adminSecret)}`);
+    const res = await fetch(`/api/wago-drops/admin/locations-by-campaign?campaignId=${campId}`,{headers:{"x-wago-admin-secret":adminSecret}});
     const data = await res.json();
     setLocations(data.locations || []);
     setLoadingLocs(false);
@@ -311,7 +311,7 @@ function PinManager({campaigns, adminSecret}){
     if(!selectedCampaign || pendingPins.length===0) return;
     setSaving(true); setMsg(null);
     try{
-      const res = await fetch("/api/wago-drops/admin/add-locations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({campaignId:selectedCampaign,locations:pendingPins.map(p=>({lat:p.lat,lng:p.lng,hint:hint||null,max_claims:maxClaims||null})),_adminSecret:adminSecret})});
+      const res = await fetch("/api/wago-drops/admin/add-locations",{method:"POST",headers:{"Content-Type":"application/json","x-wago-admin-secret":adminSecret},body:JSON.stringify({campaignId:selectedCampaign,locations:pendingPins.map(p=>({lat:p.lat,lng:p.lng,hint:hint||null,max_claims:maxClaims||null}))})});
       const data = await res.json();
       if(!res.ok) throw new Error(data.error||"Failed");
       setMsg({ok:true,text:`${pendingPins.length} pin${pendingPins.length!==1?"s":""} added.`});
@@ -325,7 +325,7 @@ function PinManager({campaigns, adminSecret}){
     e.preventDefault();
     setSaving(true); setMsg(null);
     try{
-      const res = await fetch("/api/wago-drops/admin/update-location",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...editingPin,_adminSecret:adminSecret})});
+      const res = await fetch("/api/wago-drops/admin/update-location",{method:"POST",headers:{"Content-Type":"application/json","x-wago-admin-secret":adminSecret},body:JSON.stringify({...editingPin})});
       const data = await res.json();
       if(!res.ok) throw new Error(data.error||"Failed");
       setMsg({ok:true,text:"Pin updated."});
@@ -337,7 +337,7 @@ function PinManager({campaigns, adminSecret}){
 
   async function deletePin(id){
     if(!confirm("Delete this pin?")) return;
-    const res = await fetch("/api/wago-drops/admin/update-location",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,_adminSecret:adminSecret})});
+    const res = await fetch("/api/wago-drops/admin/update-location",{method:"DELETE",headers:{"Content-Type":"application/json","x-wago-admin-secret":adminSecret},body:JSON.stringify({id})});
     if(res.ok){
       setLocations(prev=>prev.filter(l=>l.id!==id));
       setMsg({ok:true,text:"Pin deleted."});
@@ -622,8 +622,8 @@ export default function WagoAdminPage(){
     const _s = s || secret;
     setDataLoading(true);
     const [cRes, clRes] = await Promise.all([
-      fetch(`/api/wago-drops/admin/campaigns-all?_s=${encodeURIComponent(_s)}`),
-      fetch(`/api/wago-drops/admin/claims-all?_s=${encodeURIComponent(_s)}`)
+      fetch("/api/wago-drops/admin/campaigns-all",{headers:{"x-wago-admin-secret":_s}}),
+      fetch("/api/wago-drops/admin/claims-all",{headers:{"x-wago-admin-secret":_s}})
     ]);
     const [cData, clData] = await Promise.all([cRes.json(), clRes.json()]);
     setCampaigns(cData.campaigns||[]);

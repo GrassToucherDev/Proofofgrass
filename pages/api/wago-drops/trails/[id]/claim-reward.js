@@ -12,11 +12,9 @@ async function resolveUsername(googleId, wallet, supplied) {
   }
   const candidate = String(supplied || "").trim().replace(/^@/, "").toLowerCase();
   if (!candidate) return null;
-  const [{ data: prof }, { data: streak }] = await Promise.all([
-    sb.from("Profiles").select("username").ilike("username", candidate).maybeSingle(),
-    sb.from("Streaks").select("username").ilike("username", candidate).maybeSingle(),
-  ]);
-  return prof?.username || streak?.username ? candidate : "__invalid__";
+  // Only a username secured by this same Google account may receive the tickets.
+  const { data: own } = await sb.from("username_claims").select("google_id").eq("username", candidate).maybeSingle();
+  return own && own.google_id === googleId ? candidate : "__invalid__";
 }
 
 export default async function handler(req, res) {
@@ -53,7 +51,7 @@ export default async function handler(req, res) {
   // 2) Grass Tickets (separate from token status; safe to retry).
   let needUsername = false, ticketsError = null;
   if (wantTickets && row.reward_tickets_awarded == null) {
-    const username = row.pog_username || await resolveUsername(googleId, acct?.linked_wallet, req.body?.pogUsername);
+    const username = row.pog_username || await resolveUsername(googleId, walletOk ? acct.linked_wallet : null, req.body?.pogUsername);
     if (!username) needUsername = true;
     else if (username === "__invalid__") { needUsername = true; ticketsError = "No Proof of Grass account found for that username."; }
     else {
