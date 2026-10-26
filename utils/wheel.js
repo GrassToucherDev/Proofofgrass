@@ -3,6 +3,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../pages/api/auth/[...nextauth]";
 import { adminClient } from "./requireOwner";
+import { unlockedByRank } from "./wheelBadges";
 import { PaymentError, mintDelta, requireCheckoutMemo, MINT, BURN, currentTokenPriceUsd } from "./solanaPayment";
 
 export { PaymentError, adminClient, currentTokenPriceUsd };
@@ -71,4 +72,25 @@ export function publicSpin(s) {
   return { id: s.id, prize: { name: s.prize_snapshot?.name, description: s.prize_snapshot?.description, reward_type: s.prize_snapshot?.reward_type,
     image_url: s.prize_snapshot?.image_url }, rarity: s.rarity, segment: s.segment, meter_guaranteed: s.meter_guaranteed,
     fulfillment_status: s.fulfillment_status, lock_status: s.lock_status, created_at: s.created_at };
+}
+
+// How many spins this account had made when `spin` happened (1 = its first). Used to flag the spin that unlocked a badge tier.
+export async function spinRank(db, spin) {
+  if (!spin?.google_id) return null;
+  const { count } = await db.from("wheel_spins").select("id", { count: "exact", head: true })
+    .eq("google_id", spin.google_id).lte("created_at", spin.created_at);
+  return count ?? null;
+}
+export async function totalSpins(db, googleId) {
+  if (!googleId) return 0;
+  const { count } = await db.from("wheel_spins").select("id", { count: "exact", head: true }).eq("google_id", googleId);
+  return count || 0;
+}
+
+// publicSpin plus the badge tier this spin unlocked (null if none). Computed from the spin's position in the account's
+// history, so a refresh or the phone handoff shows the same result.
+export async function publicSpinWithBadge(db, row) {
+  let badge = null;
+  try { badge = unlockedByRank(await spinRank(db, row)); } catch {}
+  return { ...publicSpin(row), badge_unlocked: badge };
 }

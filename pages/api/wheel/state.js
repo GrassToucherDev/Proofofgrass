@@ -1,5 +1,5 @@
 // GET /api/wheel/state — the featured wheel, its current prize pool, a live price quote, stats, and the viewer's meter.
-import { adminClient, currentTokenPriceUsd, isWheelTester, sessionIdentity, publicWheel, publicPrizeRow } from "../../../utils/wheel";
+import { adminClient, currentTokenPriceUsd, isWheelTester, sessionIdentity, publicWheel, publicPrizeRow, totalSpins } from "../../../utils/wheel";
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -31,6 +31,6 @@ export default async function handler(req, res) {
     quote: { tokens, usd: w.price_mode === "usd" ? Number(w.price_usd) : null, lock_amount: lock, eco_amount: tokens == null ? null : tokens - lock, token_price_usd: tokenPrice },
     stats: stats || { total_spins: 0, prizes_claimed: 0, locked_amount: 0, queued_amount: 0 },
     meter: googleId && w.meter_enabled ? { count: meter?.data?.count || 0, required: w.meter_spins } : null,
-    viewer: { signedIn: !!googleId, username },
+    viewer: { signedIn: !!googleId, username, total_spins: await totalSpins(db, googleId) },
   });
 }

@@ -9,6 +9,7 @@ import { useRouter } from "next/router";
 import { supabase } from "../../../utils/supabase";
 import { resolveActiveCover, COVER_DEFINITIONS, isCoverUrlReady } from "../../../utils/coverDefinitions";
 import { getSpotlightBadge } from "../../../utils/spotlightBadges";
+import SpinnerMedal from "../../../components/wheel/SpinnerMedal";
 import { V2, V2Styles, V2GlobalCSS, getV2Tier } from "../../../utils/v2Theme";
 
 function norm(v) { return String(v??"").replace(/@/g,"").toLowerCase().trim(); }
@@ -376,11 +377,21 @@ export default function ProfilePage() {
   const [referrals,       setReferrals]         = useState([]);
   const [refLinkCopied,   setRefLinkCopied]     = useState(false);
   const [inventory,       setInventory]         = useState([]);
+  const [wheelBadge,      setWheelBadge]        = useState(null);
 
   useEffect(()=>{
     const saved = typeof window!=="undefined"?localStorage.getItem("pog_username"):null;
     if(saved) setViewer(norm(saved));
   },[]);
+
+  // Wheel Spinner badge (a spin count turned into a tier by the server).
+  useEffect(()=>{
+    if(!username) return;
+    let alive=true;
+    fetch(`/api/wheel/badge?username=${encodeURIComponent(username)}`).then(r=>r.ok?r.json():null)
+      .then(d=>{if(alive&&d?.badge) setWheelBadge(d.badge);}).catch(()=>{});
+    return ()=>{alive=false;};
+  },[username]);
 
   // ── All data fetching — preserved from V1 ────────────────────────────────
   useEffect(()=>{
@@ -663,6 +674,16 @@ export default function ProfilePage() {
                     background:"rgba(232,160,32,0.12)", border:`1px solid ${V2.borderGold}`,
                     fontSize:12, fontWeight:700, color:V2.gold }}>
                     🏆 Spotlight Winner{spotlightData.latest&&` · ${spotlightData.latest.name}`}
+                  </div>
+                )}
+                {/* Wheel Spinner badge */}
+                {wheelBadge&&wheelBadge.tier>0 && (
+                  <div style={{ display:"inline-flex", alignItems:"center", gap:8, marginLeft:8,
+                    padding:"4px 16px 4px 8px", borderRadius:20,
+                    background:"rgba(255,255,255,0.7)", border:`1px solid ${V2.borderSoft}`,
+                    fontSize:12, fontWeight:700, color:V2.forestGreen }}>
+                    <SpinnerMedal tier={wheelBadge.tier} size={26} />
+                    {wheelBadge.label} · {wheelBadge.count} spins
                   </div>
                 )}
               </div>

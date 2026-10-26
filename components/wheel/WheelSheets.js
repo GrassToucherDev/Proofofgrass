@@ -1,4 +1,6 @@
 // Bottom sheets for the WAGO Wheel: confirm spin, prize pool, result reveal, My Wins.
+import SpinnerMedal from "./SpinnerMedal";
+import { spinBadge } from "../../utils/wheelBadges";
 import TokenLogo from "../TokenLogo";
 import { useEffect, useState } from "react";
 import { V2 } from "../../utils/v2Theme";
@@ -111,6 +113,16 @@ export function ResultReveal({ spin, onSpinAgain, onWins, onClose }) {
         <div style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 6px", wordBreak: "break-word" }}>{spin.prize.name}</div>
         <RarityChip r={spin.rarity} />
         {spin.meter_guaranteed && <div style={{ fontSize: 12.5, color: V2.grassDark, marginTop: 8, fontWeight: 700 }}>WAGO Meter bonus: guaranteed Rare or better!</div>}
+        {spin.badge_unlocked && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "center", margin: "14px auto 2px", padding: "10px 14px", maxWidth: 320, borderRadius: 16, background: "#f4f9ee", border: `1px solid ${V2.borderSoft}`, textAlign: "left" }}>
+            <SpinnerMedal tier={spin.badge_unlocked.tier} size={56} />
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", color: V2.grassDark }}>NEW BADGE</div>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>{spin.badge_unlocked.label}</div>
+              <div style={{ fontSize: 12, color: V2.midGray }}>{spin.badge_unlocked.title} · {spin.badge_unlocked.count} {spin.badge_unlocked.count === 1 ? "spin" : "spins"}</div>
+            </div>
+          </div>
+        )}
         <p style={{ fontSize: 13.5, color: V2.textBody, margin: "12px 0 16px", lineHeight: 1.5 }}>{fulfillmentText(spin)}</p>
         <button style={PRIMARY} onClick={onSpinAgain}>Spin Again</button>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8, marginTop: 8 }}>
@@ -125,10 +137,11 @@ export function ResultReveal({ spin, onSpinAgain, onWins, onClose }) {
 export function WinsSheet({ onClose, signedIn }) {
   const [tab, setTab] = useState("all");
   const [rows, setRows] = useState(null);
+  const [total, setTotal] = useState(0);
   const [err, setErr] = useState("");
   useEffect(() => {
     if (!signedIn) { setRows([]); return; }
-    fetch("/api/wheel/history").then(async r => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Couldn't load your wins."); setRows(d.spins); })
+    fetch("/api/wheel/history").then(async r => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Couldn't load your wins."); setRows(d.spins); setTotal(d.total_spins || 0); })
       .catch(e => { setErr(e.message); setRows([]); });
   }, [signedIn]);
   const shown = (rows || []).filter(s => tab === "all" || typeMeta(s.prize.reward_type).group === tab);
@@ -138,6 +151,19 @@ export function WinsSheet({ onClose, signedIn }) {
       <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 12 }}>
         {tabs.map(([k, l]) => <button key={k} onClick={() => setTab(k)} style={{ border: `1.5px solid ${tab === k ? V2.grassGreen : V2.borderSoft}`, background: tab === k ? V2.grassGreen : "#fff", color: tab === k ? "#fff" : V2.forestGreen, borderRadius: 999, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{l}</button>)}
       </div>
+      {signedIn && rows && (() => {
+        const b = spinBadge(total);
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", marginBottom: 12, borderRadius: 14, background: "#f4f9ee", border: `1px solid ${V2.borderSoft}` }}>
+            <SpinnerMedal tier={b.tier} size={60} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>{b.label}{b.tier > 0 ? ` · ${b.title}` : ""}</div>
+              <div style={{ height: 6, borderRadius: 99, background: "rgba(13,42,5,0.1)", margin: "6px 0 4px", overflow: "hidden" }}><div style={{ width: `${b.pct}%`, height: "100%", background: V2.grassGreen, borderRadius: 99 }} /></div>
+              <div style={{ fontSize: 11.5, color: V2.midGray }}>{b.next ? `${b.count} / ${b.next} spins to the next tier` : `${b.count} spins · top tier`}</div>
+            </div>
+          </div>
+        );
+      })()}
       {rows === null && <div style={{ color: V2.midGray, fontSize: 13 }}>Loading…</div>}
       {err && <div style={{ color: V2.danger, fontSize: 13 }}>{err}</div>}
       {!signedIn && <div style={{ color: V2.midGray, fontSize: 13 }}>Sign in with Google to see your wins.</div>}
