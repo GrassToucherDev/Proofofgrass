@@ -87,8 +87,8 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
 
         <div style={{ position: "relative" }}>
           <WheelBoard prizes={prizes} target={spin?.segment} spinKey={spinKey} size={270} onDone={() => setSheet("reveal")} />
-          <div style={{ position: "absolute", left: -6, bottom: -14, pointerEvents: "none" }}>
-            <Wago pose={spinKey ? "cheer" : "wave"} size={118} float />
+          <div style={{ position: "absolute", left: -14, bottom: -44, pointerEvents: "none" }}>
+            <Wago pose={spinKey ? "cheer" : "wave"} size={92} float />
           </div>
         </div>
       </div>
