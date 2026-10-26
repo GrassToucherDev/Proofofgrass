@@ -21,10 +21,22 @@ export async function currentTokenPriceUsd() {
   const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${MINT}`, { headers: { Accept: "application/json" } });
   if (!r.ok) throw new Error("price_unavailable");
   const d = await r.json();
-  const p = parseFloat(d?.pairs?.[0]?.priceUsd ?? "0");
+  const pairs = (d?.pairs || []).filter(x => x?.chainId === "solana" && x?.baseToken?.address === MINT && parseFloat(x?.priceUsd) > 0);
+  pairs.sort((a, b) => Number(b?.liquidity?.usd || 0) - Number(a?.liquidity?.usd || 0));   // trust the deepest pool, not whichever is listed first
+  const p = parseFloat(pairs[0]?.priceUsd ?? "0");
   if (!(p > 0)) throw new Error("price_unavailable");
   return p;
 }
+// The payment must carry a Memo naming THIS checkout ("tg:<checkout id>"). Without it, anyone could apply a stranger's
+// public burn transaction to their own checkout. Throws PaymentError when missing.
+export function requireCheckoutMemo(tx, checkoutId) {
+  const want = `tg:${String(checkoutId || "").toLowerCase()}`;
+  const ixs = tx?.transaction?.message?.instructions || [];
+  const ok = ixs.some(ix => (ix.program === "spl-memo" || ix.programId === "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr")
+    && String(typeof ix.parsed === "string" ? ix.parsed : "").trim().toLowerCase() === want);
+  if (!ok) throw new PaymentError(400, "This payment isn't tied to this checkout, so it can't be applied. If you paid from an older page, contact support with your transaction signature.", "no_memo");
+}
+
 export function mintDelta(tx, owner) {
   const sum = (list) => (list || []).filter(b => b.mint === MINT && b.owner === owner)
     .reduce((acc, b) => acc + Number(b.uiTokenAmount?.amount || 0) / Math.pow(10, b.uiTokenAmount?.decimals ?? 6), 0);
@@ -34,13 +46,14 @@ export function mintDelta(tx, owner) {
 // Throws PaymentError. Returns { amount } = $TOUCHGRASS that reached the burn wallet.
 // `notBeforeMs`: the payment must have been made after the checkout was opened, so an old
 // transaction can't be pasted in to claim a banner.
-export async function verifyBannerPayment({ signature, walletAddress, usdPrice, notBeforeMs }, deps = {}) {
+export async function verifyBannerPayment({ signature, walletAddress, usdPrice, notBeforeMs, checkoutId }, deps = {}) {
   const rpc = deps.rpcCall || rpcCall, priceFn = deps.price || currentTokenPriceUsd, nowMs = deps.now ? deps.now() : Date.now();
   const tx = await rpc("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0, commitment: "confirmed" }]);
   if (!tx) throw new PaymentError(400, "Transaction not found. It may still be confirming — try again in a moment.", "pending");
   if (tx.meta?.err) throw new PaymentError(400, "Transaction failed on-chain.", "tx_failed");
   if (!tx.blockTime || nowMs / 1000 - tx.blockTime > MAX_TX_AGE_SEC) throw new PaymentError(400, "This payment is too old to verify. Contact support with your transaction signature.", "too_old");
   if (notBeforeMs && tx.blockTime * 1000 < notBeforeMs - 5000) throw new PaymentError(400, "This payment was made before this checkout was opened.", "too_early");
+  requireCheckoutMemo(tx, checkoutId);
   const signers = (tx.transaction?.message?.accountKeys || []).filter(k => k.signer).map(k => k.pubkey);
   if (!signers.includes(walletAddress)) throw new PaymentError(400, "That wallet did not sign this transaction.", "wrong_wallet");
   const received = mintDelta(tx, BURN);

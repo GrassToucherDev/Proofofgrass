@@ -3,7 +3,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../pages/api/auth/[...nextauth]";
 import { adminClient } from "./requireOwner";
-import { PaymentError, mintDelta, MINT, BURN, currentTokenPriceUsd } from "./solanaPayment";
+import { PaymentError, mintDelta, requireCheckoutMemo, MINT, BURN, currentTokenPriceUsd } from "./solanaPayment";
 
 export { PaymentError, adminClient, currentTokenPriceUsd };
 export const WHEEL_PAY_WALLET = BURN;
@@ -20,13 +20,14 @@ async function rpcCall(method, params) {
 
 // Throws PaymentError. Returns { amount } = $TOUCHGRASS received by the burn wallet in this transaction.
 // minTokens comes from the stored intent, never from the browser.
-export async function verifyWheelPayment({ signature, walletAddress, minTokens, notBeforeMs }, deps = {}) {
+export async function verifyWheelPayment({ signature, walletAddress, minTokens, notBeforeMs, checkoutId }, deps = {}) {
   const rpc = deps.rpcCall || rpcCall, nowMs = deps.now ? deps.now() : Date.now();
   const tx = await rpc("getTransaction", [signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0, commitment: "confirmed" }]);
   if (!tx) throw new PaymentError(400, "Transaction not found. It may still be confirming. Try again in a moment.", "pending");
   if (tx.meta?.err) throw new PaymentError(400, "Transaction failed on-chain.", "tx_failed");
   if (!tx.blockTime || nowMs / 1000 - tx.blockTime > MAX_TX_AGE_SEC) throw new PaymentError(400, "This payment is too old to verify. Contact support with your transaction signature.", "too_old");
   if (notBeforeMs && tx.blockTime * 1000 < notBeforeMs - 5000) throw new PaymentError(400, "This payment was made before this spin was opened.", "too_early");
+  requireCheckoutMemo(tx, checkoutId);
   const signers = (tx.transaction?.message?.accountKeys || []).filter(k => k.signer).map(k => k.pubkey);
   if (!signers.includes(walletAddress)) throw new PaymentError(400, "That wallet did not sign this transaction.", "wrong_wallet");
   const received = mintDelta(tx, BURN), sent = -mintDelta(tx, walletAddress);

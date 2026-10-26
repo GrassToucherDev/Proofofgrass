@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
   const { data: banner } = await db.from("grove_banners").select("id,name").eq("id", intent.banner_id).maybeSingle();
   try {
-    const { amount } = await verifyBannerPayment({ signature, walletAddress, usdPrice: Number(intent.price_usd), notBeforeMs: new Date(intent.created_at).getTime() });
+    const { amount } = await verifyBannerPayment({ signature, walletAddress, usdPrice: Number(intent.price_usd), notBeforeMs: new Date(intent.created_at).getTime(), checkoutId: intent.id });
 
     // Claim the signature in the shared ledger first (unique index = a transaction pays for one thing, once).
     const { error: claimErr } = await db.from("MarketplacePurchases").insert([{

@@ -143,6 +143,7 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
           item={{ id: "wago_wheel", name: "WAGO Wheel spin", intentId: pay.checkoutId.replace(/^w_/, "") }}
           tokens={pay.tokens} price={pay.usd} username={username}
           onClose={() => { setPay(null); try { if (new URLSearchParams(window.location.search).get("checkout")) window.history.replaceState(null, "", "/marketplace"); } catch {} }}
+          memoId={pay.checkoutId.replace(/^w_/, "")}
           verifyUrl="/api/wheel/settle"
           verifyBody={({ signature, walletAddress }) => ({ checkoutId: pay.checkoutId, signature, walletAddress })}
           handoffUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/marketplace?checkout=${pay.checkoutId}`}

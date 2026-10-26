@@ -66,6 +66,7 @@ export default function WalletPurchaseModal({
   // statusUrl is polled so this tab notices when the payment finishes over there.
   handoffUrl,
   statusUrl,
+  memoId,
 }) {
   const { connection }                = useConnection();
   const { publicKey, sendTransaction, connected, connecting } = useWallet();
@@ -227,6 +228,15 @@ export default function WalletPurchaseModal({
         )
       );
 
+      // Memo ties this payment to THIS checkout so nobody else can apply it to theirs.
+      if (memoId) {
+        const { TransactionInstruction, PublicKey: PK } = await import("@solana/web3.js");
+        tx.add(new TransactionInstruction({
+          keys: [], programId: new PK("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+          data: new TextEncoder().encode(`tg:${String(memoId).toLowerCase()}`),
+        }));
+      }
+
       tx.recentBlockhash = blockhash;
       tx.feePayer = publicKey;
 
@@ -252,7 +262,7 @@ export default function WalletPurchaseModal({
     } catch(e) {
       failWith(e);
     }
-  }, [publicKey, connection, sendTransaction, tokens, runVerify, failWith, sigKey]);
+  }, [publicKey, connection, sendTransaction, tokens, runVerify, failWith, sigKey, memoId]);
 
   const stepLabel = STEPS[step];
   const isProcessing = !["idle","error","success"].includes(step);

@@ -1,6 +1,7 @@
 // pages/api/marketplace/verify-purchase.js
 import { MARKET_PRICES_USD, MARKET_ITEM_NAMES } from "../../../utils/marketplaceCatalog";
 import { requireOwner } from "../../../utils/requireOwner";
+import { requireCheckoutMemo, PaymentError } from "../../../utils/solanaPayment";
 const MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const BURN = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const RPC  = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
@@ -36,7 +37,9 @@ async function currentTokenPriceUsd() {
   const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${MINT}`, { headers:{ Accept:"application/json" } });
   if (!r.ok) throw new Error("price_unavailable");
   const d = await r.json();
-  const p = parseFloat(d?.pairs?.[0]?.priceUsd ?? "0");
+  const pairs = (d?.pairs || []).filter(x => x?.chainId === "solana" && x?.baseToken?.address === MINT && parseFloat(x?.priceUsd) > 0);
+  pairs.sort((a, b) => Number(b?.liquidity?.usd || 0) - Number(a?.liquidity?.usd || 0));   // trust the deepest pool, not whichever is listed first
+  const p = parseFloat(pairs[0]?.priceUsd ?? "0");
   if (!(p > 0)) throw new Error("price_unavailable");
   return p;
 }
@@ -91,6 +94,9 @@ export default async function handler(req, res) {
     if (tx.blockTime * 1000 < new Date(checkout.created_at).getTime() - 60 * 1000) {
       return res.status(400).json({ error:"This payment was made before this checkout started, so it can't be applied to it." });
     }
+
+    try { requireCheckoutMemo(tx, checkoutId); }
+    catch (e) { if (e instanceof PaymentError) return res.status(e.status).json({ error: e.message, code: e.code }); throw e; }
 
     // ── 2. Verify who paid, who got paid, and how much ────────────────────
     const signers = (tx.transaction?.message?.accountKeys || [])
