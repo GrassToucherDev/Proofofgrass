@@ -172,10 +172,15 @@ export function WinsSheet({ onClose, signedIn }) {
       <div style={{ display: "grid", gap: 8 }}>
         {shown.map(s => (
           <div key={s.id} style={{ border: `1px solid ${V2.borderSoft}`, borderRadius: 12, padding: 10, display: "flex", gap: 10, alignItems: "center" }}>
-            <div style={{ fontSize: 26, width: 40, textAlign: "center" }}>{typeMeta(s.prize.reward_type).emoji}</div>
+            <div style={{ fontSize: 26, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {prizeArt(s.prize)
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={prizeArt(s.prize)} alt="" style={{ width: 44, height: 44, objectFit: "contain", opacity: s.prize.reward_type === "nothing" ? 0.8 : 1 }} />
+                : typeMeta(s.prize.reward_type).emoji}
+            </div>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, wordBreak: "break-word" }}>{s.prize.name} <RarityChip r={s.rarity} /></div>
-              <div style={{ fontSize: 12, color: V2.midGray }}>{new Date(s.created_at).toLocaleDateString()} · {statusLabel(s.fulfillment_status)}
+              <div style={{ fontWeight: 700, fontSize: 14, wordBreak: "break-word" }}>{s.prize.name} {s.prize.reward_type !== "nothing" && <RarityChip r={s.rarity} />}</div>
+              <div style={{ fontSize: 12, color: V2.midGray }}>{new Date(s.created_at).toLocaleDateString()}{s.prize.reward_type !== "nothing" && <> · {statusLabel(s.fulfillment_status)}</>}
                 {s.fulfillment_tx && /^[1-9A-HJ-NP-Za-km-z]{60,100}$/.test(s.fulfillment_tx) && <> · <a href={`https://solscan.io/tx/${s.fulfillment_tx}`} target="_blank" rel="noopener noreferrer" style={{ color: V2.grassDark }}>View transaction</a></>}
               </div>
             </div>
