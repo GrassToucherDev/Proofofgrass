@@ -52,12 +52,12 @@ export default function WheelBoard({ prizes, target, spinKey, onDone, size = 300
             const p = list[0]; const [ix, iy] = polar(150, 150, 88, mid);
             const empty = !list.length;
             return (
-              <g key={i} opacity={empty ? 0.45 : 1}>
-                <path d={wedge(150, 150, 128, a0, a1)} fill={PALETTE[i % PALETTE.length]} stroke="#fff8e8" strokeWidth="2" />
+              <g key={i}>
+                <path d={wedge(150, 150, 128, a0, a1)} fill={PALETTE[i % PALETTE.length]} stroke="#fff8e8" strokeWidth="2" opacity={empty ? 0.55 : 1} />
                 <g transform={`rotate(${mid} ${ix} ${iy})`}>
                   {(() => { const art = empty ? FILLER_ART : prizeArt(p);
                     return art
-                      ? <image href={art} x={ix - 22} y={iy - 22} width="44" height="44" preserveAspectRatio="xMidYMid meet" />
+                      ? <image href={art} x={ix - (empty ? 17 : 26)} y={iy - (empty ? 17 : 26)} width={empty ? 34 : 52} height={empty ? 34 : 52} opacity={empty ? 0.8 : 1} preserveAspectRatio="xMidYMid meet" />
                       : <text x={ix} y={iy + 8} textAnchor="middle" fontSize="26">{typeMeta(p.reward_type).emoji}</text>; })()}
                 </g>
               </g>
