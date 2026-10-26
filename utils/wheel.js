@@ -55,7 +55,7 @@ export async function sessionIdentity(req, res) {
 }
 
 export const WHEEL_AUTO_TYPES = ["cosmetic_pack", "shield", "sunset_pass", "grass_tickets"];
-export const WHEEL_REWARD_TYPES = ["cosmetic_pack", "shield", "sunset_pass", "grass_tickets", "spl_token", "touchgrass", "sol", "nft", "badge", "collectible", "partner_asset", "manual"];
+export const WHEEL_REWARD_TYPES = ["cosmetic_pack", "shield", "sunset_pass", "grass_tickets", "spl_token", "touchgrass", "sol", "nft", "badge", "collectible", "partner_asset", "manual", "nothing"];
 export const WHEEL_RARITIES = ["common", "uncommon", "rare", "epic", "legendary"];
 
 export function publicWheel(w) {

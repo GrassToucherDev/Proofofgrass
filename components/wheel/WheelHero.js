@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { V2 } from "../../utils/v2Theme";
 import Wago from "../wago-drops/Wago";
 import WheelBoard from "./WheelBoard";
+import RecentWinners from "./RecentWinners";
 import { SpinSheet, PrizesSheet, ResultReveal, WinsSheet } from "./WheelSheets";
 import { compact, fmt, rarityOf } from "./wheelBits";
 
@@ -104,6 +105,8 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
             </div>
           ))}
         </div>
+
+        <RecentWinners />
 
         <button onClick={openConfirm} disabled={!canSpin} style={{ marginTop: 14, width: "100%", border: "none", borderRadius: 999, padding: "16px 18px", fontFamily: V2.fontSans, fontWeight: 800, fontSize: 17,
           color: "#fff", background: canSpin ? V2.gradientGrassBtn : "rgba(13,42,5,0.3)", boxShadow: canSpin ? V2.shadowGlow : "none", cursor: canSpin ? "pointer" : "default" }}>

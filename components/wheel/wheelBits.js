@@ -19,6 +19,7 @@ export const TYPE_META = {
   collectible:   { emoji: "🧸", label: "Collectible",   group: "collectibles" },
   partner_asset: { emoji: "🤝", label: "Partner reward", group: "collectibles" },
   manual:        { emoji: "🎁", label: "Reward",        group: "utilities" },
+  nothing:       { emoji: "🌱", label: "No prize",      group: "utilities" },
 };
 export const typeMeta = (t) => TYPE_META[t] || TYPE_META.manual;
 export const rarityOf = (r) => RARITY[r] || RARITY.common;
@@ -36,7 +37,7 @@ export const fmt = (n) => Number(n || 0).toLocaleString(undefined, { maximumFrac
 export function fulfillmentText(spin) {
   const t = spin?.prize?.reward_type;
   switch (spin?.fulfillment_status) {
-    case "completed": return t === "grass_tickets" ? "Your Grass Tickets are in this cycle's draw." : "Added to your account.";
+    case "completed": return t === "nothing" ? "No prize this time. Spin again!" :  t === "grass_tickets" ? "Your Grass Tickets are in this cycle's draw." : "Added to your account.";
     case "manual_required": return "We'll send this to your wallet. You can follow it in My Wins.";
     case "pending": case "processing": return "Being added to your account…";
     case "failed": return "Your prize is saved and we'll retry delivery. It can't be lost or re-drawn.";
@@ -49,6 +50,7 @@ export const statusLabel = (s) => ({ completed: "Delivered", manual_required: "B
 export const FILLER_ART = "/wheel/filler.png";
 export function prizeArt(p) {
   if (!p) return null;
+  if (p.reward_type === "nothing") return FILLER_ART;
   if (p.image_url) return p.image_url;
   const t = p.reward_type, n = String(p.name || "").toLowerCase();
   if (t === "shield") return "/wheel/shield.png";
