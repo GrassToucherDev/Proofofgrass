@@ -2,16 +2,17 @@
 import { useState } from "react";
 import { TIER_COLORS, ROMAN } from "../../utils/badges/registry";
 
-export default function BadgeMedal({ id, tier = 0, emoji = "⭐", name = "", size = 72, numeral = true }) {
+export default function BadgeMedal({ id, tier = 0, emoji = "⭐", name = "", size = 72, numeral = false }) {
   const [failed, setFailed] = useState(false);
   const locked = tier === 0;
-  const lockStyle = { opacity: locked ? 0.4 : 1, filter: locked ? "grayscale(1)" : "none" };
-  const showArt = !failed && tier > 0;
+  const lockStyle = { opacity: locked ? 0.35 : 1, filter: locked ? "grayscale(1)" : "none" };
+  const showArt = !failed;
+  const artTier = tier > 0 ? tier : 1;
   if (showArt) {
     return (
       <div style={{ position: "relative", width: size, height: size, ...lockStyle }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/badges/${id}-${tier}.png`} alt={name} width={size} height={size} onError={() => setFailed(true)} style={{ display: "block", width: size, height: size, objectFit: "contain" }} />
+        <img src={`/badges/${id}-${artTier}.png`} alt={name} width={size} height={size} onError={() => setFailed(true)} style={{ display: "block", width: size, height: size, objectFit: "contain" }} />
         {numeral && <span style={numStyle(size)}>{ROMAN[tier]}</span>}
       </div>
     );
