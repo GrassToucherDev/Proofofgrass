@@ -91,6 +91,8 @@ export default function AdminWheel() {
                   <td>{p.inventory_total == null ? "∞" : `${p.inventory_remaining}/${p.inventory_total}`}</td><td>{p.segment}</td>
                   <td style={{ whiteSpace: "nowrap" }}>
                     <button style={btn} onClick={() => patchPrize(p.id, { active: !p.active })}>{p.active ? "Deactivate" : "Activate"}</button>{" "}
+                    <button style={btn} onClick={() => { const v = prompt("Wheel segment number (0, 1, 2…). Give each prize its own.", p.segment); if (v !== null && v !== "") patchPrize(p.id, { segment: v }); }}>Seg</button>{" "}
+                    <button style={btn} onClick={() => { const v = prompt("Image URL (blank = use the default art for this type)", p.image_url || ""); if (v !== null) patchPrize(p.id, { image_url: v }); }}>Image</button>{" "}
                     {p.inventory_total != null && <button style={btn} onClick={() => { const n = prompt("Add how many to stock?"); if (n) patchPrize(p.id, { add_stock: n }); }}>+stock</button>}
                   </td>
                 </tr>))}</tbody>

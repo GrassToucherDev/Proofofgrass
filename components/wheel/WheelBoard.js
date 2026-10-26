@@ -1,6 +1,6 @@
 // The wheel itself: drawn in SVG from the live prize pool, animated to a result the SERVER already decided.
 import { useEffect, useRef, useState } from "react";
-import { typeMeta } from "./wheelBits";
+import { typeMeta, prizeArt, FILLER_ART } from "./wheelBits";
 
 const PALETTE = ["#d6ecb9", "#f8e6b4", "#c3e3f4", "#dccdf1", "#bfe6cb", "#f5d4c4", "#cddcf6", "#e9f0b8", "#c9eadf", "#f3dcb8", "#d3d9f4", "#e5efc6"];
 
@@ -55,9 +55,10 @@ export default function WheelBoard({ prizes, target, spinKey, onDone, size = 300
               <g key={i} opacity={empty ? 0.45 : 1}>
                 <path d={wedge(150, 150, 128, a0, a1)} fill={PALETTE[i % PALETTE.length]} stroke="#fff8e8" strokeWidth="2" />
                 <g transform={`rotate(${mid} ${ix} ${iy})`}>
-                  {p?.image_url
-                    ? <image href={p.image_url} x={ix - 18} y={iy - 18} width="36" height="36" preserveAspectRatio="xMidYMid meet" />
-                    : <text x={ix} y={iy + 8} textAnchor="middle" fontSize="26">{empty ? "🌱" : typeMeta(p.reward_type).emoji}</text>}
+                  {(() => { const art = empty ? FILLER_ART : prizeArt(p);
+                    return art
+                      ? <image href={art} x={ix - 22} y={iy - 22} width="44" height="44" preserveAspectRatio="xMidYMid meet" />
+                      : <text x={ix} y={iy + 8} textAnchor="middle" fontSize="26">{typeMeta(p.reward_type).emoji}</text>; })()}
                 </g>
               </g>
             );
