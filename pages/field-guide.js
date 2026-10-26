@@ -221,7 +221,7 @@ function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
       const classifyRes = await fetch("/api/field-guide/classify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64, mimeType: mime, collectionSlug: collection.id, existingLabels }),
+        body: JSON.stringify({ imageBase64: base64, mimeType: mime, collectionSlug: collection.id, existingLabels, username }),
       });
       const result = await classifyRes.json().catch(() => ({}));
 
@@ -248,21 +248,16 @@ function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
       const { data:urlData } = supabase.storage.from("field-guide-photos").getPublicUrl(path);
 
       // 4. Save entry (a unique index on user/collection/slot makes a double-submit fail cleanly)
-      const { data:inserted, error:insertErr } = await supabase
-        .from("FieldGuideEntries")
-        .insert([{
-          username,
-          collection_slug: collection.id,
-          slot_number: slotNum,
-          photo_url: urlData?.publicUrl,
-          storage_path: path,
-          label: result.label || "outdoor nature photo",
-          ai_label: result.label || "outdoor nature photo",
-          ai_confidence: result.confidence || null,
-          status: "approved",
-          submitted_at: new Date().toISOString(),
-        }])
-        .select("id").single();
+      const entryRes = await fetch("/api/field-guide/entry", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username, collection_slug: collection.id, slot_number: slotNum, photo_url: urlData?.publicUrl, storage_path: path,
+          label: result.label || "outdoor nature photo", ai_confidence: result.confidence || null, exp: result.exp, proof: result.proof,
+        }),
+      });
+      const entryJson = await entryRes.json().catch(() => ({}));
+      const inserted = entryRes.ok ? { id: entryJson.id } : null;
+      const insertErr = entryRes.ok ? null : { code: entryJson.code || (entryRes.status === 409 ? "23505" : "x") };
 
       if (insertErr) {
         supabase.storage.from("field-guide-photos").remove([path]).catch(() => {});   // don't leave orphans

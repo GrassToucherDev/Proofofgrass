@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabase";
+import { adminDb } from "../../utils/adminDb";
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
@@ -76,7 +77,7 @@ export default function AdminFight() {
       const pointsToGrant = getPoints(sub.punch_count);
 
       // 1. Mark submission approved
-      const { error: updateErr } = await supabase
+      const { error: updateErr } = await adminDb
         .from("FightClubSubmissions").update({
           status:         "approved",
           points_granted: pointsToGrant,
@@ -91,7 +92,7 @@ export default function AdminFight() {
       const newPunches = (existing?.total_punches || 0) + sub.punch_count;
       const newPoints  = (existing?.total_points  || 0) + pointsToGrant;
       const newTier    = getTier(newPunches);
-      await supabase.from("FightClubStats").upsert({
+      await adminDb.from("FightClubStats").upsert({
         username:      sub.username,
         total_punches: newPunches,
         total_points:  newPoints,
@@ -103,7 +104,7 @@ export default function AdminFight() {
       const { data: prof } = await supabase
         .from("Profiles").select("grass_score")
         .eq("username", sub.username).maybeSingle();
-      await supabase.from("Profiles").update({
+      await adminDb.from("Profiles").update({
         grass_score:      (prof?.grass_score || 0) + pointsToGrant,
         punch_badge:      newTier?.slug  || null,
         punch_badge_tier: newTier?.label || null,
@@ -112,7 +113,7 @@ export default function AdminFight() {
 
       // 4. Log ScoreEvents (non-fatal)
       try {
-        await supabase.from("ScoreEvents").insert({
+        await adminDb.from("ScoreEvents").insert({
           username:   sub.username,
           event_type: "fight_club_punches",
           points:     pointsToGrant,
@@ -136,7 +137,7 @@ export default function AdminFight() {
     setProcessing(sub.id);
     setPending(prev => prev.filter(p => p.id !== sub.id));
     try {
-      const { error: rejErr } = await supabase
+      const { error: rejErr } = await adminDb
         .from("FightClubSubmissions").update({
           status:      "rejected",
           reviewed_at: new Date().toISOString(),

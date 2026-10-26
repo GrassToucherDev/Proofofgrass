@@ -1,4 +1,5 @@
 // pages/api/field-guide/classify.js
+import { signApproval } from "../../../utils/fieldGuideProof";
 // Vercel caps request bodies at ~4.5 MB regardless of this; the client shrinks photos before sending.
 export const config = { api: { bodyParser: { sizeLimit: "6mb" } } };
 
@@ -54,6 +55,14 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const { imageBase64, mimeType, collectionSlug } = req.body || {};
+  const proofUser = String(req.body?.username ?? "").replace(/@/g, "").toLowerCase().trim();
+  // An approved result carries a short-lived signature that /api/field-guide/entry requires before saving.
+  const withProof = (r) => {
+    if (!r?.approved || !proofUser) return r;
+    const label = String(r.label || "outdoor nature photo").slice(0, 120);
+    const confidence = r.confidence == null ? "" : String(r.confidence);
+    return { ...r, label, ...signApproval({ username: proofUser, collectionSlug, label, confidence }) };
+  };
   const existingLabels = Array.isArray(req.body?.existingLabels)
     ? req.body.existingLabels.slice(0, 30).map(l => String(l).slice(0, 80)) : [];
 
@@ -142,12 +151,12 @@ Respond ONLY with valid JSON in this exact format:
       const err = await response.text();
       console.error("[classify] Anthropic error:", err);
       // On API error — auto approve so users aren't blocked
-      return res.status(200).json({
+      return res.status(200).json(withProof({
         approved: true,
         label: "outdoor nature photo",
         confidence: "medium",
         reason: "Auto-approved — verification service temporarily unavailable.",
-      });
+      }));
     }
 
     const data = await response.json();
@@ -172,16 +181,16 @@ Respond ONLY with valid JSON in this exact format:
     }
     result.approved = result.approved === true;
 
-    return res.status(200).json(result);
+    return res.status(200).json(withProof(result));
 
   } catch(e) {
     console.error("[classify] error:", e);
     // On unexpected error — auto approve
-    return res.status(200).json({
+    return res.status(200).json(withProof({
       approved: true,
       label: "outdoor nature photo",
       confidence: "medium",
       reason: "Auto-approved — verification service temporarily unavailable.",
-    });
+    }));
   }
 }

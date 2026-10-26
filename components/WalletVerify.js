@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "../utils/supabase";
+import { buildProfileWalletMessage } from "../utils/profileWallet";
 
-const SIGN_MESSAGE = "Verify wallet ownership for Proof of Grass";
 
 function getPhantom() {
   if (typeof window === "undefined") return null;
@@ -63,37 +62,24 @@ export default function WalletVerify({ username, currentWallet, currentVerified,
       const publicKey = resp.publicKey.toString();
 
       setStep("signing");
-      const encoded = new TextEncoder().encode(SIGN_MESSAGE);
-      const signed  = await phantom.signMessage(encoded, "utf8");
+      const issuedAt = new Date().toISOString();
+      const message  = buildProfileWalletMessage({ username: String(username).toLowerCase(), wallet: publicKey, issuedAt });
+      const signed   = await phantom.signMessage(new TextEncoder().encode(message), "utf8");
       if (!signed?.signature) throw new Error("Signature cancelled.");
+      let bin = ""; for (const byte of signed.signature) bin += String.fromCharCode(byte);
 
       setStep("saving");
-
-      // Check not already linked to another user
-      const { data: existing } = await supabase
-        .from("Profiles")
-        .select("username")
-        .eq("wallet_address", publicKey)
-        .maybeSingle();
-
-      if (existing && existing.username !== username) {
-        setError(`Wallet already linked to @${existing.username}.`);
+      const r = await fetch("/api/profile/wallet", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, wallet: publicKey, signature: btoa(bin), issuedAt }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setError(j.code === "unclaimed" ? "Secure your username with Google first (Profile → Secure username), then verify your wallet."
+          : j.code === "not_signed_in" ? "Sign in with Google to verify your wallet." : (j.error || "Could not verify the wallet."));
         setStep("error");
         return;
       }
-
-      const { error: saveErr } = await supabase
-        .from("Profiles")
-        .upsert({
-          username,
-          wallet_address:         publicKey,
-          wallet_verified:        true,
-          wallet_verified_at:     new Date().toISOString(),
-          holder_tier:            "none",
-          wallet_last_checked_at: new Date().toISOString(),
-        }, { onConflict: "username" });
-
-      if (saveErr) throw new Error(saveErr.message);
 
       setWalletAddr(publicKey);
       setVerified(true);
@@ -111,12 +97,7 @@ export default function WalletVerify({ username, currentWallet, currentVerified,
   }, [username, onVerified]);
 
   const handleDisconnect = useCallback(async () => {
-    await supabase.from("Profiles").update({
-      wallet_address:     null,
-      wallet_verified:    false,
-      wallet_verified_at: null,
-      holder_tier:        "none",
-    }).eq("username", username);
+    await fetch("/api/profile/wallet", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username }) });
     setWalletAddr("");
     setVerified(false);
     setStep("idle");

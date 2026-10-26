@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../utils/supabase";
+import { adminDb } from "../../utils/adminDb";
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 const T = {
@@ -45,10 +46,10 @@ export default function AdminMarketplace() {
 
   const approve = async (row) => {
     // 1. Update purchase status
-    await supabase.from("MarketplacePurchases").update({ status:"approved" }).eq("id",row.id);
+    await adminDb.from("MarketplacePurchases").update({ status:"approved" }).eq("id",row.id);
 
     // 2. Add to UserInventory
-    await supabase.from("UserInventory").upsert([{
+    await adminDb.from("UserInventory").upsert([{
       username: row.username,
       item_id:  row.item_id,
       owned:    true,
@@ -69,7 +70,7 @@ export default function AdminMarketplace() {
       const existing = prof?.unlocked_covers ?? [];
       const merged   = [...new Set([...existing, ...coverSlugs])];
 
-      await supabase
+      await adminDb
         .from("Profiles")
         .update({ unlocked_covers: merged })
         .ilike("username", row.username);
@@ -81,7 +82,7 @@ export default function AdminMarketplace() {
   };
 
   const reject = async (row) => {
-    await supabase.from("MarketplacePurchases").update({ status:"rejected" }).eq("id",row.id);
+    await adminDb.from("MarketplacePurchases").update({ status:"rejected" }).eq("id",row.id);
     setMsg(`Rejected ${row.username} — ${row.item_name}`);
     setTimeout(() => setMsg(""), 3000);
     loadData();

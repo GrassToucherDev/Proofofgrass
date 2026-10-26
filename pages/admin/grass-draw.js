@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { adminFetch } from "../../utils/adminClient";
 import Link from "next/link";
 import { supabase } from "../../utils/supabase";
+import { adminDb } from "../../utils/adminDb";
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
@@ -144,7 +145,7 @@ function CycleTab({ cycle, cycles, rewards, flash, reload }) {
   const createCycle = async () => {
     if (!newName||!newStart||!newEnd) return flash("All fields required.","err");
     setSaving(true);
-    const { error } = await supabase.from("grass_draw_cycles").insert([{
+    const { error } = await adminDb.from("grass_draw_cycles").insert([{
       name:newName, starts_at:new Date(newStart).toISOString(),
       ends_at:new Date(newEnd+"T23:59:59Z").toISOString(), status:"upcoming",
     }]);
@@ -154,12 +155,12 @@ function CycleTab({ cycle, cycles, rewards, flash, reload }) {
   };
 
   const updateStatus = async (id, status) => {
-    await supabase.from("grass_draw_cycles").update({status}).eq("id",id);
+    await adminDb.from("grass_draw_cycles").update({status}).eq("id",id);
     flash(`✓ Cycle marked ${status}`); reload();
   };
 
   const updateReward = async (id, field, value) => {
-    await supabase.from("grass_draw_rewards").update({[field]:parseInt(value)||0}).eq("id",id);
+    await adminDb.from("grass_draw_rewards").update({[field]:parseInt(value)||0}).eq("id",id);
     flash("✓ Reward updated"); reload();
   };
 
@@ -382,7 +383,7 @@ function ModerationTab({ cycle, flash, reload }) {
   const disqualify = async () => {
     if(!uname||!reason) return flash("Username and reason required.","err");
     setSaving(true);
-    const {error} = await supabase.from("grass_draw_disqualifications").insert([{
+    const {error} = await adminDb.from("grass_draw_disqualifications").insert([{
       username:uname.toLowerCase(), cycle_id:permanent?null:(cycle?.id||null),
       permanent, reason, notes, admin_username:"admin",
     }]);
@@ -390,7 +391,7 @@ function ModerationTab({ cycle, flash, reload }) {
     else {
       // Zero out their totals if cycle disq
       if(cycle&&!permanent) {
-        await supabase.from("grass_draw_user_totals")
+        await adminDb.from("grass_draw_user_totals")
           .update({disqualified:true,eligible:false,total_active_entries:0,
             active_bonus_entries:0,pending_bonus_entries:0})
           .eq("cycle_id",cycle.id).ilike("username",uname);
@@ -405,14 +406,14 @@ function ModerationTab({ cycle, flash, reload }) {
   };
 
   const reverse = async (id,username) => {
-    await supabase.from("grass_draw_disqualifications")
+    await adminDb.from("grass_draw_disqualifications")
       .update({reversed:true,reversed_at:new Date().toISOString(),reversed_by:"admin"}).eq("id",id);
     flash(`✓ Disqualification reversed for @${username}`);
     const {data} = await supabase.from("grass_draw_disqualifications")
       .select("*").eq("reversed",false).order("created_at",{ascending:false}).limit(50);
     setDisqs(data||[]);
     if(cycle) {
-      await supabase.rpc("recalculate_draw_totals",{p_cycle_id:cycle.id,p_username:username});
+      await adminDb.rpc("recalculate_draw_totals",{p_cycle_id:cycle.id,p_username:username});
     }
   };
 
@@ -585,7 +586,7 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
   };
 
   const markDelivered = async (id) => {
-    await supabase.from("grass_draw_winners")
+    await adminDb.from("grass_draw_winners")
       .update({delivered:true,delivered_at:new Date().toISOString()}).eq("id",id);
     flash("✓ Marked as delivered");
     const {data} = await supabase.from("grass_draw_winners")
@@ -595,7 +596,7 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
 
   const voidWinner = async (id,username) => {
     if(!confirm(`Void reward for @${username}?`)) return;
-    await supabase.from("grass_draw_winners")
+    await adminDb.from("grass_draw_winners")
       .update({voided:true,void_reason:"Admin voided"}).eq("id",id);
     flash(`✓ Voided reward for @${username}`);
     const {data} = await supabase.from("grass_draw_winners")

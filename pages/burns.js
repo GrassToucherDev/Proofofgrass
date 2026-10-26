@@ -94,29 +94,12 @@ function PurchaseModal({ item, username, isPremium, onClose }) {
     if (!txInput.trim()) { setErrMsg("Paste your transaction signature."); return; }
     setStatus("loading"); setErrMsg("");
     try {
-      let err;
-      if (isPremium) {
-        // Check not already pending/approved
-        const { data: existing } = await supabase
-          .from("PremiumPurchaseRequests")
-          .select("id,status").eq("username", username)
-          .eq("premium_type", item.type).maybeSingle();
-        if (existing?.status === "approved") {
-          setErrMsg("You already own this upgrade."); setStatus(null); return;
-        }
-        if (existing?.status === "pending") {
-          setErrMsg("You already have a pending request for this upgrade."); setStatus(null); return;
-        }
-        ({ error: err } = await supabase.from("PremiumPurchaseRequests").insert({
-          username, premium_type: item.type,
-          tx_signature: txInput.trim(), token_amount: item.cost, status: "pending",
-        }));
-      } else {
-        ({ error: err } = await supabase.from("ShieldPurchases").insert({
-          username, consumable_type: item.type,
-          tx_signature: txInput.trim(), token_amount: item.cost, status: "pending",
-        }));
-      }
+      const rr = await fetch("/api/burns/request", {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ username, kind: isPremium ? "premium" : "consumable", type: item.type, tx_signature: txInput.trim(), token_amount: item.cost }),
+      });
+      const rj = await rr.json().catch(() => ({}));
+      const err = rr.ok ? null : new Error(rj.error || "Submission failed.");
       if (err) throw err;
       setStatus("success");
     } catch(e) {

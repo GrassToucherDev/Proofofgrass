@@ -142,19 +142,6 @@ const REFERRAL_BADGES = [
   { count:100, slug:"touchgrass-ambassador",  name:"Touch Grass Ambassador",emoji:"👑" },
 ];
 
-async function checkAndAwardReferralBadge(referrerUsername) {
-  if (!referrerUsername) return;
-  try {
-    const { data:prof } = await supabase.from("Profiles")
-      .select("referral_count_successful,referral_badge").eq("username",referrerUsername).maybeSingle();
-    if (!prof) return;
-    const count = (prof.referral_count_successful||0)+1;
-    const earned = [...REFERRAL_BADGES].reverse().find(b=>count>=b.count);
-    if (!earned||prof.referral_badge===earned.slug) return;
-    await supabase.from("Profiles").update({referral_badge:earned.slug}).eq("username",referrerUsername);
-  } catch(e) { console.warn("[referral badge]",e?.message); }
-}
-
 // ── canvas helpers ────────────────────────────────────────────────────────────
 function roundRect(ctx,x,y,w,h,r){
   ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
@@ -375,31 +362,14 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       try{
         const referrer=typeof localStorage!=="undefined"?localStorage.getItem("pog_referrer"):null;
         if(referrer&&referrer!==effectiveUsername){
-          const{data:existing}=await supabase.from("Referrals").select("id").eq("referred_username",effectiveUsername).maybeSingle();
-          if(!existing){
-            const{data:refExists}=await supabase.from("Streaks").select("username").eq("username",referrer).maybeSingle();
-            if(refExists){
-              await supabase.from("Referrals").insert([{referrer_username:referrer,referred_username:effectiveUsername,status:"pending",source_url:typeof window!=="undefined"?window.location.href:null}]);
-              const{data:rp}=await supabase.from("Profiles").select("referral_count_pending").eq("username",referrer).maybeSingle();
-              await supabase.from("Profiles").update({referral_count_pending:(rp?.referral_count_pending??0)+1}).eq("username",referrer);
-            }
-          }
+          fetch("/api/referral",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"register",referrer,referred:effectiveUsername,source_url:typeof window!=="undefined"?window.location.href:null})}).catch(()=>{});
         }
       }catch(refErr){console.warn("[referral] insert non-fatal:",refErr?.message);}
       // Referral conversion
       try{
         if(newStreak>=10){
-          const{data:pendingRef}=await supabase.from("Referrals").select("id,referrer_username").eq("referred_username",username).eq("status","pending").maybeSingle();
-          if(pendingRef){
-            const{count:proofCount}=await supabase.from("Submissions").select("id",{count:"exact",head:true}).eq("username",username).in("status",["pending","approved"]);
-            if(proofCount>=7){
-              await supabase.from("Referrals").update({status:"converted",converted_at:new Date().toISOString(),referred_reached_day_10:true}).eq("id",pendingRef.id);
-              const{data:rProf}=await supabase.from("Profiles").select("referral_count_successful,referral_count_pending").eq("username",pendingRef.referrer_username).maybeSingle();
-              await supabase.from("Profiles").update({referral_count_successful:(rProf?.referral_count_successful??0)+1,referral_count_pending:Math.max(0,(rProf?.referral_count_pending??1)-1)}).eq("username",pendingRef.referrer_username);
-              await checkAndAwardReferralBadge(pendingRef.referrer_username);
-              if(typeof localStorage!=="undefined") localStorage.removeItem("pog_referrer");
-            }
-          }
+          const cr=await fetch("/api/referral",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"convert",referred:username})}).then(r=>r.json()).catch(()=>null);
+          if(cr?.converted&&typeof localStorage!=="undefined") localStorage.removeItem("pog_referrer");
         }
       }catch(convErr){console.warn("[referral] conversion non-fatal:",convErr?.message);}
       // Challenge progress is no longer written from the browser: results are counted server-side from real proofs (see yard_settle_challenge).

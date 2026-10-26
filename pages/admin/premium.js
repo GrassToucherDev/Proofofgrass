@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../utils/supabase";
+import { adminDb } from "../../utils/adminDb";
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
@@ -69,7 +70,7 @@ export default function AdminPremium() {
     setPending(prev => prev.filter(p => p.id !== req.id));
     try {
       // 1. Mark request approved
-      const { error: updErr } = await supabase
+      const { error: updErr } = await adminDb
         .from("PremiumPurchaseRequests")
         .update({ status: "approved", reviewed_at: new Date().toISOString() })
         .eq("id", req.id);
@@ -82,7 +83,7 @@ export default function AdminPremium() {
         .eq("premium_type", req.premium_type).maybeSingle();
 
       if (!existing) {
-        const { error: unlockErr } = await supabase
+        const { error: unlockErr } = await adminDb
           .from("UserPremiumUnlocks")
           .insert({
             username:     req.username,
@@ -106,7 +107,7 @@ export default function AdminPremium() {
     setProcessing(req.id);
     setPending(prev => prev.filter(p => p.id !== req.id));
     try {
-      const { error: rejErr } = await supabase
+      const { error: rejErr } = await adminDb
         .from("PremiumPurchaseRequests")
         .update({ status: "rejected", reviewed_at: new Date().toISOString() })
         .eq("id", req.id);

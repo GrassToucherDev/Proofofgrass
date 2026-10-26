@@ -679,9 +679,7 @@ export default function BurnerCollectionPage() {
     setSelectedTierKey(tierKey);
     setPreview(null);
     if (username) {
-      await supabase.from("Profiles")
-        .update({ double_burn_selected_tier: tierKey })
-        .eq("username", username);
+      fetch("/api/profile/update", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ username, field:"double_burn_selected_tier", value: tierKey }) }).catch(() => {});
     }
   };
 

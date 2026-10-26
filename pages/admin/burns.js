@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabase";
+import { adminDb } from "../../utils/adminDb";
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
@@ -100,7 +101,7 @@ export default function AdminBurns() {
       const qty            = purchase.quantity || 1;
 
       // 1. Mark purchase approved
-      const { error: updateErr } = await supabase
+      const { error: updateErr } = await adminDb
         .from("ShieldPurchases")
         .update({ status:"approved" })
         .eq("id", purchase.id);
@@ -115,18 +116,18 @@ export default function AdminBurns() {
         .maybeSingle();
 
       if (existing) {
-        await supabase
+        await adminDb
           .from("UserConsumables")
           .update({ quantity: existing.quantity + qty, updated_at: new Date().toISOString() })
           .eq("id", existing.id);
       } else {
-        await supabase
+        await adminDb
           .from("UserConsumables")
           .insert({ username: purchase.username, consumable_type: consumableType, quantity: qty });
       }
 
       // 3. Log ConsumableEvent
-      await supabase.from("ConsumableEvents").insert({
+      await adminDb.from("ConsumableEvents").insert({
         username:        purchase.username,
         consumable_type: consumableType,
         event_type:      "purchase_approved",
@@ -142,14 +143,14 @@ export default function AdminBurns() {
       if (consumableType === "shield") {
         const { data: streakRow } = await supabase
           .from("Streaks").select("shield_count").eq("username", purchase.username).maybeSingle();
-        await supabase.from("Streaks")
+        await adminDb.from("Streaks")
           .update({ shield_count: (streakRow?.shield_count ?? 0) + qty })
           .eq("username", purchase.username);
 
         // Shield burn event (legacy + leaderboard)
         const inEvent = new Date(purchase.created_at) >= EVENT_START && new Date(purchase.created_at) < EVENT_END;
         const amount  = Number(purchase.token_amount || 50000);
-        await supabase.from("BurnEvents").insert({
+        await adminDb.from("BurnEvents").insert({
           username:             purchase.username,
           burn_type:            "shield_burn",
           amount_burned:        amount,
@@ -160,7 +161,7 @@ export default function AdminBurns() {
         });
 
         // Try RPC for double burn progression (non-fatal)
-        try { await supabase.rpc("recompute_double_burn_progression", { p_username: purchase.username }); } catch {}
+        try { await adminDb.rpc("recompute_double_burn_progression", { p_username: purchase.username }); } catch {}
       }
 
       flash("success", `✓ Approved ${qty}x ${consumableType.replace("_"," ")} for @${purchase.username}`);
@@ -178,8 +179,8 @@ export default function AdminBurns() {
     setProcessingId(purchase.id);
     setPending(prev => prev.filter(p => p.id !== purchase.id));
     try {
-      await supabase.from("ShieldPurchases").update({ status:"rejected" }).eq("id", purchase.id);
-      await supabase.from("ConsumableEvents").insert({
+      await adminDb.from("ShieldPurchases").update({ status:"rejected" }).eq("id", purchase.id);
+      await adminDb.from("ConsumableEvents").insert({
         username:        purchase.username,
         consumable_type: purchase.consumable_type || "shield",
         event_type:      "purchase_rejected",
@@ -210,15 +211,15 @@ export default function AdminBurns() {
         .maybeSingle();
 
       if (existing) {
-        await supabase.from("UserConsumables")
+        await adminDb.from("UserConsumables")
           .update({ quantity: existing.quantity + qty, updated_at: new Date().toISOString() })
           .eq("id", existing.id);
       } else {
-        await supabase.from("UserConsumables")
+        await adminDb.from("UserConsumables")
           .insert({ username: manualUsername.trim(), consumable_type: manualType, quantity: qty });
       }
 
-      await supabase.from("ConsumableEvents").insert({
+      await adminDb.from("ConsumableEvents").insert({
         username:        manualUsername.trim(),
         consumable_type: manualType,
         event_type:      "admin_adjusted",
@@ -229,7 +230,7 @@ export default function AdminBurns() {
       if (manualType === "shield") {
         const { data: streakRow } = await supabase.from("Streaks").select("shield_count").eq("username", manualUsername.trim()).maybeSingle();
         if (streakRow) {
-          await supabase.from("Streaks").update({ shield_count: (streakRow.shield_count ?? 0) + qty }).eq("username", manualUsername.trim());
+          await adminDb.from("Streaks").update({ shield_count: (streakRow.shield_count ?? 0) + qty }).eq("username", manualUsername.trim());
         }
       }
 
