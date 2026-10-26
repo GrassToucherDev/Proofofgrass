@@ -10,6 +10,39 @@ function wedge(cx, cy, r, a0, a1) {
   return `M${cx} ${cy} L${x0} ${y0} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1} Z`;
 }
 
+
+// Grass growing out of the rim. Deterministic (seeded) so server and browser render the same blades.
+function rnd(seed) { const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+const BLADE_COLORS = ["#2f7d22", "#3f9a2b", "#58b035", "#7cc544"];
+const GRASS = Array.from({ length: 150 }, (_, i) => {
+  const a = (i / 150) * 360 + (rnd(i) - 0.5) * 3;
+  const len = 15 + rnd(i + 9) * 17, w = 3.4 + rnd(i + 3) * 2.6;
+  return { a, len, w, lean: (rnd(i + 5) - 0.5) * 22, c: BLADE_COLORS[Math.floor(rnd(i + 7) * BLADE_COLORS.length)] };
+});
+function GrassRing() {
+  return (
+    <g aria-hidden>
+      {GRASS.map((b, i) => {
+        const [x, y] = polar(150, 150, 141, b.a);
+        return (
+          <path key={i} transform={`translate(${x} ${y}) rotate(${b.a + b.lean})`}
+            d={`M ${-b.w} 2 Q ${-b.w * 0.2} ${-b.len * 0.65} ${b.w * 0.4} ${-b.len} Q ${b.w * 0.9} ${-b.len * 0.5} ${b.w} 2 Z`}
+            fill={b.c} stroke="#245c1a" strokeWidth="0.8" strokeLinejoin="round" />
+        );
+      })}
+    </g>
+  );
+}
+function Daisy({ a }) {
+  const [x, y] = polar(150, 150, 151, a);
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      {[0, 72, 144, 216, 288].map(r => <ellipse key={r} cx="0" cy="-4" rx="2.6" ry="3.8" fill="#fffdf4" stroke="#d9d3b6" strokeWidth="0.5" transform={`rotate(${r})`} />)}
+      <circle r="2.4" fill="#f6c42a" stroke="#c58a12" strokeWidth="0.6" />
+    </g>
+  );
+}
+
 // segments = number of slots; prizes decide each slot's icon. A slot with nothing in stock is shown dimmed.
 export function segmentCount(prizes) {
   const max = Math.max(-1, ...prizes.map(p => p.segment));
@@ -43,6 +76,7 @@ export default function WheelBoard({ prizes, target, spinKey, onDone, size = 300
   return (
     <div style={{ position: "relative", width: "100%", maxWidth: size, aspectRatio: "1 / 1", margin: "0 auto" }}>
       <svg viewBox="0 0 300 300" width="100%" height="100%" role="img" aria-label="WAGO Wheel" style={{ display: "block", overflow: "visible" }}>
+        <GrassRing />
         <circle cx="150" cy="150" r="148" fill="#8a5a2b" />
         <circle cx="150" cy="150" r="148" fill="none" stroke="#5e3b17" strokeWidth="3" />
         <circle cx="150" cy="150" r="132" fill="#fff8e8" />
@@ -65,6 +99,7 @@ export default function WheelBoard({ prizes, target, spinKey, onDone, size = 300
           })}
         </g>
         {lights.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="4" fill="#ffe08a" stroke="#c58a12" strokeWidth="1" />)}
+        {[11.25, 78.75, 146.25, 213.75, 281.25, 326.25].map(a => <Daisy key={a} a={a} />)}
         <circle cx="150" cy="150" r="26" fill="#ffd54a" stroke="#8a5a2b" strokeWidth="5" />
         <text x="150" y="160" textAnchor="middle" fontSize="26">🌻</text>
       </svg>
