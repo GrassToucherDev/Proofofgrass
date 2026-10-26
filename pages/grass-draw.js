@@ -91,6 +91,12 @@ function HowItWorksStep({ num, icon, title, desc, aside }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function GrassDraw() {
+  const [liveShow, setLiveShow] = useState(null);
+  useEffect(() => {
+    let on = true;
+    fetch("/api/grass-draw/live").then(r => r.json()).then(j => { if (on && j && j.phase && j.phase !== "none") setLiveShow(j); }).catch(() => {});
+    return () => { on = false; };
+  }, []);
   const [rawUsername, setRawUsername] = useState("");
   const [cycle,       setCycle]       = useState(null);
   const [totals,      setTotals]      = useState(null);
@@ -229,6 +235,14 @@ export default function GrassDraw() {
       <style dangerouslySetInnerHTML={{ __html:css }} />
 
       <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>
+        {liveShow && (
+          <Link href="/grass-draw/live" style={{ display:"block", textAlign:"center", padding:"12px 16px", textDecoration:"none",
+            background:"linear-gradient(90deg,#0d2a05,#2d6b1a)", color:"#f3ffe6", fontWeight:700, fontSize:14 }}>
+            {liveShow.phase === "done" ? "🎉 See the winners from the live draw →"
+              : ["intro","revealing"].includes(liveShow.phase) ? "🔴 LIVE NOW — watch the Grass Draw →"
+              : "🍃 A live Grass Draw is coming up — watch it here →"}
+          </Link>
+        )}
 
         {/* ── NAV ────────────────────────────────────────────────────────── */}
         <nav style={{ position:"sticky", top:0, zIndex:200, height:64,
