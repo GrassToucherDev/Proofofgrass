@@ -7,7 +7,7 @@ import { V2 } from "../../utils/v2Theme";
 const box = { background: "#fff", border: `1px solid ${V2.borderSoft}`, borderRadius: 14, padding: 16, marginBottom: 14 };
 const inp = { width: "100%", boxSizing: "border-box", border: `1px solid ${V2.borderSoft}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, color: V2.forestGreen, background: "#fff" };
 const btn = { border: `1px solid ${V2.borderSoft}`, background: "#fff", borderRadius: 8, padding: "6px 10px", fontSize: 12, cursor: "pointer", color: V2.forestGreen };
-const TYPES = ["cosmetic_pack", "shield", "sunset_pass", "grass_tickets", "spl_token", "touchgrass", "sol", "nft", "badge", "collectible", "partner_asset", "manual"];
+const TYPES = ["cosmetic_pack", "shield", "sunset_pass", "grass_tickets", "spl_token", "touchgrass", "sol", "nft", "badge", "collectible", "partner_asset", "manual", "nothing"];
 const RARITIES = ["common", "uncommon", "rare", "epic", "legendary"];
 const fmt = (n) => Number(n || 0).toLocaleString();
 

@@ -69,10 +69,10 @@ export function SpinSheet({ quote, wheel, busy, error, onConfirm, onClose }) {
 
 export function PrizesSheet({ prizes, onClose }) {
   const order = ["legendary", "epic", "rare", "uncommon", "common"];
-  const sorted = [...prizes].sort((a, b) => order.indexOf(a.rarity) - order.indexOf(b.rarity));
+  const sorted = [...prizes].filter(p => p.reward_type !== "nothing").sort((a, b) => order.indexOf(a.rarity) - order.indexOf(b.rarity));
   return (
     <Sheet title="Prize pool" onClose={onClose} tall>
-      <p style={{ margin: "0 0 12px", fontSize: 13, color: V2.midGray, lineHeight: 1.5 }}>What's on the wheel right now. Prizes that run out disappear from this list.</p>
+      <p style={{ margin: "0 0 12px", fontSize: 13, color: V2.midGray, lineHeight: 1.5 }}>What's on the wheel right now. Prizes that run out disappear from this list. Some spins land on no prize.</p>
       <div style={{ display: "grid", gap: 10 }}>
         {sorted.map(p => (
           <div key={p.id} style={{ display: "flex", gap: 12, alignItems: "center", border: `1px solid ${V2.borderSoft}`, borderRadius: 14, padding: 10 }}>
@@ -95,7 +95,8 @@ export function PrizesSheet({ prizes, onClose }) {
 export function ResultReveal({ spin, onSpinAgain, onWins, onClose }) {
   const r = rarityOf(spin.rarity);
   const big = ["epic", "legendary"].includes(spin.rarity);
-  const head = spin.rarity === "legendary" ? "LEGENDARY FIND ✨" : spin.rarity === "epic" ? "EPIC PULL ✨" : "YOU WON 🌱";
+  const none = spin.prize?.reward_type === "nothing";
+  const head = none ? "NO PRIZE THIS TIME" : spin.rarity === "legendary" ? "LEGENDARY FIND ✨" : spin.rarity === "epic" ? "EPIC PULL ✨" : "YOU WON 🌱";
   const share = () => {
     const text = `I just won ${spin.prize.name} (${r.label}) on the WAGO Wheel! 🌱 #TouchGrass`;
     const url = typeof window !== "undefined" ? `${window.location.origin}/marketplace` : "";
@@ -105,13 +106,13 @@ export function ResultReveal({ spin, onSpinAgain, onWins, onClose }) {
   return (
     <Sheet title="" onClose={onClose}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ display: "flex", justifyContent: "center" }}><Wago pose="cheer" size={big ? 150 : 120} float /></div>
+        <div style={{ display: "flex", justifyContent: "center" }}><Wago pose={none ? "shrug" : "cheer"} size={big ? 150 : 120} float /></div>
         <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", color: r.color, margin: "8px 0 6px" }}>{head}</div>
         {prizeArt(spin.prize)
           ? <img src={prizeArt(spin.prize)} alt="" style={{ width: 96, height: 96, objectFit: "contain", margin: "4px auto" }} />
           : <div style={{ fontSize: 48 }}>{typeMeta(spin.prize.reward_type).emoji}</div>}
-        <div style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 6px", wordBreak: "break-word" }}>{spin.prize.name}</div>
-        <RarityChip r={spin.rarity} />
+        <div style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 6px", wordBreak: "break-word" }}>{none ? "Better luck next spin" : spin.prize.name}</div>
+        {!none && <RarityChip r={spin.rarity} />}
         {spin.meter_guaranteed && <div style={{ fontSize: 12.5, color: V2.grassDark, marginTop: 8, fontWeight: 700 }}>WAGO Meter bonus: guaranteed Rare or better!</div>}
         {spin.badge_unlocked && (
           <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "center", margin: "14px auto 2px", padding: "10px 14px", maxWidth: 320, borderRadius: 16, background: "#f4f9ee", border: `1px solid ${V2.borderSoft}`, textAlign: "left" }}>
@@ -127,7 +128,7 @@ export function ResultReveal({ spin, onSpinAgain, onWins, onClose }) {
         <button style={PRIMARY} onClick={onSpinAgain}>Spin Again</button>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8, marginTop: 8 }}>
           <button style={GHOST} onClick={onWins}>View My Wins</button>
-          <button style={GHOST} onClick={share}>Share</button>
+          {!none && <button style={GHOST} onClick={share}>Share</button>}
         </div>
       </div>
     </Sheet>
