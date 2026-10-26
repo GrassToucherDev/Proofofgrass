@@ -14,10 +14,10 @@ function wedge(cx, cy, r, a0, a1) {
 // Grass growing out of the rim. Deterministic (seeded) so server and browser render the same blades.
 function rnd(seed) { const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
 const BLADE_COLORS = ["#2f7d22", "#3f9a2b", "#58b035", "#7cc544"];
-const GRASS = Array.from({ length: 150 }, (_, i) => {
-  const a = (i / 150) * 360 + (rnd(i) - 0.5) * 3;
-  const len = 15 + rnd(i + 9) * 17, w = 3.4 + rnd(i + 3) * 2.6;
-  return { a, len, w, lean: (rnd(i + 5) - 0.5) * 22, c: BLADE_COLORS[Math.floor(rnd(i + 7) * BLADE_COLORS.length)] };
+const GRASS = Array.from({ length: 120 }, (_, i) => {
+  const a = (i / 120) * 360 + (rnd(i) - 0.5) * 3;
+  const len = 11 + rnd(i + 9) * 11, w = 4.2 + rnd(i + 3) * 2.4;
+  return { a, len, w, lean: (rnd(i + 5) - 0.5) * 20, c: BLADE_COLORS[Math.floor(rnd(i + 7) * BLADE_COLORS.length)] };
 });
 function GrassRing() {
   return (
@@ -26,8 +26,8 @@ function GrassRing() {
         const [x, y] = polar(150, 150, 141, b.a);
         return (
           <path key={i} transform={`translate(${x} ${y}) rotate(${b.a + b.lean})`}
-            d={`M ${-b.w} 2 Q ${-b.w * 0.2} ${-b.len * 0.65} ${b.w * 0.4} ${-b.len} Q ${b.w * 0.9} ${-b.len * 0.5} ${b.w} 2 Z`}
-            fill={b.c} stroke="#245c1a" strokeWidth="0.8" strokeLinejoin="round" />
+            d={`M ${-b.w} 3 C ${-b.w * 1.15} ${-b.len * 0.45}, ${-b.w * 0.75} ${-b.len}, 0 ${-b.len} C ${b.w * 0.75} ${-b.len}, ${b.w * 1.15} ${-b.len * 0.45}, ${b.w} 3 Z`}
+            fill={b.c} stroke="#2b6a1f" strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" />
         );
       })}
     </g>
@@ -100,8 +100,8 @@ export default function WheelBoard({ prizes, target, spinKey, onDone, size = 300
         </g>
         {lights.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="4" fill="#ffe08a" stroke="#c58a12" strokeWidth="1" />)}
         {[11.25, 78.75, 146.25, 213.75, 281.25, 326.25].map(a => <Daisy key={a} a={a} />)}
-        <circle cx="150" cy="150" r="26" fill="#ffd54a" stroke="#8a5a2b" strokeWidth="5" />
-        <text x="150" y="160" textAnchor="middle" fontSize="26">🌻</text>
+        <circle cx="150" cy="150" r="42" fill="#fff8e8" stroke="#8a5a2b" strokeWidth="5" />
+        <image href="/wheel/wago-logo.png" x="112" y="112" width="76" height="76" preserveAspectRatio="xMidYMid meet" />
       </svg>
       <div aria-hidden style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", width: 0, height: 0,
         borderLeft: "13px solid transparent", borderRight: "13px solid transparent", borderTop: "26px solid #e0a31c", filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.3))" }} />
