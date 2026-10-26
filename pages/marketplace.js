@@ -712,7 +712,10 @@ export default function Marketplace() {
             setBuyingItemRaw(d.kind==="banner"
               ? { id:"grove_banner", name:`${d.bannerName} for ${d.groveName}`, groveBanner:true, intentId:ref.slice(2), checkoutRef:ref, usdPrice:d.usdPrice, groveName:d.groveName }
               : { id:d.itemId, name:d.itemName, usdPrice:d.usdPrice, checkoutRef:ref });
-          } else if(d.status==="completed") setCheckoutNote("This purchase is already complete. Nothing more to pay.");
+          } else if(d.status==="completed") {
+            setCheckoutNote(d.kind==="wheel" ? "Your spin is complete. Tap My Wins to see your prize." : "This purchase is already complete. Nothing more to pay.");
+            try { window.history.replaceState(null, "", "/marketplace"); } catch {}   // so a reload doesn't show this again
+          }
           else setCheckoutNote("This checkout expired or wasn't found. Start the purchase again from the Marketplace.");
         }).catch(()=>setCheckoutNote("Couldn't load this checkout. Please try again."));
       }
