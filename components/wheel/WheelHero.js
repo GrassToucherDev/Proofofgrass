@@ -65,9 +65,10 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
   const pill = { background: "rgba(255,255,255,0.92)", borderRadius: 16, border: `1px solid ${V2.borderSoft}`, boxShadow: "0 2px 10px rgba(26,74,10,0.08)" };
 
   return (
-    <section aria-label={wheel.name} style={{ position: "relative", overflow: "hidden", padding: "18px clamp(14px,4vw,48px) 18px",
-      background: "linear-gradient(170deg,#bfe3f7 0%,#d9f0e3 55%,#eaf6e2 100%)", borderBottom: `1px solid ${V2.borderSoft}` }}>
+    <section aria-label={wheel.name} style={{ position: "relative", overflow: "hidden", padding: "18px clamp(14px,4vw,48px) 44px",
+      background: "linear-gradient(170deg,#bfe3f7 0%,#d9f0e3 55%,#eaf6e2 100%)" }}>
       <div aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: `url(${wheel.hero_image || "/marketplace-banner.png"})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.35, pointerEvents: "none" }} />
+      <div aria-hidden style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 96, pointerEvents: "none", background: "linear-gradient(to bottom, rgba(197,227,247,0) 0%, #c5e3f7 100%)" }} />
       <div style={{ position: "relative", maxWidth: 980, margin: "0 auto", display: "grid", gap: 18, gridTemplateColumns: "minmax(0,1fr)", alignItems: "center" }} className="wheel-grid">
         <div>
           <span style={{ display: "inline-block", background: V2.grassGreen, color: "#fff", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", borderRadius: 999, padding: "4px 12px" }}>⭐ NEW</span>
