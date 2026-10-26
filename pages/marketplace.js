@@ -915,6 +915,7 @@ export default function Marketplace() {
           tokens={tokensFor(buyingItem.usdPrice)}
           price={buyingItem.groveBanner?buyingItem.usdPrice:price}
           username={username}
+          memoId={String(buyingItem.checkoutRef||buyingItem.intentId||"").replace(/^[mbw]_/,"")}
           onClose={closeBuying}
           handoffUrl={buyingItem.checkoutRef ? `${typeof window!=="undefined"?window.location.origin:""}/marketplace?checkout=${buyingItem.checkoutRef}` : undefined}
           statusUrl={buyingItem.checkoutRef ? `/api/checkout/info?id=${buyingItem.checkoutRef}` : undefined}
