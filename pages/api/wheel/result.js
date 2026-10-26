@@ -10,6 +10,10 @@ export default async function handler(req, res) {
   const { data: i } = await db.from("wheel_intents").select("status, spin_id").eq("id", id).maybeSingle();
   if (!i) return res.status(404).json({ error: "Spin not found." });
   if (!i.spin_id) return res.status(200).json({ status: i.status, spin: null });
-  const { data: s } = await db.from("wheel_spins").select("*").eq("id", i.spin_id).single();
+  let { data: s } = await db.from("wheel_spins").select("*").eq("id", i.spin_id).single();
+  if (s && ["pending", "failed"].includes(s.fulfillment_status)) {
+    await db.rpc("wheel_fulfill", { p_spin: s.id });
+    ({ data: s } = await db.from("wheel_spins").select("*").eq("id", i.spin_id).single());
+  }
   return res.status(200).json({ status: "completed", spin: publicSpin(s) });
 }
