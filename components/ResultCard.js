@@ -323,8 +323,13 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             :locationMode==="manual"&&locationCity.trim()
               ?{p_location_city:locationCity.trim()||null,p_location_region:locationRegion.trim()||null,p_location_country:locationCountry.trim()||null,p_location_label:[locationCity.trim(),locationRegion.trim()].filter(Boolean).join(", ")||null,p_location_source:"manual"}
               :{p_location_source:"none"};
-          const res = await supabase.rpc("lock_in_streak",{p_username:effectiveUsername,p_tweet_url:null,p_verification:"self_attested",...locationPayload});
-          return res;
+          // Logged by the server (the database function is no longer callable from the browser).
+          const httpRes = await fetch("/api/proof/log",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername,...locationPayload})});
+          const body = await httpRes.json().catch(()=>({}));
+          if(httpRes.ok) return {data:body.result,error:null};
+          const failure = {data:null,error:{message:body.error||"Streak log failed.",code:body.code||"failed",status:httpRes.status}};
+          if(httpRes.status>=400 && httpRes.status<500) return failure;   // don't retry sign-in / rate-limit / validation failures
+          throw new Error(failure.error.message);
         }catch(e){
           console.warn(`lock_in_streak attempt ${attempt+1} failed:`,e?.message);
           if(attempt===retries) throw e;
@@ -344,7 +349,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             setSubmitStatus("success");return;
           }
         }catch{}
-        setSubmitError("Streak log failed — tap again.");setSubmitStatus("error");return;
+        setSubmitError(rpcError.code==="not_signed_in"?"This username is secured — sign in with Google to log your proof.":rpcError.code==="not_owner"?"This username belongs to another account.":(rpcError.code==="rate_limited"||rpcError.code==="too_many_accounts")?rpcError.message:"Streak log failed — tap again.");setSubmitStatus("error");return;
       }
       if(result?.status==="already_submitted"){setSubmitStatus("success");return;}
       const newStreak=result?.current_streak??currentStreak;
