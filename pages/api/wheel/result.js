@@ -1,5 +1,5 @@
 // GET /api/wheel/result?checkoutId=w_… — the stored result of a spin (for refreshes and the phone handoff).
-import { adminClient, publicSpin } from "../../../utils/wheel";
+import { adminClient, publicSpinWithBadge } from "../../../utils/wheel";
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -15,5 +15,5 @@ export default async function handler(req, res) {
     await db.rpc("wheel_fulfill", { p_spin: s.id });
     ({ data: s } = await db.from("wheel_spins").select("*").eq("id", i.spin_id).single());
   }
-  return res.status(200).json({ status: "completed", spin: publicSpin(s) });
+  return res.status(200).json({ status: "completed", spin: await publicSpinWithBadge(db, s) });
 }

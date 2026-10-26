@@ -1,5 +1,5 @@
 // GET /api/wheel/history — the signed-in user's own spins.
-import { adminClient, sessionIdentity, publicSpin } from "../../../utils/wheel";
+import { adminClient, sessionIdentity, publicSpin, totalSpins } from "../../../utils/wheel";
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -16,5 +16,6 @@ export default async function handler(req, res) {
     const { data: again } = await db.from("wheel_spins").select("*").in("id", stuck.map(s => s.id));
     for (const f of again || []) { const k = data.findIndex(x => x.id === f.id); if (k >= 0) data[k] = f; }
   }
-  return res.status(200).json({ spins: (data || []).map(s => ({ ...publicSpin(s), payment_tx: s.payment_tx, fulfillment_tx: s.fulfillment_tx })) });
+  const total_spins = await totalSpins(adminClient(), googleId);
+  return res.status(200).json({ total_spins, spins: (data || []).map(s => ({ ...publicSpin(s), payment_tx: s.payment_tx, fulfillment_tx: s.fulfillment_tx })) });
 }

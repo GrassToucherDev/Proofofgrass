@@ -1,6 +1,6 @@
 // POST /api/wheel/settle — step 2. Verifies the on-chain payment, then asks the database to turn it into exactly one spin.
 // No Google session needed (the wallet step can run in Phantom's in-app browser); the unguessable intent id is the key.
-import { adminClient, verifyWheelPayment, PaymentError, publicSpin } from "../../../utils/wheel";
+import { adminClient, verifyWheelPayment, PaymentError, publicSpinWithBadge } from "../../../utils/wheel";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 const MSG = {
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
       const { data: fresh } = await db.from("wheel_spins").select("*").eq("id", existing.id).single();
       if (fresh) spin = fresh;
     }
-    return res.status(200).json({ success: true, replay: true, spin: publicSpin(spin) });
+    return res.status(200).json({ success: true, replay: true, spin: await publicSpinWithBadge(db, spin) });
   }
 
   let amount;
@@ -56,5 +56,5 @@ export default async function handler(req, res) {
     await db.rpc("wheel_fulfill", { p_spin: spin.id });
   }
   const { data: fresh } = await db.from("wheel_spins").select("*").eq("id", spin.id).single();
-  return res.status(200).json({ success: true, replay: !!data.replay, spin: publicSpin(fresh) });
+  return res.status(200).json({ success: true, replay: !!data.replay, spin: await publicSpinWithBadge(db, fresh) });
 }
