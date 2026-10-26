@@ -11,6 +11,7 @@ import { resolveActiveCover, COVER_DEFINITIONS, isCoverUrlReady } from "../../..
 import { getSpotlightBadge } from "../../../utils/spotlightBadges";
 import SpinnerMedal from "../../../components/wheel/SpinnerMedal";
 import BadgeShelf from "../../../components/badges/BadgeShelf";
+import BadgeMedal from "../../../components/badges/BadgeMedal";
 import { V2, V2Styles, V2GlobalCSS, getV2Tier } from "../../../utils/v2Theme";
 
 function norm(v) { return String(v??"").replace(/@/g,"").toLowerCase().trim(); }
@@ -780,15 +781,27 @@ export default function ProfilePage() {
             <div className="pf-card">
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
                 <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray }}>Favorite Badges</div>
-                <button style={{ fontSize:11, color:V2.grassGreen, background:"rgba(125,200,50,0.1)",
+                <button onClick={()=>{try{document.getElementById("badge-shelf")?.scrollIntoView({behavior:"smooth",block:"start"});}catch{}}} style={{ fontSize:11, color:V2.grassGreen, background:"rgba(125,200,50,0.1)",
                   border:`1px solid ${V2.borderGreen}`, borderRadius:20, padding:"3px 10px", cursor:"pointer" }}>
                   View All
                 </button>
               </div>
+              {badgeShelf.length>0 ? (
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
+                  {[...badgeShelf].filter(b=>b.tier>0).sort((a,b)=>(b.tier/b.maxTier)-(a.tier/a.maxTier)||b.tier-a.tier).slice(0,6).map(b=>(
+                    <div key={b.id} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, textAlign:"center" }}>
+                      <BadgeMedal id={b.id} tier={b.tier} emoji={b.emoji} name={b.label} size={72} />
+                      <div style={{ fontSize:12, fontWeight:700, color:V2.textBody, lineHeight:1.2 }}>{b.label}</div>
+                    </div>
+                  ))}
+                  {badgeShelf.every(b=>b.tier===0) && <div style={{ gridColumn:"1 / -1", fontSize:13, color:V2.midGray }}>No badges earned yet.</div>}
+                </div>
+              ) : (
               <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
                 {badges.filter(b=>b.earned).slice(0,6).map(b=><BadgeItem key={b.id} b={b} />)}
                 {badges.filter(b=>!b.earned).slice(0,Math.max(0,6-badges.filter(b=>b.earned).length)).map(b=><BadgeItem key={b.id} b={b} />)}
               </div>
+              )}
             </div>
           </div>
 
@@ -797,7 +810,7 @@ export default function ProfilePage() {
 
           {/* Badge shelf: all experiences */}
           {badgeShelf.length>0 && (
-            <div className="pf-card" style={{ marginBottom:16 }}>
+            <div id="badge-shelf" className="pf-card" style={{ marginBottom:16 }}>
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray, marginBottom:14 }}>Badges</div>
               <BadgeShelf badges={badgeShelf} />
             </div>
