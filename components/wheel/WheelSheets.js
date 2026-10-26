@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { V2 } from "../../utils/v2Theme";
 import Wago from "../wago-drops/Wago";
-import { RARITY, rarityOf, typeMeta, fmt, fulfillmentText, statusLabel } from "./wheelBits";
+import { RARITY, rarityOf, typeMeta, prizeArt, fmt, fulfillmentText, statusLabel } from "./wheelBits";
 
 const BTN = { border: "none", borderRadius: 999, fontFamily: V2.fontSans, fontWeight: 700, fontSize: 15, cursor: "pointer", padding: "14px 18px", width: "100%" };
 const PRIMARY = { ...BTN, background: V2.gradientGrassBtn, color: "#fff", boxShadow: V2.shadowGlow };
@@ -74,7 +74,7 @@ export function PrizesSheet({ prizes, onClose }) {
         {sorted.map(p => (
           <div key={p.id} style={{ display: "flex", gap: 12, alignItems: "center", border: `1px solid ${V2.borderSoft}`, borderRadius: 14, padding: 10 }}>
             <div style={{ width: 56, height: 56, borderRadius: 12, background: rarityOf(p.rarity).bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0, overflow: "hidden" }}>
-              {p.image_url ? <img src={p.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : typeMeta(p.reward_type).emoji}
+              {prizeArt(p) ? <img src={prizeArt(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : typeMeta(p.reward_type).emoji}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 15, wordBreak: "break-word" }}>{p.name}</div>
@@ -104,8 +104,8 @@ export function ResultReveal({ spin, onSpinAgain, onWins, onClose }) {
       <div style={{ textAlign: "center" }}>
         <div style={{ display: "flex", justifyContent: "center" }}><Wago pose="cheer" size={big ? 150 : 120} float /></div>
         <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", color: r.color, margin: "8px 0 6px" }}>{head}</div>
-        {spin.prize.image_url
-          ? <img src={spin.prize.image_url} alt="" style={{ width: 96, height: 96, objectFit: "contain", margin: "4px auto" }} />
+        {prizeArt(spin.prize)
+          ? <img src={prizeArt(spin.prize)} alt="" style={{ width: 96, height: 96, objectFit: "contain", margin: "4px auto" }} />
           : <div style={{ fontSize: 48 }}>{typeMeta(spin.prize.reward_type).emoji}</div>}
         <div style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 6px", wordBreak: "break-word" }}>{spin.prize.name}</div>
         <RarityChip r={spin.rarity} />

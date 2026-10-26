@@ -44,3 +44,24 @@ export function fulfillmentText(spin) {
   }
 }
 export const statusLabel = (s) => ({ completed: "Delivered", manual_required: "Being sent", pending: "Processing", processing: "Processing", failed: "Retrying" }[s] || s);
+
+// Prize art: an explicit image_url (set in the wheel admin) wins; otherwise a default by type / pack name.
+export const FILLER_ART = "/wheel/filler.png";
+export function prizeArt(p) {
+  if (!p) return null;
+  if (p.image_url) return p.image_url;
+  const t = p.reward_type, n = String(p.name || "").toLowerCase();
+  if (t === "shield") return "/wheel/shield.png";
+  if (t === "sunset_pass") return "/wheel/sunset-pass.png";
+  if (t === "grass_tickets") return "/wheel/grass-tickets.png";
+  if (t === "nft") return "/wheel/nft.png";
+  if (t === "touchgrass" || t === "spl_token" || t === "sol") return "/wheel/token.png";
+  if (t === "cosmetic_pack") {
+    if (/retro/.test(n)) return "/wheel/pack-retro-covers.png";
+    if (/anime|nature/.test(n)) return "/wheel/pack-anime-nature.png";
+    if (/y2k/.test(n)) return "/wheel/pack-y2k.png";
+    if (/trench/.test(n)) return "/wheel/pack-trenches.png";
+    if (/block|chain|trail/.test(n)) return "/wheel/pack-blockchain-trails.png";
+  }
+  return null;
+}
