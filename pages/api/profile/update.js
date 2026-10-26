@@ -34,7 +34,17 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "That field can't be changed here." });
   }
 
-  const { error } = await db.from("Profiles").upsert({ username: who.username, ...patch }, { onConflict: "username" });
-  if (error) return res.status(500).json({ error: "Could not save." });
+  // Older profiles may be stored with capitals ("RealKatoo"). Update THAT row; only create one if none exists, so a
+  // save never lands on a lowercase twin that the profile page doesn't read.
+  const esc = who.username.replace(/[%_\\]/g, (c) => "\\" + c);
+  const { data: rows, error: findErr } = await db.from("Profiles").select("username").ilike("username", esc).limit(2);
+  if (findErr) return res.status(500).json({ error: "Could not save." });
+  let error;
+  if (rows?.length) {
+    ({ error } = await db.from("Profiles").update(patch).eq("username", rows[0].username));
+  } else {
+    ({ error } = await db.from("Profiles").insert([{ username: who.username, ...patch }]));
+  }
+  if (error) { console.error("[profile/update]", error.message); return res.status(500).json({ error: "Could not save." }); }
   return res.status(200).json({ ok: true });
 }
