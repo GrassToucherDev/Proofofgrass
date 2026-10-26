@@ -18,7 +18,7 @@ function fit(ctx, text, maxW, weight, start, min, family) {
 // grove: { name, slots }, streak: grove_streak result, members: [{ username, locked_today, avatarUrl }], banner: { id, art_path }
 export async function renderGroveCard({ grove, streak, members, banner }) {
   const W = GROVE_CARD.w, H = GROVE_CARD.h, BH = GROVE_CARD.bannerH;
-  const family = "'DM Sans','Helvetica Neue',Arial,sans-serif";
+  const family = "'Nunito','Helvetica Neue',Arial,sans-serif";
   try { await Promise.all([document.fonts.load(`800 40px ${family}`), document.fonts.load(`700 28px ${family}`)]); } catch {}
   const canvas = document.createElement("canvas"); canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");

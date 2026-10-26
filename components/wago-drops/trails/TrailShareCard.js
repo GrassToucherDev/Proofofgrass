@@ -10,7 +10,7 @@ function cover(ctx, img, x, y, w, h) { const s = Math.max(w / img.width, h / img
 
 async function draw(canvas, { coverUrl, name, city, stops, distanceText, durationText, rewardText }) {
   const ctx = canvas.getContext("2d");
-  const font = "'DM Sans', -apple-system, 'Segoe UI', sans-serif";
+  const font = "'Nunito', -apple-system, 'Segoe UI', sans-serif";
   try { await document.fonts?.ready; } catch {}
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, "#c5e3f7"); bg.addColorStop(0.45, "#e8f4fd"); bg.addColorStop(1, "#f0f8ee");

@@ -144,7 +144,7 @@ export default function WalletVerify({ username, currentWallet, currentVerified,
           border:"1px solid rgba(248,113,113,0.25)",
           borderRadius:8,padding:"8px 16px",fontSize:11,
           color:"rgba(248,113,113,0.6)",cursor:"pointer",
-          fontFamily:"'DM Sans',sans-serif",fontWeight:600,
+          fontFamily:"'Nunito',sans-serif",fontWeight:600,
         }}>Disconnect Wallet</button>
       </div>
     );
@@ -202,14 +202,14 @@ export default function WalletVerify({ username, currentWallet, currentVerified,
               background:"transparent",border:`1px solid ${T.borderG}`,
               borderRadius:7,padding:"8px 12px",fontSize:11,
               fontWeight:600,color:T.olive,cursor:"pointer",flexShrink:0,
-              fontFamily:"'DM Sans',sans-serif",
+              fontFamily:"'Nunito',sans-serif",
             }}>Copy</button>
           </div>
         </div>
         <button onClick={()=>setShowGuide(false)} style={{
           background:"transparent",border:`1px solid ${T.border}`,
           borderRadius:8,padding:"10px",fontSize:12,
-          color:T.dim,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",
+          color:T.dim,cursor:"pointer",fontFamily:"'Nunito',sans-serif",
         }}>← Back</button>
       </div>
     );
@@ -241,7 +241,7 @@ export default function WalletVerify({ username, currentWallet, currentVerified,
         background: isLoading ? T.bg3 : T.olive,
         border:`1px solid ${isLoading ? T.border : T.olive}`,
         color: isLoading ? T.dim : "#080a06",
-        fontSize:13,fontWeight:700,fontFamily:"'DM Sans',sans-serif",
+        fontSize:13,fontWeight:700,fontFamily:"'Nunito',sans-serif",
         letterSpacing:"0.04em",opacity:isLoading?0.7:1,
         transition:"all 0.2s",
       }}>

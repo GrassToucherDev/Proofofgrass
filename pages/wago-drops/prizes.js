@@ -12,7 +12,7 @@ export default function Prizes() {
     fetch("/api/wago-drops/prizes").then(r => r.json()).then(d => setList(d.prizes || [])).catch(() => setList([]));
   }, []);
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'DM Sans',-apple-system,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'Nunito',-apple-system,sans-serif" }}>
       <Head><title>Prizes — WAGO Drops</title></Head>
       <WagoDropsNav session={session} />
       <WagoDropsBottomNav />

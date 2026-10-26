@@ -638,7 +638,7 @@ export default function WagoAdminPage(){
         <link rel="apple-touch-icon" href="/images/wago/apple-touch-icon.png" /></Head>
       <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
         <form onSubmit={checkAuth} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:14,padding:32,width:320}}>
-          <h2 style={{fontFamily:"'Cormorant Garamond',serif",color:T.white,margin:"0 0 20px",textAlign:"center"}}>🗺️ Admin Access</h2>
+          <h2 style={{fontFamily:"'Fredoka',serif",color:T.white,margin:"0 0 20px",textAlign:"center"}}>🗺️ Admin Access</h2>
           <Input label="Admin Secret" type="password" value={secret} onChange={e=>setSecret(e.target.value)}/>
           {authErr && <p style={{fontSize:13,color:T.red,margin:"0 0 12px"}}>{authErr}</p>}
           <button type="submit" style={{width:"100%",background:T.olive,color:T.bg,border:"none",borderRadius:8,padding:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>Enter</button>
@@ -651,9 +651,9 @@ export default function WagoAdminPage(){
     <>
       <Head>
         <title>WAGO Drops Admin</title>
-        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet"/>
+        <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet"/>
       </Head>
-      <div style={{minHeight:"100vh",background:T.bg,color:T.white,fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif"}}>
+      <div style={{minHeight:"100vh",background:T.bg,color:T.white,fontFamily:"'Nunito',-apple-system,BlinkMacSystemFont,sans-serif"}}>
         <nav style={{position:"sticky",top:0,zIndex:100,background:T.bg,borderBottom:`1px solid ${T.border}`,padding:"0 clamp(14px,4vw,48px)",height:56,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <img src="/images/wago/wago-drops-logo-sm.png" alt="WAGO Drops" style={{height:40,width:"auto",display:"block"}}/>

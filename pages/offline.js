@@ -4,7 +4,7 @@ export default function OfflinePage() {
         minHeight:"100vh", background:"#080a06",
         display:"flex", flexDirection:"column",
         alignItems:"center", justifyContent:"center",
-        fontFamily:"'DM Sans',sans-serif", color:"#f0efea",
+        fontFamily:"'Nunito',sans-serif", color:"#f0efea",
         textAlign:"center", padding:24,
       }}>
         <div style={{ fontSize:64, marginBottom:24 }}>🌿</div>
@@ -21,7 +21,7 @@ export default function OfflinePage() {
             marginTop:32, background:"#93a85a", color:"#080a06",
             border:"none", borderRadius:9, padding:"12px 28px",
             fontSize:14, fontWeight:700, cursor:"pointer",
-            fontFamily:"'DM Sans',sans-serif", letterSpacing:"0.04em",
+            fontFamily:"'Nunito',sans-serif", letterSpacing:"0.04em",
           }}
         >
           Try Again

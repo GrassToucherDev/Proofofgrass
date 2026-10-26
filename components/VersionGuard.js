@@ -73,7 +73,7 @@ export default function VersionGuard() {
       bottom: "calc(76px + env(safe-area-inset-bottom))",
       maxWidth: 420, margin: "0 auto", display: "flex", alignItems: "center", gap: 10,
       background: "#0d2a05", color: "#fff", borderRadius: 14, padding: "10px 12px 10px 14px",
-      boxShadow: "0 8px 30px rgba(0,0,0,0.3)", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600,
+      boxShadow: "0 8px 30px rgba(0,0,0,0.3)", fontFamily: "'Nunito', sans-serif", fontSize: 13, fontWeight: 600,
     }}>
       <span style={{ flex: 1 }}>A new version of Proof of Grass is ready.</span>
       <button onClick={() => window.location.reload()} style={{

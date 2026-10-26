@@ -66,7 +66,7 @@ export default function PrizePage() {
   const card = { background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16, marginBottom: 14 };
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'DM Sans',-apple-system,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'Nunito',-apple-system,sans-serif" }}>
       <Head><title>{p ? `${p.title} — WAGO Prize` : "WAGO Prize"}</title></Head>
       <WagoDropsNav session={session} />
       <WagoDropsBottomNav />

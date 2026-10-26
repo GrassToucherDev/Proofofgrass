@@ -169,9 +169,9 @@ export default function LeafDraw() {
   };
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{background:#080a06;color:#f0efea;font-family:'DM Sans',sans-serif;overflow:hidden;}
+    body{background:#080a06;color:#f0efea;font-family:'Nunito',sans-serif;overflow:hidden;}
     @keyframes leafFall {
       0%   { transform: translate(var(--sx), var(--sy)) rotate(var(--r0)) scale(var(--sc)); opacity:0; }
       10%  { opacity:1; }
@@ -224,7 +224,7 @@ export default function LeafDraw() {
         <div style={{ background:"#0e100b", border:"1px solid rgba(147,168,90,0.2)",
           borderRadius:16, padding:"40px 36px", width:"100%", maxWidth:360, textAlign:"center" }}>
           <div style={{ fontSize:40, marginBottom:16 }}>🍃</div>
-          <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+          <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
             fontSize:24, fontWeight:700, color:"#f0efea", marginBottom:24 }}>
             Leaf Draw
           </div>
@@ -305,7 +305,7 @@ export default function LeafDraw() {
                   {/* Username — only show on winner or on hover */}
                   {(leaf.isWinner || leaf.scale > 1.2) && (
                     <text x="0" y="0" textAnchor="middle" dominantBaseline="middle"
-                      fontSize="4" fill="rgba(0,0,0,0.6)" fontFamily="DM Sans"
+                      fontSize="4" fill="rgba(0,0,0,0.6)" fontFamily="Nunito"
                       style={{ userSelect:"none" }}>
                       {leaf.username.length > 8 ? leaf.username.slice(0,7)+"…" : leaf.username}
                     </text>
@@ -339,7 +339,7 @@ export default function LeafDraw() {
                 {DRAW_TYPES.find(t=>t.value===drawType)?.label} Winner
               </div>
               <div style={{ fontSize:56, marginBottom:16 }}>🍃</div>
-              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+              <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                 fontSize:"clamp(36px,6vw,64px)", fontWeight:700,
                 color:"#c8a84b", lineHeight:1, marginBottom:8,
                 animation:"shimmer 2s ease-in-out infinite" }}>
@@ -389,7 +389,7 @@ export default function LeafDraw() {
                 animation: phase==="drawing" ? "shimmer 1s ease-in-out infinite" : "none" }}>
                 🍃
               </div>
-              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+              <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                 fontSize:"clamp(36px,5vw,56px)", fontWeight:700, color:"#f0efea",
                 lineHeight:1, marginBottom:8 }}>
                 The Grass Draw

@@ -42,7 +42,7 @@ export default function ConsentGate() {
   const box = { display: "flex", gap: 10, alignItems: "flex-start", fontSize: 14, lineHeight: 1.4, marginBottom: 12, color: V2.forestGreen };
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="consent-title" style={{ position: "fixed", inset: 0, zIndex: 100000, background: "rgba(13,42,5,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 18, maxWidth: 440, width: "100%", maxHeight: "92vh", overflowY: "auto", padding: "24px 22px", boxSizing: "border-box", fontFamily: "'DM Sans',-apple-system,sans-serif" }}>
+      <div style={{ background: "#fff", borderRadius: 18, maxWidth: 440, width: "100%", maxHeight: "92vh", overflowY: "auto", padding: "24px 22px", boxSizing: "border-box", fontFamily: "'Nunito',-apple-system,sans-serif" }}>
         <h2 id="consent-title" style={{ margin: "0 0 8px", fontSize: 20, color: V2.forestGreen }}>Before you continue</h2>
         <p style={{ margin: "0 0 14px", fontSize: 14, lineHeight: 1.5, color: "rgba(13,42,5,0.7)" }}>
           Proof of Grass and WAGO Drops can include real-world prizes from sponsors, such as cards, merch, or cash. Prizes are provided by the sponsor, not by us. If you ever win something that has to be shipped, we will ask you first before any sponsor sees your name or address.

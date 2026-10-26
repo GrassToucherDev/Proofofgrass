@@ -14,7 +14,7 @@ function markerEl(stop, selected) {
   const c = stop.unavailable && stop.state !== "done" ? "#c9c9c9" : COL[stop.state] || COL.upcoming;
   inner.style.cssText = `width:${hot ? 38 : 32}px;height:${hot ? 38 : 32}px;border-radius:50%;background:${c};color:#fff;
     border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;
-    font:800 ${hot ? 16 : 14}px 'DM Sans',sans-serif;opacity:${stop.state === "upcoming" ? 0.8 : 1};
+    font:800 ${hot ? 16 : 14}px 'Nunito',sans-serif;opacity:${stop.state === "upcoming" ? 0.8 : 1};
     ${hot ? "animation:wagoTrailPulse 1.6s ease-out infinite;" : ""}${selected ? "outline:3px solid #0d2a05;" : ""}`;
   inner.textContent = stop.state === "done" ? "✓" : String(stop.position);
   wrap.appendChild(inner);

@@ -41,7 +41,7 @@ export default function TrailComplete({ trail, progress, stopCount, onChanged })
   return (
     <div style={{ background: "#fff", borderRadius: 22, padding: "22px 18px", border: `1px solid ${V2.borderSoft}`, boxShadow: "0 6px 24px rgba(26,74,10,0.1)", textAlign: "center" }}>
       <Wago pose="cheer" size={150} float />
-      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 34, fontWeight: 700, color: T.white, lineHeight: 1.05, marginTop: 4 }}>Trail complete!</div>
+      <div style={{ fontFamily: "'Fredoka',serif", fontSize: 34, fontWeight: 700, color: T.white, lineHeight: 1.05, marginTop: 4 }}>Trail complete!</div>
       <div style={{ color: T.muted, fontSize: 14, margin: "6px 0 14px" }}>You walked every stop of <b>{trail.name}</b>.</div>
 
       <div style={{ display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>

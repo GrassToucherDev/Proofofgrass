@@ -223,7 +223,7 @@ export default function AdminPremium() {
 
   return (
     <div style={{ minHeight:"100vh", background:T.bg,
-      color:T.white, fontFamily:"'DM Sans',sans-serif" }}>
+      color:T.white, fontFamily:"'Nunito',sans-serif" }}>
       <div style={{ maxWidth:860, margin:"0 auto", padding:"32px 16px 64px" }}>
 
         <div style={{ display:"flex", alignItems:"center",

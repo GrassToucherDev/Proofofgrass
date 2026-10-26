@@ -48,7 +48,7 @@ export default function WagoDropsList() {
   return (
     <>
       <Head><title>My Claims — WAGO</title></Head>
-      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: T.bg, color: T.white, fontFamily: "'Nunito',-apple-system,BlinkMacSystemFont,sans-serif" }}>
         <WagoDropsNav session={session} />
         <WagoDropsBottomNav />
 

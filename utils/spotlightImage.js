@@ -82,7 +82,7 @@ export function weekRangeLabel(weekStart, weekEnd) {
 
 // winners: { [categoryKey]: { handle: "name" (no @), avatarUrl?: string } | undefined }
 export async function renderWinnersImage({ weekLabel, winners }) {
-  const family = "'DM Sans', 'Helvetica Neue', Arial, sans-serif";
+  const family = "'Nunito', 'Helvetica Neue', Arial, sans-serif";
   try { await Promise.all([document.fonts.load(`800 30px ${family}`), document.fonts.load(`700 30px ${family}`)]); } catch {}
   const canvas = document.createElement("canvas");
   canvas.width = FRAME.width; canvas.height = FRAME.height;

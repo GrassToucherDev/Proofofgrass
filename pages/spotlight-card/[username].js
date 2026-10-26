@@ -194,12 +194,12 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
 
   ctx.textAlign = "center";
 
-  ctx.font = "600 20px 'DM Sans',sans-serif";
+  ctx.font = "600 20px 'Nunito',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.48)";
   ctx.letterSpacing = "0.2em";
   ctx.fillText("PROOF OF GRASS", W/2, 102);
 
-  ctx.font = "700 13px 'DM Sans',sans-serif";
+  ctx.font = "700 13px 'Nunito',sans-serif";
   ctx.fillStyle = "#c8a84b";
   ctx.letterSpacing = "0.26em";
   ctx.fillText("COMMUNITY SPOTLIGHT", W/2, 126);
@@ -244,7 +244,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   roundRect(ctx, PILL_X, PILL_Y, PILL_W, PILL_H, 31); ctx.fill();
   ctx.strokeStyle = badge.color + "90"; ctx.lineWidth = 1.5;
   roundRect(ctx, PILL_X, PILL_Y, PILL_W, PILL_H, 31); ctx.stroke();
-  ctx.font = "700 26px 'DM Sans',sans-serif";
+  ctx.font = "700 26px 'Nunito',sans-serif";
   ctx.fillStyle = badge.color;
   ctx.letterSpacing = "0.1em";
   ctx.textAlign = "center";
@@ -255,10 +255,10 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   const displayName = `@${win.display_name || win.username}`;
   let nameFontSize = 92;
   ctx.letterSpacing = "-0.01em";
-  ctx.font = `700 ${nameFontSize}px 'Cormorant Garamond',Georgia,serif`;
+  ctx.font = `700 ${nameFontSize}px 'Fredoka',system-ui,sans-serif`;
   while (ctx.measureText(displayName).width > 980 && nameFontSize > 52) {
     nameFontSize -= 4;
-    ctx.font = `700 ${nameFontSize}px 'Cormorant Garamond',Georgia,serif`;
+    ctx.font = `700 ${nameFontSize}px 'Fredoka',system-ui,sans-serif`;
   }
   ctx.fillStyle = "#f0efea";
   ctx.textAlign = "center";
@@ -294,7 +294,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
 
   // ── ZONE D — Winner label (baseline y=930) ────────────────────────────────────
   // Avatar bottom = 900. Winner label top ~916. Baseline 930. Gap: 16px. Tight but clean.
-  ctx.font = "500 16px 'DM Sans',sans-serif";
+  ctx.font = "500 16px 'Nunito',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.38)";
   ctx.letterSpacing = "0.2em";
   ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, 910);
@@ -302,12 +302,12 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // ── ZONE E — Week (y=960–1040) ────────────────────────────────────────────────
   div(930, 0.2);
 
-  ctx.font = "700 50px 'Cormorant Garamond',Georgia,serif";
+  ctx.font = "700 50px 'Fredoka',system-ui,sans-serif";
   ctx.fillStyle = "#c8a84b";
   ctx.letterSpacing = "0.01em";
   ctx.fillText(weekNumber(win.week_start), W/2, 1000);
 
-  ctx.font = "400 20px 'DM Sans',sans-serif";
+  ctx.font = "400 20px 'Nunito',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.58)";
   ctx.letterSpacing = "0.04em";
   ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 1036);
@@ -348,13 +348,13 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
       ctx.fillText(s.emoji, cx, STATS_Y + 34);
 
       // Label ABOVE number — gives context before the number
-      ctx.font = "600 16px 'DM Sans',sans-serif";
+      ctx.font = "600 16px 'Nunito',sans-serif";
       ctx.fillStyle = "rgba(240,239,234,0.62)";
       ctx.letterSpacing = "0.06em";
       ctx.fillText(s.label, cx, STATS_Y + 68);
 
       // Value — large and bold
-      ctx.font = "700 54px 'Cormorant Garamond',Georgia,serif";
+      ctx.font = "700 54px 'Fredoka',system-ui,sans-serif";
       ctx.fillStyle = "#f0efea";
       ctx.letterSpacing = "-0.01em";
       ctx.fillText(s.value, cx, STATS_Y + 128);
@@ -364,7 +364,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // ── ZONE G — Bottom branding ──────────────────────────────────────────────
   // ── ZONE G — Bottom branding ──────────────────────────────────────────────
   div(H - 90, 0.25);
-  ctx.font = "500 18px 'DM Sans',sans-serif";
+  ctx.font = "500 18px 'Nunito',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.26)";
   ctx.letterSpacing = "0.1em";
   ctx.textAlign = "center";
@@ -493,10 +493,10 @@ export default function SpotlightCardPage() {
   const badge = selectedWin ? getSpotlightBadge(selectedWin.category) : null;
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{overflow-x:hidden;}
-    body{background:#080a06;color:#f0efea;font-family:'DM Sans',sans-serif;}
+    body{background:#080a06;color:#f0efea;font-family:'Nunito',sans-serif;}
     ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:#080a06;}
     ::-webkit-scrollbar-thumb{background:#93a85a40;border-radius:2px;}
     .win-opt{background:#141710;border:1px solid rgba(255,255,255,0.055);border-radius:10px;
@@ -504,7 +504,7 @@ export default function SpotlightCardPage() {
       display:flex;align-items:center;gap:10px;width:100%;text-align:left;}
     .win-opt:hover{border-color:rgba(200,168,75,0.35);}
     .win-opt.sel{border-color:#c8a84b;background:rgba(200,168,75,0.05);}
-    .btn{border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;
+    .btn{border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;
       font-size:13px;letter-spacing:0.06em;border-radius:10px;padding:14px 28px;
       transition:opacity 0.15s;width:100%;}
     .btn:hover{opacity:0.85;}.btn:disabled{opacity:0.4;cursor:default;}
@@ -526,7 +526,7 @@ export default function SpotlightCardPage() {
           borderBottom:`1px solid ${T.border}` }}>
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:26,height:26,objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:17,fontWeight:700,color:T.white }}>touch grass</span>
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif",fontSize:17,fontWeight:700,color:T.white }}>touch grass</span>
           </Link>
           {username && (
             <Link href={`/u/${username}`}
@@ -541,7 +541,7 @@ export default function SpotlightCardPage() {
           {/* Header */}
           <div style={{ textAlign:"center", marginBottom:32 }}>
             <div style={{ fontSize:42, marginBottom:12 }}>🏆</div>
-            <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
               fontSize:"clamp(28px,5vw,44px)", fontWeight:700, color:T.white,
               lineHeight:1.1, marginBottom:8 }}>Spotlight Card</h1>
             <p style={{ fontSize:13, color:T.dim, lineHeight:1.6 }}>
@@ -609,7 +609,7 @@ export default function SpotlightCardPage() {
                         textTransform:"uppercase", color:badge.color, marginBottom:4 }}>
                         {badge.emoji} {badge.label}
                       </div>
-                      <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                      <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                         fontSize:20, fontWeight:700, color:T.white }}>{badge.title}</div>
                       <div style={{ fontSize:11, color:T.dim, marginTop:4 }}>
                         {fmtWeek(selectedWin.week_start, selectedWin.week_end)}

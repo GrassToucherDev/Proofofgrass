@@ -27,7 +27,7 @@ body {
   min-height: -webkit-fill-available;
   background: #080a06;
   color: #f0efea;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Standalone PWA — add safe area padding to body */

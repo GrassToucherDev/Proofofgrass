@@ -71,12 +71,12 @@ async function generateAchievementCard({ milestone, username, avatarUrl }) {
   ctx.stroke();
 
   ctx.textAlign = "center";
-  ctx.font = "600 18px 'DM Sans',sans-serif";
+  ctx.font = "600 18px 'Nunito',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.45)";
   ctx.letterSpacing = "0.2em";
   ctx.fillText("PROOF OF GRASS", W/2, 110);
 
-  ctx.font = "700 14px 'DM Sans',sans-serif";
+  ctx.font = "700 14px 'Nunito',sans-serif";
   ctx.fillStyle = T.gold;
   ctx.letterSpacing = "0.24em";
   ctx.fillText("ACHIEVEMENT UNLOCKED", W/2, 138);
@@ -106,21 +106,21 @@ async function generateAchievementCard({ milestone, username, avatarUrl }) {
 
   // Milestone label
   let fontSize = 64;
-  ctx.font = `700 ${fontSize}px 'Cormorant Garamond',Georgia,serif`;
+  ctx.font = `700 ${fontSize}px 'Fredoka',system-ui,sans-serif`;
   while (ctx.measureText(milestone.milestone_label).width > 900 && fontSize > 36) {
     fontSize -= 4;
-    ctx.font = `700 ${fontSize}px 'Cormorant Garamond',Georgia,serif`;
+    ctx.font = `700 ${fontSize}px 'Fredoka',system-ui,sans-serif`;
   }
   ctx.fillStyle = "#f0efea";
   ctx.letterSpacing = "-0.01em";
   ctx.fillText(milestone.milestone_label, W/2, labelY);
 
-  ctx.font = "600 22px 'DM Sans',sans-serif";
+  ctx.font = "600 22px 'Nunito',sans-serif";
   ctx.fillStyle = meta.color;
   ctx.letterSpacing = "0.04em";
   ctx.fillText(`@${username}`, W/2, labelY + 50);
 
-  ctx.font = "500 18px 'DM Sans',sans-serif";
+  ctx.font = "500 18px 'Nunito',sans-serif";
   ctx.fillStyle = "rgba(240,239,234,0.28)";
   ctx.letterSpacing = "0.1em";
   ctx.fillText("ProofOfGrass.app", W/2, H - 60);
@@ -173,15 +173,15 @@ export default function AchievementTool() {
   };
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{overflow-x:hidden;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
     .ms-btn{ background:${T.bg3}; border:1px solid ${T.border}; padding:12px 14px;
       border-radius:10px; cursor:pointer; text-align:left; transition:all 0.15s; width:100%;
       display:flex; align-items:center; gap:10px; }
     .ms-btn.active{ background:rgba(147,168,90,0.08); border-color:${T.borderG}; }
-    .btn{ border:none; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700;
+    .btn{ border:none; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700;
       font-size:13px; border-radius:10px; padding:13px 24px; }
   `;
 
@@ -195,7 +195,7 @@ export default function AchievementTool() {
           background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}` }}>
           <Link href="/create" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:24,height:24,objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:16, fontWeight:700, color:T.white }}>Creator Hub</span>
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:16, fontWeight:700, color:T.white }}>Creator Hub</span>
           </Link>
           <Link href="/create" style={{ fontSize:11, color:T.olive, textDecoration:"none" }}>← All Tools</Link>
         </nav>
@@ -203,7 +203,7 @@ export default function AchievementTool() {
         <div style={{ maxWidth:560, margin:"0 auto", padding:"32px clamp(14px,5vw,32px) 64px" }}>
           <div style={{ textAlign:"center", marginBottom:28 }}>
             <div style={{ fontSize:36, marginBottom:10 }}>🏆</div>
-            <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(26px,5vw,38px)",
+            <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:"clamp(26px,5vw,38px)",
               fontWeight:700, color:T.white, marginBottom:6 }}>Achievement Card</h1>
             <p style={{ fontSize:12.5, color:T.dim }}>Only for milestones you've actually earned.</p>
           </div>

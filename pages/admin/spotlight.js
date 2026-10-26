@@ -173,17 +173,17 @@ export default function AdminSpotlight() {
   const getCat = (key) => CATEGORIES.find(c => c.key === key) ?? CATEGORIES[0];
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
-    input,select,textarea{font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
+    input,select,textarea{font-family:'Nunito',sans-serif;}
     .field{display:flex;flex-direction:column;gap:5px;}
     .label{font-size:9px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:${T.dim};}
     .inp{background:${T.bg3};border:1px solid ${T.border};color:${T.white};
       padding:10px 12px;border-radius:8px;font-size:13px;outline:none;width:100%;
       transition:border-color 0.15s;}
     .inp:focus{border-color:${T.olive};}
-    .btn{border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;
+    .btn{border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:600;
       font-size:12px;letter-spacing:0.06em;border-radius:7px;padding:10px 20px;
       transition:opacity 0.15s;}
     .btn:hover{opacity:0.85;} .btn:disabled{opacity:0.4;cursor:default;}
@@ -208,7 +208,7 @@ export default function AdminSpotlight() {
         <div style={{ background:T.bg2, border:`1px solid ${T.borderG}`, borderRadius:16,
           padding:"40px 36px", width:"100%", maxWidth:360, textAlign:"center" }}>
           <div style={{ fontSize:32, marginBottom:12 }}>🏆</div>
-          <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22,
+          <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:22,
             fontWeight:700, color:T.white, marginBottom:4 }}>Admin Access</div>
           <div style={{ fontSize:12, color:T.dim, marginBottom:28 }}>Community Spotlight</div>
           <input type="password" value={pw} onChange={e => setPw(e.target.value)}
@@ -237,7 +237,7 @@ export default function AdminSpotlight() {
           borderBottom:`1px solid ${T.border}`, gap:12 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <span style={{ fontSize:18 }}>🌿</span>
-            <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
               fontSize:17, fontWeight:700, color:T.white }}>Proof of Grass</span>
             <span style={{ fontSize:10, color:T.dim, letterSpacing:"0.1em",
               textTransform:"uppercase", marginLeft:4 }}>/ Admin</span>
@@ -254,7 +254,7 @@ export default function AdminSpotlight() {
           <div style={{ marginBottom:28 }}>
             <div style={{ fontSize:10, letterSpacing:"0.22em", color:T.gold,
               textTransform:"uppercase", marginBottom:8, fontWeight:600 }}>Admin</div>
-            <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+            <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
               fontSize:"clamp(28px,4vw,44px)", fontWeight:700, color:T.white, lineHeight:1 }}>
               Community Spotlight
             </h1>

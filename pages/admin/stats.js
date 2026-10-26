@@ -316,8 +316,8 @@ proofofgrass.app`;
 
   const css = `
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
-    input{font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
+    input{font-family:'Nunito',sans-serif;}
     @keyframes spin{to{transform:rotate(360deg);}}
     .spin{animation:spin 1s linear infinite;display:inline-block;}
     .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
@@ -396,7 +396,7 @@ proofofgrass.app`;
             <button onClick={loadStats} disabled={loading}
               style={{background:T.bg3,border:`1px solid ${T.border}`,borderRadius:7,
                 padding:"6px 14px",color:loading?T.dim:T.white,fontSize:11,
-                cursor:loading?"default":"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                cursor:loading?"default":"pointer",fontFamily:"'Nunito',sans-serif"}}>
               {loading ? <span className="spin">Refresh</span> : "Refresh Refresh"}
             </button>
           </div>
@@ -486,7 +486,7 @@ proofofgrass.app`;
                     display:"inline-flex",alignItems:"center",gap:6,
                     background:T.olive,color:T.bg,border:"none",borderRadius:7,
                     padding:"7px 14px",fontSize:11,fontWeight:700,cursor:"pointer",
-                    fontFamily:"'DM Sans',sans-serif"}}>
+                    fontFamily:"'Nunito',sans-serif"}}>
                     {copiedWelcome ? "✓ Copied!" : "🌱 Copy Welcome Post"}
                   </button>
                   <div style={{fontSize:11,color:T.dim,display:"flex",
@@ -544,7 +544,7 @@ proofofgrass.app`;
                           background:T.bg3,border:`1px solid ${T.border}`,
                           borderRadius:6,padding:"4px 9px",fontSize:10,
                           color:T.dim,cursor:"pointer",flexShrink:0,
-                          fontFamily:"'DM Sans',sans-serif"}}>
+                          fontFamily:"'Nunito',sans-serif"}}>
                           Copy shoutout
                         </button>
                       </div>
@@ -586,7 +586,7 @@ proofofgrass.app`;
             </div>
             <div style={{background:T.bg2,border:`1px solid ${T.borderG}`,
               borderRadius:12,padding:"18px 20px",marginBottom:16}}>
-              <pre style={{fontFamily:"'DM Sans',sans-serif",fontSize:13,
+              <pre style={{fontFamily:"'Nunito',sans-serif",fontSize:13,
                 color:T.muted,lineHeight:1.7,whiteSpace:"pre-wrap",margin:0}}>
                 {generatePost()}
               </pre>
@@ -596,7 +596,7 @@ proofofgrass.app`;
                 display:"inline-flex",alignItems:"center",gap:8,
                 background:T.white,color:T.bg,border:"none",borderRadius:9,
                 padding:"11px 22px",fontSize:13,fontWeight:700,cursor:"pointer",
-                letterSpacing:"0.04em",fontFamily:"'DM Sans',sans-serif"}}>
+                letterSpacing:"0.04em",fontFamily:"'Nunito',sans-serif"}}>
                 {copied ? "✓ Copied!" : "📋 Copy X Post"}
               </button>
               <button onClick={loadStats} disabled={loading} style={{
@@ -604,7 +604,7 @@ proofofgrass.app`;
                 background:"transparent",color:T.olive,
                 border:`1px solid ${T.borderG}`,borderRadius:9,
                 padding:"11px 22px",fontSize:13,fontWeight:600,cursor:"pointer",
-                fontFamily:"'DM Sans',sans-serif"}}>
+                fontFamily:"'Nunito',sans-serif"}}>
                 Refresh Refresh Stats
               </button>
             </div>

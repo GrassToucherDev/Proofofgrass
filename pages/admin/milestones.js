@@ -77,7 +77,7 @@ function MilestoneGroup({ title, icon, color, items, emptyMsg }) {
     <div style={{ marginBottom:32 }}>
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
         <span style={{ fontSize:20 }}>{icon}</span>
-        <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+        <h2 style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
           fontSize:22, fontWeight:700, color:T.white, margin:0 }}>{title}</h2>
         <div style={{ marginLeft:"auto", fontSize:11, fontWeight:700,
           color, background:`${color}18`,
@@ -102,7 +102,7 @@ function MilestoneGroup({ title, icon, color, items, emptyMsg }) {
               display:"flex", alignItems:"center",
               gap:12, flexWrap:"wrap" }}>
               {/* Rank */}
-              <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+              <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                 fontSize:18, fontWeight:700,
                 color:T.dim, width:24, flexShrink:0 }}>{i + 1}</div>
 
@@ -374,9 +374,9 @@ export default function AdminMilestones() {
   );
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{background:${T.bg};color:${T.white};font-family:'DM Sans',sans-serif;}
+    body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
   `;
 
   return (
@@ -394,7 +394,7 @@ export default function AdminMilestones() {
               <div style={{ fontSize:10, letterSpacing:"0.2em",
                 textTransform:"uppercase", color:T.olive,
                 fontWeight:600, marginBottom:8 }}>Admin</div>
-              <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+              <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                 fontSize:"clamp(28px,5vw,40px)", fontWeight:700,
                 color:T.white, lineHeight:1, marginBottom:8 }}>
                 Weekly Milestones
@@ -477,7 +477,7 @@ export default function AdminMilestones() {
                 <div style={{ display:"flex", alignItems:"center",
                   gap:10, marginBottom:16 }}>
                   <span style={{ fontSize:20 }}>🌱</span>
-                  <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                  <h2 style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                     fontSize:22, fontWeight:700, color:T.white, margin:0 }}>
                     New This Week
                   </h2>
@@ -544,7 +544,7 @@ export default function AdminMilestones() {
                 ].map(([label, val]) => (
                   <div key={label} style={{ textAlign:"center",
                     flex:"1 1 80px" }}>
-                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                    <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                       fontSize:26, fontWeight:700, color:T.white,
                       lineHeight:1 }}>{val}</div>
                     <div style={{ fontSize:9, color:T.dim,

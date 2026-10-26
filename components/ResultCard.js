@@ -539,7 +539,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             <button onClick={onRetake} aria-label="Choose a different photo"
               style={{ background:"white", border:`1px solid ${V2G.border}`, borderRadius:20, padding:"6px 12px",
                 fontSize:12, fontWeight:700, color:V2G.darkGreen, cursor:"pointer", whiteSpace:"nowrap",
-                fontFamily:"DM Sans,sans-serif" }}>↺ Retake</button>
+                fontFamily:"Nunito,sans-serif" }}>↺ Retake</button>
           ) : null} />
         <div style={{ borderRadius:12, overflow:"hidden", marginBottom:12,
           background:"rgba(200,220,190,0.2)", minHeight:200,
@@ -571,7 +571,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                   border:`2px solid ${shareStyle==="outdoor_photo"?V2G.green:V2G.border}`,
                   background:shareStyle==="outdoor_photo"?"rgba(125,200,50,0.08)":"white",
                   display:"flex", flexDirection:"column", gap:6, textAlign:"left",
-                  fontFamily:"DM Sans,sans-serif" }}>
+                  fontFamily:"Nunito,sans-serif" }}>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                   <span style={{ fontSize:20 }}>📸</span>
                   {shareStyle==="outdoor_photo" && (
@@ -588,7 +588,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                   border:`2px solid ${shareStyle==="result_card"?V2G.green:V2G.border}`,
                   background:shareStyle==="result_card"?"rgba(125,200,50,0.08)":"white",
                   display:"flex", flexDirection:"column", gap:6, textAlign:"left",
-                  fontFamily:"DM Sans,sans-serif" }}>
+                  fontFamily:"Nunito,sans-serif" }}>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                   <span style={{ fontSize:20 }}>✨</span>
                   {shareStyle==="result_card" && (
@@ -612,19 +612,19 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                   <button onClick={requestGpsLocation} disabled={gpsRequesting}
                     style={{ gridColumn:"1 / -1", padding:"12px 10px", borderRadius:12, cursor:"pointer",
                       border:`1.5px solid ${V2G.green}`, background:"rgba(125,200,50,0.10)",
-                      color:V2G.darkGreen, fontSize:13, fontWeight:700, fontFamily:"DM Sans,sans-serif", whiteSpace:"nowrap" }}>
+                      color:V2G.darkGreen, fontSize:13, fontWeight:700, fontFamily:"Nunito,sans-serif", whiteSpace:"nowrap" }}>
                     📍 {gpsRequesting?"Locating…":"Use my location"}
                   </button>
                   <button onClick={()=>setLocationMode("manual")}
                     style={{ padding:"11px 8px", borderRadius:12, cursor:"pointer",
                       border:`1.5px solid ${V2G.border}`, background:"white",
-                      color:V2G.darkGreen, fontSize:13, fontWeight:600, fontFamily:"DM Sans,sans-serif", whiteSpace:"nowrap" }}>
+                      color:V2G.darkGreen, fontSize:13, fontWeight:600, fontFamily:"Nunito,sans-serif", whiteSpace:"nowrap" }}>
                     ✏️ Enter city
                   </button>
                   <button onClick={()=>setLocationMode("none")}
                     style={{ padding:"11px 8px", borderRadius:12, cursor:"pointer",
                       border:`1.5px solid ${V2G.border}`, background:"white",
-                      color:V2G.midGray, fontSize:13, fontWeight:600, fontFamily:"DM Sans,sans-serif", whiteSpace:"nowrap" }}>
+                      color:V2G.midGray, fontSize:13, fontWeight:600, fontFamily:"Nunito,sans-serif", whiteSpace:"nowrap" }}>
                     Skip
                   </button>
                 </div>
@@ -635,20 +635,20 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                 <input value={locationCity} onChange={e=>setLocationCity(e.target.value)}
                   placeholder="City (e.g. Tampa)"
                   style={{ padding:"10px 14px", borderRadius:10, border:`1.5px solid ${V2G.border}`,
-                    fontSize:13, color:V2G.darkGreen, outline:"none", fontFamily:"DM Sans,sans-serif" }} />
+                    fontSize:13, color:V2G.darkGreen, outline:"none", fontFamily:"Nunito,sans-serif" }} />
                 <div style={{ display:"flex", gap:8 }}>
                   <input value={locationRegion} onChange={e=>setLocationRegion(e.target.value)}
                     placeholder="State/Region"
                     style={{ flex:1, padding:"10px 14px", borderRadius:10, border:`1.5px solid ${V2G.border}`,
-                      fontSize:13, color:V2G.darkGreen, outline:"none", fontFamily:"DM Sans,sans-serif" }} />
+                      fontSize:13, color:V2G.darkGreen, outline:"none", fontFamily:"Nunito,sans-serif" }} />
                   <input value={locationCountry} onChange={e=>setLocationCountry(e.target.value)}
                     placeholder="Country"
                     style={{ flex:1, padding:"10px 14px", borderRadius:10, border:`1.5px solid ${V2G.border}`,
-                      fontSize:13, color:V2G.darkGreen, outline:"none", fontFamily:"DM Sans,sans-serif" }} />
+                      fontSize:13, color:V2G.darkGreen, outline:"none", fontFamily:"Nunito,sans-serif" }} />
                 </div>
                 <button onClick={()=>setLocationMode(null)}
                   style={{ fontSize:11, color:V2G.midGray, background:"none", border:"none",
-                    cursor:"pointer", textAlign:"left", textDecoration:"underline", fontFamily:"DM Sans,sans-serif" }}>
+                    cursor:"pointer", textAlign:"left", textDecoration:"underline", fontFamily:"Nunito,sans-serif" }}>
                   ← Back
                 </button>
               </div>
@@ -659,7 +659,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                 <span style={{ fontSize:12, color:V2G.green }}>📍 Approximate location added</span>
                 <button onClick={()=>{setLocationMode(null);setGpsLat(null);setGpsLng(null);}}
                   style={{ fontSize:11, color:V2G.midGray, background:"none", border:"none",
-                    cursor:"pointer", textDecoration:"underline", fontFamily:"DM Sans,sans-serif" }}>
+                    cursor:"pointer", textDecoration:"underline", fontFamily:"Nunito,sans-serif" }}>
                   Remove
                 </button>
               </div>
@@ -670,7 +670,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                 <span style={{ fontSize:12, color:V2G.midGray }}>No location</span>
                 <button onClick={()=>setLocationMode(null)}
                   style={{ fontSize:11, color:V2G.green, background:"none", border:"none",
-                    cursor:"pointer", textDecoration:"underline", fontFamily:"DM Sans,sans-serif" }}>
+                    cursor:"pointer", textDecoration:"underline", fontFamily:"Nunito,sans-serif" }}>
                   Add location
                 </button>
               </div>
@@ -688,7 +688,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               action={<button onClick={handleNewCaption} aria-label="Get a new caption"
                 style={{ background:"white", border:`1px solid ${V2G.border}`, borderRadius:20, padding:"6px 12px",
                   fontSize:12, fontWeight:700, color:V2G.darkGreen, cursor:"pointer", whiteSpace:"nowrap",
-                  fontFamily:"DM Sans,sans-serif" }}>↻ New caption</button>} />
+                  fontFamily:"Nunito,sans-serif" }}>↻ New caption</button>} />
             <div style={{ padding:"12px 14px", borderRadius:12,
               border:`1.5px solid ${V2G.border}`, background:"rgba(125,200,50,0.03)" }}>
               <p style={{ fontSize:12, color:V2G.darkGreen, lineHeight:1.6, margin:0 }}>{caption}</p>
@@ -747,7 +747,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                 <button onClick={activateSunset} disabled={activatingSunset}
                   style={{ background:"rgba(200,168,75,0.15)", border:"1px solid rgba(200,168,75,0.4)",
                     borderRadius:8, padding:"8px 14px", color:"#c8a84b", fontSize:12, fontWeight:700,
-                    cursor:"pointer", flexShrink:0, opacity:activatingSunset?0.6:1, fontFamily:"DM Sans,sans-serif" }}>
+                    cursor:"pointer", flexShrink:0, opacity:activatingSunset?0.6:1, fontFamily:"Nunito,sans-serif" }}>
                   {activatingSunset?"Activating…":"🌅 Activate Pass"}
                 </button>
               )}
@@ -768,7 +768,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               color:"white", border:"none", borderRadius:12, padding:"18px", width:"100%",
               fontSize:17, fontWeight:800,
               cursor:(submitStatus==="loading"||submitStatus==="success")?"default":"pointer",
-              boxShadow:"0 4px 20px rgba(125,200,50,0.4)", fontFamily:"DM Sans,sans-serif",
+              boxShadow:"0 4px 20px rgba(125,200,50,0.4)", fontFamily:"Nunito,sans-serif",
               display:"flex", alignItems:"center", justifyContent:"center", gap:10, letterSpacing:"0.02em",
               WebkitAppearance:"none", touchAction:"manipulation", userSelect:"none",
             }}>
@@ -782,7 +782,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               border:`1.5px solid ${V2G.border}`, borderRadius:12, padding:"13px", width:"100%",
               fontSize:14, fontWeight:700,
               cursor:submitStatus==="loading"?"default":"pointer",
-              fontFamily:"DM Sans,sans-serif",
+              fontFamily:"Nunito,sans-serif",
               display:"flex", alignItems:"center", justifyContent:"center", gap:8,
               WebkitAppearance:"none", touchAction:"manipulation", userSelect:"none",
             }}>
@@ -829,7 +829,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             <button onClick={()=>setShowStylePicker(true)}
               style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer",
                 background:"rgba(125,200,50,0.12)", border:"1.5px solid rgba(125,200,50,0.3)",
-                color:"#5ba622", fontSize:13, fontWeight:700, fontFamily:"DM Sans,sans-serif" }}>
+                color:"#5ba622", fontSize:13, fontWeight:700, fontFamily:"Nunito,sans-serif" }}>
               📤 Share to X
             </button>
             <a href={downloadUrl} download={`proof-of-grass-day-${currentStreak}.png`}
@@ -853,7 +853,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             style={{position:"fixed",left:0,right:0,bottom:0,zIndex:998,margin:"0 auto",width:"100%",maxWidth:520,
               background:"white",borderRadius:"22px 22px 0 0",boxShadow:"0 -8px 40px rgba(26,74,10,0.18)",
               padding:"10px 18px calc(env(safe-area-inset-bottom,0px) + 18px)",maxHeight:"92vh",overflowY:"auto",
-              fontFamily:"DM Sans,sans-serif",boxSizing:"border-box"}}>
+              fontFamily:"Nunito,sans-serif",boxSizing:"border-box"}}>
             <div style={{width:40,height:4,borderRadius:2,background:"rgba(200,220,190,0.8)",margin:"0 auto 12px"}} />
             <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:14}}>
               <div style={{flex:1,minWidth:0}}>
@@ -877,7 +877,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                       border:`2px solid ${on?"#5ba622":"rgba(200,220,190,0.7)"}`,
                       background:on?"rgba(125,200,50,0.08)":"white",
                       boxShadow:on?"0 2px 12px rgba(125,200,50,0.25)":"none",
-                      transition:"all .15s",fontFamily:"DM Sans,sans-serif",display:"flex",flexDirection:"column",gap:8}}>
+                      transition:"all .15s",fontFamily:"Nunito,sans-serif",display:"flex",flexDirection:"column",gap:8}}>
                     <div style={{position:"relative",width:"100%",aspectRatio:"4 / 3",borderRadius:10,overflow:"hidden",background:"rgba(200,220,190,0.25)"}}>
                       {o.src && <img src={o.src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />}
                       <span aria-hidden="true" style={{position:"absolute",right:6,top:6,width:22,height:22,borderRadius:"50%",
@@ -897,7 +897,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",borderBottom:"1px solid rgba(200,220,190,0.5)"}}>
                 <span style={{fontSize:11,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:"#6b7d60"}}>Your post</span>
                 <button onClick={handleNewCaption}
-                  style={{background:"none",border:"none",color:"#3d7a12",fontSize:12,fontWeight:800,cursor:"pointer",padding:"4px 2px",fontFamily:"DM Sans,sans-serif"}}>↻ New caption</button>
+                  style={{background:"none",border:"none",color:"#3d7a12",fontSize:12,fontWeight:800,cursor:"pointer",padding:"4px 2px",fontFamily:"Nunito,sans-serif"}}>↻ New caption</button>
               </div>
               <div style={{padding:"10px 12px 12px",maxHeight:150,overflowY:"auto"}}>
                 <p style={{margin:0,fontSize:13.5,color:"#0d2a05",lineHeight:1.5,fontWeight:600,wordBreak:"break-word"}}>{caption}</p>
@@ -973,7 +973,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                   }}
               style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#7dc832,#5ba622)",
                 color:"white",fontSize:16,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 18px rgba(125,200,50,0.4)",
-                fontFamily:"DM Sans,sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,touchAction:"manipulation"}}>
+                fontFamily:"Nunito,sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,touchAction:"manipulation"}}>
               Continue to X <span aria-hidden="true">→</span>
             </button>
             <div style={{textAlign:"center",fontSize:11.5,color:"#6b7d60",margin:"10px 0 2px",lineHeight:1.4}}>
@@ -981,14 +981,14 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             </div>
             <button onClick={()=>setShowStylePicker(false)}
               style={{display:"block",margin:"4px auto 0",background:"none",border:"none",color:"#6b7d60",fontSize:13.5,fontWeight:700,
-                cursor:"pointer",padding:"8px 16px",fontFamily:"DM Sans,sans-serif"}}>Cancel</button>
+                cursor:"pointer",padding:"8px 16px",fontFamily:"Nunito,sans-serif"}}>Cancel</button>
           </div>
         </Portal>
       )}
 
       {shareFallbackMsg && (
         <Portal><div role="status" onClick={()=>setShareFallbackMsg("")}
-          style={{position:"fixed",left:12,right:12,bottom:"max(16px,env(safe-area-inset-bottom))",zIndex:9998,background:"#1a4a0a",color:"white",borderRadius:12,padding:"14px 16px",fontSize:13,lineHeight:1.5,boxShadow:"0 8px 30px rgba(0,0,0,0.35)",fontFamily:"DM Sans,sans-serif"}}>
+          style={{position:"fixed",left:12,right:12,bottom:"max(16px,env(safe-area-inset-bottom))",zIndex:9998,background:"#1a4a0a",color:"white",borderRadius:12,padding:"14px 16px",fontSize:13,lineHeight:1.5,boxShadow:"0 8px 30px rgba(0,0,0,0.35)",fontFamily:"Nunito,sans-serif"}}>
           {shareFallbackMsg}
           <div style={{fontSize:11,opacity:0.7,marginTop:6}}>Tap to dismiss</div>
         </div></Portal>
@@ -1004,17 +1004,17 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.22em",textTransform:"uppercase",marginBottom:10,color:luckyTouch.tier==="legendary"?"#c8a84b":luckyTouch.tier==="rare"?"#a78bfa":"#93a85a"}}>
               {luckyTouch.tier==="legendary"?"☀ Sun's Blessing":luckyTouch.tier==="rare"?"🍀 Rare Lucky Touch":"🍀 Lucky Touch"}
             </div>
-            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:700,lineHeight:1.1,marginBottom:12,color:"#f0efea"}}>
+            <div style={{fontFamily:"'Fredoka',system-ui,sans-serif",fontSize:28,fontWeight:700,lineHeight:1.1,marginBottom:12,color:"#f0efea"}}>
               {luckyTouch.tier==="legendary"?"A Rare Blessing":luckyTouch.tier==="rare"?"Rare Reward":"Lucky Touch"}
             </div>
-            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:600,marginBottom:8,color:luckyTouch.tier==="legendary"?"#c8a84b":luckyTouch.tier==="rare"?"#a78bfa":"#93a85a"}}>
+            <div style={{fontFamily:"'Fredoka',system-ui,sans-serif",fontSize:22,fontWeight:600,marginBottom:8,color:luckyTouch.tier==="legendary"?"#c8a84b":luckyTouch.tier==="rare"?"#a78bfa":"#93a85a"}}>
               {luckyTouch.type==="shield"?"🛡 +1 Shield":`🌱 +${luckyTouch.points} Grass Score`}
             </div>
             <div style={{fontSize:12,color:"rgba(240,239,234,0.45)",lineHeight:1.6,marginBottom:28}}>
               {luckyTouch.tier==="legendary"?"A rare blessing from the Touch Grass Sun.":luckyTouch.tier==="rare"?"Not everyone gets this. Keep touching grass.":"Keep touching grass."}
             </div>
             <button onClick={()=>setLuckyTouch(null)}
-              style={{width:"100%",padding:"14px",background:luckyTouch.tier==="legendary"?"#c8a84b":luckyTouch.tier==="rare"?"#a78bfa":"#93a85a",color:luckyTouch.tier==="rare"?"#f0efea":"#0e1108",border:"none",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:700,letterSpacing:"0.06em"}}>
+              style={{width:"100%",padding:"14px",background:luckyTouch.tier==="legendary"?"#c8a84b":luckyTouch.tier==="rare"?"#a78bfa":"#93a85a",color:luckyTouch.tier==="rare"?"#f0efea":"#0e1108",border:"none",borderRadius:10,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,letterSpacing:"0.06em"}}>
               Keep Going ✦
             </button>
           </div>

@@ -65,8 +65,8 @@ export const V2 = {
 
   // ── Typography ───────────────────────────────────────────────────────────────
 
-  fontSerif:      "'Cormorant Garamond', Georgia, serif",
-  fontSans:       "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+  fontSerif:      "'Fredoka',system-ui,sans-serif",
+  fontSans:       "'Nunito', -apple-system, BlinkMacSystemFont, sans-serif",
 
   // Text colors on light backgrounds
   textPrimary:    "#0d2a05",   // forest green — main headings
@@ -329,12 +329,12 @@ export const V2Styles = {
 // ── Global CSS string (inject into pages) ─────────────────────────────────────
 
 export const V2GlobalCSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
-    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
     background: ${V2.gradientSky};
     color: ${V2.forestGreen};
     min-height: 100vh;
@@ -348,7 +348,7 @@ export const V2GlobalCSS = `
   ::-webkit-scrollbar-thumb { background: ${V2.grassGreen}40; border-radius: 2px; }
 
   /* Inputs */
-  input, select, textarea, button { font-family: 'DM Sans', sans-serif; }
+  input, select, textarea, button { font-family: 'Nunito', sans-serif; }
   input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: ${V2.grassGreen} !important;

@@ -158,7 +158,7 @@ function StatCell({ icon, value, label, sub, accent, last }) {
       alignItems:"center", gap:5, padding:"18px 10px",
       borderRight: last ? "none" : `1px solid ${T.border}` }}>
       <span style={{ fontSize:22 }}>{icon}</span>
-      <span style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+      <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
         fontSize:"clamp(18px,3vw,28px)", fontWeight:700, color: accent ? T.gold : T.white,
         lineHeight:1, letterSpacing:"-0.02em" }}>{value}</span>
       {sub && <span style={{ fontSize:9, color:accent?T.goldDim:T.olive, letterSpacing:"0.08em", textTransform:"uppercase", fontWeight:600 }}>{sub}</span>}
@@ -874,7 +874,7 @@ export default function FlexCardPage() {
   };
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     body{background:#e8f4fd;font-family:'Plus Jakarta Sans',sans-serif;}
     .fcs-tab{padding:10px 18px;border-radius:20px;border:1.5px solid rgba(200,220,190,0.5);
@@ -929,7 +929,7 @@ export default function FlexCardPage() {
           {/* Help */}
           <button style={{ background:"transparent", border:"1.5px solid rgba(200,220,190,0.5)",
             borderRadius:20, padding:"6px 14px", fontSize:12, fontWeight:600,
-            color:"#6b7d60", cursor:"pointer", flexShrink:0, fontFamily:"DM Sans,sans-serif" }}>
+            color:"#6b7d60", cursor:"pointer", flexShrink:0, fontFamily:"Nunito,sans-serif" }}>
             Help
           </button>
         </nav>
@@ -1011,7 +1011,7 @@ export default function FlexCardPage() {
                   <div style={{ marginLeft:"auto", textAlign:"right" }}>
                     <div style={{ fontSize:9, color:"rgba(255,255,255,0.6)", letterSpacing:"0.1em",
                       textTransform:"uppercase", marginBottom:2 }}>Day</div>
-                    <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                    <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                       fontSize:48, fontWeight:700, color:"white", lineHeight:1 }}>{streak}</div>
                   </div>
                 </div>
@@ -1029,7 +1029,7 @@ export default function FlexCardPage() {
                       border:"1px solid rgba(255,255,255,0.2)", flex:"1 1 80px", minWidth:0 }}>
                       <div style={{ fontSize:9, color:"rgba(255,255,255,0.6)",
                         textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:2 }}>{s.label}</div>
-                      <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif",
+                      <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                         fontSize:18, fontWeight:700, color:"white" }}>{s.value}</div>
                     </div>
                   ))}
@@ -1274,7 +1274,7 @@ export default function FlexCardPage() {
                 style={{ background:"linear-gradient(135deg,#7dc832,#5ba622)",
                   color:"white", border:"none", borderRadius:12, padding:"14px",
                   fontSize:15, fontWeight:700, cursor:"pointer",
-                  boxShadow:"0 4px 16px rgba(125,200,50,0.35)", fontFamily:"DM Sans,sans-serif",
+                  boxShadow:"0 4px 16px rgba(125,200,50,0.35)", fontFamily:"Nunito,sans-serif",
                   display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
                 ✓ Apply Background
               </button>
@@ -1286,7 +1286,7 @@ export default function FlexCardPage() {
                 color:cardReady?"white":"#6b7d60", border:"none", borderRadius:12, padding:"14px",
                 fontSize:15, fontWeight:700, cursor:cardReady?"pointer":"default",
                 boxShadow:cardReady?"0 4px 16px rgba(125,200,50,0.35)":"none",
-                fontFamily:"DM Sans,sans-serif",
+                fontFamily:"Nunito,sans-serif",
                 display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
               {!cardReady?"⏳ Building Card…":"🚀 Share Flex Card to X"}
             </button>
@@ -1296,13 +1296,13 @@ export default function FlexCardPage() {
               <button onClick={downloadCard} disabled={generatingImg}
                 style={{ flex:1, padding:"12px", borderRadius:12, cursor:"pointer",
                   background:"white", border:"1.5px solid rgba(200,220,190,0.5)",
-                  color:"#1a4a0a", fontSize:13, fontWeight:600, fontFamily:"DM Sans,sans-serif" }}>
+                  color:"#1a4a0a", fontSize:13, fontWeight:600, fontFamily:"Nunito,sans-serif" }}>
                 {downloaded?"✓ Downloaded!":"↓ Download Card"}
               </button>
               <button onClick={copyLink}
                 style={{ flex:1, padding:"12px", borderRadius:12, cursor:"pointer",
                   background:"white", border:"1.5px solid rgba(200,220,190,0.5)",
-                  color:"#1a4a0a", fontSize:13, fontWeight:600, fontFamily:"DM Sans,sans-serif" }}>
+                  color:"#1a4a0a", fontSize:13, fontWeight:600, fontFamily:"Nunito,sans-serif" }}>
                 {copied?"✓ Copied!":"↗ Copy Link"}
               </button>
             </div>
