@@ -64,12 +64,11 @@ export default async function handler(req, res) {
   if (!username && pogUsername) {
     const candidate = String(pogUsername).trim().replace(/^@/, "").toLowerCase();
     if (candidate) {
-      const [{ data: prof }, { data: streak }] = await Promise.all([
-        supabase.from("Profiles").select("username").ilike("username", candidate).maybeSingle(),
-        supabase.from("Streaks").select("username").ilike("username", candidate).maybeSingle(),
-      ]);
-      if (prof?.username || streak?.username) username = candidate;
-      else return res.status(400).json({ error: `No Proof of Grass account found for @${candidate}.`, need_username: true });
+      // Tickets can only go to a username secured by THIS Google account.
+      const { data: own } = await supabase.from("username_claims").select("google_id").eq("username", candidate).maybeSingle();
+      if (!own) return res.status(400).json({ error: `@${candidate} isn't secured with your Google account yet. Secure it on Proof of Grass first.`, need_username: true });
+      if (own.google_id !== googleId) return res.status(403).json({ error: `@${candidate} belongs to another account.`, need_username: true });
+      username = candidate;
     }
   }
   if (!username) {

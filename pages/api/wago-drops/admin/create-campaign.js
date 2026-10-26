@@ -1,5 +1,6 @@
 // pages/api/wago-drops/admin/create-campaign.js
 import { validateReward } from "../../../../utils/wagoPayout.mjs";
+import { wagoSecretOk } from "../../../../utils/wagoAdminAuth";
 import { createClient } from "@supabase/supabase-js";
 import { RARITIES } from "../../../../utils/wagoProofBonus";
 
@@ -9,8 +10,8 @@ const supabase = createClient(
 );
 
 function isAdmin(req) {
-  const secret = req.headers["x-wago-admin-secret"] || req.body?._adminSecret;
-  return secret === process.env.WAGO_ADMIN_SECRET;
+  const secret = req.headers["x-wago-admin-secret"];
+  return wagoSecretOk(secret, req);
 }
 
 export default async function handler(req, res) {

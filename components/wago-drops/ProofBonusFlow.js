@@ -109,7 +109,11 @@ export default function ProofBonusFlow({ claim, onDone, existingProof = null }) 
       const pos  = await getPosition();
       const blob = await toJpegBlob(file);
       const path = `wago-drops/${claim.claim_id}.jpg`;
-      const up = await supabase.storage.from("proof-photos").upload(path, blob, { contentType: "image/jpeg", upsert: true });
+      const uj = await fetch("/api/wago-drops/proof-upload-url", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claimId: claim.claim_id }),
+      }).then(r => r.json().catch(() => ({})));
+      if (!uj.token) throw new Error(uj.error || "Photo upload failed. Please try again.");
+      const up = await supabase.storage.from("proof-photos").uploadToSignedUrl(uj.path, uj.token, blob, { contentType: "image/jpeg", upsert: true });
       if (up.error) throw new Error("Photo upload failed. Please try again.");
       const res = await fetch("/api/wago-drops/proof", {
         method: "POST",

@@ -1,9 +1,10 @@
 // Admin: list / create / update prizes and generate single-use codes.
+import { wagoSecretOk } from "../../../../utils/wagoAdminAuth";
 import { createClient } from "@supabase/supabase-js";
 import { hashCode, makeCode, loadSpots } from "../../../../utils/prizes";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const isAdmin = (req) => { const s = req.headers["x-wago-admin-secret"]; return !!s && s === process.env.WAGO_ADMIN_SECRET; };
+const isAdmin = (req) => { const s = req.headers["x-wago-admin-secret"]; return !!s && wagoSecretOk(s, req); };
 const str = (v, n) => (v == null || String(v).trim() === "" ? null : String(v).trim().slice(0, n));
 
 async function addCodes(prizeId, spotId, n) {
