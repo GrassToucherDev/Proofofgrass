@@ -27,7 +27,14 @@ export default async function handler(req, res) {
   const { data: existing } = await db.from("wheel_spins").select("*").eq("payment_tx", signature).maybeSingle();
   if (existing) {
     if (existing.intent_id !== id) return res.status(409).json({ error: MSG.signature_used });
-    return res.status(200).json({ success: true, replay: true, spin: publicSpin(existing) });
+    // A refresh or retry also finishes a prize that was left pending/failed (the grant is idempotent).
+    let spin = existing;
+    if (["pending", "failed"].includes(existing.fulfillment_status)) {
+      await db.rpc("wheel_fulfill", { p_spin: existing.id });
+      const { data: fresh } = await db.from("wheel_spins").select("*").eq("id", existing.id).single();
+      if (fresh) spin = fresh;
+    }
+    return res.status(200).json({ success: true, replay: true, spin: publicSpin(spin) });
   }
 
   let amount;

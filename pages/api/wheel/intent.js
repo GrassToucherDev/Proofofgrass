@@ -16,7 +16,10 @@ export default async function handler(req, res) {
   const who = await requireOwner(req, res, req.body?.username);
   if (!who) return;
   const db = adminClient();
-  if (!(await hasConsent(db, who.googleId).catch(() => true))) return res.status(403).json({ error: "Please accept the terms first.", code: "consent_required" });
+  let consented;
+  try { consented = await hasConsent(db, who.googleId); }
+  catch (e) { console.error("[wheel/intent] consent check", e); return res.status(503).json({ error: "Couldn't check your terms acceptance. Please try again in a moment." }); }
+  if (!consented) return res.status(403).json({ error: "Please accept the terms first.", code: "consent_required" });
   const { data: w } = await db.from("wheels").select("id, price_mode").eq("featured", true).eq("status", "active").maybeSingle();
   if (!w) return res.status(409).json({ error: MSG.not_active, reason: "not_active" });
   let price = null;
