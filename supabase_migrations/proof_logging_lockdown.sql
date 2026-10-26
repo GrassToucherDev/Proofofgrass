@@ -23,3 +23,21 @@ begin
     execute format('grant execute on function %s to service_role', r.sig);
   end loop;
 end $$;
+
+-- STEP 1b (run BEFORE deploying, harmless): remembers a hash of each proof photo so one picture can't be reused.
+create table if not exists public.proof_photo_hashes (
+  hash       text primary key,
+  username   text not null,
+  day        date not null,
+  created_at timestamptz not null default now()
+);
+alter table public.proof_photo_hashes enable row level security;
+revoke all on public.proof_photo_hashes from anon, authenticated;
+
+-- STEP 3 (run AFTER the new code is deployed): proof photos can only be uploaded through the server's signed links.
+-- Only the WAGO Drops folder (which still uploads from the browser) stays open for inserts.
+drop policy if exists "allow anon insert proof-photos" on storage.objects;
+drop policy if exists "allow anon uploads  ny6sru_0" on storage.objects;
+drop policy if exists proof_photos_wago_insert on storage.objects;
+create policy proof_photos_wago_insert on storage.objects for insert to public
+  with check (bucket_id = 'proof-photos' and name like 'wago-drops/%');

@@ -3,22 +3,16 @@
 //   * a SECURED username can only be logged by the Google account that owns it (no impersonation, no burning someone
 //     else's shield);
 //   * an unsecured username is allowed but throttled per network (a few different usernames a day, an hourly cap).
-// Verification is always "self_attested"; the client cannot ask for more.
-import crypto from "crypto";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]";
+// A real photo is required (see below). Verification is always "self_attested"; the client cannot ask for more.
 import { adminClient, cleanUsername } from "../../../utils/requireOwner";
+import { authorizeProofActor, BUCKET, proofPath, looksLikeImage } from "../../../utils/proofAccess";
+import crypto from "crypto";
 
-const MAX_ATTEMPTS_PER_HOUR = 60;      // per network, any username
-const MAX_NEW_USERNAMES_PER_DAY = 5;   // per network, unsecured usernames only (shared Wi-Fi / mobile carriers allowed for)
+const MIN_PHOTO_BYTES = 8 * 1024;
+const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 
 const num = (v, lo, hi) => { const n = Number(v); return Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n * 100) / 100 : null; };
 const str = (v, n) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
-
-function ipHash(req) {
-  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.headers["x-real-ip"] || req.socket?.remoteAddress || "unknown";
-  return crypto.createHash("sha256").update(ip + "|" + (process.env.SUPABASE_SERVICE_ROLE_KEY || "").slice(0, 16)).digest("hex").slice(0, 32);
-}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -26,30 +20,35 @@ export default async function handler(req, res) {
   if (!/^[\w.\-]{1,64}$/.test(username)) return res.status(400).json({ error: "Invalid username.", code: "bad_username" });
   const db = adminClient();
 
-  // Secured usernames: owner only.
-  const { data: claim } = await db.from("username_claims").select("google_id").eq("username", username).maybeSingle();
-  if (claim) {
-    const session = await getServerSession(req, res, authOptions);
-    const gid = session?.user?.google_id;
-    if (!gid) return res.status(401).json({ error: "This username is secured. Sign in with Google to log your proof.", code: "not_signed_in" });
-    if (gid !== claim.google_id) return res.status(403).json({ error: "This username belongs to another account.", code: "not_owner" });
-  }
+  const who = await authorizeProofActor(req, res, db, username);
+  if (!who) return;
+  const { claim, ih } = who;
 
-  // Throttle per network. Fails open if the table isn't there yet, so logging never breaks over bookkeeping.
-  const ih = ipHash(req);
+  // A proof needs a real photo: today's upload must exist, be an image, and not be a re-used picture.
+  const path = proofPath(username);
+  const { data: files } = await db.storage.from(BUCKET).list(username, { search: path.split("/")[1], limit: 5 });
+  const file = (files || []).find((f) => f.name === path.split("/")[1]);
+  const size = Number(file?.metadata?.size ?? 0);
+  if (!file || size < MIN_PHOTO_BYTES || size > MAX_PHOTO_BYTES) {
+    return res.status(400).json({ error: "Add your outdoor photo to log your proof.", code: "photo_required" });
+  }
   try {
-    const hourAgo = new Date(Date.now() - 3600_000).toISOString();
-    const dayAgo = new Date(Date.now() - 86400_000).toISOString();
-    const { count: hourly } = await db.from("proof_attempts").select("id", { count: "exact", head: true }).eq("ip_hash", ih).gte("created_at", hourAgo);
-    if ((hourly ?? 0) >= MAX_ATTEMPTS_PER_HOUR) return res.status(429).json({ error: "Too many attempts from this network. Try again in a bit.", code: "rate_limited" });
-    if (!claim) {
-      const { data: recent } = await db.from("proof_attempts").select("username").eq("ip_hash", ih).eq("secured", false).gte("created_at", dayAgo).limit(500);
-      const others = new Set((recent || []).map((r) => r.username).filter((u) => u !== username));
-      if (others.size >= MAX_NEW_USERNAMES_PER_DAY) {
-        return res.status(429).json({ error: "Too many different accounts from this network today. Secure your username with Google to keep logging.", code: "too_many_accounts" });
+    const { data: blob } = await db.storage.from(BUCKET).download(path);
+    const buf = Buffer.from(await blob.arrayBuffer());
+    if (!looksLikeImage(buf)) return res.status(400).json({ error: "That file isn't a photo we can read. Try a JPEG or PNG.", code: "photo_invalid" });
+    const hash = crypto.createHash("sha256").update(buf).digest("hex");
+    const day = new Date().toISOString().slice(0, 10);
+    const { data: seen, error: hErr } = await db.from("proof_photo_hashes").select("username,day").eq("hash", hash).maybeSingle();
+    if (!hErr) {
+      if (seen && (seen.username !== username || String(seen.day).slice(0, 10) !== day)) {
+        return res.status(409).json({ error: "That photo was already used for a proof. Take a new one today.", code: "photo_reused" });
       }
-    }
-  } catch (e) { console.warn("[proof/log] throttle skipped:", e?.message); }
+      if (!seen) await db.from("proof_photo_hashes").insert([{ hash, username, day }]);
+    } else console.warn("[proof/log] photo hash check skipped:", hErr.message);
+  } catch (e) {
+    console.error("[proof/log] photo check failed:", e?.message);
+    return res.status(400).json({ error: "We couldn't read your photo. Please retake it and try again.", code: "photo_invalid" });
+  }
 
   // Whitelisted, sanitised parameters only.
   const b = req.body || {};
