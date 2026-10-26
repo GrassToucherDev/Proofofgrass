@@ -8,7 +8,6 @@ import V2Nav from "../components/V2Nav";
 import V2BottomNav from "../components/V2BottomNav";
 import V2Ticker from "../components/V2Ticker";
 import { supabase } from "../utils/supabase";
-import WagoCard from "../components/WagoCard";
 import { yardError } from "../utils/yardErrors";
 import SecureUsernameCard from "../components/SecureUsernameCard";
 import { getSpotlightBadge, getSpotlightFeedText, SPOTLIGHT_BADGES } from "../utils/spotlightBadges";
@@ -682,7 +681,8 @@ export default function Home() {
     try {
       const today = new Date().toISOString().slice(0,10);
       const fileName = `${username}/${today}.png`;
-      await supabase.storage.from("proof-photos").upload(fileName, file, { contentType:file.type||"image/png", upsert:true });
+      // upsert:false — overwriting needs an UPDATE storage rule, and that rule let anyone replace anyone's proof photo. The first photo of the day sticks.
+      await supabase.storage.from("proof-photos").upload(fileName, file, { contentType:file.type||"image/png", upsert:false });
     } catch(e) {}
   }, [username, hasUser]);
 
@@ -799,9 +799,6 @@ export default function Home() {
               </Link>
             </div>
           </div>
-
-          {/* WAGO Drops card */}
-          <WagoCard username={username} />
 
           {/* Right — stat cards */}
           <div className="v2-hero-right" style={{ position: "relative", zIndex: 1 }}>
