@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { signIn } from "next-auth/react";
 import { supabase } from "../utils/supabase";
 
 // ── Premium+ Themes ──────────────────────────────────────────────────────────
@@ -795,6 +796,13 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           )}
           {submitStatus==="error" && submitError && (
             <p style={{ fontSize:11, color:"#e05050", textAlign:"center", margin:0 }}>{submitError}</p>
+          )}
+          {submitStatus==="error" && submitError && /sign in with google/i.test(submitError) && (
+            <button onClick={()=>signIn("google",{callbackUrl:typeof window!=="undefined"?window.location.href:"/"})}
+              style={{ alignSelf:"center", padding:"10px 20px", borderRadius:12, border:"none", cursor:"pointer",
+                fontSize:13, fontWeight:700, color:"white", background:"linear-gradient(135deg,#7dc832,#5ba622)" }}>
+              Sign in with Google
+            </button>
           )}
           <p style={{ fontSize:11, color:"#6b7d60", textAlign:"center", margin:0 }}>
             Tap <strong>Lock In My Streak</strong> first, then share to X separately.
