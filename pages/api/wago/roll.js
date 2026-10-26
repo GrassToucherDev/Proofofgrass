@@ -2,6 +2,9 @@
 // Server-side WAGO Drop roll — called after lock_in_streak succeeds
 // Never trust client-supplied streak, balance or reward data
 
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]";
+
 const MINT    = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const DECIMALS = 6;
 const RPC     = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
@@ -70,10 +73,11 @@ function selectReward(rewards, noDropWeight) {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { username, streak_day, submission_id } = req.body;
+  const username = String(req.body?.username ?? "").replace(/@/g, "").toLowerCase().trim();
+  const submission_id = req.body?.submission_id ?? null;
 
-  if (!username || !streak_day) {
-    return res.status(400).json({ error: "Missing username or streak_day" });
+  if (!username) {
+    return res.status(400).json({ error: "Missing username" });
   }
 
   const { createClient } = await import("@supabase/supabase-js");
@@ -81,6 +85,26 @@ export default async function handler(req, res) {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
+
+  // A secured username can only be rolled for by the Google account that owns it.
+  {
+    const { data: claim } = await supabase.from("username_claims").select("google_id").eq("username", username).maybeSingle();
+    if (claim) {
+      const session = await getServerSession(req, res, authOptions);
+      if (session?.user?.google_id !== claim.google_id) return res.status(403).json({ error: "Not your account." });
+    }
+  }
+
+  // The streak comes from the database, never from the request: the old code trusted a client-sent streak_day, so
+  // anyone could roll without a streak or a proof. A proof must also have been counted for today or yesterday (UTC).
+  const { data: streakRow } = await supabase.from("Streaks").select("current_streak,last_submission_date").ilike("username", username).maybeSingle();
+  const streak_day = Number(streakRow?.current_streak ?? 0);
+  const lastDay = streakRow?.last_submission_date ? String(streakRow.last_submission_date).slice(0, 10) : null;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (!streak_day || !lastDay || (lastDay !== todayStr && lastDay !== yesterdayStr)) {
+    return res.status(200).json({ outcome: "ineligible", reason: "no_proof_today" });
+  }
 
   try {
     // ── 1. Find active season ─────────────────────────────────────────────────
