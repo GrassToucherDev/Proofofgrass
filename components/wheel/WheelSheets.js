@@ -1,4 +1,5 @@
 // Bottom sheets for the WAGO Wheel: confirm spin, prize pool, result reveal, My Wins.
+import TokenLogo from "../TokenLogo";
 import { useEffect, useState } from "react";
 import { V2 } from "../../utils/v2Theme";
 import Wago from "../wago-drops/Wago";
@@ -39,7 +40,7 @@ export function SpinSheet({ quote, wheel, busy, error, onConfirm, onClose }) {
     <Sheet title="Spin the WAGO Wheel" onClose={onClose}>
       <div style={{ background: "#f4f9ee", borderRadius: 14, padding: 14, marginBottom: 12 }}>
         <div style={{ fontSize: 12, color: V2.midGray, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Spin cost</div>
-        <div style={{ fontSize: 26, fontWeight: 800 }}>{fmt(t)} $TOUCHGRASS</div>
+        <div style={{ fontSize: 26, fontWeight: 800 }}><TokenLogo size={28} />{fmt(t)} $TOUCHGRASS</div>
         {quote.usd != null && <div style={{ fontSize: 13, color: V2.midGray }}>≈ ${Number(quote.usd).toFixed(2)} USD at today's price</div>}
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 10, marginTop: 12 }}>
           <div style={{ background: "#fff", borderRadius: 10, padding: "10px 12px" }}>

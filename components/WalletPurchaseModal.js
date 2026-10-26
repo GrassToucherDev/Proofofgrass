@@ -1,6 +1,7 @@
 // components/WalletPurchaseModal.js
 // On-chain $TOUCHGRASS payment — no admin approval needed
 
+import TokenLogo from "./TokenLogo";
 import { useState, useCallback, useEffect } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -313,7 +314,7 @@ export default function WalletPurchaseModal({
           </div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
             paddingTop:8,borderTop:`1px solid ${T.border}`}}>
-            <span style={{fontSize:12,color:T.muted}}>$TOUCHGRASS Amount</span>
+            <span style={{fontSize:12,color:T.muted,display:"inline-flex",alignItems:"center"}}><TokenLogo size={14} />$TOUCHGRASS Amount</span>
             <span style={{fontSize:16,fontWeight:700,color:T.gold}}>
               {tokens?.toLocaleString()}
             </span>
@@ -450,7 +451,7 @@ export default function WalletPurchaseModal({
                     ...BTN, width:"100%", padding:"15px", fontSize:15, marginBottom:12,
                     opacity: connected ? 1 : 0.5, cursor: connected ? "pointer" : "default",
                   }}>
-                  {txSig ? "Retry verification →" : (payLabel || `Pay ${tokens?.toLocaleString()} $TOUCHGRASS →`)}
+                  {txSig ? "Retry verification →" : (payLabel || <><TokenLogo size={18} />{`Pay ${tokens?.toLocaleString()} $TOUCHGRASS →`}</>)}
                 </button>
 
                 <div style={{fontSize:10,color:T.dim,textAlign:"center",lineHeight:1.6}}>

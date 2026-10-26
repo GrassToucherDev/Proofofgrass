@@ -1,4 +1,5 @@
 // The WAGO Wheel hero on the Marketplace. Renders nothing when no wheel is live for this viewer.
+import TokenLogo from "../TokenLogo";
 import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { V2 } from "../../utils/v2Theme";
@@ -99,14 +100,14 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
           {[[compact(stats.locked_amount), "$TOUCHGRASS locked", "🔥"], [fmt(stats.total_spins), "Total spins", "👥"], [fmt(stats.prizes_claimed), "Prizes claimed", "🎁"]].map(([v, l, e], i) => (
             <div key={l} style={{ padding: "2px 4px", borderLeft: i ? `1px solid ${V2.borderSoft}` : "none" }}>
               <div style={{ fontSize: 20, fontWeight: 800 }}>{e} {v}</div>
-              <div style={{ fontSize: 10.5, color: V2.midGray, fontWeight: 600 }}>{l}</div>
+              <div style={{ fontSize: 10.5, color: V2.midGray, fontWeight: 600 }}>{l.startsWith("$TOUCHGRASS") && <TokenLogo size={12} />}{l}</div>
             </div>
           ))}
         </div>
 
         <button onClick={openConfirm} disabled={!canSpin} style={{ marginTop: 14, width: "100%", border: "none", borderRadius: 999, padding: "16px 18px", fontFamily: V2.fontSans, fontWeight: 800, fontSize: 17,
           color: "#fff", background: canSpin ? V2.gradientGrassBtn : "rgba(13,42,5,0.3)", boxShadow: canSpin ? V2.shadowGlow : "none", cursor: canSpin ? "pointer" : "default" }}>
-          {!playable ? "Restocking prizes…" : quote?.tokens ? `Spin for ${fmt(quote.tokens)} $TOUCHGRASS` : "Price unavailable"}
+          {!playable ? "Restocking prizes…" : quote?.tokens ? <><TokenLogo size={22} style={{ verticalAlign: "-0.3em" }} />{`Spin for ${fmt(quote.tokens)} $TOUCHGRASS`}</> : "Price unavailable"}
         </button>
         {canSpin && <div style={{ textAlign: "center", fontSize: 12, color: V2.textBody, marginTop: 6 }}>
           {quote.usd != null && <>≈ ${Number(quote.usd).toFixed(2)} USD · </>}{wheel.lock_pct}% ({fmt(quote.lock_amount)}) to lock · {wheel.eco_pct}% ({fmt(quote.eco_amount)}) to ecosystem</div>}
@@ -150,7 +151,7 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
           handoffUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/marketplace?checkout=${pay.checkoutId}`}
           statusUrl={`/api/checkout/info?id=${pay.checkoutId}`}
           notice="Your prize is picked by our server once the payment is confirmed. If anything interrupts, you can retry verification and you will not be charged twice."
-          payLabel={`Pay ${fmt(pay.tokens)} $TOUCHGRASS →`}
+          payLabel={<><TokenLogo size={18} />{`Pay ${fmt(pay.tokens)} $TOUCHGRASS →`}</>}
           onSuccess={paidDone}
         />
       )}
