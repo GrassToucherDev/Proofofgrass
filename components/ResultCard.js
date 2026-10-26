@@ -184,10 +184,14 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
   const sharableFileRef = useRef(null);
   const outdoorFileRef  = useRef(null);
 
-  const [downloadUrl,    setDownloadUrl]    = useState(null);
+  const [rawDownloadUrl, setDownloadUrl]    = useState(null);
+  const [cardStreak,     setCardStreak]     = useState(null);
   const [caption,        setCaption]        = useState(()=>pickCaption(initialStreak,null));
   const [copied,         setCopied]         = useState(false);
   const [currentStreak,  setCurrentStreak]  = useState(initialStreak);
+  // The card image only counts as ready if it was drawn for the CURRENT streak, so a stale card (e.g. Day 120 after the
+  // streak became 121) can never be shared or downloaded while the new one is still being drawn.
+  const downloadUrl = cardStreak===currentStreak ? rawDownloadUrl : null;
   const [tweetUrl,       setTweetUrl]       = useState("");
   const [submitStatus,   setSubmitStatus]   = useState(null);
   const [submitError,    setSubmitError]    = useState("");
@@ -502,7 +506,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       const logo=new Image();
       const cacheForPreview=(dataUrl)=>{
         if(cancelled) return;
-        setDownloadUrl(dataUrl);
+        setDownloadUrl(dataUrl);setCardStreak(currentStreak);
         // Pre-build result card file for sharing (only if this render is still the current one)
         try{fetch(dataUrl).then(res=>res.blob()).then(blob=>{
           if(cancelled) return;
@@ -512,7 +516,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       logo.onload=()=>{if(cancelled) return;ctx.save();ctx.globalAlpha=0.55;ctx.drawImage(logo,BL_X-4,BL_BASE-72,36,36);ctx.restore();cacheForPreview(canvas.toDataURL("image/png"));};
       logo.onerror=()=>{if(!cancelled) cacheForPreview(canvas.toDataURL("image/png"));};
       logo.src="/touchgrass-transparent.png";
-    }catch(canvasErr){console.error("[canvas] render error:",canvasErr?.message,canvasErr);if(!cancelled){try{setDownloadUrl(canvas.toDataURL("image/png"));}catch{}}}};
+    }catch(canvasErr){console.error("[canvas] render error:",canvasErr?.message,canvasErr);if(!cancelled){try{setDownloadUrl(canvas.toDataURL("image/png"));setCardStreak(currentStreak);}catch{}}}};
     img.src=imageSrc;
     return ()=>{cancelled=true;};
   },[imageSrc,dateStr,currentStreak,selectedTheme]);
