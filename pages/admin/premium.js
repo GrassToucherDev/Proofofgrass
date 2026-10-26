@@ -3,8 +3,8 @@ import Link from "next/link";
 import { supabase } from "../../utils/supabase";
 import { adminDb } from "../../utils/adminDb";
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
+import { adminLoginOk } from "../../utils/adminLogin";
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
   border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)",
@@ -131,13 +131,13 @@ export default function AdminPremium() {
           color:T.muted, marginBottom:20 }}>Premium+ Admin</div>
         <input type="password" value={pw}
           onChange={e => setPw(e.target.value)}
-          onKeyDown={e => { if(e.key==="Enter" && pw===ADMIN_PASSWORD) setAuthed(true); }}
+          onKeyDown={e => { if(e.key==="Enter") adminLoginOk(pw).then(ok=>{ if(ok) setAuthed(true); }); }}
           placeholder="Password"
           style={{ width:"100%", background:"rgba(0,0,0,0.3)",
             border:`1px solid ${T.border}`, borderRadius:8,
             padding:"10px 12px", color:T.white, fontSize:13,
             outline:"none", marginBottom:12, boxSizing:"border-box" }} />
-        <button onClick={() => { if(pw===ADMIN_PASSWORD) setAuthed(true); else flash("error","Wrong password."); }}
+        <button onClick={() => { adminLoginOk(pw).then(ok=>{ if(ok) setAuthed(true); else flash("error","Wrong password."); }); }}
           style={{ width:"100%", background:T.gold, color:"#0a0c08",
             border:"none", borderRadius:8, padding:"11px",
             fontSize:13, fontWeight:700, cursor:"pointer" }}>

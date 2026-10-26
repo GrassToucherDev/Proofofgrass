@@ -4,6 +4,7 @@ import { supabase } from "../../utils/supabase";
 import { adminDb } from "../../utils/adminDb";
 import SpotlightAnnouncement from "../../components/SpotlightAnnouncement";
 
+import { adminLoginOk } from "../../utils/adminLogin";
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710", bg4:"#1a1e13",
   border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)",
@@ -13,7 +14,6 @@ const T = {
   red:"#f87171",
 };
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
 const CATEGORIES = [
   { key:"community_mvp",  emoji:"🔥", name:"Community MVP",  color:"#f97316" },
@@ -57,8 +57,7 @@ export default function AdminSpotlight() {
   const [editId,    setEditId]    = useState(null);
 
   const checkPw = () => {
-    if (pw === ADMIN_PASSWORD) { setAuthed(true); setPwError(""); }
-    else setPwError("Incorrect password.");
+    adminLoginOk(pw).then(ok => { if (ok) { setAuthed(true); setPwError(""); } else setPwError("Incorrect password."); });
   };
 
   const loadSpotlights = useCallback(async () => {
