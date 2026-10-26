@@ -1,5 +1,6 @@
 // GET ?username= — a player's public Yard record for their profile: 1v1 W-L-T and rank, their Grove's record, event entries.
 // Everything comes from server-settled results; nothing here can be written by a client.
+import { settled1v1, settledGroves } from "../../../utils/yardSettledCache";
 import { adminClient } from "../../../utils/requireOwner";
 import { tally, rankPlayers, normName } from "../../../utils/yardStats";
 import { viewerGrove } from "../../../utils/yardEvents";
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
   try {
     const nowIso = new Date().toISOString();
     const [{ data: settled }, { count: active }, gid, { data: evEntries }] = await Promise.all([
-      db.from("Challenges").select("challenger, challenged, winner, result").not("result", "is", null).limit(20000),
+      settled1v1(db),
       db.from("Challenges").select("id", { count: "exact", head: true }).eq("status", "active").gt("ends_at", nowIso)
         .or(`challenger.eq.${me},challenged.eq.${me}`),
       viewerGrove(db, me),
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
     if (gid) {
       const [info, { data: gs }, { count: gActive }] = await Promise.all([
         loadGroves(db, [gid]),
-        db.from("grove_challenges").select("challenger_grove, challenged_grove, winner_grove, result").not("result", "is", null).limit(5000),
+        settledGroves(db),
         db.from("grove_challenges").select("id", { count: "exact", head: true }).eq("status", "active").gt("ends_at", nowIso)
           .or(`challenger_grove.eq.${gid},challenged_grove.eq.${gid}`),
       ]);

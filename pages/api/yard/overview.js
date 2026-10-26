@@ -1,5 +1,6 @@
 // GET ?username= — everything the Yard landing and challenges pages need. All of it is already public data
 // (challenges are shown on profiles and share links), so no sign-in is needed to read.
+import { settled1v1 } from "../../../utils/yardSettledCache";
 import { adminClient } from "../../../utils/requireOwner";
 import { tally, rankPlayers, normName } from "../../../utils/yardStats";
 import { loadAvatars } from "../../../utils/yardData";
@@ -14,7 +15,7 @@ export default async function handler(req, res) {
   try {
     const [{ count: active }, { data: settled }] = await Promise.all([
       db.from("Challenges").select("id", { count: "exact", head: true }).eq("status", "active").gt("ends_at", new Date().toISOString()),
-      db.from("Challenges").select("challenger, challenged, winner, result").not("result", "is", null).limit(20000),
+      settled1v1(db),
     ]);
     const map = tally(settled || []);
     const ranked = rankPlayers(map, "wins");

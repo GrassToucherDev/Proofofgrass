@@ -1,4 +1,5 @@
 // GET ?username= — the viewer's Grove and its Grove vs Grove challenges. Public data; buttons are enforced server-side in SQL.
+import { settledGroves } from "../../../../utils/yardSettledCache";
 import { adminClient } from "../../../../utils/requireOwner";
 import { normName, tally } from "../../../../utils/yardStats";
 import { loadGroves, shapeGroveChallenges, WEEK_MS } from "../../../../utils/yardGroves";
@@ -11,7 +12,7 @@ export default async function handler(req, res) {
   try {
     const [{ count: active }, { data: settled }] = await Promise.all([
       db.from("grove_challenges").select("id", { count: "exact", head: true }).eq("status", "active").gt("ends_at", new Date().toISOString()),
-      db.from("grove_challenges").select("challenger_grove, challenged_grove, winner_grove, result").not("result", "is", null).limit(5000),
+      settledGroves(db),
     ]);
     const out = { stats: { activeChallenges: active ?? 0, settledChallenges: (settled || []).length }, grove: null };
     if (!me) return res.status(200).json(out);
