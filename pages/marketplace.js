@@ -12,6 +12,7 @@ import SecureUsernameCard from "../components/SecureUsernameCard";
 import MarketplaceAccountBar from "../components/MarketplaceAccountBar";
 import WheelHero from "../components/wheel/WheelHero";
 import { signIn } from "next-auth/react";
+import TokenLogo from "../components/TokenLogo";
 import { BANNER_PURCHASE_NOTICE } from "../utils/groveBanners";
 const BURN_ADDR       = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const TOUCHGRASS_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
@@ -242,7 +243,7 @@ function FeaturedPackCard({ item, tokensFor, owned, onBuy, onPreview }) {
             <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em",
               textTransform:"uppercase", color:V2.midGray, marginBottom:3 }}>You Pay</div>
             <div style={{ fontSize:18, fontWeight:700, color:V2.gold }}>
-              {tokens?`≈ ${tokens.toLocaleString()} $TOUCHGRASS`:"Loading price…"}
+              {tokens?<><TokenLogo size={18} />{`≈ ${tokens.toLocaleString()} $TOUCHGRASS`}</>:"Loading price…"}
             </div>
           </div>
           <div style={{ marginLeft:"auto", display:"flex", gap:10 }}>
@@ -440,7 +441,7 @@ function PreviewModal({ item, onClose, onBuy, tokensFor, owned }) {
               <div style={{ fontSize:9, color:V2.midGray, textTransform:"uppercase",
                 letterSpacing:"0.1em", marginBottom:2 }}>You Pay</div>
               <div style={{ fontSize:16, fontWeight:700, color:V2.gold }}>
-                {tokens?`≈ ${tokens.toLocaleString()} $TG`:"—"}
+                {tokens?<><TokenLogo size={16} />{`≈ ${tokens.toLocaleString()} $TG`}</>:"—"}
               </div>
             </div>
           </div>
@@ -603,7 +604,7 @@ function GrovesPanel({ username, price, tokensFor, onBuy, reloadKey }) {
                 <div style={{ fontWeight:800, color:V2.forestGreen, fontSize:16 }}>{b.name}</div>
                 <div style={{ fontSize:12, color:V2.textMuted, margin:"2px 0 10px", minHeight:32 }}>{b.description} <span style={{ opacity:.8 }}>Preview applied to {bn.grove_name || "your Grove"}.</span></div>
                 <div style={{ fontSize:13, fontWeight:700, color:V2.forestGreen, marginBottom:10 }}>
-                  {b.purchasable ? (tokens ? `${tokens.toLocaleString()} $TOUCHGRASS` : "Loading price…") : "Price not set"}
+                  {b.purchasable ? (tokens ? <><TokenLogo size={16} />{`${tokens.toLocaleString()} $TOUCHGRASS`}</> : "Loading price…") : "Price not set"}
                   {b.purchasable && <span style={{ fontWeight:500, color:V2.textMuted }}> · ${Number(b.price_usd).toFixed(2)}</span>}
                 </div>
                 <button disabled={disabled} onClick={()=>start(b)}
