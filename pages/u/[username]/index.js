@@ -14,6 +14,7 @@ import BadgeShelf from "../../../components/badges/BadgeShelf";
 import BadgeMedal from "../../../components/badges/BadgeMedal";
 import { V2, V2Styles, V2GlobalCSS, getV2Tier } from "../../../utils/v2Theme";
 
+import { SiteLinks, SiteMobileMenu } from "../../../components/SiteMenu";
 function norm(v) { return String(v??"").replace(/@/g,"").toLowerCase().trim(); }
 
 // ── Data constants — all preserved ───────────────────────────────────────────
@@ -582,15 +583,12 @@ export default function ProfilePage() {
             Touch Grass <span style={{ fontWeight:400, opacity:0.6 }}>| Proof of Grass</span>
           </span>
         </Link>
-        <div style={{ display:"flex", gap:4, flex:1, overflowX:"auto" }} className="v2-desktop-only">
-          {[["Dashboard","/"],["Leaderboard","/leaderboard"],["Grass Draw","/grass-draw"],["Marketplace","/marketplace"]].map(([l,h])=>(
-            <Link key={l} href={h} style={{ fontSize:13, fontWeight:500, color:V2.forestGreen,
-              textDecoration:"none", padding:"6px 12px", borderRadius:20, whiteSpace:"nowrap" }}>{l}</Link>
-          ))}
-        </div>
+        <SiteLinks />
+        <div style={{ flex:1 }} className="sm-spacer" />
         <div style={{ marginLeft:"auto", display:"flex", gap:8, flexShrink:0 }}>
           {isOwner&&<button onClick={()=>setEditMode(v=>!v)} className="pf-action-btn" style={{ fontSize:11, padding:"6px 12px" }}>{editMode?"✓ Done":"✏ Edit"}</button>}
           <button onClick={copyProfile} style={{ ...V2Styles.btnPrimary, padding:"8px 18px", fontSize:12 }}>{copied?"✓ Copied":"↗ Share"}</button>
+          <SiteMobileMenu />
         </div>
       </nav>
 

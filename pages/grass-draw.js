@@ -5,6 +5,7 @@ import Head from "next/head";
 import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
+import { SiteLinks, SiteMobileMenu } from "../components/SiteMenu";
 function normalizeUsername(v) {
   return String(v ?? "").replace(/@/g, "").toLowerCase().trim();
 }
@@ -256,6 +257,7 @@ export default function GrassDraw() {
               Touch Grass <span style={{ fontWeight:400, opacity:0.5 }}>| Proof of Grass</span>
             </span>
           </Link>
+          <SiteLinks username={username} />
           <div style={{ marginLeft:"auto", display:"flex", gap:8, alignItems:"center" }}>
             {username && (
               <div style={{ display:"flex", alignItems:"center", gap:8, background:"white",
@@ -270,6 +272,7 @@ export default function GrassDraw() {
               background:"rgba(125,200,50,0.06)", fontWeight:600 }}>
               Dashboard
             </Link>
+            <SiteMobileMenu username={username} />
           </div>
         </nav>
 

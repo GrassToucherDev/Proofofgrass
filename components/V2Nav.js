@@ -4,34 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { V2, V2Styles } from "../utils/v2Theme";
-
-const NAV_LINKS = [
-  { href: "/",            label: "Dashboard"    },
-  { href: "#upload",      label: "Log Proof",  internal: true },
-  { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/yard",        label: "The Yard"    },
-  { href: "/grass-draw",  label: "Grass Draw"  },
-  { href: "/marketplace", label: "Marketplace" },
-  { href: "https://harvest.touchgrass.today", label: "Harvest", external: true },
-];
-
-const MENU_LINKS = [
-  { href: "/",             label: "Dashboard",    icon: "🏠" },
-  { href: "#upload",       label: "Log Proof",    icon: "🌿", internal: true },
-  { href: "/leaderboard",  label: "Leaderboard",  icon: "🏆" },
-  { href: "/grass-draw",   label: "Grass Draw",   icon: "🌱" },
-  { href: "/marketplace",  label: "Marketplace",  icon: "🏪" },
-  { href: "/map",          label: "World Map",    icon: "🗺️" },
-  { href: "/groves",       label: "Groves",       icon: "🌳" },
-  { href: "/field-guide",  label: "Field Guide",  icon: "📖" },
-  { href: "/spotlight",    label: "Spotlight",    icon: "🌟" },
-  { href: "/yard",         label: "The Yard",     icon: "⚔️" },
-  { href: "https://harvest.touchgrass.today", label: "Harvest", icon: "🌾", external: true },
-];
+import { SiteLinks, SiteMobileMenu } from "./SiteMenu";
 
 export default function V2Nav({ username, onUsernameChange, showUpload }) {
   const router   = useRouter();
-  const [menu,   setMenu]   = useState(false);
   const [raw,    setRaw]    = useState(username || "");
   const [scrolled, setScrolled] = useState(false);
 
@@ -150,9 +126,7 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
     @media (max-width: 1240px) {
       .v2nav-myprofile { display: none; }
     }
-    @media (max-width: 1120px) {
-      .v2nav-links { display: none; }
-    }
+    @media (max-width: 1240px) { .v2nav-input { width: 110px; } }
     @media (max-width: 768px) {
       .v2nav-links { display: none; }
       .v2nav { gap: 12px; }
@@ -186,31 +160,8 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
           </span>
         </Link>
 
-        {/* Desktop nav links */}
-        <div className="v2nav-links">
-          {NAV_LINKS.map(link => {
-            const active = !link.internal && !link.external && (router.pathname === link.href || (link.href !== "/" && router.pathname.startsWith(link.href + "/")));
-            if (link.external) return (
-              <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer"
-                className={`v2nav-link${active ? " active" : ""}`}>
-                {link.label}
-              </a>
-            );
-            if (link.internal) return (
-              <a key={link.label} href={link.href}
-                className="v2nav-link"
-                onClick={e => { e.preventDefault(); showUpload?.(); }}>
-                {link.label}
-              </a>
-            );
-            return (
-              <Link key={link.label} href={link.href}
-                className={`v2nav-link${active ? " active" : ""}`}>
-                {link.label}
-              </Link>
-            );
-          })}
-        </div>
+        {/* Site menu: Proof of Grass / Explore / Play + solo links */}
+        <SiteLinks username={username} onLogProof={showUpload} />
 
         {/* Right side */}
         <div className="v2nav-right">
@@ -248,48 +199,10 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
             </div>
           )}
 
-          {/* Hamburger */}
-          <div className="v2nav-hamburger" onClick={() => setMenu(m => !m)}
-            role="button" aria-label="Menu">
-            <span />
-            <span />
-            <span />
-          </div>
+          <SiteMobileMenu username={username} onLogProof={showUpload} />
         </div>
       </nav>
 
-      {/* Mobile menu */}
-      {menu && (
-        <>
-          <div className="v2menu-overlay" onClick={() => setMenu(false)} />
-          <div className="v2menu-panel">
-            {MENU_LINKS.map((link, i) => {
-              if (link.external) return (
-                <a key={i} href={link.href} target="_blank" rel="noopener noreferrer"
-                  className="v2menu-item" onClick={() => setMenu(false)}>
-                  <span className="icon">{link.icon}</span>{link.label}
-                </a>
-              );
-              if (link.internal) return (
-                <a key={i} href={link.href} className="v2menu-item"
-                  onClick={() => { setMenu(false); showUpload?.(); }}>
-                  <span className="icon">{link.icon}</span>{link.label}
-                </a>
-              );
-              return (
-                <Link key={i} href={link.href} className="v2menu-item"
-                  onClick={() => setMenu(false)}>
-                  <span className="icon">{link.icon}</span>{link.label}
-                </Link>
-              );
-            })}
-            <div className="v2menu-divider" />
-            <Link href="/spotlight" className="v2menu-item" onClick={() => setMenu(false)}>
-              <span className="icon">🏆</span>Weekly Spotlight
-            </Link>
-          </div>
-        </>
-      )}
     </>
   );
 }

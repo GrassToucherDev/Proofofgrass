@@ -5,6 +5,7 @@ import Head from "next/head";
 import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
+import { SiteLinks, SiteMobileMenu } from "../components/SiteMenu";
 function norm(v) { return String(v ?? "").replace(/@/g, "").toLowerCase().trim(); }
 
 const PAGE_SIZE = 20;
@@ -343,13 +344,8 @@ export default function Leaderboard() {
               Touch Grass <span style={{ fontWeight:400, opacity:0.5 }}>| Proof of Grass</span>
             </span>
           </Link>
-          <div style={{ display:"flex", gap:4, flex:1, overflowX:"auto", scrollbarWidth:"none" }}>
-            {[["Dashboard","/"],["Leaderboard","/leaderboard"],["Grass Draw","/grass-draw"],["Marketplace","/marketplace"]].map(([l,h])=>(
-              <Link key={l} href={h} style={{ fontSize:13, fontWeight:l==="Leaderboard"?700:500,
-                color:l==="Leaderboard"?V2.grassGreen:V2.forestGreen,
-                textDecoration:"none", padding:"6px 12px", borderRadius:20, whiteSpace:"nowrap" }}>{l}</Link>
-            ))}
-          </div>
+          <SiteLinks username={currentUser} />
+          <div style={{ flex:1 }} className="sm-spacer" />
           {currentUser && (
             <Link href={`/u/${currentUser}`} style={{ display:"flex", alignItems:"center", gap:8,
               background:"white", border:`1px solid ${V2.borderSoft}`, borderRadius:20,
@@ -358,6 +354,7 @@ export default function Leaderboard() {
               <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{currentUser}</span>
             </Link>
           )}
+          <SiteMobileMenu username={currentUser} />
         </nav>
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
