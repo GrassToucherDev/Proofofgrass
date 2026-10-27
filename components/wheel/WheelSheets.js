@@ -67,26 +67,53 @@ export function SpinSheet({ quote, wheel, busy, error, onConfirm, onClose }) {
   );
 }
 
+const pctText = (n) => (n >= 10 ? n.toFixed(0) : n >= 1 ? n.toFixed(1) : n.toFixed(2)) + "%";
+const oneIn = (n) => (n > 0 && n < 1 ? ` · about 1 in ${Math.round(100 / n).toLocaleString()}` : "");
+
 export function PrizesSheet({ prizes, onClose }) {
   const order = ["legendary", "epic", "rare", "uncommon", "common"];
-  const sorted = [...prizes].filter(p => p.reward_type !== "nothing").sort((a, b) => order.indexOf(a.rarity) - order.indexOf(b.rarity));
+  const noPrize = prizes.filter(p => p.reward_type === "nothing").reduce((n, p) => n + (p.chance || 0), 0);
+  const real = prizes.filter(p => p.reward_type !== "nothing");
+  const tiers = order.map(r => ({ r, list: real.filter(p => p.rarity === r).sort((a, b) => (b.chance || 0) - (a.chance || 0)) })).filter(t => t.list.length);
   return (
-    <Sheet title="Prize pool" onClose={onClose} tall>
-      <p style={{ margin: "0 0 12px", fontSize: 13, color: V2.midGray, lineHeight: 1.5 }}>What's on the wheel right now. Prizes that run out disappear from this list. Some spins land on no prize.</p>
-      <div style={{ display: "grid", gap: 10 }}>
-        {sorted.map(p => (
-          <div key={p.id} style={{ display: "flex", gap: 12, alignItems: "center", border: `1px solid ${V2.borderSoft}`, borderRadius: 14, padding: 10 }}>
-            <div style={{ width: 56, height: 56, borderRadius: 12, background: rarityOf(p.rarity).bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0, overflow: "hidden" }}>
-              {prizeArt(p) ? <img src={prizeArt(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : typeMeta(p.reward_type).emoji}
+    <Sheet title="Prizes & odds" onClose={onClose} tall>
+      <p style={{ margin: "0 0 12px", fontSize: 13, color: V2.midGray, lineHeight: 1.5 }}>Your chance on every spin. Prizes that run out disappear from this list and the odds update. Some spins land on no prize.</p>
+      <div style={{ display: "grid", gap: 14 }}>
+        {tiers.map(({ r, list }) => {
+          const tierPct = list.reduce((n, p) => n + (p.chance || 0), 0);
+          return (
+            <div key={r}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <RarityChip r={r} />
+                <span style={{ fontSize: 12.5, fontWeight: 800, color: V2.forestGreen }}>{pctText(tierPct)} total</span>
+              </div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {list.map(p => (
+                  <div key={p.id} style={{ display: "flex", gap: 12, alignItems: "center", border: `1px solid ${V2.borderSoft}`, borderRadius: 14, padding: 10 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: 12, background: rarityOf(p.rarity).bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0, overflow: "hidden" }}>
+                      {prizeArt(p) ? <img src={prizeArt(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : typeMeta(p.reward_type).emoji}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, wordBreak: "break-word" }}>{p.name}</div>
+                      <div style={{ fontSize: 12, color: V2.midGray, marginTop: 2 }}>{typeMeta(p.reward_type).label}{p.remaining != null ? ` · ${p.remaining} left` : ""}</div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 15 }}>{pctText(p.chance || 0)}</div>
+                      <div style={{ fontSize: 10.5, color: V2.midGray, maxWidth: 90 }}>{oneIn(p.chance || 0).replace(" · ", "")}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 15, wordBreak: "break-word" }}>{p.name}</div>
-              <div style={{ fontSize: 12, color: V2.midGray, margin: "2px 0 4px" }}>{typeMeta(p.reward_type).label}{p.remaining != null ? ` · ${p.remaining} left` : ""}</div>
-              <RarityChip r={p.rarity} />
-            </div>
+          );
+        })}
+        {noPrize > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: `1px dashed ${V2.borderSoft}`, borderRadius: 14, padding: "12px 14px" }}>
+            <span style={{ fontWeight: 700 }}>🌱 No prize</span><span style={{ fontWeight: 800 }}>{pctText(noPrize)}</span>
           </div>
-        ))}
-        {!prizes.length && <div style={{ textAlign: "center", padding: 24, color: V2.midGray }}><Wago pose="shrug" size={100} /><div style={{ marginTop: 8 }}>The pool is being restocked.</div></div>}
+        )}
+        {!real.length && <div style={{ textAlign: "center", padding: 24, color: V2.midGray }}><Wago pose="shrug" size={100} /><div style={{ marginTop: 8 }}>The pool is being restocked.</div></div>}
+        <p style={{ margin: 0, fontSize: 11.5, color: V2.midGray, lineHeight: 1.5 }}>Odds are for the full prize pool and are rounded. Cosmetic packs you already own can't be won again, which slightly raises your chance at everything else.</p>
       </div>
     </Sheet>
   );

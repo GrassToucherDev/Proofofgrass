@@ -27,7 +27,11 @@ export default async function handler(req, res) {
   return res.status(200).json({
     wheel: publicWheel(w),
     playable: !!playable,
-    prizes: (prizes || []).filter(p => p.inventory_remaining == null || p.inventory_remaining > 0).map(publicPrizeRow),
+    prizes: (() => {
+      const live = (prizes || []).filter(p => p.inventory_remaining == null || p.inventory_remaining > 0);
+      const total = live.reduce((n, p) => n + Number(p.weight || 0), 0);
+      return live.map(p => ({ ...publicPrizeRow(p), chance: total > 0 ? (Number(p.weight || 0) / total) * 100 : 0 }));   // % of the full pool
+    })(),
     quote: { tokens, usd: w.price_mode === "usd" ? Number(w.price_usd) : null, lock_amount: lock, eco_amount: tokens == null ? null : tokens - lock, token_price_usd: tokenPrice },
     stats: stats || { total_spins: 0, prizes_claimed: 0, locked_amount: 0, queued_amount: 0 },
     meter: googleId && w.meter_enabled ? { count: meter?.data?.count || 0, required: w.meter_spins } : null,
