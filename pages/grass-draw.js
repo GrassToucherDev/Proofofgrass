@@ -121,7 +121,7 @@ export default function GrassDraw() {
 
       const { data: cycleData } = await supabase
         .from("grass_draw_cycles")
-        .select("*")
+        .select("id,name,starts_at,ends_at,status")
         .eq("status", "active")
         .lte("starts_at", new Date().toISOString())
         .gte("ends_at", new Date().toISOString())
@@ -131,7 +131,7 @@ export default function GrassDraw() {
       if (cycleData) {
         const { data: rewardData } = await supabase
           .from("grass_draw_rewards")
-          .select("*")
+          .select("id,cycle_id,reward_type,quantity,reward_value,draw_order,description")
           .eq("cycle_id", cycleData.id)
           .order("draw_order", { ascending: true });
         setRewards(rewardData || []);
@@ -145,11 +145,11 @@ export default function GrassDraw() {
     try {
       const [totalsRes, streakRes, entriesRes, profileRes] = await Promise.all([
         supabase.from("grass_draw_user_totals")
-          .select("*").eq("cycle_id", cycle.id).ilike("username", username).maybeSingle(),
+          .select("cycle_id,username,proof_entries,total_bonus_entries,active_bonus_entries,pending_bonus_entries,total_active_entries,proof_day_count,eligible,disqualified").eq("cycle_id", cycle.id).ilike("username", username).maybeSingle(),
         supabase.from("Streaks")
           .select("current_streak").ilike("username", username).maybeSingle(),
         supabase.from("grass_draw_entries")
-          .select("*").eq("cycle_id", cycle.id).ilike("username", username)
+          .select("id,cycle_id,username,entry_type,created_at").eq("cycle_id", cycle.id).ilike("username", username)
           .order("created_at", { ascending: false }).limit(20),
         fetch(`/api/profile/wallet-status?username=${encodeURIComponent(username)}`)
           .then(r => r.json()).then(w => ({ data: { linked: !!w.linked } })).catch(() => ({ data: null })),
