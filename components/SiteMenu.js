@@ -31,6 +31,7 @@ export const MENU_GROUPS = [
     id: "play", label: "Play", icon: "🎮",
     items: [
       { href: "/grass-draw", label: "Grass Draw", icon: "🌱" },
+      { href: "/wheel",      label: "WAGO Wheel", icon: "🎡", needsWheel: true },
       { href: "/groves",     label: "Groves",     icon: "🌳" },
       { href: "/yard",       label: "The Yard",   icon: "⚔️" },
       { href: HARVEST,       label: "Harvest",    icon: "🌾", external: true },
@@ -43,6 +44,19 @@ export const SOLO_LINKS = [
   { href: "/marketplace", label: "Marketplace", icon: "🏪" },
   { href: "/spotlight",   label: "Spotlight",   icon: "🌟" },
 ];
+
+// Is a wheel live for this viewer? One shared lookup per page load; gates the "WAGO Wheel" menu entry.
+let wheelLive = null;
+function useWheelLive() {
+  const [live, setLive] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    if (!wheelLive) wheelLive = fetch("/api/wheel/state", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(d => !!d?.wheel).catch(() => false);
+    wheelLive.then(v => { if (alive) setLive(v); });
+    return () => { alive = false; };
+  }, []);
+  return live;
+}
 
 function useUsername(prop) {
   const [u, setU] = useState(prop || "");
@@ -132,6 +146,7 @@ function ItemLink({ item, username, pathname, onNavigate, onLogProof, className 
 export function SiteLinks({ username: usernameProp, onLogProof }) {
   const router = useRouter();
   const username = useUsername(usernameProp);
+  const wheel = useWheelLive();
   const [open, setOpen] = useState(null);
   const ref = useRef(null);
 
@@ -149,7 +164,7 @@ export function SiteLinks({ username: usernameProp, onLogProof }) {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="sm-desk" ref={ref}>
         {MENU_GROUPS.map((g) => {
-          const items = g.items.filter((i) => !i.needsUser || username);
+          const items = g.items.filter((i) => (!i.needsUser || username) && (!i.needsWheel || wheel));
           const active = items.some((i) => isActivePath(router.pathname, resolve(i, username)));
           return (
             <div key={g.id} className={`sm-group${open === g.id ? " open" : ""}`}>
@@ -179,6 +194,7 @@ export function SiteLinks({ username: usernameProp, onLogProof }) {
 export function SiteMobileMenu({ username: usernameProp, onLogProof }) {
   const router = useRouter();
   const username = useUsername(usernameProp);
+  const wheel = useWheelLive();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -210,7 +226,7 @@ export function SiteMobileMenu({ username: usernameProp, onLogProof }) {
             {MENU_GROUPS.map((g) => (
               <div key={g.id}>
                 <div className="sm-sec">{g.label}</div>
-                {g.items.filter((i) => !i.needsUser || username).map((i) => (
+                {g.items.filter((i) => (!i.needsUser || username) && (!i.needsWheel || wheel)).map((i) => (
                   <ItemLink key={i.label} item={i} username={username} pathname={router.pathname}
                     onNavigate={close} onLogProof={onLogProof} />
                 ))}
