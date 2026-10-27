@@ -69,7 +69,7 @@ export default function LeafDraw() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("grass_draw_cycles")
-        .select("*").eq("status","active")
+        .select("id,name,starts_at,ends_at,status").eq("status","active")
         .lte("starts_at", new Date().toISOString())
         .gte("ends_at", new Date().toISOString())
         .single();
