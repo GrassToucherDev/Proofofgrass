@@ -31,12 +31,32 @@ function Skel({ w="100%", h=16, r=8 }) {
     backgroundSize:"200% 100%", animation:"v2Shimmer 1.4s ease-in-out infinite" }} />;
 }
 
+// Art for the draw page (falls back to the emoji if an image is missing)
+const ART = {
+  score:   "/badges/grass-score-2.png",
+  shield:  "/wheel/shield.png",
+  pack:    "/wheel/pack-retro-covers.png",
+  nft:     "/wheel/nft.png",
+  proofs:  "/badges/proofs-2.png",
+  tickets: "/wheel/grass-tickets.png",
+  streak:  "/badges/streak-3.png",
+  token:   "/wheel/token.png",
+  winner:  "/badges/draw-winner-1.png",
+};
+function GdArt({ icon, size, inline }) {
+  if (typeof icon === "string" && icon.startsWith("/")) {
+    return <img src={icon} alt="" width={size} height={size} draggable={false}
+      style={{ width:size, height:size, objectFit:"contain", display:"block", margin:inline ? 0 : "0 auto", flexShrink:0 }} />;
+  }
+  return <span style={{ fontSize:Math.round(size*0.62), lineHeight:1 }}>{icon}</span>;
+}
+
 function StatCard({ icon, value, label, sub, accent, loading }) {
   return (
     <div style={{ flex:1, minWidth:0, textAlign:"center", padding:"16px 10px",
       background:"white", borderRadius:14, border:`1px solid ${V2.borderSoft}`,
       boxShadow:"0 1px 8px rgba(26,74,10,0.06)" }}>
-      <div style={{ fontSize:22, marginBottom:6 }}>{icon}</div>
+      <div style={{ marginBottom:6 }}><GdArt icon={icon} size={36} /></div>
       {loading ? <Skel h={28} r={4} w="60%" /> : (
         <div style={{ fontFamily:V2.fontSerif, fontSize:"clamp(22px,3vw,32px)",
           fontWeight:700, color:accent||V2.forestGreen, lineHeight:1, marginBottom:4 }}>
@@ -57,7 +77,7 @@ function RewardCard({ icon, name, desc, winners, accent, isNFT }) {
       boxShadow:"0 2px 16px rgba(26,74,10,0.08)",
       display:"flex", flexDirection:"column", alignItems:"center",
       textAlign:"center", gap:10, flex:1, minWidth:0 }}>
-      <div style={{ fontSize:48, lineHeight:1 }}>{icon}</div>
+      <div style={{ lineHeight:1 }}><GdArt icon={icon} size={80} /></div>
       <div style={{ fontSize:15, fontWeight:800, color:V2.forestGreen }}>{name}</div>
       <div style={{ fontSize:12, color:V2.textMuted, lineHeight:1.5 }}>{desc}</div>
       <div style={{ marginTop:"auto", fontSize:13, fontWeight:700,
@@ -78,7 +98,7 @@ function HowItWorksStep({ num, icon, title, desc, aside }) {
       <div style={{ width:36, height:36, borderRadius:10, flexShrink:0,
         background:V2.grassGreen, color:"white", fontSize:16, fontWeight:800,
         display:"flex", alignItems:"center", justifyContent:"center" }}>{num}</div>
-      <div style={{ fontSize:28, flexShrink:0 }}>{icon}</div>
+      <div style={{ flexShrink:0, width:48 }}><GdArt icon={icon} size={48} /></div>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontSize:15, fontWeight:700, color:V2.forestGreen, marginBottom:6 }}>{title}</div>
         <div style={{ fontSize:13, color:V2.textMuted, lineHeight:1.6 }}>{desc}</div>
@@ -213,17 +233,17 @@ export default function GrassDraw() {
 
   // Reward card definitions from DB or fallback
   const rewardCards = rewards.length > 0 ? rewards.map(r => ({
-    icon: r.reward_type==="grass_score"?"⚡":r.reward_type==="shield"?"🛡️":r.reward_type==="profile_pack"?"🎨":"🖼️",
+    icon: r.reward_type==="grass_score"?ART.score:r.reward_type==="shield"?ART.shield:r.reward_type==="profile_pack"?ART.pack:ART.nft,
     name: r.reward_type==="grass_score"?"Grass Score Boost":r.reward_type==="shield"?"Streak Shield":r.reward_type==="profile_pack"?"Profile Pack":"NFT",
     desc: r.reward_type==="grass_score"?`+${r.reward_value?.amount||250} Grass Score`:r.reward_type==="shield"?"Protects your streak":r.reward_type==="profile_pack"?`${r.reward_value?.eligible_packs?.length||4} packs to choose from`:"Screen Touchers & more",
     winners: r.quantity>0?`${r.quantity} winners`:"Admin set",
     accent: r.reward_type==="nft"?V2.borderGold:V2.borderGreen,
     isNFT: r.reward_type==="nft",
   })) : [
-    { icon:"⚡", name:"Grass Score Boost", desc:"+250 Grass Score",    winners:"10 winners", accent:V2.borderGreen,  isNFT:false },
-    { icon:"🛡️", name:"Streak Shield",      desc:"Protects your streak", winners:"5 winners",  accent:V2.borderGreen,  isNFT:false },
-    { icon:"🎨", name:"Profile Pack",       desc:"Exclusive cosmetics",  winners:"5 winners",  accent:V2.borderGreen,  isNFT:false },
-    { icon:"🖼️", name:"NFT",               desc:"Screen Touchers & more",winners:"Admin set", accent:V2.borderGold,   isNFT:true  },
+    { icon:ART.score, name:"Grass Score Boost", desc:"+250 Grass Score",    winners:"10 winners", accent:V2.borderGreen,  isNFT:false },
+    { icon:ART.shield, name:"Streak Shield",      desc:"Protects your streak", winners:"5 winners",  accent:V2.borderGreen,  isNFT:false },
+    { icon:ART.pack, name:"Profile Pack",       desc:"Exclusive cosmetics",  winners:"5 winners",  accent:V2.borderGreen,  isNFT:false },
+    { icon:ART.nft, name:"NFT",               desc:"Screen Touchers & more",winners:"Admin set", accent:V2.borderGold,   isNFT:true  },
   ];
 
   return (
@@ -401,19 +421,19 @@ export default function GrassDraw() {
 
                 {/* Stat cards */}
                 <div className="gd-stats-row" style={{ flex:1, minWidth:0 }}>
-                  <StatCard icon="🌱" label="From Proofs"
+                  <StatCard icon={ART.proofs} label="From Proofs"
                     value={totals ? parseFloat(totals.proof_entries).toFixed(2) : "0.00"}
                     loading={loading} />
-                  <StatCard icon="✨" label="Bonus Entries"
+                  <StatCard icon={ART.tickets} label="Bonus Entries"
                     value={totals ? parseFloat(totals.active_bonus_entries).toFixed(2) : "0.00"}
                     sub={totals?.pending_bonus_entries > 0 ? `+${parseFloat(totals.pending_bonus_entries).toFixed(1)} pending` : null}
                     loading={loading} />
-                  <StatCard icon="📈" label="Streak Weight"
+                  <StatCard icon={ART.streak} label="Streak Weight"
                     value={`${multiplier.toFixed(2)}×`}
                     sub={streak >= 14 ? `Day ${streak}` : "Reach Day 14"}
                     accent={multiplier > 1 ? V2.grassGreen : V2.midGray}
                     loading={loading} />
-                  <StatCard icon="🔗" label="Solana Wallet"
+                  <StatCard icon={ART.token} label="Solana Wallet"
                     value={walletOk ? "✓" : "—"}
                     sub={walletOk ? "Connected" : "Not connected"}
                     accent={walletOk ? V2.grassGreen : V2.midGray}
@@ -460,7 +480,7 @@ export default function GrassDraw() {
               {/* No entries state */}
               {!loading && searched && !totals && !error && (
                 <div style={{ textAlign:"center", padding:"24px 0", color:V2.midGray }}>
-                  <div style={{ fontSize:32, marginBottom:8 }}>🌱</div>
+                  <div style={{ marginBottom:8 }}><GdArt icon={ART.tickets} size={56} /></div>
                   <div style={{ fontSize:14, fontWeight:600, color:V2.forestGreen, marginBottom:4 }}>
                     No entries yet this cycle
                   </div>
@@ -488,7 +508,7 @@ export default function GrassDraw() {
           {/* ── MONTHLY REWARDS POOL ─────────────────────────────────────── */}
           <div style={{ marginBottom:24 }}>
             <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
-              <span style={{ fontSize:20 }}>🎁</span>
+              <GdArt icon={ART.tickets} size={32} inline />
               <h2 style={{ fontFamily:V2.fontSans, fontSize:18, fontWeight:800, color:V2.forestGreen }}>
                 Monthly Rewards Pool
               </h2>
@@ -532,10 +552,10 @@ export default function GrassDraw() {
                     This Cycle
                   </div>
                   <div style={{ fontSize:18, fontWeight:800, color:V2.forestGreen }}>
-                    🏆 Entry Leaderboard
+                    <span style={{ display:"inline-flex", alignItems:"center", gap:8, whiteSpace:"nowrap" }}><GdArt icon={ART.winner} size={22} inline /> Entry Leaderboard</span>
                   </div>
                 </div>
-                <div style={{ fontSize:11, color:V2.midGray }}>Ranked by entries</div>
+                <div style={{ fontSize:11, color:V2.midGray, marginLeft:8, textAlign:"right", fontSize:10 }}>Ranked by entries</div>
               </div>
               {lbLoading ? (
                 <div style={{ padding:"24px" }}>
@@ -550,7 +570,7 @@ export default function GrassDraw() {
                 </div>
               ) : lbData.length === 0 ? (
                 <div style={{ padding:"40px 24px", textAlign:"center" }}>
-                  <div style={{ fontSize:32, marginBottom:8 }}>🌱</div>
+                  <div style={{ marginBottom:8 }}><GdArt icon={ART.tickets} size={56} /></div>
                   <div style={{ fontSize:14, color:V2.midGray }}>No entries yet this cycle.</div>
                 </div>
               ) : (
@@ -616,10 +636,10 @@ export default function GrassDraw() {
               </h2>
             </div>
 
-            <HowItWorksStep num="1" icon="🌱" title="Submit Daily Proofs"
+            <HowItWorksStep num="1" icon={ART.proofs} title="Submit Daily Proofs"
               desc="Every approved outdoor proof earns Grass Draw entries. The more proofs you log, the more entries you earn." />
 
-            <HowItWorksStep num="2" icon="📈" title="Build Your Streak Weight"
+            <HowItWorksStep num="2" icon={ART.streak} title="Build Your Streak Weight"
               desc="Reach key streak milestones to increase your draw weight. Longer streaks = more impact per proof."
               aside={
                 <div className="gd-how-aside" style={{ background:"rgba(125,200,50,0.06)",
@@ -639,7 +659,7 @@ export default function GrassDraw() {
                 </div>
               } />
 
-            <HowItWorksStep num="3" icon="✨" title="Earn Bonus Entries"
+            <HowItWorksStep num="3" icon={ART.tickets} title="Earn Bonus Entries"
               desc="Win spotlights, post Flex Cards, log Field Guide entries, win challenges, and refer new members for bonus entries."
               aside={
                 <div className="gd-how-aside" style={{ background:"rgba(125,200,50,0.06)",
@@ -653,13 +673,13 @@ export default function GrassDraw() {
                 </div>
               } />
 
-            <HowItWorksStep num="4" icon="🎁" title="Monthly Draw"
+            <HowItWorksStep num="4" icon={ART.winner} title="Monthly Draw"
               desc="At the end of each cycle, winners are drawn by weighted random selection. The more entries you have, the stronger your position."
               aside={
                 <div className="gd-how-aside" style={{ background:"rgba(232,160,32,0.06)",
                   borderRadius:12, padding:"14px", textAlign:"center",
                   border:`1px solid ${V2.borderGold}` }}>
-                  <div style={{ fontSize:28, marginBottom:6 }}>🏆</div>
+                  <div style={{ marginBottom:6 }}><GdArt icon={ART.winner} size={52} /></div>
                   <div style={{ fontSize:13, color:V2.gold, fontWeight:600, lineHeight:1.5 }}>
                     Winners announced shortly after the cycle ends.
                   </div>
