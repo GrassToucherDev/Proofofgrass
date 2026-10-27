@@ -126,7 +126,7 @@ export function ResultReveal({ spin, onSpinAgain, onWins, onClose }) {
   const head = none ? "NO PRIZE THIS TIME" : spin.rarity === "legendary" ? "LEGENDARY FIND ✨" : spin.rarity === "epic" ? "EPIC PULL ✨" : "YOU WON 🌱";
   const share = () => {
     const text = `I just won ${spin.prize.name} (${r.label}) on the WAGO Wheel! 🌱 #TouchGrass`;
-    const url = typeof window !== "undefined" ? `${window.location.origin}/marketplace` : "";
+    const url = typeof window !== "undefined" ? `${window.location.origin}/wheel` : "";
     if (navigator.share) navigator.share({ title: "WAGO Wheel", text, url }).catch(() => {});
     else window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, "_blank", "noopener");
   };

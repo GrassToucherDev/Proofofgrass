@@ -8,10 +8,9 @@ import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 import V2Nav from "../components/V2Nav";
 import GroveBanner from "../components/GroveBanner";
-import SecureUsernameCard from "../components/SecureUsernameCard";
+import BuyGate from "../components/BuyGate";
 import MarketplaceAccountBar from "../components/MarketplaceAccountBar";
-import WheelHero from "../components/wheel/WheelHero";
-import { signIn } from "next-auth/react";
+import WheelTeaser from "../components/wheel/WheelTeaser";
 import TokenLogo from "../components/TokenLogo";
 import { BANNER_PURCHASE_NOTICE } from "../utils/groveBanners";
 const BURN_ADDR       = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
@@ -630,33 +629,6 @@ function GrovesPanel({ username, price, tokensFor, onBuy, reloadKey }) {
     </div>
   );
 }
-// Individual purchases need a username secured by the signed-in Google account (the server enforces it too).
-// This is checked BEFORE the wallet opens so nobody pays and then fails verification.
-function BuyGate({ username, status, item, onClose, onReady }) {
-  return (
-    <div style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(0,0,0,0.5)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-      <div role="dialog" aria-label="Secure your username" style={{ background:"white", borderRadius:20, padding:"26px 22px", maxWidth:420, width:"100%", boxShadow:"0 20px 60px rgba(26,74,10,0.25)" }}>
-        <div style={{ fontFamily:V2.fontSans, fontWeight:800, fontSize:20, color:V2.forestGreen, marginBottom:8 }}>Secure your username to buy</div>
-        {!username ? (
-          <p style={{ fontSize:14, color:V2.textBody, lineHeight:1.6 }}>Enter your username in the top bar first.</p>
-        ) : status?.claimed && status?.signedIn && !status?.mine ? (
-          <p style={{ fontSize:14, color:V2.textBody, lineHeight:1.6 }}>@{username} belongs to a different Google account. Sign in with the account that secured it.</p>
-        ) : status?.claimed ? (
-          <>
-            <p style={{ fontSize:14, color:V2.textBody, lineHeight:1.6, margin:"0 0 14px" }}>@{username} is secured by a Google account. Sign in with it to buy {item?.name}. This makes sure purchases always land on the right account.</p>
-            <button onClick={()=>signIn("google")} style={{ ...V2Styles.btnPrimary, padding:"10px 20px" }}>Continue with Google</button>
-          </>
-        ) : (
-          <>
-            <p style={{ fontSize:14, color:V2.textBody, lineHeight:1.6, margin:"0 0 14px" }}>Purchases are tied to a username secured with your Google account, so nobody else can claim your payment. It takes a few seconds.</p>
-            <SecureUsernameCard username={username} onClaimed={onReady} />
-          </>
-        )}
-        <button onClick={onClose} style={{ ...V2Styles.btnSecondary, marginTop:14, fontSize:13, padding:"8px 18px" }}>Cancel</button>
-      </div>
-    </div>
-  );
-}
 // ── Main Marketplace ───────────────────────────────────────────────────────────
 export default function Marketplace() {
   const [tab,          setTab]          = useState("featured");
@@ -683,14 +655,6 @@ export default function Marketplace() {
       .then(st=>{ if(st?.mine) openItemCheckout(item); else setGate({ item, status:st }); })
       .catch(()=>setGate({ item, status:{} }));
   };
-  // WAGO Wheel: the same "secured username" gate as item purchases, then run `cb`.
-  const [wheelHandoff, setWheelHandoff] = useState(null);
-  const requireSecured = (item, cb)=>{
-    if(!username){ setGate({ item, status:null, after:cb }); return; }
-    fetch(`/api/username/status?username=${encodeURIComponent(username)}`).then(r=>r.json())
-      .then(st=>{ if(st?.mine) cb(); else setGate({ item, status:st, after:cb }); })
-      .catch(()=>setGate({ item, status:{}, after:cb }));
-  };
   const closeBuying = ()=>{
     setBuyingItemRaw(null);
     try { if(new URLSearchParams(window.location.search).get("checkout")) window.history.replaceState(null,"","/marketplace"); } catch {}
@@ -706,15 +670,15 @@ export default function Marketplace() {
       const ref = new URLSearchParams(window.location.search).get("checkout");
       if(ref){
         fetch(`/api/checkout/info?id=${encodeURIComponent(ref)}`).then(r=>r.json()).then(d=>{
-          if(d.status==="pending" && d.kind==="wheel"){
-            setWheelHandoff({ checkoutId:ref, tokens:d.tokens, usd:d.usdPrice });
+          if(d.kind==="wheel"){
+            window.location.replace(`/wheel?checkout=${encodeURIComponent(ref)}`);   // older wheel links pointed here
           } else if(d.status==="pending"){
             if(d.kind==="banner") setTab("groves");
             setBuyingItemRaw(d.kind==="banner"
               ? { id:"grove_banner", name:`${d.bannerName} for ${d.groveName}`, groveBanner:true, intentId:ref.slice(2), checkoutRef:ref, usdPrice:d.usdPrice, groveName:d.groveName }
               : { id:d.itemId, name:d.itemName, usdPrice:d.usdPrice, checkoutRef:ref });
           } else if(d.status==="completed") {
-            setCheckoutNote(d.kind==="wheel" ? "Your spin is complete. Tap My Wins to see your prize." : "This purchase is already complete. Nothing more to pay.");
+            setCheckoutNote("This purchase is already complete. Nothing more to pay.");
             try { window.history.replaceState(null, "", "/marketplace"); } catch {}   // so a reload doesn't show this again
           }
           else setCheckoutNote("This checkout expired or wasn't found. Start the purchase again from the Marketplace.");
@@ -762,7 +726,7 @@ export default function Marketplace() {
         <V2Nav username={username||""} onUsernameChange={setUsername} showUpload={()=>{ window.location.href="/#upload"; }} />
         {/* Activity ticker */}
         <ActivityTicker />
-        <WheelHero username={username} requireSecured={requireSecured} handoff={wheelHandoff} />
+        <WheelTeaser />
         {/* HERO */}
         <div style={{ position:"relative", overflow:"hidden", padding:"40px clamp(14px,4vw,48px) 48px",
           background:"linear-gradient(160deg,#c5e3f7 0%,#d8f0e8 50%,#e8f4fd 100%)" }}>
