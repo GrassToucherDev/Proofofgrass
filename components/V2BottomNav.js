@@ -76,7 +76,7 @@ export default function V2BottomNav({ username, onLogProof, onMore }) {
 
           if (tab.more) return (
             <button key={i} className="v2-bottom-nav-tab"
-              onClick={onMore}>
+              onClick={() => { onMore?.(); try { window.dispatchEvent(new Event("pog:open-menu")); } catch {} }}>
               <div className="v2-bottom-nav-icon" style={{ fontSize: 16, letterSpacing: 2 }}>
                 •••
               </div>

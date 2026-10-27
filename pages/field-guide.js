@@ -5,6 +5,7 @@ import Head from "next/head";
 import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
+import { SiteLinks, SiteMobileMenu } from "../components/SiteMenu";
 function norm(v) { return String(v ?? "").replace(/@/g, "").toLowerCase().trim(); }
 
 // ── Collection definitions — rendered dynamically ─────────────────────────────
@@ -512,15 +513,8 @@ export default function FieldGuide() {
               Touch Grass <span style={{ fontWeight:400, opacity:0.5 }}>| Proof of Grass</span>
             </span>
           </Link>
-          <div style={{ display:"flex", gap:4, flex:1, overflowX:"auto", scrollbarWidth:"none" }}>
-            {[["Dashboard","/"],["Leaderboard","/leaderboard"],["Grass Draw","/grass-draw"],
-              ["Marketplace","/marketplace"],["Field Guide","/field-guide"]].map(([l,h])=>(
-              <Link key={l} href={h} style={{ fontSize:13,
-                fontWeight:l==="Field Guide"?700:500,
-                color:l==="Field Guide"?V2.grassGreen:V2.forestGreen,
-                textDecoration:"none", padding:"6px 12px", borderRadius:20, whiteSpace:"nowrap" }}>{l}</Link>
-            ))}
-          </div>
+          <SiteLinks username={username} />
+          <div style={{ flex:1 }} className="sm-spacer" />
           {username && (
             <Link href={`/u/${username}`} style={{ display:"flex", alignItems:"center", gap:8,
               background:"white", border:`1px solid ${V2.borderSoft}`, borderRadius:20,
@@ -529,6 +523,7 @@ export default function FieldGuide() {
               <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{username}</span>
             </Link>
           )}
+          <SiteMobileMenu username={username} />
         </nav>
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
