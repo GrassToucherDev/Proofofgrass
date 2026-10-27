@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { V2, V2Styles, V2GlobalCSS } from "../../utils/v2Theme";
+import { SiteLinks, SiteMobileMenu } from "../../components/SiteMenu";
 
 const ICON = { grass_score: "⚡", shield: "🛡️", profile_pack: "🎨", nft: "🖼️" };
 const fmtClock = (ms) => {
@@ -127,6 +128,19 @@ export default function GrassDrawLive() {
       </Head>
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)", fontFamily: V2.fontSans }}>
+        <nav style={{ position: "sticky", top: 0, zIndex: 200, height: 64, display: "flex", alignItems: "center",
+          padding: "0 clamp(14px,4vw,40px)", gap: 20, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(20px)",
+          borderBottom: `1px solid ${V2.borderSoft}`, boxShadow: "0 2px 16px rgba(26,74,10,0.07)" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", flexShrink: 0 }}>
+            <img src="/touchgrass-transparent.png" alt="" style={{ width: 36, height: 36, objectFit: "contain" }} />
+            <span style={{ fontFamily: V2.fontSans, fontSize: 16, fontWeight: 800, color: V2.forestGreen }}>
+              Touch Grass <span style={{ fontWeight: 400, opacity: 0.5 }}>| Proof of Grass</span>
+            </span>
+          </Link>
+          <SiteLinks />
+          <div className="sm-spacer" />
+          <SiteMobileMenu />
+        </nav>
         <div className="gdl-wrap">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 10, flexWrap: "wrap" }}>
             <h1 style={{ fontFamily: V2.fontSerif, color: V2.forestGreen, fontSize: "clamp(26px,5vw,38px)", margin: 0 }}>Grass Draw Live</h1>
