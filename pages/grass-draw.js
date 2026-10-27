@@ -254,20 +254,21 @@ export default function GrassDraw() {
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:10, textDecoration:"none", flexShrink:0 }}>
             <img src="/touchgrass-transparent.png" alt="" style={{ width:36, height:36, objectFit:"contain" }} />
             <span style={{ fontFamily:V2.fontSans, fontSize:16, fontWeight:800, color:V2.forestGreen }}>
-              Touch Grass <span style={{ fontWeight:400, opacity:0.5 }}>| Proof of Grass</span>
+              Touch Grass <span className="gd-logo-sub" style={{ fontWeight:400, opacity:0.5 }}>| Proof of Grass</span>
             </span>
           </Link>
+          <style>{`@media(max-width:1100px){.gd-dash{display:none!important}} @media(max-width:560px){.gd-logo-sub{display:none}.gd-user{display:none!important}}`}</style>
           <SiteLinks username={username} />
           <div style={{ marginLeft:"auto", display:"flex", gap:8, alignItems:"center" }}>
             {username && (
-              <div style={{ display:"flex", alignItems:"center", gap:8, background:"white",
+              <div className="gd-user" style={{ display:"flex", alignItems:"center", gap:8, background:"white",
                 border:`1px solid ${V2.borderSoft}`, borderRadius:20, padding:"6px 14px",
                 boxShadow:"0 1px 6px rgba(26,74,10,0.06)" }}>
                 <span style={{ fontSize:16 }}>🌿</span>
                 <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{username}</span>
               </div>
             )}
-            <Link href="/" style={{ fontSize:12, color:V2.grassGreen, textDecoration:"none",
+            <Link href="/" className="gd-dash" style={{ fontSize:12, color:V2.grassGreen, textDecoration:"none",
               padding:"8px 16px", borderRadius:20, border:`1px solid ${V2.borderGreen}`,
               background:"rgba(125,200,50,0.06)", fontWeight:600 }}>
               Dashboard
