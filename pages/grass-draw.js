@@ -150,8 +150,8 @@ export default function GrassDraw() {
         supabase.from("grass_draw_entries")
           .select("*").eq("cycle_id", cycle.id).ilike("username", username)
           .order("created_at", { ascending: false }).limit(20),
-        supabase.from("Profiles")
-          .select("wallet_verified,wallet_address").ilike("username", username).maybeSingle(),
+        fetch(`/api/profile/wallet-status?username=${encodeURIComponent(username)}`)
+          .then(r => r.json()).then(w => ({ data: { linked: !!w.linked } })).catch(() => ({ data: null })),
       ]);
       if (!totalsRes.data && !streakRes.data) {
         setError("Username not found. Check the spelling and try again.");
@@ -160,7 +160,7 @@ export default function GrassDraw() {
         setStreak(streakRes.data?.current_streak || 0);
         setEntries(entriesRes.data || []);
 
-        setWalletOk(!!(profileRes.data?.wallet_verified && profileRes.data?.wallet_address));
+        setWalletOk(!!profileRes.data?.linked);
       }
     } catch(e) { setError("Failed to load data. Try again."); }
     setLoading(false); setSearched(true);
