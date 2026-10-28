@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { V2, V2Styles } from "../../utils/v2Theme";
 import { WAGO_POSES } from "./Wago";
 
+import { withShareTags } from "../../utils/shareTags";
 const W = 1080;
 const H = 1350;
 
@@ -123,7 +124,8 @@ async function drawCard(canvas, { photoUrl, campaignName, rewardText, rarity, ti
   ctx.fillText("Proof I was there  ·  proofofgrass.app/wago-drops", 70, 1286);
 }
 
-export default function WagoShareCard({ photoUrl, campaignName, rewardText, rarity = "common", tickets = 0, shareText, onShared }) {
+export default function WagoShareCard({ photoUrl, campaignName, rewardText, rarity = "common", tickets = 0, shareText: shareTextRaw, onShared }) {
+  const shareText = withShareTags(shareTextRaw);
   const canvasRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [note, setNote] = useState(null);

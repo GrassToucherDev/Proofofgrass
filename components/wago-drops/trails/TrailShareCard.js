@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { V2, V2Styles } from "../../../utils/v2Theme";
 import { WAGO_POSES } from "../Wago";
 
+import { withShareTags } from "../../../utils/shareTags";
 const W = 1080, H = 1350;
 const loadImage = src => new Promise((res, rej) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = rej; i.src = src; });
 function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
@@ -72,7 +73,8 @@ async function draw(canvas, { coverUrl, name, city, stops, distanceText, duratio
 }
 
 export default function TrailShareCard(props) {
-  const { coverUrl, name, city, stops, distanceText, durationText, rewardText, shareText } = props;
+  const { coverUrl, name, city, stops, distanceText, durationText, rewardText } = props;
+  const shareText = withShareTags(props.shareText);
   const ref = useRef(null), blobRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [note, setNote] = useState(null);

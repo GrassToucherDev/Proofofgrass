@@ -22,6 +22,7 @@ import ProofBonusFlow from "../components/wago-drops/ProofBonusFlow";
 import { T } from "../utils/wagoTheme";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
+import { withShareTags } from "../utils/shareTags";
 // ─── Reward display (any Solana token) ───────────────────────────────────────
 const rewardIconUrl = rewardLogo;
 
@@ -582,7 +583,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
 
   function handleShare(result) {
     const hint   = result.drop?.hint || "a drop";
-    const text   = `Just claimed ${formatReward(result, result.reward_amount)} at "${hint}" 🌿 #WAGO #TouchGrass #ProofOfGrass`;
+    const text   = withShareTags(`Just claimed ${formatReward(result, result.reward_amount)} at "${hint}" 🌿 #WAGO`);
     const url    = "https://proofofgrass.app/wago-drops";
     if (navigator.share) {
       navigator.share({ title: "WAGO Drop claimed!", text, url }).catch(() => {});
