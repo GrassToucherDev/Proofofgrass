@@ -7,6 +7,8 @@
 // the spotlight card generator.
 // ════════════════════════════════════════════════════════════════════════════
 
+import { withShareTags } from "./shareTags";
+
 export const SPOTLIGHT_BADGES = {
   community_mvp: {
     key:        "community_mvp",
@@ -92,5 +94,5 @@ export function getSpotlightFeedText(category) {
 // Helper: get X caption for a win
 export function getSpotlightCaption(category, username, weekLabel) {
   const b = getSpotlightBadge(category);
-  return b ? b.xCaption(username, weekLabel) : `🏆 I won Community Spotlight on Proof of Grass!\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\n\n@XTouchGrass | ProofOfGrass.app`;
+  return withShareTags(b ? b.xCaption(username, weekLabel) : `🏆 I won Community Spotlight on Proof of Grass!\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\n\n@XTouchGrass | ProofOfGrass.app`);
 }

@@ -14,6 +14,7 @@ import { supabase } from "../utils/supabase";
 import { renderGroveCard } from "../utils/groveShareImage";
 import { BANNER_PERMISSION_NOTE } from "../utils/groveBanners";
 
+import { withShareTags } from "../utils/shareTags";
 const ERRORS = {
   already_in_grove: "You're already in a grove. Leave it first to join another.",
   cooldown: "You recently left a grove. You can join or create another after the 48-hour cooldown.",
@@ -130,7 +131,7 @@ export default function GrovesPage() {
   const downloadCard = () => { if (!cardUrl) return; const a = document.createElement("a"); a.href = cardUrl; a.download = "touchgrass-grove.png"; a.click(); };
   const shareGrove = () => {
     const f = cardFile.current;
-    const text = `${data.grove.name} — ${data.streak?.streak ?? 0} day Grove streak on Proof of Grass 🌿`;
+    const text = withShareTags(`${data.grove.name} — ${data.streak?.streak ?? 0} day Grove streak on Proof of Grass 🌿`);
     if (f && navigator.canShare?.({ files: [f] })) navigator.share({ files: [f], text, url: "https://proofofgrass.app/groves" }).catch(() => {});
     else downloadCard();
   };

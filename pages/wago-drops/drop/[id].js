@@ -13,6 +13,7 @@ import { rewardLogo, formatReward } from "../../../utils/wagoReward";
 import CoverImage from "../../../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../../../components/wago-drops/ProofBonusFlow";
 
+import { withShareTags } from "../../../utils/shareTags";
 const rewardIconUrl = rewardLogo;
 
 function haversineM(lat1, lng1, lat2, lng2) {
@@ -117,9 +118,9 @@ export default function DropDetail() {
   }
 
   function handleShare() {
-    const text = drop?.hint
-      ? `There's a drop at "${drop.hint}" on WAGO 🌿 #TouchGrass`
-      : `Check out this WAGO Drop 🌿 #TouchGrass`;
+    const text = withShareTags(drop?.hint
+      ? `There's a drop at "${drop.hint}" on WAGO 🌿`
+      : `Check out this WAGO Drop 🌿`);
     const url = `${window.location.origin}/wago-drops/${id}`;
     if (navigator.share) {
       navigator.share({ title: "WAGO Drop", text, url }).catch(() => {});
