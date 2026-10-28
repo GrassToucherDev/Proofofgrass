@@ -8,13 +8,16 @@ import { adminClient, cleanUsername } from "../../../utils/requireOwner";
 import { authorizeProofActor, BUCKET, proofPath, looksLikeImage, isSafeProofUsername } from "../../../utils/proofAccess";
 import crypto from "crypto";
 
+// Give the route room to finish on Vercel (the database function does real work at long streaks).
+export const config = { maxDuration: 30 };
+
 const MIN_PHOTO_BYTES = 8 * 1024;
 const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 
 const num = (v, lo, hi) => { const n = Number(v); return Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n * 100) / 100 : null; };
 const str = (v, n) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
 
-export default async function handler(req, res) {
+async function logProof(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const username = cleanUsername(req.body?.username);
   if (!isSafeProofUsername(username)) return res.status(400).json({ error: "Invalid username.", code: "bad_username" });
@@ -62,8 +65,34 @@ export default async function handler(req, res) {
     if (city) Object.assign(params, { p_location_source: "manual", p_location_city: city, p_location_region: str(b.p_location_region, 80), p_location_country: str(b.p_location_country, 80), p_location_label: str(b.p_location_label, 160) });
   }
 
-  const { data, error } = await db.rpc("lock_in_streak", params);
+  // Stop waiting a little before the platform would kill us, so the player gets a real answer and we keep a record.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 24000);
+  const t0 = Date.now();
+  let data, error;
+  try {
+    ({ data, error } = await db.rpc("lock_in_streak", params).abortSignal(ctrl.signal));
+  } catch (e) {
+    error = { message: e?.message || "rpc threw", aborted: true };
+  } finally { clearTimeout(timer); }
+  const ms = Date.now() - t0;
   try { await db.from("proof_attempts").insert([{ ip_hash: ih, username, secured: !!claim, ok: !error }]); } catch {}
-  if (error) { console.error("[proof/log]", error.message); return res.status(500).json({ error: "Streak log failed.", code: "rpc_failed" }); }
+  if (error) {
+    const timedOut = !!error.aborted || ctrl.signal.aborted;
+    console.error("[proof/log] rpc failed", JSON.stringify({ username, ms, timedOut, message: error.message, code: error.code }));
+    if (timedOut) return res.status(504).json({ error: "That took too long. Your proof may still have saved. Check your profile in a minute before trying again.", code: "timeout" });
+    return res.status(500).json({ error: "Streak log failed.", code: "rpc_failed" });
+  }
+  if (ms > 5000) console.warn("[proof/log] slow rpc", JSON.stringify({ username, ms }));
   return res.status(200).json({ result: data });
+}
+
+export default async function handler(req, res) {
+  try {
+    return await logProof(req, res);
+  } catch (e) {
+    // Anything unexpected still gets a JSON answer, and a line in the server log with the real cause.
+    console.error("[proof/log] unhandled", JSON.stringify({ message: e?.message, stack: String(e?.stack || "").split("\n").slice(0, 4).join(" | ") }));
+    if (!res.headersSent) return res.status(500).json({ error: "Streak log failed.", code: "server_error" });
+  }
 }

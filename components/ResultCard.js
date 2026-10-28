@@ -337,7 +337,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
         if(up.error){setSubmitError("Photo upload failed — tap again.");setSubmitStatus("error");return;}
       }catch(e){setSubmitError("Photo upload failed — tap again.");setSubmitStatus("error");return;}
     }
-    const rpcWithRetry = async(retries=5)=>{
+    const rpcWithRetry = async(retries=2)=>{
       for(let attempt=0;attempt<=retries;attempt++){
         try{
           const locationPayload = locationMode==="gps"
@@ -351,11 +351,12 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           if(httpRes.ok) return {data:body.result,error:null};
           const failure = {data:null,error:{message:body.error||"Streak log failed.",code:body.code||"failed",status:httpRes.status}};
           if(httpRes.status>=400 && httpRes.status<500) return failure;   // don't retry sign-in / rate-limit / validation failures
+          if(body.code==="timeout") return failure;                        // the server may still be finishing — retrying only piles on
           throw new Error(failure.error.message);
         }catch(e){
           console.warn(`lock_in_streak attempt ${attempt+1} failed:`,e?.message);
           if(attempt===retries) throw e;
-          await new Promise(r=>setTimeout(r,1000*Math.pow(2,attempt)));
+          await new Promise(r=>setTimeout(r,1500*Math.pow(2,attempt)));
         }
       }
     };
@@ -371,7 +372,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             setSubmitStatus("success");return;
           }
         }catch{}
-        setSubmitError(rpcError.code==="not_signed_in"?"This username is secured — sign in with Google to log your proof.":rpcError.code==="not_owner"?"This username belongs to another account.":(rpcError.code==="photo_required"||rpcError.code==="photo_invalid"||rpcError.code==="photo_reused")?rpcError.message:(rpcError.code==="rate_limited"||rpcError.code==="too_many_accounts")?rpcError.message:"Streak log failed — tap again.");setSubmitStatus("error");return;
+        setSubmitError(rpcError.code==="not_signed_in"?"This username is secured — sign in with Google to log your proof.":rpcError.code==="not_owner"?"This username belongs to another account.":(rpcError.code==="photo_required"||rpcError.code==="photo_invalid"||rpcError.code==="photo_reused")?rpcError.message:(rpcError.code==="rate_limited"||rpcError.code==="too_many_accounts"||rpcError.code==="timeout")?rpcError.message:"Streak log failed — tap again.");setSubmitStatus("error");return;
       }
       if(result?.status==="already_submitted"){setSubmitStatus("success");return;}
       const newStreak=result?.current_streak??currentStreak;
