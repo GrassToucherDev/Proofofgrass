@@ -317,25 +317,25 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
     // Fallback to localStorage if username prop is empty
     const effectiveUsername = username ||
       (typeof localStorage !== "undefined" ? localStorage.getItem("pog_username")?.replace(/@/g,"").toLowerCase().trim() : null);
-    if(!effectiveUsername) return;
-    if(submitStatus==="success") return;
+    if(!effectiveUsername) return false;
+    if(submitStatus==="success") return true;
     setSubmitStatus("loading");setSubmitError("");
     // 1) The proof photo goes up first, through a one-time link from the server (the browser can't write to the
     //    proof-photo folders directly any more). No photo, no streak.
     {
       const photo = proofFile instanceof File ? proofFile : null;
-      if(!photo){setSubmitError("Add your outdoor photo to log your proof.");setSubmitStatus("error");return;}
+      if(!photo){setSubmitError("Add your outdoor photo to log your proof.");setSubmitStatus("error");return false;}
       try{
         const ur = await fetch("/api/proof/upload-url",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername})});
         const uj = await ur.json().catch(()=>({}));
-        if(ur.status===409&&uj.code==="already_logged"){setSubmitStatus("success");return;}
+        if(ur.status===409&&uj.code==="already_logged"){setSubmitStatus("success");return true;}
         if(!ur.ok){
           setSubmitError(uj.code==="not_signed_in"?"This username is secured — sign in with Google to log your proof.":uj.code==="not_owner"?"This username belongs to another account.":uj.error||"Couldn't start the photo upload — tap again.");
-          setSubmitStatus("error");return;
+          setSubmitStatus("error");return false;
         }
         const up = await supabase.storage.from("proof-photos").uploadToSignedUrl(uj.path,uj.token,photo,{contentType:photo.type||"image/png",upsert:true});
-        if(up.error){setSubmitError("Photo upload failed — tap again.");setSubmitStatus("error");return;}
-      }catch(e){setSubmitError("Photo upload failed — tap again.");setSubmitStatus("error");return;}
+        if(up.error){setSubmitError("Photo upload failed — tap again.");setSubmitStatus("error");return false;}
+      }catch(e){setSubmitError("Photo upload failed — tap again.");setSubmitStatus("error");return false;}
     }
     const rpcWithRetry = async(retries=2)=>{
       for(let attempt=0;attempt<=retries;attempt++){
@@ -369,12 +369,12 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           if(streakCheck?.last_submission_date&&String(streakCheck.last_submission_date).slice(0,10)===todayUTC){
             setCurrentStreak(streakCheck.current_streak??currentStreak);
             onStreakUpdate?.(streakCheck.current_streak??currentStreak);
-            setSubmitStatus("success");return;
+            setSubmitStatus("success");return true;
           }
         }catch{}
-        setSubmitError(rpcError.code==="not_signed_in"?"This username is secured — sign in with Google to log your proof.":rpcError.code==="not_owner"?"This username belongs to another account.":(rpcError.code==="photo_required"||rpcError.code==="photo_invalid"||rpcError.code==="photo_reused")?rpcError.message:(rpcError.code==="rate_limited"||rpcError.code==="too_many_accounts"||rpcError.code==="timeout")?rpcError.message:"Streak log failed — tap again.");setSubmitStatus("error");return;
+        setSubmitError(rpcError.code==="not_signed_in"?"This username is secured — sign in with Google to log your proof.":rpcError.code==="not_owner"?"This username belongs to another account.":(rpcError.code==="photo_required"||rpcError.code==="photo_invalid"||rpcError.code==="photo_reused")?rpcError.message:(rpcError.code==="rate_limited"||rpcError.code==="too_many_accounts"||rpcError.code==="timeout")?rpcError.message:"Streak log failed — tap again.");setSubmitStatus("error");return false;
       }
-      if(result?.status==="already_submitted"){setSubmitStatus("success");return;}
+      if(result?.status==="already_submitted"){setSubmitStatus("success");return true;}
       const newStreak=result?.current_streak??currentStreak;
       setCurrentStreak(newStreak);onStreakUpdate?.(newStreak);setSubmitStatus("success");
       if(result?.lucky_touch?.triggered) setLuckyTouch(result.lucky_touch);
@@ -393,7 +393,8 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
         }
       }catch(convErr){console.warn("[referral] conversion non-fatal:",convErr?.message);}
       // Challenge progress is no longer written from the browser: results are counted server-side from real proofs (see yard_settle_challenge).
-    }catch(err){console.error("lock_in_streak exception",err);setSubmitError("Something went wrong — tap again.");setSubmitStatus("error");}
+      return true;
+    }catch(err){console.error("lock_in_streak exception",err);setSubmitError("Something went wrong — tap again.");setSubmitStatus("error");return false;}
   },[username,currentStreak,onStreakUpdate,locationMode,gpsLat,gpsLng,locationCity,locationRegion,locationCountry]);
 
   const isInAppBrowser = typeof navigator!=="undefined"&&(/Twitter/i.test(navigator.userAgent)||/Instagram/i.test(navigator.userAgent)||/FBAN|FBAV/i.test(navigator.userAgent)||/MicroMessenger/i.test(navigator.userAgent));
@@ -912,13 +913,17 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             </div>
 
             <button
-              onClick={()=>{
+              onClick={async()=>{
+                    // Lock in FIRST and only hand off to X once the streak is confirmed saved. Opening X
+                    // straight away backgrounds this page and can kill the upload/log mid-flight (X post
+                    // exists, no proof recorded). After a successful lock-in this same button becomes the
+                    // share button, so the share sheet opens from a fresh tap.
+                    if(submitStatus!=="success"){ await lockInStreak(); return; }
                     setShowStylePicker(false);
                     const text=buildShareText();
                     const isAndroid=/Android/i.test(navigator.userAgent??"");
                     const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent??"");
                     setShareInitiated(true);
-                    lockInStreak();
 
                     // Native share sheet is the only way to hand X an actual image. It works on
                     // Android Chrome as well as iOS, so use it whenever the browser can share files.
@@ -976,13 +981,14 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                       doShare(null);
                     }
                   }}
-              style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#7dc832,#5ba622)",
+              disabled={submitStatus==="loading"}
+              style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#7dc832,#5ba622)",opacity:submitStatus==="loading"?0.6:1,
                 color:"white",fontSize:16,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 18px rgba(125,200,50,0.4)",
                 fontFamily:"Nunito,sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,touchAction:"manipulation"}}>
-              Continue to X <span aria-hidden="true">→</span>
+              {submitStatus==="loading"?"⏳ Locking in…":submitStatus==="success"?"Share to X":"Lock in & continue"} <span aria-hidden="true">→</span>
             </button>
             <div style={{textAlign:"center",fontSize:11.5,color:"#6b7d60",margin:"10px 0 2px",lineHeight:1.4}}>
-              This locks in your streak, then opens your share options.
+              {submitStatus==="success"?"✓ Streak locked in. Tap to share.":submitStatus==="loading"?"Locking in your streak. Stay on this page.":submitStatus==="error"?(submitError||"Streak log failed. Tap again."):"Step 1 locks in your streak. Step 2 opens X, only once your streak is saved."}
             </div>
             <button onClick={()=>setShowStylePicker(false)}
               style={{display:"block",margin:"4px auto 0",background:"none",border:"none",color:"#6b7d60",fontSize:13.5,fontWeight:700,
