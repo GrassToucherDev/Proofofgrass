@@ -1,5 +1,6 @@
 // /yard/events/[slug] — one seasonal event: details, how it's scored, join, and the live leaderboard.
 import { useState, useEffect, useCallback } from "react";
+import { signInWithGoogle } from "../../../utils/googleSignIn";
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -90,7 +91,7 @@ export default function YardEvent() {
             </section>
 
             {action && <div style={{ margin: "16px 0" }}>{action}</div>}
-            {err && <div role="alert" style={{ fontSize: 13, fontWeight: 600, color: V2.danger, margin: "8px 0" }}>{err}{needSignIn && <> <button type="button" onClick={() => signIn("google")} style={{ ...V2Styles.btnPrimary, marginLeft: 8, minHeight: 44, padding: "0 16px" }}>Sign in with Google</button></>}</div>}
+            {err && <div role="alert" style={{ fontSize: 13, fontWeight: 600, color: V2.danger, margin: "8px 0" }}>{err}{needSignIn && <> <button type="button" onClick={() => signInWithGoogle()} style={{ ...V2Styles.btnPrimary, marginLeft: 8, minHeight: 44, padding: "0 16px" }}>Sign in with Google</button></>}</div>}
 
             <h2 className="yd-h2" style={{ marginTop: 28 }}>Leaderboard</h2>
             {ev.phase === "upcoming" ? <WagoEmpty title="Not started yet" copy="Standings appear when the event begins." />

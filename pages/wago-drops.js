@@ -5,6 +5,7 @@
 // - Signed in + wallet linked: full Mapbox map with drop pins
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { signInWithGoogle } from "../utils/googleSignIn";
 import Head from "next/head";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
@@ -316,7 +317,7 @@ function LandingView() {
           Real-world treasure hunts hidden on a live map. Walk there, claim the drop,
           and prove you were actually outside.
         </p>
-        <button onClick={() => signIn("google")} style={{ ...V2Styles.btnPrimary, padding: "15px 34px", fontSize: 16 }}>
+        <button onClick={() => signInWithGoogle()} style={{ ...V2Styles.btnPrimary, padding: "15px 34px", fontSize: 16 }}>
           Start Hunting
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
@@ -361,7 +362,7 @@ function LandingView() {
         <p style={{ fontSize: 14, color: V2.forestLight, margin: "0 auto 24px", maxWidth: 380, lineHeight: 1.7 }}>
           Sign in with Google, link your Solana wallet, and start hunting. Drops are live now.
         </p>
-        <button onClick={() => signIn("google")} style={{ ...V2Styles.btnSecondary, padding: "13px 28px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10 }}>
+        <button onClick={() => signInWithGoogle()} style={{ ...V2Styles.btnSecondary, padding: "13px 28px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10 }}>
           <img src="https://www.google.com/favicon.ico" alt="" style={{ width: 16, height: 16 }} />
           Continue with Google
         </button>

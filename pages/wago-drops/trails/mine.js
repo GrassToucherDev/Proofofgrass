@@ -1,5 +1,6 @@
 // /wago-drops/trails/mine — Active / Completed / Expired.
 import Head from "next/head";
+import { signInWithGoogle } from "../../../utils/googleSignIn";
 import Link from "next/link";
 import { useSession, signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -36,7 +37,7 @@ export default function MyTrails() {
             <div style={{ textAlign: "center", padding: "40px 0" }}>
               <Wago pose="wave" size={140} />
               <p style={{ color: T.muted }}>Sign in to see your Trails.</p>
-              <button onClick={() => signIn("google")} style={btnPrimary}>Sign in with Google</button>
+              <button onClick={() => signInWithGoogle()} style={btnPrimary}>Sign in with Google</button>
             </div>
           )}
           {session && (

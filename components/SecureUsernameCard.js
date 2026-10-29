@@ -1,5 +1,7 @@
 // "Secure your username" prompt. Shows only when a username is set and not yet secured by this Google account.
 import { useEffect, useState } from "react";
+import InAppBrowserNote from "./InAppBrowserNote";
+import { signInWithGoogle } from "../utils/googleSignIn";
 import { useSession, signIn } from "next-auth/react";
 import { V2, V2Styles } from "../utils/v2Theme";
 
@@ -47,7 +49,10 @@ export default function SecureUsernameCard({ username, onClaimed }) {
       {state.signedIn || status === "authenticated" ? (
         <button onClick={claim} disabled={busy} style={{ ...V2Styles.btnPrimary, padding: "10px 20px" }}>{busy ? "Securing…" : `Secure @${username}`}</button>
       ) : (
-        <button onClick={() => signIn("google")} style={{ ...V2Styles.btnPrimary, padding: "10px 20px" }}>Continue with Google</button>
+        <>
+          <InAppBrowserNote />
+          <button onClick={() => signInWithGoogle()} style={{ ...V2Styles.btnPrimary, padding: "10px 20px" }}>Continue with Google</button>
+        </>
       )}
       {err && <div role="alert" style={{ marginTop: 8, fontSize: 13, color: "#b3261e" }}>{err}</div>}
     </div>

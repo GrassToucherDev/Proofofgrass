@@ -1,6 +1,7 @@
 // pages/groves.js — squads of 3–6 who share a streak and can gift shields.
 // Requires a secured (Google-claimed) username to create or join.
 import { useState, useEffect, useCallback, useRef } from "react";
+import { signInWithGoogle } from "../utils/googleSignIn";
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -238,7 +239,7 @@ export default function GrovesPage() {
               {ident.claimed ? (
                 <>
                   <p style={{ color: V2.textBody, margin: "4px 0 12px" }}>@{username} is secured by a Google account. {ident.signedIn ? "You're signed in with a different account." : "Sign in with the Google account that secured it."}</p>
-                  {!ident.signedIn && <button onClick={() => signIn("google")} style={{ ...V2Styles.btnPrimary, padding: "10px 20px" }}>Continue with Google</button>}
+                  {!ident.signedIn && <button onClick={() => signInWithGoogle()} style={{ ...V2Styles.btnPrimary, padding: "10px 20px" }}>Continue with Google</button>}
                 </>
               ) : (
                 <>

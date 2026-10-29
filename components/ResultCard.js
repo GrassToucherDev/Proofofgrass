@@ -1,4 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
+import InAppBrowserNote from "./InAppBrowserNote";
+import { signInWithGoogle } from "../utils/googleSignIn";
 import { createPortal } from "react-dom";
 import { signIn } from "next-auth/react";
 import { supabase } from "../utils/supabase";
@@ -803,8 +805,9 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           {submitStatus==="error" && submitError && (
             <p style={{ fontSize:11, color:"#e05050", textAlign:"center", margin:0 }}>{submitError}</p>
           )}
+          {submitStatus==="error" && submitError && /sign in with google/i.test(submitError) && <InAppBrowserNote />}
           {submitStatus==="error" && submitError && /sign in with google/i.test(submitError) && (
-            <button onClick={()=>signIn("google",{callbackUrl:typeof window!=="undefined"?window.location.href:"/"})}
+            <button onClick={()=>signInWithGoogle({callbackUrl:typeof window!=="undefined"?window.location.href:"/"})}
               style={{ alignSelf:"center", padding:"10px 20px", borderRadius:12, border:"none", cursor:"pointer",
                 fontSize:13, fontWeight:700, color:"white", background:"linear-gradient(135deg,#7dc832,#5ba622)" }}>
               Sign in with Google

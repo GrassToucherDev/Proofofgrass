@@ -23,9 +23,12 @@ export const authOptions = {
 
   secret: process.env.NEXTAUTH_SECRET,
 
+  // Stay signed in: a 90-day session that rolls forward. Any visit more than a day after the last refresh
+  // issues a fresh 90-day cookie, so anyone who comes back at least every ~3 months never has to sign in again.
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 90 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60,
   },
 
   callbacks: {
