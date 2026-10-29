@@ -1,5 +1,6 @@
 // /wago-drops/trails/[id] — Trail detail, active map state, and completion screen.
 import Head from "next/head";
+import { signInWithGoogle } from "../../../utils/googleSignIn";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
@@ -86,7 +87,7 @@ export default function TrailDetail() {
   }, [load]);
 
   async function start() {
-    if (!session) return signIn("google");
+    if (!session) return signInWithGoogle();
     setBusy(true); setMsg(null);
     const r = await fetch(`/api/wago-drops/trails/${id}/start`, { method: "POST" });
     const d = await r.json().catch(() => ({}));

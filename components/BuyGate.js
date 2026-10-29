@@ -1,6 +1,8 @@
 // components/BuyGate.js
 // Shared "secure your username" gate used before any purchase (Marketplace items, banners, and WAGO Wheel spins).
 import { V2, V2Styles } from "../utils/v2Theme";
+import InAppBrowserNote from "./InAppBrowserNote";
+import { signInWithGoogle } from "../utils/googleSignIn";
 import { signIn } from "next-auth/react";
 import SecureUsernameCard from "./SecureUsernameCard";
 
@@ -18,7 +20,8 @@ export default function BuyGate({ username, status, item, onClose, onReady }) {
         ) : status?.claimed ? (
           <>
             <p style={{ fontSize:14, color:V2.textBody, lineHeight:1.6, margin:"0 0 14px" }}>@{username} is secured by a Google account. Sign in with it to buy {item?.name}. This makes sure purchases always land on the right account.</p>
-            <button onClick={()=>signIn("google")} style={{ ...V2Styles.btnPrimary, padding:"10px 20px" }}>Continue with Google</button>
+            <InAppBrowserNote />
+            <button onClick={()=>signInWithGoogle()} style={{ ...V2Styles.btnPrimary, padding:"10px 20px" }}>Continue with Google</button>
           </>
         ) : (
           <>

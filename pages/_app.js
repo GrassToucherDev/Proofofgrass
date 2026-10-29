@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { SessionProvider } from "next-auth/react";
 import ConsentGate from "../components/ConsentGate";
 import VersionGuard from "../components/VersionGuard";
+import GoogleHintKeeper from "../components/GoogleHintKeeper";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
@@ -28,7 +29,8 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   }, []);
 
   return (
-    <SessionProvider session={session}>
+    <SessionProvider session={session} refetchInterval={60 * 60} refetchOnWindowFocus>
+      <GoogleHintKeeper />
       <ConnectionProvider endpoint={RPC_ENDPOINT}>
         <WalletProvider wallets={wallets} autoConnect>
           <WalletModalProvider>

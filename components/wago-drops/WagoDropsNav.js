@@ -4,6 +4,7 @@
 // tabs (Explore / Saved / My Drops / Settings), V2BottomNav pattern.
 
 import Link from "next/link";
+import { signInWithGoogle } from "../../utils/googleSignIn";
 import WagoAvatar from "./WagoAvatar";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -129,7 +130,7 @@ export function WagoDropsNav({ session }) {
               }}>Sign out</button>
             </>
           ) : (
-            <button onClick={() => signIn("google")} style={{
+            <button onClick={() => signInWithGoogle()} style={{
               background: V2.gradientGrassBtn, color: V2.white, border: "none",
               borderRadius: 20, padding: "8px 18px", fontSize: 13, fontWeight: 700,
               cursor: "pointer", boxShadow: "0 2px 10px rgba(125,200,50,0.35)",

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { signInWithGoogle } from "../../../utils/googleSignIn";
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -128,7 +129,7 @@ export default function PrizePage() {
                 <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em", color: T.dim, marginBottom: 6 }}>Got it? Enter the code</div>
                 <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 10, lineHeight: 1.4 }}>If you take a prize, please enter its code so others know it's gone.</div>
                 {!session ? (
-                  <button onClick={() => signIn("google")} style={{ width: "100%", background: T.olive, color: "#fff", border: "none", borderRadius: 999, padding: 13, fontSize: 15, fontWeight: 700 }}>Sign in to claim</button>
+                  <button onClick={() => signInWithGoogle()} style={{ width: "100%", background: T.olive, color: "#fff", border: "none", borderRadius: 999, padding: 13, fontSize: 15, fontWeight: 700 }}>Sign in to claim</button>
                 ) : (
                   <>
                     <input value={code} onChange={e => setCode(e.target.value)} placeholder="XXXX-XXXX" autoCapitalize="characters" autoComplete="off"
