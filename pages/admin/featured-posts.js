@@ -4,8 +4,8 @@ import Link from "next/link";
 import { supabase } from "../../utils/supabase";
 import { adminDb } from "../../utils/adminDb";
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
+import { adminLoginOk } from "../../utils/adminLogin";
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
   border:"rgba(255,255,255,0.055)",
@@ -95,9 +95,9 @@ export default function FeaturedPostsAdmin() {
         <div style={{fontSize:28,marginBottom:12}}>📌</div>
         <div style={{fontSize:14,color:T.muted,marginBottom:20}}>Featured Posts Admin</div>
         <input type="password" value={pw} onChange={e=>setPw(e.target.value)}
-          onKeyDown={e=>{if(e.key==="Enter"&&pw===ADMIN_PASSWORD)setAuthed(true);}}
+          onKeyDown={e=>{if(e.key==="Enter") adminLoginOk(pw).then(ok=>{ if(ok) setAuthed(true); });}}
           placeholder="Password" style={{...inputStyle,marginBottom:12}}/>
-        <button onClick={()=>{if(pw===ADMIN_PASSWORD)setAuthed(true);}}
+        <button onClick={()=>{adminLoginOk(pw).then(ok=>{ if(ok) setAuthed(true); });}}
           style={{width:"100%",background:T.olive,color:"#0a0c08",border:"none",borderRadius:8,padding:"11px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
           Enter
         </button>

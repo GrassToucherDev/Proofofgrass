@@ -4,8 +4,8 @@ import { adminFetch } from "../../utils/adminClient";
 import Head from "next/head";
 import { supabase } from "../../utils/supabase";
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
+import { adminLoginOk } from "../../utils/adminLogin";
 const LEAF_COLORS = [
   "#4a7c3f","#5a8f4a","#6ba55a","#3d6b35","#7ab86a",
   "#8faa6a","#c8a84b","#93a85a","#2d5a27","#4e7a44",
@@ -229,12 +229,12 @@ export default function LeafDraw() {
             Leaf Draw
           </div>
           <input type="password" value={pw} onChange={e => setPw(e.target.value)}
-            onKeyDown={e => { if(e.key==="Enter" && pw===ADMIN_PASSWORD) setAuthed(true); }}
+            onKeyDown={e => { if(e.key==="Enter") adminLoginOk(pw).then(ok=>{ if(ok) setAuthed(true); }); }}
             placeholder="Admin password"
             style={{ width:"100%", background:"#141710", border:"1px solid rgba(255,255,255,0.055)",
               borderRadius:8, padding:"10px 14px", color:"#f0efea", fontSize:13,
               outline:"none", marginBottom:12 }} />
-          <button onClick={() => { if(pw===ADMIN_PASSWORD) setAuthed(true); }}
+          <button onClick={() => { adminLoginOk(pw).then(ok=>{ if(ok) setAuthed(true); }); }}
             style={{ width:"100%", background:"#93a85a", color:"#0a0c08", border:"none",
               borderRadius:8, padding:"12px", fontSize:14, fontWeight:700, cursor:"pointer" }}>
             Enter

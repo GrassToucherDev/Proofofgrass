@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../utils/supabase";
 
+import { adminLoginOk } from "../../utils/adminLogin";
 // --- Design tokens ------------------------------------------------------------
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710", bg4:"#1a1e13",
@@ -11,7 +12,6 @@ const T = {
   red:"#f87171",
 };
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "touchgrass_admin";
 
 // --- Helpers -----------------------------------------------------------------
 function todayUTC() {
@@ -84,8 +84,7 @@ export default function AdminStats() {
   const [lastRefresh, setLastRefresh] = useState(null);
 
   const checkPw = () => {
-    if (pw === ADMIN_PASSWORD) { setAuthed(true); setPwError(""); }
-    else { setPwError("Incorrect password."); }
+    adminLoginOk(pw).then(ok => { if (ok) { setAuthed(true); setPwError(""); } else { setPwError("Incorrect password."); } });
   };
 
   const loadStats = useCallback(async () => {
@@ -354,7 +353,7 @@ proofofgrass.app`;
             Enter
           </button>
           <div style={{fontSize:10,color:T.dim,marginTop:16}}>
-            Set NEXT_PUBLIC_ADMIN_PASSWORD in .env.local
+            Enter the admin secret
           </div>
         </div>
       </div>
