@@ -333,14 +333,14 @@ export default function Leaderboard() {
 
         {/* ── NAV ──────────────────────────────────────────────────────────── */}
         <nav style={{ position:"sticky", top:0, zIndex:200, height:64,
-          display:"flex", alignItems:"center", padding:"0 clamp(14px,4vw,40px)", gap:20,
+          display:"flex", alignItems:"center", padding:"0 clamp(14px,4vw,40px)", gap:"clamp(8px,2vw,20px)",
           background:"rgba(255,255,255,0.95)", backdropFilter:"blur(20px)",
           borderBottom:`1px solid ${V2.borderSoft}`,
           boxShadow:"0 2px 16px rgba(26,74,10,0.07)" }}>
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:10,
-            textDecoration:"none", flexShrink:0 }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width:36, height:36, objectFit:"contain" }} />
-            <span style={{ fontFamily:V2.fontSans, fontSize:16, fontWeight:800, color:V2.forestGreen }}>
+            textDecoration:"none", flexShrink:1, minWidth:0 }}>
+            <img src="/touchgrass-transparent.png" alt="" style={{ width:36, height:36, objectFit:"contain", flexShrink:0 }} />
+            <span style={{ fontFamily:V2.fontSans, fontSize:16, fontWeight:800, color:V2.forestGreen, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
               Touch Grass <span style={{ fontWeight:400, opacity:0.5 }}>| Proof of Grass</span>
             </span>
           </Link>
