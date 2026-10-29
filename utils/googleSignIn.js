@@ -20,3 +20,7 @@ export function signInWithGoogle(options, authorizationParams) {
   const params = hint ? { login_hint: hint, ...(authorizationParams || {}) } : authorizationParams;
   return signIn("google", options, params);
 }
+
+export function forgetGoogleHint() {
+  try { localStorage.removeItem(KEY); } catch {}
+}

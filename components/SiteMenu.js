@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { V2 } from "../utils/v2Theme";
+import AccountChip from "./AccountChip";
 
 const HARVEST = "https://harvest.touchgrass.today";
 
@@ -186,6 +187,7 @@ export function SiteLinks({ username: usernameProp, onLogProof }) {
           <Link key={l.href} href={l.href}
             className={`sm-solo${isActivePath(router.pathname, l.href) ? " active" : ""}`}>{l.label}</Link>
         ))}
+        <span style={{ marginLeft: "auto", paddingLeft: 10, display: "inline-flex" }}><AccountChip variant="d" username={usernameProp} /></span>
       </div>
     </>
   );
@@ -214,6 +216,7 @@ export function SiteMobileMenu({ username: usernameProp, onLogProof }) {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <AccountChip variant="m" username={usernameProp} />
       <div className="sm-burger" role="button" aria-label="Menu" tabIndex={0}
         onClick={() => setOpen(true)} onKeyDown={(e) => { if (e.key === "Enter") setOpen(true); }}>
         <span /><span /><span />
