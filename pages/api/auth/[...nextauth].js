@@ -70,8 +70,11 @@ export const authOptions = {
     },
   },
 
+  // Failed sign-ins land on a page that explains and offers a retry. (This used to be "/wago-drops", which sent
+  // anyone whose Google sign-in failed to the WAGO drops map with no explanation.)
   pages: {
-    signIn: "/wago-drops",
+    signIn: "/signin-problem",
+    error: "/signin-problem",
   },
 };
 
