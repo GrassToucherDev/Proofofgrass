@@ -34,10 +34,10 @@ begin
       insert into wheel_prizes(wheel_id, name, description, reward_type, reward_config, rarity, weight, inventory_total, inventory_remaining,
                                image_url, segment, active, sort_order, available_until)
         values (w, r.name, r.descr, 'collectible', jsonb_build_object('collection', 'fright-bits', 'slug', r.slug), 'rare', 1,
-                1, 1, '/images/wago/fright-bits/' || r.file, 0, false, 900 + r.n, cutoff)
+                1, 1, '/images/wago/fright-bits/web/' || r.slug || '.webp', 0, false, 900 + r.n, cutoff)
         returning id into pid;
       insert into collectibles(collection_id, number, slug, name, character, description, rarity, image_url, status, reserve_order, prize_id)
-        values (col, r.n, r.slug, r.name, r.chr, r.descr, 'rare', '/images/wago/fright-bits/' || r.file, 'reserve', r.n, pid)
+        values (col, r.n, r.slug, r.name, r.chr, r.descr, 'rare', '/images/wago/fright-bits/web/' || r.slug || '.webp', 'reserve', r.n, pid)
         returning id into kid;
       update wheel_prizes set collectible_id = kid where id = pid;
     end if;
