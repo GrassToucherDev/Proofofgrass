@@ -6,6 +6,7 @@ import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 import V2Nav from "../components/V2Nav";
 import BuyGate from "../components/BuyGate";
 import WheelHero from "../components/wheel/WheelHero";
+import FrightBitsHeroBanner from "../components/frightbits/FrightBitsHeroBanner";
 
 function getUsername() {
   try { return (localStorage.getItem("pog_username") || "").trim().toLowerCase(); } catch { return ""; }
@@ -49,6 +50,7 @@ export default function WheelPage() {
       <style dangerouslySetInnerHTML={{ __html: V2GlobalCSS }} />
       <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>
         <V2Nav username={username} onUsernameChange={setUsername} showUpload={() => { window.location.href = "/#upload"; }} />
+        <FrightBitsHeroBanner maxWidth={720} />
         <WheelHero username={username} requireSecured={requireSecured} handoff={handoff} />
         {live === false && (
           <div style={{ maxWidth: 520, margin: "70px auto", padding: "0 20px", textAlign: "center" }}>

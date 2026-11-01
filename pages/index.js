@@ -5,6 +5,7 @@ import Head from "next/head";
 import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
 import V2Nav from "../components/V2Nav";
+import FrightBitsHeroBanner from "../components/frightbits/FrightBitsHeroBanner";
 import V2BottomNav from "../components/V2BottomNav";
 import V2Ticker from "../components/V2Ticker";
 import { supabase } from "../utils/supabase";
@@ -740,6 +741,9 @@ export default function Home() {
 
       {/* Ticker */}
       <V2Ticker />
+
+      {/* WAGO: Fright Bits event banner (only while live) */}
+      <FrightBitsHeroBanner />
 
       {/* Main page */}
       <div className="v2-page-wrap">
