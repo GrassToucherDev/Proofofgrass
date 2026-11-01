@@ -70,7 +70,8 @@ export function publicPrizeRow(p) {
 }
 export function publicSpin(s) {
   return { id: s.id, prize: { name: s.prize_snapshot?.name, description: s.prize_snapshot?.description, reward_type: s.prize_snapshot?.reward_type,
-    image_url: s.prize_snapshot?.image_url }, rarity: s.rarity, segment: s.segment, meter_guaranteed: s.meter_guaranteed,
+    image_url: s.prize_snapshot?.image_url,
+    collection: s.prize_snapshot?.reward_config?.collection || null, collectible_slug: s.prize_snapshot?.reward_config?.slug || null }, rarity: s.rarity, segment: s.segment, meter_guaranteed: s.meter_guaranteed,
     fulfillment_status: s.fulfillment_status, lock_status: s.lock_status, created_at: s.created_at };
 }
 

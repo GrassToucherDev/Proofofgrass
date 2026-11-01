@@ -8,6 +8,7 @@ import Wago from "../wago-drops/Wago";
 import { RARITY, rarityOf, typeMeta, prizeArt, fmt, fulfillmentText, statusLabel } from "./wheelBits";
 
 import { withShareTags } from "../../utils/shareTags";
+import { shareFrightBits } from "../../utils/frightBitsCard";
 const BTN = { border: "none", borderRadius: 999, fontFamily: V2.fontSans, fontWeight: 700, fontSize: 15, cursor: "pointer", padding: "14px 18px", width: "100%" };
 const PRIMARY = { ...BTN, background: V2.gradientGrassBtn, color: "#fff", boxShadow: V2.shadowGlow };
 const GHOST = { ...BTN, background: "#fff", color: V2.forestGreen, border: `1.5px solid ${V2.borderSoft}` };
@@ -121,6 +122,33 @@ export function PrizesSheet({ prizes, onClose }) {
 }
 
 export function ResultReveal({ spin, onSpinAgain, onWins, onClose }) {
+  const [fb, setFb] = useState(null);                 // Fright Bits details (character, number) for a collectible win
+  const isFB = spin.prize?.collection === "fright-bits";
+  useEffect(() => {
+    if (!isFB) return;
+    fetch("/api/fright-bits/state", { cache: "no-store" }).then(r => r.json()).then(d => setFb(d?.items?.find(i => i.slug === spin.prize.collectible_slug) || null)).catch(() => {});
+  }, [isFB, spin.prize?.collectible_slug]);
+  if (isFB) {
+    return (
+      <Sheet title="" onClose={onClose}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", color: "#b45309", margin: "4px 0 8px" }}>YOU FOUND A FRIGHT BIT 🎃</div>
+          <div style={{ background: "radial-gradient(circle,#3a1a5c,#12081f)", borderRadius: 22, padding: 14, maxWidth: 260, margin: "0 auto" }}>
+            <img src={spin.prize.image_url} alt="" style={{ width: "100%", aspectRatio: "1/1", objectFit: "contain" }} />
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, margin: "12px 0 4px", wordBreak: "break-word" }}>{spin.prize.name}</div>
+          <RarityChip r="rare" />
+          <p style={{ fontSize: 13.5, color: V2.textBody, margin: "12px 0 4px", lineHeight: 1.5 }}>{spin.prize.description}</p>
+          <p style={{ fontSize: 13.5, fontWeight: 700, margin: "4px 0 16px" }}>One of one. This monster is yours alone, and it’s now in My Collectibles on your profile.</p>
+          <button style={PRIMARY} onClick={() => shareFrightBits({ ...spin.prize, slug: spin.prize.collectible_slug, image_url: spin.prize.image_url, character: fb?.character || "Monster", number: fb?.number || "", total: 10 }, null)}>Share</button>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8, marginTop: 8 }}>
+            <button style={GHOST} onClick={onSpinAgain}>Spin Again</button>
+            <a href="/fright-bits" style={{ ...GHOST, textDecoration: "none", textAlign: "center", boxSizing: "border-box" }}>See the collection</a>
+          </div>
+        </div>
+      </Sheet>
+    );
+  }
   const r = rarityOf(spin.rarity);
   const big = ["epic", "legendary"].includes(spin.rarity);
   const none = spin.prize?.reward_type === "nothing";

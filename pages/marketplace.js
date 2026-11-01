@@ -11,6 +11,7 @@ import GroveBanner from "../components/GroveBanner";
 import BuyGate from "../components/BuyGate";
 import MarketplaceAccountBar from "../components/MarketplaceAccountBar";
 import WheelTeaser from "../components/wheel/WheelTeaser";
+import FrightBitsBanner from "../components/frightbits/FrightBitsBanner";
 import TokenLogo from "../components/TokenLogo";
 import { BANNER_PURCHASE_NOTICE } from "../utils/groveBanners";
 const BURN_ADDR       = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
@@ -727,6 +728,7 @@ export default function Marketplace() {
         {/* Activity ticker */}
         <ActivityTicker />
         <WheelTeaser />
+        <FrightBitsBanner />
         {/* HERO */}
         <div style={{ position:"relative", overflow:"hidden", padding:"40px clamp(14px,4vw,48px) 48px",
           background:"linear-gradient(160deg,#c5e3f7 0%,#d8f0e8 50%,#e8f4fd 100%)" }}>

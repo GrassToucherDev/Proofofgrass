@@ -213,6 +213,20 @@ describe("Fright Bits", { timeout: 60000 }, () => {
     expect(await activeNames()).toContain("WAGO: Mistwalker");
   });
 
+  it("a promoted character takes the wheel slice the winner left, and slots fill from the reserved list", async () => {
+    await db.query(`select fright_bits_configure('fright-bits', null, null, null, array[1,3,5,7,9])`);
+    await openAndStart();
+    const segs = (await all(`select p.segment from wheel_prizes p join collectibles k on k.prize_id=p.id where k.status='active' order by k.number`)).map((r) => r.segment);
+    expect(segs).toEqual([1, 3, 5, 7, 9]);
+    await favourCollectibles();
+    const s = await spin();
+    const won = s.r.spin.segment;
+    const promoted = await one(`select p.segment from wheel_prizes p join collectibles k on k.prize_id=p.id where k.name='WAGO: Moonbloom'`);
+    expect(promoted.segment).toBe(won);
+    const live = (await all(`select p.segment from wheel_prizes p where p.reward_type='collectible' and p.active`)).map((r) => r.segment);
+    expect(new Set(live).size).toBe(5);
+  });
+
   it("state hides reserve identity in silhouette mode and shows it in artwork mode", async () => {
     await openAndStart();
     let st = (await one(`select fright_bits_state('fright-bits') r`)).r;

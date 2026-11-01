@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     wheel: publicWheel(w),
     playable: !!playable,
     prizes: (() => {
-      const live = (prizes || []).filter(p => p.inventory_remaining == null || p.inventory_remaining > 0);
+      const live = (prizes || []).filter(p => (p.inventory_remaining == null || p.inventory_remaining > 0) && (!p.available_until || new Date(p.available_until) >= now));
       const total = live.reduce((n, p) => n + Number(p.weight || 0), 0);
       return live.map(p => ({ ...publicPrizeRow(p), chance: total > 0 ? (Number(p.weight || 0) / total) * 100 : 0 }));   // % of the full pool
     })(),

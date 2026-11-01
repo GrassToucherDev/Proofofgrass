@@ -30,8 +30,10 @@ create table if not exists public.collectible_collections (
   ends_at     timestamptz,
   reveal_mode text not null default 'silhouette' check (reveal_mode in ('artwork','silhouette')),
   paid_eligibility_enabled boolean not null default false,
+  segments    int[] not null default '{}',   -- wheel slices reserved for this collection (a promoted character takes the slice the winner left)
   created_at  timestamptz not null default now()
 );
+alter table public.collectible_collections add column if not exists segments int[] not null default '{}';
 
 create table if not exists public.collectibles (
   id            uuid primary key default gen_random_uuid(),
@@ -94,8 +96,8 @@ create trigger collectible_events_guard before update or delete on public.collec
 
 -- Promote reserve characters until `max_active` are on the wheel. Only while the collection is live and before its end.
 -- Callers hold the wheel's advisory lock (settle does; admin functions take it below).
-create or replace function public.fright_bits_replenish(p_collection uuid) returns int language plpgsql security definer set search_path = public as $$
-declare c collectible_collections%rowtype; n_active int; promoted int := 0; nxt collectibles%rowtype;
+create or replace function public.fright_bits_replenish(p_collection uuid, p_freed int default null) returns int language plpgsql security definer set search_path = public as $$
+declare c collectible_collections%rowtype; n_active int; promoted int := 0; nxt collectibles%rowtype; seg int; freed int := p_freed;
 begin
   select * into c from collectible_collections where id = p_collection;
   if not found or c.status <> 'active' or (c.ends_at is not null and now() > c.ends_at) then return 0; end if;
@@ -105,8 +107,14 @@ begin
     select * into nxt from collectibles where collection_id = c.id and status = 'reserve' order by reserve_order, number limit 1 for update;
     exit when not found;
     update collectibles set status = 'active' where id = nxt.id;
-    update wheel_prizes set active = true where id = nxt.prize_id;
-    insert into collectible_events(collection_id, collectible_id, kind, detail) values (c.id, nxt.id, 'activated', jsonb_build_object('name', nxt.name));
+    -- slice: the one the winner just left, else the first reserved slice nobody on this wheel is using
+    seg := freed; freed := null;
+    if seg is null then
+      select s into seg from unnest(c.segments) s
+        where not exists (select 1 from wheel_prizes q where q.wheel_id = c.wheel_id and q.active and q.segment = s) limit 1;
+    end if;
+    update wheel_prizes set active = true, segment = coalesce(seg, segment) where id = nxt.prize_id;
+    insert into collectible_events(collection_id, collectible_id, kind, detail) values (c.id, nxt.id, 'activated', jsonb_build_object('name', nxt.name, 'segment', seg));
     promoted := promoted + 1;
   end loop;
   return promoted;
@@ -114,9 +122,9 @@ end $$;
 
 -- Runs inside wheel_spin_settle's transaction whenever a spin is recorded.
 create or replace function public.fright_bits_on_spin() returns trigger language plpgsql security definer set search_path = public as $$
-declare cid uuid; col uuid; k collectibles%rowtype;
+declare cid uuid; col uuid; k collectibles%rowtype; seg int;
 begin
-  select collectible_id into cid from wheel_prizes where id = new.prize_id;
+  select collectible_id, segment into cid, seg from wheel_prizes where id = new.prize_id;
   if cid is null then return new; end if;   -- every ordinary prize: nothing happens
 
   select * into k from collectibles where id = cid for update;
@@ -128,7 +136,7 @@ begin
   update wheel_prizes set active = false where id = k.prize_id;
   insert into collectible_events(collection_id, collectible_id, kind, detail)
     values (col, k.id, 'claimed', jsonb_build_object('spin_id', new.id, 'username', new.username));
-  perform fright_bits_replenish(col);
+  perform fright_bits_replenish(col, seg);
 
   -- The collectible is delivered by the ownership row itself, so the spin is complete.
   update wheel_spins set fulfillment_status = 'completed', fulfilled_at = now(), fulfillment_note = null where id = new.id;
@@ -204,7 +212,7 @@ begin
   return jsonb_build_object('ok', true);
 end $$;
 
-create or replace function public.fright_bits_configure(p_slug text, p_reveal_mode text default null, p_max_active int default null, p_reserve_order text[] default null)
+create or replace function public.fright_bits_configure(p_slug text, p_reveal_mode text default null, p_max_active int default null, p_reserve_order text[] default null, p_segments int[] default null)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare c collectible_collections%rowtype; i int; slugs text[] := coalesce(p_reserve_order, '{}');
 begin
@@ -218,11 +226,15 @@ begin
     if p_max_active < 1 or p_max_active > 50 then return jsonb_build_object('ok', false, 'error', 'bad_max_active'); end if;
     update collectible_collections set max_active = p_max_active where id = c.id;
   end if;
+  if p_segments is not null then
+    if exists (select 1 from unnest(p_segments) s where s < 0 or s > 11) then return jsonb_build_object('ok', false, 'error', 'bad_segments'); end if;
+    update collectible_collections set segments = p_segments where id = c.id;
+  end if;
   for i in 1..coalesce(array_length(slugs, 1), 0) loop
     update collectibles set reserve_order = i where collection_id = c.id and slug = slugs[i] and status = 'reserve';
   end loop;
   insert into collectible_events(collection_id, kind, detail) values (c.id, 'configured',
-    jsonb_build_object('reveal_mode', p_reveal_mode, 'max_active', p_max_active, 'reserve_order', p_reserve_order));
+    jsonb_build_object('reveal_mode', p_reveal_mode, 'max_active', p_max_active, 'reserve_order', p_reserve_order, 'segments', p_segments));
   return jsonb_build_object('ok', true);
 end $$;
 
@@ -261,6 +273,6 @@ create or replace function public.fright_bits_for_user(p_google text) returns js
   from collectible_ownership o join collectibles k on k.id = o.collectible_id join collectible_collections c on c.id = k.collection_id
   where o.google_id = p_google $$;
 
-revoke all on function public.fright_bits_replenish(uuid), public.fright_bits_on_spin(), public.fright_bits_start(text), public.fright_bits_pause(text),
-  public.fright_bits_end(text), public.fright_bits_set_legal_gate(text, boolean), public.fright_bits_configure(text, text, int, text[]),
+revoke all on function public.fright_bits_replenish(uuid, int), public.fright_bits_on_spin(), public.fright_bits_start(text), public.fright_bits_pause(text),
+  public.fright_bits_end(text), public.fright_bits_set_legal_gate(text, boolean), public.fright_bits_configure(text, text, int, text[], int[]),
   public.fright_bits_state(text), public.fright_bits_for_user(text) from public, anon, authenticated;
