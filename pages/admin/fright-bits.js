@@ -4,7 +4,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { V2 } from "../../utils/v2Theme";
 
-const box = { background: "#fff", border: `1px solid ${V2.borderSoft}`, borderRadius: 14, padding: 16, marginBottom: 14 };
+const box = { color: "#1f2d17", background: "#fff", border: `1px solid ${V2.borderSoft}`, borderRadius: 14, padding: 16, marginBottom: 14 };
 const inp = { boxSizing: "border-box", border: `1px solid ${V2.borderSoft}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, background: "#fff", color: V2.forestGreen };
 const btn = { border: `1px solid ${V2.borderSoft}`, background: "#fff", borderRadius: 8, padding: "7px 12px", fontSize: 12.5, cursor: "pointer", color: V2.forestGreen };
 
@@ -28,7 +28,7 @@ export default function AdminFrightBits() {
   const dupe = new Set(activeSegs).size !== activeSegs.length;
 
   return (
-    <div style={{ padding: "24px 16px", background: V2.cream || "#fafaf5", minHeight: "100vh", fontFamily: V2.fontSans }}>
+    <div style={{ padding: "24px 16px", background: V2.cream || "#fafaf5", color: "#1f2d17", minHeight: "100vh", fontFamily: V2.fontSans }}>
       <Head><title>Fright Bits admin</title><meta name="robots" content="noindex" /></Head>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <Link href="/admin/wheel" style={{ fontSize: 13, color: V2.grassDark, textDecoration: "none" }}>← Wheel admin</Link>
@@ -59,14 +59,13 @@ export default function AdminFrightBits() {
           </div>
           <div style={box}>
             <b>Characters</b>
-            <table style={{ width: "100%", fontSize: 12.5, borderCollapse: "collapse", marginTop: 8 }}>
-              <thead><tr style={{ textAlign: "left", color: V2.midGray }}><th>#</th><th>Name</th><th>Status</th><th>Order</th><th>Slice</th><th>Weight</th><th>Owner</th></tr></thead>
+            <div style={{ overflowX: "auto" }}><table style={{ width: "100%", fontSize: 12.5, borderCollapse: "collapse", marginTop: 8, minWidth: 520 }}>
+              <thead><tr style={{ textAlign: "left", color: V2.midGray }}>{["#", "Name", "Status", "Order", "Slice", "Weight", "Owner"].map(h => <th key={h} style={{ padding: "4px 10px 4px 0" }}>{h}</th>)}</tr></thead>
               <tbody>{d.items.map(i => (
                 <tr key={i.id} style={{ borderTop: `1px solid ${V2.borderSoft}` }}>
-                  <td>{i.number}</td><td>{i.name}</td><td>{i.status}</td><td>{i.reserve_order}</td><td>{i.wheel_prizes?.segment}</td><td>{i.wheel_prizes?.weight}</td>
-                  <td>{i.owner ? `@${i.owner.username}` : "—"}</td>
+                  {[i.number, i.name, i.status, i.reserve_order, i.wheel_prizes?.segment, i.wheel_prizes?.weight, i.owner ? `@${i.owner.username}` : "—"].map((v, n) => <td key={n} style={{ padding: "6px 10px 6px 0" }}>{v}</td>)}
                 </tr>))}</tbody>
-            </table>
+            </table></div>
           </div>
           <div style={box}>
             <b>Settings</b>
