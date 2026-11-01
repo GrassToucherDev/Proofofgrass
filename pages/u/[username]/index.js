@@ -12,6 +12,7 @@ import { getSpotlightBadge } from "../../../utils/spotlightBadges";
 import SpinnerMedal from "../../../components/wheel/SpinnerMedal";
 import BadgeShelf from "../../../components/badges/BadgeShelf";
 import BadgeMedal from "../../../components/badges/BadgeMedal";
+import MyCollectibles from "../../../components/frightbits/MyCollectibles";
 import { V2, V2Styles, V2GlobalCSS, getV2Tier } from "../../../utils/v2Theme";
 
 import { SiteLinks, SiteMobileMenu } from "../../../components/SiteMenu";
@@ -806,6 +807,8 @@ export default function ProfilePage() {
 
           {/* Yard record: only appears once they have Yard history */}
           <YardRecordCard username={username} />
+
+          <MyCollectibles username={username} />
 
           {/* Badge shelf: all experiences */}
           {badgeShelf.length>0 && (
