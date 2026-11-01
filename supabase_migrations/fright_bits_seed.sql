@@ -17,7 +17,7 @@ begin
   select id into col from collectible_collections where slug = 'fright-bits';
 
   for r in select * from (values
-    (1,  'crashberry',       'WAGO: Crashberry',       'Juice Box Vampire', 'A berry-themed little monster with a market-crashing bite.',  'crashberry.png'),
+    (1,  'crashberry',       'WAGO: Crashberry',       'Candlestick Vampire', 'A berry-themed little monster with a market-crashing bite.',  'crashberry.png'),
     (2,  'dusty-trails',     'WAGO: Dusty Trails',     'Mummy',             'Fresh out of the ancient hiking trails.',                      'dusty-trails.png'),
     (3,  'count-canopy',     'WAGO: Count Canopy',     'Vampire',           'Lurking beneath the treetops after sunset.',                   'count-canopy.png'),
     (4,  'rotwood',          'WAGO: Rotwood',          'Zombie',            'The forest’s most stubborn undead wanderer.',             'rotwood.png'),
