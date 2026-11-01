@@ -24,6 +24,7 @@ export default function FrightBits() {
       <Head><title>WAGO: Fright Bits</title><meta name="description" content="Ten one-of-one Halloween monsters hiding in the WAGO Wheel." /></Head>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
         <Link href="/marketplace" style={{ color: T.dim, fontSize: 13, textDecoration: "none" }}>← Marketplace</Link>
+        {c && <img src="/images/wago/fright-bits/banner.webp" alt="WAGO: Fright Bits Halloween 2026" width={1600} height={533} style={{ width: "100%", height: "auto", borderRadius: 18, border: "2px solid #f59e0b", margin: "12px 0 6px", display: "block" }} />}
         <h1 style={{ fontSize: "clamp(28px,6vw,44px)", margin: "10px 0 4px" }}>🎃 WAGO: Fright Bits</h1>
         {d === undefined && <p style={{ color: T.dim }}>Loading…</p>}
         {d === null && <p style={{ color: T.dim }}>Couldn’t load right now. Try again in a moment.</p>}
