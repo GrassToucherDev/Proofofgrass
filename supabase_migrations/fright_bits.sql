@@ -34,6 +34,15 @@ create table if not exists public.collectible_collections (
   created_at  timestamptz not null default now()
 );
 alter table public.collectible_collections add column if not exists segments int[] not null default '{}';
+-- Odds: 'manual' = each character keeps the weight set in admin. 'replace_packs' = the characters take over the odds the active
+-- cosmetic packs have on the wheel (packs step aside while the collection is live and come back on pause/end).
+alter table public.collectible_collections add column if not exists odds_mode text not null default 'replace_packs';
+alter table public.collectible_collections add column if not exists pack_snapshot jsonb not null default '[]'::jsonb;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'collectible_collections_odds_mode_check') then
+    alter table public.collectible_collections add constraint collectible_collections_odds_mode_check check (odds_mode in ('manual','replace_packs'));
+  end if;
+end $$;
 
 create table if not exists public.collectibles (
   id            uuid primary key default gen_random_uuid(),
@@ -157,10 +166,21 @@ begin
   execute replace(def, pat, pat || ' and (p.available_until is null or p.available_until >= i.created_at)');
 end $$;
 
+-- Put the cosmetic packs back exactly as they were before the collection took their odds.
+create or replace function public.fright_bits_restore_packs(p_collection uuid) returns void language plpgsql security definer set search_path = public as $$
+declare c collectible_collections%rowtype;
+begin
+  select * into c from collectible_collections where id = p_collection;
+  if not found or c.pack_snapshot = '[]'::jsonb then return; end if;
+  update wheel_prizes set active = true where id in (select (e->>'id')::uuid from jsonb_array_elements(c.pack_snapshot) e) and reward_type = 'cosmetic_pack';
+  update collectible_collections set pack_snapshot = '[]'::jsonb where id = c.id;
+  insert into collectible_events(collection_id, kind) values (c.id, 'packs_restored');
+end $$;
+
 -- ---- Admin / operations (service_role only) ----
 
 create or replace function public.fright_bits_start(p_slug text) returns jsonb language plpgsql security definer set search_path = public as $$
-declare c collectible_collections%rowtype;
+declare c collectible_collections%rowtype; snap jsonb; tot numeric;
 begin
   select * into c from collectible_collections where slug = p_slug for update;
   if not found then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
@@ -168,6 +188,17 @@ begin
   if c.status = 'ended' then return jsonb_build_object('ok', false, 'error', 'ended'); end if;
   if c.wheel_id is null then return jsonb_build_object('ok', false, 'error', 'no_wheel'); end if;
   perform pg_advisory_xact_lock(hashtext('wheel:' || c.wheel_id::text));
+  if c.odds_mode = 'replace_packs' and c.pack_snapshot = '[]'::jsonb then
+    select coalesce(jsonb_agg(jsonb_build_object('id', id, 'weight', weight)), '[]'::jsonb), coalesce(sum(weight), 0) into snap, tot
+      from wheel_prizes where wheel_id = c.wheel_id and reward_type = 'cosmetic_pack' and active;
+    if tot <= 0 then return jsonb_build_object('ok', false, 'error', 'no_packs_to_replace'); end if;
+    update wheel_prizes set active = false where wheel_id = c.wheel_id and reward_type = 'cosmetic_pack' and active;
+    update collectible_collections set pack_snapshot = snap where id = c.id;
+    -- every character gets an equal share, so the collection as a whole carries the packs' total weight while full
+    update wheel_prizes p set weight = round(tot / c.max_active, 4) from collectibles k
+      where k.prize_id = p.id and k.collection_id = c.id and k.status in ('reserve','active');
+    insert into collectible_events(collection_id, kind, detail) values (c.id, 'packs_replaced', jsonb_build_object('pack_weight', tot, 'per_character', round(tot / c.max_active, 4)));
+  end if;
   update collectible_collections set status = 'active' where id = c.id;
   update wheel_prizes p set active = (k.status = 'active') from collectibles k where k.prize_id = p.id and k.collection_id = c.id;
   perform fright_bits_replenish(c.id);
@@ -183,6 +214,7 @@ begin
   if c.wheel_id is not null then perform pg_advisory_xact_lock(hashtext('wheel:' || c.wheel_id::text)); end if;
   update collectible_collections set status = 'paused' where id = c.id and status <> 'ended';
   update wheel_prizes p set active = false from collectibles k where k.prize_id = p.id and k.collection_id = c.id;
+  perform fright_bits_restore_packs(c.id);
   insert into collectible_events(collection_id, kind) values (c.id, 'paused');
   return jsonb_build_object('ok', true);
 end $$;
@@ -196,6 +228,7 @@ begin
   update collectible_collections set status = 'ended' where id = c.id;
   update wheel_prizes p set active = false from collectibles k where k.prize_id = p.id and k.collection_id = c.id;
   update collectibles set status = 'retired' where collection_id = c.id and status in ('reserve','active');
+  perform fright_bits_restore_packs(c.id);
   insert into collectible_events(collection_id, kind) values (c.id, 'ended');
   return jsonb_build_object('ok', true);
 end $$;
@@ -212,7 +245,7 @@ begin
   return jsonb_build_object('ok', true);
 end $$;
 
-create or replace function public.fright_bits_configure(p_slug text, p_reveal_mode text default null, p_max_active int default null, p_reserve_order text[] default null, p_segments int[] default null)
+create or replace function public.fright_bits_configure(p_slug text, p_reveal_mode text default null, p_max_active int default null, p_reserve_order text[] default null, p_segments int[] default null, p_odds_mode text default null)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare c collectible_collections%rowtype; i int; slugs text[] := coalesce(p_reserve_order, '{}');
 begin
@@ -225,6 +258,11 @@ begin
   if p_max_active is not null then
     if p_max_active < 1 or p_max_active > 50 then return jsonb_build_object('ok', false, 'error', 'bad_max_active'); end if;
     update collectible_collections set max_active = p_max_active where id = c.id;
+  end if;
+  if p_odds_mode is not null then
+    if p_odds_mode not in ('manual','replace_packs') then return jsonb_build_object('ok', false, 'error', 'bad_odds_mode'); end if;
+    if c.status = 'active' then return jsonb_build_object('ok', false, 'error', 'pause_first'); end if;
+    update collectible_collections set odds_mode = p_odds_mode where id = c.id;
   end if;
   if p_segments is not null then
     if exists (select 1 from unnest(p_segments) s where s < 0 or s > 11) then return jsonb_build_object('ok', false, 'error', 'bad_segments'); end if;
@@ -273,6 +311,6 @@ create or replace function public.fright_bits_for_user(p_google text) returns js
   from collectible_ownership o join collectibles k on k.id = o.collectible_id join collectible_collections c on c.id = k.collection_id
   where o.google_id = p_google $$;
 
-revoke all on function public.fright_bits_replenish(uuid, int), public.fright_bits_on_spin(), public.fright_bits_start(text), public.fright_bits_pause(text),
-  public.fright_bits_end(text), public.fright_bits_set_legal_gate(text, boolean), public.fright_bits_configure(text, text, int, text[], int[]),
+revoke all on function public.fright_bits_replenish(uuid, int), public.fright_bits_on_spin(), public.fright_bits_restore_packs(uuid), public.fright_bits_start(text), public.fright_bits_pause(text),
+  public.fright_bits_end(text), public.fright_bits_set_legal_gate(text, boolean), public.fright_bits_configure(text, text, int, text[], int[], text),
   public.fright_bits_state(text), public.fright_bits_for_user(text) from public, anon, authenticated;

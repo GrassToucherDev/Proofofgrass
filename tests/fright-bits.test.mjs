@@ -45,6 +45,7 @@ async function setup({ seed = true } = {}) {
   // ordinary prizes: an unlimited 'nothing' and a limited shield
   await db.query(`insert into wheel_prizes(wheel_id,name,reward_type,weight,rarity,active) values ($1,'Nothing','nothing',50,'common',true)`, [wheel]);
   await db.query(`insert into wheel_prizes(wheel_id,name,reward_type,weight,rarity,active,inventory_total,inventory_remaining) values ($1,'Shield','shield',50,'common',true,2,2)`, [wheel]);
+  await db.query(`insert into wheel_prizes(wheel_id,name,reward_type,reward_config,weight,rarity,active) values ($1,'Base Pack','cosmetic_pack','{"item_id":"base"}',50,'common',true)`, [wheel]);
   if (seed) await db.exec(sql("fright_bits_seed.sql"));
 }
 
@@ -225,6 +226,37 @@ describe("Fright Bits", { timeout: 60000 }, () => {
     expect(promoted.segment).toBe(won);
     const live = (await all(`select p.segment from wheel_prizes p where p.reward_type='collectible' and p.active`)).map((r) => r.segment);
     expect(new Set(live).size).toBe(5);
+  });
+
+  it("replace_packs: packs step aside, characters take their combined odds, and everything is restored on pause", async () => {
+    await db.query(`delete from wheel_prizes where reward_type='cosmetic_pack'`);
+    await db.query(`insert into wheel_prizes(wheel_id,name,reward_type,reward_config,weight,rarity,active) values ($1,'Pack A','cosmetic_pack','{"item_id":"a"}',20,'common',true),($1,'Pack B','cosmetic_pack','{"item_id":"b"}',10,'common',true),($1,'Pack Off','cosmetic_pack','{"item_id":"c"}',99,'common',false)`, [wheel]);
+    await openAndStart();
+    expect(await one(`select count(*)::int c from wheel_prizes where reward_type='cosmetic_pack' and active`)).toEqual({ c: 0 });
+    const ws = (await all(`select weight from wheel_prizes where reward_type='collectible' and active`)).map((r) => Number(r.weight));
+    expect(ws).toEqual([6, 6, 6, 6, 6]);                   // 30 total / 5
+    expect(ws.reduce((a, b) => a + b, 0)).toBe(30);
+    // claiming one keeps the per-character odds, and the next reserve joins at the same weight
+    await favourCollectibles(); await spin();
+    await db.query(`select fright_bits_pause('fright-bits')`);
+    const packs = await all(`select name from wheel_prizes where reward_type='cosmetic_pack' and active order by name`);
+    expect(packs.map((r) => r.name)).toEqual(["Pack A", "Pack B"]);   // the one that was off stays off
+    await db.query(`select fright_bits_start('fright-bits')`);
+    expect(await one(`select count(*)::int c from wheel_prizes where reward_type='cosmetic_pack' and active`)).toEqual({ c: 0 });
+    await db.query(`select fright_bits_end('fright-bits')`);
+    expect(await one(`select count(*)::int c from wheel_prizes where reward_type='cosmetic_pack' and active`)).toEqual({ c: 2 });
+  });
+
+  it("replace_packs refuses to start when there are no active packs; manual mode leaves packs alone", async () => {
+    await db.query(`delete from wheel_prizes where reward_type='cosmetic_pack'`);
+    await db.query(`select fright_bits_set_legal_gate('fright-bits', true)`);
+    expect((await one(`select fright_bits_start('fright-bits') r`)).r.error).toBe("no_packs_to_replace");
+    expect((await one(`select status from collectible_collections`)).status).toBe("draft");
+    await db.query(`insert into wheel_prizes(wheel_id,name,reward_type,reward_config,weight,rarity,active) values ($1,'Pack A','cosmetic_pack','{"item_id":"a"}',20,'common',true)`, [wheel]);
+    await db.query(`select fright_bits_configure('fright-bits', null, null, null, null, 'manual')`);
+    expect((await one(`select fright_bits_start('fright-bits') r`)).r.ok).toBe(true);
+    expect(await one(`select count(*)::int c from wheel_prizes where reward_type='cosmetic_pack' and active`)).toEqual({ c: 1 });
+    expect((await one(`select fright_bits_configure('fright-bits', null, null, null, null, 'replace_packs') r`)).r.error).toBe("pause_first");
   });
 
   it("state hides reserve identity in silhouette mode and shows it in artwork mode", async () => {

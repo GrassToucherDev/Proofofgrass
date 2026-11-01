@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ collection: col, items: (items || []).map(i => ({ ...i, owner: own[i.id] || null })), events: events || [] });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-  const { action, open, reveal_mode, max_active, reserve_order, segments, weight } = req.body || {};
+  const { action, open, reveal_mode, max_active, reserve_order, segments, weight, odds_mode } = req.body || {};
   let r;
   switch (action) {
     case "start":  r = await db.rpc("fright_bits_start", { p_slug: SLUG }); break;
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       r = await db.rpc("fright_bits_configure", { p_slug: SLUG, p_reveal_mode: reveal_mode ?? null,
         p_max_active: max_active == null ? null : parseInt(max_active),
         p_reserve_order: Array.isArray(reserve_order) ? reserve_order.map(String) : null,
-        p_segments: Array.isArray(segments) ? segments.map(n => parseInt(n)) : null });
+        p_segments: Array.isArray(segments) ? segments.map(n => parseInt(n)) : null, p_odds_mode: odds_mode ?? null });
       break;
     case "weight": {     // odds knob: weight applies to every character; the Wheel's own pool is untouched
       const w = Number(weight); if (!(w > 0)) return res.status(400).json({ error: "Weight must be above 0." });

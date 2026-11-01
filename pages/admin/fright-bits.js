@@ -75,6 +75,12 @@ export default function AdminFrightBits() {
                 <span style={{ fontSize: 13 }}>Reserve shown as:</span>
                 {["silhouette", "artwork"].map(m => <button key={m} style={{ ...btn, background: c.reveal_mode === m ? V2.grassGreen : "#fff", color: c.reveal_mode === m ? "#fff" : V2.forestGreen }} onClick={() => act({ action: "configure", reveal_mode: m })}>{m}</button>)}
               </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: 13 }}>Odds:</span>
+                {[["replace_packs", "Take over the cosmetic packs’ odds"], ["manual", "Manual weights"]].map(([m, l]) => <button key={m} disabled={c.status === "active"} style={{ ...btn, background: c.odds_mode === m ? V2.grassGreen : "#fff", color: c.odds_mode === m ? "#fff" : V2.forestGreen }} onClick={() => act({ action: "configure", odds_mode: m })}>{l}</button>)}
+                {c.status === "active" && <span style={{ fontSize: 12, color: V2.midGray }}>Pause to change.</span>}
+              </div>
+              <div style={{ fontSize: 12, color: V2.midGray }}>{c.odds_mode === "replace_packs" ? "On Start the active cosmetic packs step off the wheel and the characters share their combined odds equally. Pause or End puts the packs back exactly as they were." : "Characters use the weight below; packs stay on the wheel."}</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <input style={{ ...inp, flex: 1, minWidth: 220 }} placeholder="Reserve order (slugs, comma-separated)" value={f.reserve} onChange={e => setF({ ...f, reserve: e.target.value })} />
                 <button style={btn} onClick={() => act({ action: "configure", reserve_order: list(f.reserve) })}>Save order</button>
