@@ -308,7 +308,7 @@ function BonusesTab({ cycle, flash, reload }) {
   };
 
   const ADMIN_BONUS_TYPES = [
-    {value:"spotlight",    label:"Spotlight Winner (+10)"},
+    {value:"spotlight",    label:"Spotlight Winner (+5)"},
     {value:"x_engagement", label:"X Engagement (+5)"},
     {value:"manual",       label:"Manual Bonus (custom amount)"},
   ];
