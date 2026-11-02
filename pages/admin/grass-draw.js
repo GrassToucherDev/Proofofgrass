@@ -42,6 +42,7 @@ export default function AdminGrassDraw() {
   const [rewards, setRewards] = useState([]);
   const [totals,  setTotals]  = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pickId,  setPickId]  = useState("");   // "" = the active cycle (or newest); otherwise the cycle you picked
 
   const flash = (text, type="ok") => { setMsg({text,type}); setTimeout(()=>setMsg({text:"",type:"ok"}),4000); };
 
@@ -50,7 +51,7 @@ export default function AdminGrassDraw() {
     const { data: cycs } = await supabase.from("grass_draw_cycles")
       .select("*").order("starts_at",{ascending:false});
     setCycles(cycs||[]);
-    const active = (cycs||[]).find(c=>c.status==="active") || (cycs||[])[0];
+    const active = (cycs||[]).find(c=>c.id===pickId) || (cycs||[]).find(c=>c.status==="active") || (cycs||[])[0];
     setCycle(active||null);
 
     if (active) {
@@ -64,7 +65,7 @@ export default function AdminGrassDraw() {
       setTotals(tots||[]);
     }
     setLoading(false);
-  }, []);
+  }, [pickId]);
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
@@ -95,6 +96,12 @@ export default function AdminGrassDraw() {
             <div style={{fontSize:10,letterSpacing:"0.2em",textTransform:"uppercase",color:T.gold,marginBottom:8}}>Admin</div>
             <h1 style={{fontFamily:"'Fredoka',system-ui,sans-serif",fontSize:32,fontWeight:700,color:T.white}}>Grass Draw</h1>
             {cycle && <div style={{fontSize:12,color:T.dim,marginTop:4}}>{cycle.name} · {cycle.status.toUpperCase()}</div>}
+            {cycles.length > 1 && (
+              <select value={cycle?.id||""} onChange={e=>setPickId(e.target.value)}
+                style={{marginTop:10,padding:"8px 10px",borderRadius:8,background:T.bg2,color:T.white,border:`1px solid ${T.border}`,fontSize:13,maxWidth:"100%"}}>
+                {cycles.map(c=><option key={c.id} value={c.id}>{c.name} — {c.status}</option>)}
+              </select>
+            )}
           </div>
           <Link href="/admin/marketplace" style={{fontSize:11,color:T.dim,textDecoration:"none"}}>← Admin</Link>
         </div>
