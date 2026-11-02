@@ -84,7 +84,7 @@ export default async function handler(req, res) {
 
     // ── 3. Entry amounts ────────────────────────────────────────────────────
     const BONUS_AMOUNTS = {
-      spotlight: 10, x_engagement: 5, challenge_win: 8,
+      spotlight: 5, x_engagement: 5, challenge_win: 8,
       referral_convert: 5, flex_card: 2, field_guide: 1, manual: null, wago_proof: null,
     };
     let raw_amount = BONUS_AMOUNTS[entry_type];

@@ -37,6 +37,16 @@ export default function AdminWheel() {
     const s = await call("/api/wheel/admin/spins?limit=100", "GET"); if (s) setSpins(s.spins);
   }, [call]);
 
+  const [fs, setFs] = useState({ usernames: "", count: 5, expires: "2026-11-06T23:59", batch: "", reason: "" });
+  const [grants, setGrants] = useState(null);
+  const loadGrants = async () => { const d = await call("/api/wheel/admin/free-spins", "GET"); if (d) setGrants(d.grants); };
+  const grantFree = async () => {
+    // expires is entered as New York time
+    const iso = new Date(`${fs.expires}:59-05:00`).toISOString();
+    if (!confirm(`Give ${fs.count} free spins to: ${fs.usernames}?`)) return;
+    const d = await call("/api/wheel/admin/free-spins", "POST", { usernames: fs.usernames, count: fs.count, expires_at: iso, batch: fs.batch, reason: fs.reason });
+    if (d) { setMsg(d.results.map(r => `${r.username}: ${r.result}`).join(" · ")); loadGrants(); }
+  };
   const patchWheel = async (id, body) => { if (await call("/api/wheel/admin/wheels", "PATCH", { id, ...body })) load(); };
   const patchPrize = async (id, body) => { if (await call("/api/wheel/admin/prizes", "PATCH", { id, ...body })) load(); };
   const cfgFor = (type, raw) => {
@@ -137,6 +147,22 @@ export default function AdminWheel() {
           </div>
         )}
 
+        {wheels && (
+          <div style={box}>
+            <b>Free spins</b>
+            <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+              <F label="Usernames (comma or space separated)"><input style={inp} value={fs.usernames} onChange={e => setFs({ ...fs, usernames: e.target.value })} /></F>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 8 }}>
+                <F label="Spins each"><input style={inp} type="number" value={fs.count} onChange={e => setFs({ ...fs, count: e.target.value })} /></F>
+                <F label="Expires (ET)"><input style={inp} type="datetime-local" value={fs.expires} onChange={e => setFs({ ...fs, expires: e.target.value })} /></F>
+                <F label="Batch name (unique)"><input style={inp} value={fs.batch} onChange={e => setFs({ ...fs, batch: e.target.value })} placeholder="spotlight-2026-10-26" /></F>
+              </div>
+              <F label="Reason"><input style={inp} value={fs.reason} onChange={e => setFs({ ...fs, reason: e.target.value })} /></F>
+              <div style={{ display: "flex", gap: 8 }}><button style={{ ...btn, background: V2.grassGreen, color: "#fff" }} onClick={grantFree}>Grant free spins</button><button style={btn} onClick={loadGrants}>Show grants</button></div>
+              {grants && grants.map(g => <div key={g.batch + g.username} style={{ fontSize: 12.5 }}>@{g.username} · {g.used}/{g.total} used · {g.batch} · expires {new Date(g.expires_at).toLocaleString("en-US", { timeZone: "America/New_York" })} ET {g.used < g.total && <button style={{ ...btn, marginLeft: 6 }} onClick={async () => { if (confirm(`Cancel unused spins in batch ${g.batch}?`)) { await call("/api/wheel/admin/free-spins", "POST", { action: "revoke", batch: g.batch }); loadGrants(); } }}>Revoke batch</button>}</div>)}
+            </div>
+          </div>
+        )}
         {wheels && (
           <div style={box}>
             <b>Recent spins</b>
