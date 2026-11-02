@@ -10,13 +10,13 @@ export default function AdminGrassDrawLive() {
   const [title, setTitle] = useState("Grass Draw");
   const [when, setWhen] = useState("");
   const [lead, setLead] = useState(15);
-  const [step, setStep] = useState(6);
+  const [step, setStep] = useState(15);
   const [msg, setMsg] = useState("");
 
   const load = useCallback(async () => {
     const r = await adminFetch("/api/grass-draw/live-admin");
     const j = await r.json().catch(() => ({}));
-    if (r.ok) { setD(j); if (!cycle && j.cycles?.[0]) setCycle(String(j.cycles[0].id)); } else setMsg(j.error || "Couldn't load.");
+    if (r.ok) { setD(j); if (!cycle && j.cycles?.length) setCycle(String((j.cycles.find((c) => c.winners > 0 && c.status !== "drawn") || j.cycles.find((c) => c.winners > 0) || j.cycles[0]).id)); } else setMsg(j.error || "Couldn't load.");
   }, [cycle]);
   useEffect(() => { load(); }, [load]);
 
