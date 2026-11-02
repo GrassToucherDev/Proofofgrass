@@ -19,6 +19,12 @@ export default async function handler(req, res) {
       for (const g of groves) g.member_list = (byGrove[g.id] || []).slice(0, 6);
     }
   } catch (e) { console.error("[groves/leaderboard] avatars", e); }
+  // Perfect-day board (bonus layer): groves with at least one perfect day, grouped by size bracket in the page.
+  let perfect_board = [];
+  try {
+    const { data: pb } = await db.rpc("grove_perfect_board", { p_limit: 50 });
+    perfect_board = pb || [];
+  } catch (e) { console.error("[groves/leaderboard] perfect", e); }
   res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=120");
-  return res.status(200).json({ groves });
+  return res.status(200).json({ groves, perfect_board });
 }
