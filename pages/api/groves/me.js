@@ -7,5 +7,12 @@ export default async function handler(req, res) {
   if (!who) return;
   const { data, error } = await adminClient().rpc("grove_get", { p_username: who.username });
   if (error) { console.error("[groves/me]", error); return res.status(500).json({ error: "Could not load grove." }); }
+  // Perfect days are a bonus layer; if this lookup fails the grove still loads without it.
+  try {
+    if (data?.grove?.id) {
+      const { data: perfect } = await adminClient().rpc("grove_perfect", { p_grove: data.grove.id });
+      if (perfect) data.perfect = perfect;
+    }
+  } catch (e) { console.error("[groves/me] perfect", e); }
   return res.status(200).json(data);
 }

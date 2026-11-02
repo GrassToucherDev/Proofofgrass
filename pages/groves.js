@@ -52,6 +52,8 @@ export default function GrovesPage() {
   const [ident, setIdent] = useState(null);      // { claimed, mine, signedIn }
   const [data, setData] = useState(null);        // grove_get result
   const [board, setBoard] = useState([]);
+  const [pBoard, setPBoard] = useState([]);
+  const [boardTab, setBoardTab] = useState("streak");
   const [invite, setInvite] = useState(null);    // preview of ?join=
   const [name, setName] = useState("");
   const [busy, setBusy] = useState("");
@@ -73,7 +75,7 @@ export default function GrovesPage() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/groves/leaderboard").then(r => r.json()).then(d => setBoard(d.groves || [])).catch(() => {});
+    fetch("/api/groves/leaderboard").then(r => r.json()).then(d => { setBoard(d.groves || []); setPBoard(d.perfect_board || []); }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -299,7 +301,17 @@ export default function GrovesPage() {
                   <div className="gv-stats">
                     <div className="gv-stat"><div className="gv-stat-n">🔥 {counted ? (streak?.streak ?? 0) : 0}<span> days</span></div><div className="gv-stat-l">Grove streak</div></div>
                     <div className="gv-stat"><div className="gv-stat-n">{data.members.length}<span> / {grove.slots}</span></div><div className="gv-stat-l">Members</div></div>
+                    {data.perfect && <div className="gv-stat"><div className="gv-stat-n">✨ {data.perfect.total}<span> perfect</span></div><div className="gv-stat-l">Perfect days</div></div>}
                   </div>
+                  {data.perfect && counted && (
+                    <div style={{ fontSize: 13, color: V2.textBody, marginTop: 10 }}>
+                      {data.perfect.today_perfect
+                        ? <b>✨ Perfect day today: everyone locked in!</b>
+                        : <>A perfect day is when <b>every</b> member locks in. A Shield doesn't count.</>}
+                      {" "}Current run {data.perfect.current}d · best {data.perfect.best}d
+                      {data.perfect.next_target ? <> · next badge at {data.perfect.next_target} perfect days ({data.perfect.bracket} member groves)</> : <> · top badge reached 🏅</>}
+                    </div>
+                  )}
                   <div className="gv-avrow" aria-label="Today's participation">
                     {data.members.map(m => (
                       <span key={m.username} className="gv-av" title={`@${m.username}: ${m.locked_today ? "locked in" : "not yet"}`}>
@@ -429,7 +441,38 @@ export default function GrovesPage() {
           {/* Leaderboard */}
           <div className="gv-card">
             <div className="gv-h" style={{ fontSize: 20 }}>🏆 Top Groves</div>
-            {board.length === 0 ? (
+            <div style={{ display: "flex", gap: 8, margin: "4px 0 12px" }}>
+              {[["streak", "🔥 Streak"], ["perfect", "✨ Perfect days"]].map(([k, l]) => (
+                <button key={k} onClick={() => setBoardTab(k)} className="gv-pill"
+                  style={{ border: "none", cursor: "pointer", fontWeight: 700, background: boardTab === k ? "#2d6a10" : "#e3f5d6", color: boardTab === k ? "#fff" : "#2d6a10" }}>{l}</button>
+              ))}
+            </div>
+            {boardTab === "perfect" ? (
+              <>
+                <p style={{ margin: "0 0 12px", color: V2.textMuted, fontSize: 13 }}>A perfect day is when every member locks in. Shields don't count. Groves are ranked within their size so smaller groves don't have the edge.</p>
+                {pBoard.length === 0 ? (
+                  <p style={{ margin: 0, color: V2.textMuted, fontSize: 14 }}>No perfect days yet. Be the first grove where everyone locks in.</p>
+                ) : ["3-4", "5-6"].map(br => {
+                  const rows = pBoard.filter(g => g.perfect.bracket === br).slice(0, 10);
+                  if (!rows.length) return null;
+                  return (
+                    <div key={br} style={{ marginBottom: 14 }}>
+                      <div style={{ fontWeight: 800, color: V2.forestGreen, fontSize: 14, margin: "6px 0" }}>{br} member groves</div>
+                      {rows.map((g, i) => (
+                        <div className="gv-row" key={g.id}>
+                          <span style={{ width: 24, fontWeight: 800, color: V2.textMuted }}>{i + 1}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, color: V2.forestGreen, overflowWrap: "anywhere" }}>{g.name}</div>
+                            <div style={{ fontSize: 12, color: V2.textMuted }}>{g.perfect.members} members · run {g.perfect.current}d · best {g.perfect.best}d{g.perfect.tier > 0 ? ` · badge tier ${g.perfect.tier}` : ""}</div>
+                          </div>
+                          <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10" }}>✨ {g.perfect.total}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </>
+            ) : board.length === 0 ? (
               <p style={{ margin: 0, color: V2.textMuted, fontSize: 14 }}>No groves on the board yet. Groves with 3 or more members and a running streak appear here.</p>
             ) : board.map((g, i) => (
               <div className="gv-row" key={g.id}>
