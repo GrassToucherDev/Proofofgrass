@@ -20,6 +20,18 @@ export async function computeBadgeCounts(db, rawName) {
     safe(async () => { const r = await db.from("Challenges").select("status").or(`challenger.in.(${names.join(",")}),challenged.in.(${names.join(",")})`).limit(500); return (r.data || []).filter(c => c.status === "completed").length; }),
   ]);
 
+  // Perfect Grove: the highest perfect-day badge tier among the groves they are in right now (tiers depend on grove size).
+  const perfectGrove = await safe(async () => {
+    const r = await db.from("grove_members").select("grove_id").eq("username", low).is("left_at", null);
+    const ids = Array.from(new Set((r.data || []).map(x => x.grove_id)));
+    let best = 0;
+    for (const id of ids) {
+      const { data } = await db.rpc("grove_perfect", { p_grove: id });
+      best = Math.max(best, Number(data?.tier) || 0);
+    }
+    return best;
+  });
+
   const sr = streakRow || {};
   const pr = profileRow || {};
   return {
@@ -30,6 +42,7 @@ export async function computeBadgeCounts(db, rawName) {
     "challenger": chal,
     "grove-member": groveMember,
     "grove-founder": groveFounder,
+    "perfect-grove": perfectGrove,
     "wheel-spinner": spins,
     "lucky-pull": lucky,
     "draw-entrant": drawEntries,

@@ -24,6 +24,7 @@ export const BADGE_LINES = [
   { id: "challenger",    exp: "yard",    name: "Challenger",     emoji: "🎯", unit: "challenges", unit1: "challenge",       tiers: [1, 3, 10],                     blurb: "Complete challenges" },
   { id: "grove-member",  exp: "groves",  name: "Grove Member",   emoji: "🌳", unit: "groves", unit1: "grove",           tiers: [1],                            blurb: "Join a grove" },
   { id: "grove-founder", exp: "groves",  name: "Grove Founder",  emoji: "🌲", unit: "groves founded", unit1: "grove founded",   tiers: [1],                            blurb: "Found a grove" },
+  { id: "perfect-grove",  exp: "groves",  name: "Perfect Grove",  emoji: "✨", unit: "badge tiers", unit1: "badge tier", tiers: [1, 2, 3], blurb: "Every member locks in, together" },
   { id: "wheel-spinner", exp: "wheel",   name: "Wheel Spinner",  emoji: "🎡", unit: "spins", unit1: "spin",            tiers: [1, 10, 25, 50, 100],           blurb: "Spin the WAGO Wheel" },
   { id: "lucky-pull",    exp: "wheel",   name: "Lucky Pull",     emoji: "🍀", unit: "rare+ pulls", unit1: "rare+ pull",      tiers: [1, 5, 10],                     blurb: "Land rare or better prizes" },
   { id: "draw-entrant",  exp: "draw",    name: "Draw Entrant",   emoji: "🎟️", unit: "draws entered", unit1: "draw entered",    tiers: [1, 5, 10],                     blurb: "Enter the Grass Draw" },

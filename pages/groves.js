@@ -305,6 +305,7 @@ export default function GrovesPage() {
                   </div>
                   {data.perfect && counted && (
                     <div style={{ fontSize: 13, color: V2.textBody, marginTop: 10 }}>
+                      {data.perfect.tier > 0 && <img src={`/badges/perfect-grove-${data.perfect.tier}.png`} alt={`Perfect Grove ${["", "I", "II", "III"][data.perfect.tier]}`} width={56} height={56} style={{ float: "left", marginRight: 12 }} />}
                       {data.perfect.today_perfect
                         ? <b>✨ Perfect day today: everyone locked in!</b>
                         : <>A perfect day is when <b>every</b> member locks in. A Shield doesn't count.</>}
