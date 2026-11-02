@@ -169,7 +169,7 @@ export function ResultReveal({ spin, onSpinAgain, onWins, onClose }) {
           : <div style={{ fontSize: 48 }}>{typeMeta(spin.prize.reward_type).emoji}</div>}
         <div style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 6px", wordBreak: "break-word" }}>{none ? "Better luck next spin" : spin.prize.name}</div>
         {!none && <RarityChip r={spin.rarity} />}
-        {spin.meter_guaranteed && <div style={{ fontSize: 12.5, color: V2.grassDark, marginTop: 8, fontWeight: 700 }}>WAGO Meter bonus: guaranteed Rare or better!</div>}
+        {spin.meter_guaranteed && <div style={{ fontSize: 12.5, color: V2.grassDark, marginTop: 8, fontWeight: 700 }}>{spin.prize?.collection ? "WAGO Meter bonus: a guaranteed Fright Bit!" : "WAGO Meter bonus: guaranteed Rare or better!"}</div>}
         {spin.badge_unlocked && (
           <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "center", margin: "14px auto 2px", padding: "10px 14px", maxWidth: 320, borderRadius: 16, background: "#f4f9ee", border: `1px solid ${V2.borderSoft}`, textAlign: "left" }}>
             <SpinnerMedal tier={spin.badge_unlocked.tier} size={56} />

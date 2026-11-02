@@ -76,6 +76,7 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
 
   if (!st || !st.wheel) return null;
   const { wheel, prizes, quote, stats, meter, playable } = st;
+  const fbGuar = !!st.fright_guarantee;
   const canSpin = playable && quote?.tokens;
   const minR = rarityOf(wheel.meter_min_rarity).label;
   const pill = { background: "rgba(255,255,255,0.92)", borderRadius: 16, border: `1px solid ${V2.borderSoft}`, boxShadow: "0 2px 10px rgba(26,74,10,0.08)" };
@@ -145,7 +146,7 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
                 <div style={{ display: "flex", gap: 3, margin: "4px 0" }} aria-label={`${meter.count} of ${meter.required} spins`}>
                   {Array.from({ length: meter.required }, (_, i) => <span key={i} style={{ flex: 1, height: 8, borderRadius: 4, background: i < meter.count ? V2.grassGreen : "rgba(13,42,5,0.12)" }} />)}
                 </div>
-                <div style={{ fontSize: 11, color: V2.midGray }}>{meter.count} / {meter.required} · spin {meter.required} since your last {minR}+ is guaranteed. Win a {minR}+ and it resets.</div>
+                <div style={{ fontSize: 11, color: V2.midGray }}>{meter.count} / {meter.required} · spin {meter.required} since your last {minR}+ is {fbGuar ? "a guaranteed Fright Bit" : "guaranteed"}. Win a {minR}+ and it resets.</div>
               </> : <div style={{ fontSize: 11, color: V2.midGray }}>{wheel.meter_enabled ? `Sign in to track your meter. Spin ${wheel.meter_spins} since your last ${minR}+ is guaranteed. Win a ${minR}+ and it resets.` : "Meter is off for this wheel."}</div>}
             </div>
           </div>}
