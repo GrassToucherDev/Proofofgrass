@@ -145,8 +145,8 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
                 <div style={{ display: "flex", gap: 3, margin: "4px 0" }} aria-label={`${meter.count} of ${meter.required} spins`}>
                   {Array.from({ length: meter.required }, (_, i) => <span key={i} style={{ flex: 1, height: 8, borderRadius: 4, background: i < meter.count ? V2.grassGreen : "rgba(13,42,5,0.12)" }} />)}
                 </div>
-                <div style={{ fontSize: 11, color: V2.midGray }}>{meter.count} / {meter.required} · every {meter.required}th spin is a guaranteed {minR}+</div>
-              </> : <div style={{ fontSize: 11, color: V2.midGray }}>{wheel.meter_enabled ? `Sign in to track your meter. Every ${wheel.meter_spins}th spin is a guaranteed ${minR}+.` : "Meter is off for this wheel."}</div>}
+                <div style={{ fontSize: 11, color: V2.midGray }}>{meter.count} / {meter.required} · spin {meter.required} since your last {minR}+ is guaranteed. Win a {minR}+ and it resets.</div>
+              </> : <div style={{ fontSize: 11, color: V2.midGray }}>{wheel.meter_enabled ? `Sign in to track your meter. Spin ${wheel.meter_spins} since your last ${minR}+ is guaranteed. Win a ${minR}+ and it resets.` : "Meter is off for this wheel."}</div>}
             </div>
           </div>}
           <button onClick={() => setSheet("prizes")} style={{ ...pill, cursor: "pointer", fontFamily: V2.fontSans, fontWeight: 700, fontSize: 14, color: V2.forestGreen, padding: "10px 8px" }}>🎁 View Prizes ›</button>
