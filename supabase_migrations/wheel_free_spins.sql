@@ -6,11 +6,8 @@
 -- The spin's payment_tx is 'free:<credit id>', so each credit can only ever produce one spin, and admins can tell them apart.
 
 -- Intents may now have a zero price (free spins). Paid intents are still always created with a positive price.
-do $$ declare c text; begin
-  for c in select conname from pg_constraint where conrelid = 'public.wheel_intents'::regclass and contype = 'c'
-           and pg_get_constraintdef(oid) ~ 'price_tokens > \(?0' loop
-    execute format('alter table public.wheel_intents drop constraint %I', c);
-  end loop;
+alter table public.wheel_intents drop constraint if exists wheel_intents_price_tokens_check;
+do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'wheel_intents_price_tokens_nonneg') then
     alter table public.wheel_intents add constraint wheel_intents_price_tokens_nonneg check (price_tokens >= 0);
   end if;
