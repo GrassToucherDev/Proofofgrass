@@ -42,29 +42,30 @@ export default function AdminGrassDraw() {
   const [rewards, setRewards] = useState([]);
   const [totals,  setTotals]  = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pickId,  setPickId]  = useState("");   // "" = the active cycle (or newest); otherwise the cycle you picked
 
   const flash = (text, type="ok") => { setMsg({text,type}); setTimeout(()=>setMsg({text:"",type:"ok"}),4000); };
 
   const load = useCallback(async () => {
     setLoading(true);
     const { data: cycs } = await supabase.from("grass_draw_cycles")
-      .select("*").order("starts_at",{ascending:false});
+      .select("id,name,starts_at,ends_at,status").order("starts_at",{ascending:false});
     setCycles(cycs||[]);
-    const active = (cycs||[]).find(c=>c.status==="active") || (cycs||[])[0];
+    const active = (cycs||[]).find(c=>c.id===pickId) || (cycs||[]).find(c=>c.status==="active") || (cycs||[])[0];
     setCycle(active||null);
 
     if (active) {
       const { data: rwds } = await supabase.from("grass_draw_rewards")
-        .select("*").eq("cycle_id",active.id).order("draw_order");
+        .select("id,cycle_id,reward_type,quantity,reward_value,draw_order,description").eq("cycle_id",active.id).order("draw_order");
       setRewards(rwds||[]);
 
       const { data: tots } = await supabase.from("grass_draw_user_totals")
-        .select("*").eq("cycle_id",active.id)
+        .select("cycle_id,username,proof_entries,total_bonus_entries,active_bonus_entries,pending_bonus_entries,total_active_entries,proof_day_count,eligible,disqualified").eq("cycle_id",active.id)
         .order("total_active_entries",{ascending:false}).limit(100);
       setTotals(tots||[]);
     }
     setLoading(false);
-  }, []);
+  }, [pickId]);
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
@@ -95,6 +96,12 @@ export default function AdminGrassDraw() {
             <div style={{fontSize:10,letterSpacing:"0.2em",textTransform:"uppercase",color:T.gold,marginBottom:8}}>Admin</div>
             <h1 style={{fontFamily:"'Fredoka',system-ui,sans-serif",fontSize:32,fontWeight:700,color:T.white}}>Grass Draw</h1>
             {cycle && <div style={{fontSize:12,color:T.dim,marginTop:4}}>{cycle.name} · {cycle.status.toUpperCase()}</div>}
+            {cycles.length > 1 && (
+              <select value={cycle?.id||""} onChange={e=>setPickId(e.target.value)}
+                style={{marginTop:10,padding:"8px 10px",borderRadius:8,background:T.bg2,color:T.white,border:`1px solid ${T.border}`,fontSize:13,maxWidth:"100%"}}>
+                {cycles.map(c=><option key={c.id} value={c.id}>{c.name} — {c.status}</option>)}
+              </select>
+            )}
           </div>
           <Link href="/admin/marketplace" style={{fontSize:11,color:T.dim,textDecoration:"none"}}>← Admin</Link>
         </div>
@@ -269,11 +276,9 @@ function BonusesTab({ cycle, flash, reload }) {
   useEffect(()=>{
     if(!cycle) return;
     (async()=>{
-      const {data} = await supabase.from("grass_draw_entries")
-        .select("*").eq("cycle_id",cycle.id)
-        .in("entry_type",["spotlight","x_engagement","manual"])
-        .order("created_at",{ascending:false}).limit(30);
-      setRecent(data||[]);
+      const r = await adminFetch("/api/grass-draw/admin-entries?cycle_id="+cycle.id);
+      const j = await r.json().catch(()=>({}));
+      setRecent(j.entries||[]);
     })();
   },[cycle]);
 
@@ -297,11 +302,9 @@ function BonusesTab({ cycle, flash, reload }) {
         flash(`✓ +${d.amount} ${bonusType} entries awarded to @${uname}`);
         setUname(""); setNotes(""); setAmount("");
         // Refresh recent
-        const {data} = await supabase.from("grass_draw_entries")
-          .select("*").eq("cycle_id",cycle.id)
-          .in("entry_type",["spotlight","x_engagement","manual"])
-          .order("created_at",{ascending:false}).limit(30);
-        setRecent(data||[]);
+        const rr = await adminFetch("/api/grass-draw/admin-entries?cycle_id="+cycle.id);
+        const jj = await rr.json().catch(()=>({}));
+        setRecent(jj.entries||[]);
       }
     } catch(e) { flash("Error: "+e.message,"err"); }
     setSaving(false);
