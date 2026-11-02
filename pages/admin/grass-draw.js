@@ -49,18 +49,18 @@ export default function AdminGrassDraw() {
   const load = useCallback(async () => {
     setLoading(true);
     const { data: cycs } = await supabase.from("grass_draw_cycles")
-      .select("*").order("starts_at",{ascending:false});
+      .select("id,name,starts_at,ends_at,status").order("starts_at",{ascending:false});
     setCycles(cycs||[]);
     const active = (cycs||[]).find(c=>c.id===pickId) || (cycs||[]).find(c=>c.status==="active") || (cycs||[])[0];
     setCycle(active||null);
 
     if (active) {
       const { data: rwds } = await supabase.from("grass_draw_rewards")
-        .select("*").eq("cycle_id",active.id).order("draw_order");
+        .select("id,cycle_id,reward_type,quantity,reward_value,draw_order,description").eq("cycle_id",active.id).order("draw_order");
       setRewards(rwds||[]);
 
       const { data: tots } = await supabase.from("grass_draw_user_totals")
-        .select("*").eq("cycle_id",active.id)
+        .select("cycle_id,username,proof_entries,total_bonus_entries,active_bonus_entries,pending_bonus_entries,total_active_entries,proof_day_count,eligible,disqualified").eq("cycle_id",active.id)
         .order("total_active_entries",{ascending:false}).limit(100);
       setTotals(tots||[]);
     }
@@ -276,11 +276,9 @@ function BonusesTab({ cycle, flash, reload }) {
   useEffect(()=>{
     if(!cycle) return;
     (async()=>{
-      const {data} = await supabase.from("grass_draw_entries")
-        .select("*").eq("cycle_id",cycle.id)
-        .in("entry_type",["spotlight","x_engagement","manual"])
-        .order("created_at",{ascending:false}).limit(30);
-      setRecent(data||[]);
+      const r = await adminFetch("/api/grass-draw/admin-entries?cycle_id="+cycle.id);
+      const j = await r.json().catch(()=>({}));
+      setRecent(j.entries||[]);
     })();
   },[cycle]);
 
@@ -304,11 +302,9 @@ function BonusesTab({ cycle, flash, reload }) {
         flash(`✓ +${d.amount} ${bonusType} entries awarded to @${uname}`);
         setUname(""); setNotes(""); setAmount("");
         // Refresh recent
-        const {data} = await supabase.from("grass_draw_entries")
-          .select("*").eq("cycle_id",cycle.id)
-          .in("entry_type",["spotlight","x_engagement","manual"])
-          .order("created_at",{ascending:false}).limit(30);
-        setRecent(data||[]);
+        const rr = await adminFetch("/api/grass-draw/admin-entries?cycle_id="+cycle.id);
+        const jj = await rr.json().catch(()=>({}));
+        setRecent(jj.entries||[]);
       }
     } catch(e) { flash("Error: "+e.message,"err"); }
     setSaving(false);
