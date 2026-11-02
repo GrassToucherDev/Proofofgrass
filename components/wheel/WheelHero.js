@@ -43,6 +43,20 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
     } catch (e) { setErr(e.message); }
     setBusy(false);
   }
+  async function useFreeSpin() {
+    setBusy(true); setErr("");
+    try {
+      const r = await fetch("/api/wheel/free-spin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.spin) throw new Error(d.error || "Couldn't use your free spin.");
+      onSettled?.(); showResult(d.spin);
+    } catch (e) { setErr(e.message); }
+    setBusy(false);
+  }
+  const openFree = () => {
+    setErr("");
+    if (requireSecured) requireSecured({ id: "wago_wheel", name: "WAGO Wheel free spin", wheel: true }, useFreeSpin); else useFreeSpin();
+  };
   const openConfirm = () => {
     setErr("");
     const go = () => setSheet("confirm");
@@ -108,6 +122,13 @@ export default function WheelHero({ username, requireSecured, handoff, onSettled
 
         <RecentWinners />
 
+        {st.viewer?.free_spins > 0 && (
+          <button onClick={openFree} disabled={busy || !playable} style={{ marginTop: 14, width: "100%", border: "2px solid #f59e0b", borderRadius: 999, padding: "14px 18px", fontFamily: V2.fontSans, fontWeight: 800, fontSize: 16,
+            color: "#7c4a03", background: "linear-gradient(135deg,#fff7e0,#ffe9b0)", cursor: busy ? "default" : "pointer" }}>
+            🎁 Use a free spin ({st.viewer.free_spins} left)
+          </button>
+        )}
+        {err && !sheet && <div role="alert" style={{ color: V2.danger, fontSize: 13, textAlign: "center", marginTop: 8 }}>{err}</div>}
         <button onClick={openConfirm} disabled={!canSpin} style={{ marginTop: 14, width: "100%", border: "none", borderRadius: 999, padding: "16px 18px", fontFamily: V2.fontSans, fontWeight: 800, fontSize: 17,
           color: "#fff", background: canSpin ? V2.gradientGrassBtn : "rgba(13,42,5,0.3)", boxShadow: canSpin ? V2.shadowGlow : "none", cursor: canSpin ? "pointer" : "default" }}>
           {!playable ? "Restocking prizes…" : quote?.tokens ? <><TokenLogo size={22} style={{ verticalAlign: "-0.3em" }} />{`Spin for ${fmt(quote.tokens)} $TOUCHGRASS`}</> : "Price unavailable"}

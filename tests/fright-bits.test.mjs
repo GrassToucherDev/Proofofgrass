@@ -290,6 +290,7 @@ describe("Fright Bits", { timeout: 60000 }, () => {
   it("without Fright Bits seeded the ordinary Wheel behaves as before (inventory still decrements)", async () => {
     await setup({ seed: false });
     await db.query(`update wheel_prizes set weight = 0.0001 where reward_type='nothing'`);
+    await db.query(`update wheel_prizes set weight = 0.0001 where reward_type='cosmetic_pack'`);
     await db.query(`update wheel_prizes set weight = 1000 where reward_type='shield'`);
     const s = await spin();
     expect(s.r.spin.prize.reward_type).toBe("shield");

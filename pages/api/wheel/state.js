@@ -35,6 +35,6 @@ export default async function handler(req, res) {
     quote: { tokens, usd: w.price_mode === "usd" ? Number(w.price_usd) : null, lock_amount: lock, eco_amount: tokens == null ? null : tokens - lock, token_price_usd: tokenPrice },
     stats: stats || { total_spins: 0, prizes_claimed: 0, locked_amount: 0, queued_amount: 0 },
     meter: googleId && w.meter_enabled ? { count: meter?.data?.count || 0, required: w.meter_spins } : null,
-    viewer: { signedIn: !!googleId, username, total_spins: await totalSpins(db, googleId) },
+    viewer: { signedIn: !!googleId, username, total_spins: await totalSpins(db, googleId), free_spins: googleId ? ((await db.rpc("wheel_free_spin_count", { p_google: googleId })).data || 0) : 0 },
   });
 }
