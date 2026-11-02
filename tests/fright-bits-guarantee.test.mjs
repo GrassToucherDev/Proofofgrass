@@ -26,7 +26,7 @@ beforeEach(async () => {
   wheel = (await one(`insert into wheels(slug,name,status,visibility,featured,price_mode,price_usd,meter_enabled,meter_spins,meter_min_rarity)
      values ('test-wheel','Test Wheel','active','public',true,'usd',5,true,3,'rare') returning id`)).id;
   await db.query(`insert into wheel_prizes(wheel_id,name,reward_type,weight,rarity,active) values ($1,'Nothing','nothing',1000,'common',true)`, [wheel]);
-  bigRare = (await one(`insert into wheel_prizes(wheel_id,name,reward_type,weight,rarity,active) values ($1,'Big Rare','nothing',100000,'rare',false) returning id`, [wheel])).id;
+  bigRare = (await one(`insert into wheel_prizes(wheel_id,name,reward_type,weight,rarity,active) values ($1,'Big Rare','nothing',90000000,'rare',false) returning id`, [wheel])).id;
   await db.query(`insert into wheel_prizes(wheel_id,name,reward_type,reward_config,weight,rarity,active) values ($1,'Base Pack','cosmetic_pack','{"item_id":"base"}',50,'common',true)`, [wheel]);
   await db.exec(sql("fright_bits_seed.sql"));
   await db.query(`select fright_bits_set_legal_gate('fright-bits', true)`);
