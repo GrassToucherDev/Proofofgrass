@@ -24,8 +24,15 @@ export default async function handler(req, res) {
     try { tokenPrice = await currentTokenPriceUsd(); tokens = Math.ceil(Number(w.price_usd) / tokenPrice); } catch { tokens = null; }
   }
   const lock = tokens == null ? null : Math.round(tokens * w.lock_pct) / 100;
+  // While a Fright Bits event is live, the meter's guaranteed spin is a Fright Bit (see fright_bits_meter_guarantee.sql).
+  let frightGuarantee = false;
+  try {
+    const { data: fc } = await db.from("collectible_collections").select("id").eq("wheel_id", w.id).eq("status", "active").or(`ends_at.is.null,ends_at.gte.${new Date(now).toISOString()}`).limit(1);
+    frightGuarantee = !!(fc && fc.length) && (prizes || []).some(p => p.collectible_id && (p.inventory_remaining == null || p.inventory_remaining > 0) && (!p.available_until || new Date(p.available_until) >= now));
+  } catch {}
   return res.status(200).json({
     wheel: publicWheel(w),
+    fright_guarantee: frightGuarantee,
     playable: !!playable,
     prizes: (() => {
       const live = (prizes || []).filter(p => (p.inventory_remaining == null || p.inventory_remaining > 0) && (!p.available_until || new Date(p.available_until) >= now));
