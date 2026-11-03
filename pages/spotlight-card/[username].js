@@ -104,12 +104,12 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   ctx.restore();
 
   // Badge
-  const BY = PY + PH + 18, BH = 380;
+  const BY = PY + PH + 12, BH = 360;
   try {
     const badgeImg = await loadImageSafe(badge.image);
-    const BW = BH * badgeImg.width / badgeImg.height;
+    const BW = BH * 924 / 1160;
     ctx.save(); ctx.shadowColor = "rgba(26,74,10,0.25)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
-    ctx.drawImage(badgeImg, W/2 - BW/2, BY, BW, BH);
+    ctx.drawImage(badgeImg, 50, 188, 924, 1160, W/2 - BW/2, BY, BW, BH);
     ctx.restore();
   } catch { /* skip */ }
 
@@ -123,12 +123,12 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
     ctx.fillText(txt, cx, cy + 2);
     ctx.restore();
   };
-  pill(weekNumber(win.week_start), 215, BY + BH/2 - 40, 270);
-  pill(`${badge.emoji} Winner`, W - 215, BY + BH/2 - 40, 270);
+  pill(weekNumber(win.week_start), 215, BY + BH/2 - 22, 270);
+  pill(`${badge.emoji} Winner`, W - 215, BY + BH/2 - 22, 270);
   ctx.save();
   ctx.fillStyle = acc.a; ctx.textAlign = "center"; ctx.font = "800 22px 'Nunito',sans-serif"; ctx.letterSpacing = "0.12em";
-  ctx.fillText(badge.label, 215, BY + BH/2 + 40);
-  ctx.fillText("SPOTLIGHT", W - 215, BY + BH/2 + 40);
+  ctx.fillText(badge.label, 215, BY + BH/2 + 52);
+  ctx.fillText("SPOTLIGHT", W - 215, BY + BH/2 + 52);
   ctx.restore();
 
   // Stats (cream cards with forest-green borders, like the panels)
@@ -136,7 +136,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   if (streakCount)           stats.push({ emoji:"🔥", value:`${streakCount}`, label:"Current Streak" });
   if (grassScore)            stats.push({ emoji:"⚡", value:Number(grassScore).toLocaleString(), label:"Grass Score" });
   if (spotlightWinCount > 0) stats.push({ emoji:"🏆", value:`${spotlightWinCount}`, label:"Spotlight Wins" });
-  const SY = BY + BH + 16, SH = 130;
+  const SY = BY + BH + 26, SH = 188;
   if (stats.length) {
     const totalW = 960, gap = 18, cw = (totalW - gap * (stats.length - 1)) / stats.length;
     stats.forEach((st, i) => {
@@ -144,11 +144,11 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
       ctx.fillStyle = CREAM; roundRect(ctx, x, SY, cw, SH, 28); ctx.fill();
       ctx.lineWidth = 5; ctx.strokeStyle = GREEN; roundRect(ctx, x, SY, cw, SH, 28); ctx.stroke();
       ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.letterSpacing = "0";
-      ctx.font = "26px serif"; ctx.fillStyle = INK; ctx.fillText(st.emoji, cx, SY + 36);
-      ctx.font = "800 17px 'Nunito',sans-serif"; ctx.fillStyle = "#2d5a1a"; ctx.letterSpacing = "0.06em";
-      ctx.fillText(st.label.toUpperCase(), cx, SY + 62);
-      ctx.font = "700 52px 'Fredoka',system-ui,sans-serif"; ctx.fillStyle = INK; ctx.letterSpacing = "-0.01em";
-      ctx.fillText(st.value, cx, SY + 118);
+      ctx.font = "44px serif"; ctx.fillStyle = INK; ctx.fillText(st.emoji, cx, SY + 54);
+      ctx.font = "800 21px 'Nunito',sans-serif"; ctx.fillStyle = "#2d5a1a"; ctx.letterSpacing = "0.06em";
+      ctx.fillText(st.label.toUpperCase(), cx, SY + 90);
+      ctx.font = "700 68px 'Fredoka',system-ui,sans-serif"; ctx.fillStyle = INK; ctx.letterSpacing = "-0.01em";
+      ctx.fillText(st.value, cx, SY + 164);
     });
   }
 
