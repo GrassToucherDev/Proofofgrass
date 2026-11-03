@@ -7,6 +7,8 @@ import Link from "next/link";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import OgMeta, { SITE_URL } from "../../../components/OgMeta";
+import ShareCardSheet from "../../../components/ShareCardSheet";
+import { renderStreakCard, streakCaption } from "../../../utils/streakShareCard";
 import { supabase } from "../../../utils/supabase";
 import { resolveActiveCover, COVER_DEFINITIONS, isCoverUrlReady } from "../../../utils/coverDefinitions";
 import { getSpotlightBadge } from "../../../utils/spotlightBadges";
@@ -384,6 +386,7 @@ export default function ProfilePage({ og }) {
   const [inventory,       setInventory]         = useState([]);
   const [wheelBadge,      setWheelBadge]        = useState(null);
   const [badgeShelf,      setBadgeShelf]        = useState([]);
+  const [sharingStreak,   setSharingStreak]     = useState(false);
 
   useEffect(()=>{
     const saved = typeof window!=="undefined"?localStorage.getItem("pog_username"):null;
@@ -670,6 +673,11 @@ export default function ProfilePage({ og }) {
                   <button onClick={copyProfile} className="pf-action-btn">
                     ↗ Share Profile
                   </button>
+                  {isOwner && current>0 && (
+                    <button onClick={()=>setSharingStreak(true)} className="pf-action-btn">
+                      🔥 Share Streak
+                    </button>
+                  )}
                   <Link href={`/flex/${username}`} className="pf-action-btn">
                     ✦ Flex Card
                   </Link>
@@ -809,6 +817,12 @@ export default function ProfilePage({ og }) {
 
           {/* Yard record: only appears once they have Yard history */}
           <YardRecordCard username={username} />
+
+          {sharingStreak && (
+            <ShareCardSheet title="Share your streak" caption={streakCaption(username, current)}
+              filename={`streak-${current}-${username}.png`}
+              render={() => renderStreakCard({ username, streak: current, best })} onClose={()=>setSharingStreak(false)} />
+          )}
 
           <MyCollectibles username={username} />
 

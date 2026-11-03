@@ -4,6 +4,8 @@ import Link from "next/link";
 import Head from "next/head";
 import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
+import ShareCardSheet from "../components/ShareCardSheet";
+import { renderStreakCard, streakCaption, isStreakMilestone } from "../utils/streakShareCard";
 import V2Nav from "../components/V2Nav";
 import FrightBitsHeroBanner from "../components/frightbits/FrightBitsHeroBanner";
 import V2BottomNav from "../components/V2BottomNav";
@@ -334,6 +336,7 @@ function FeaturedPostsSection() {
 
 function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, hasPostedToday,
   onUpload, onRetake, streakStatus, streakTone, resolvedStreak, loadingUser }) {
+  const [sharingMilestone, setSharingMilestone] = useState(false);
 
   const toneColor = {
     success: V2.success, warning: V2.warning, reset: V2.danger, neutral: V2.midGray,
@@ -376,6 +379,19 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
       {/* Result card */}
       {showResult && imageSrc && (
         <div style={{ marginBottom: 16 }}>
+          {isStreakMilestone(resolvedStreak) && (
+            <button onClick={() => setSharingMilestone(true)}
+              style={{ width: "100%", marginBottom: 12, border: "none", cursor: "pointer", borderRadius: 18, padding: "14px 16px", textAlign: "left",
+                background: "linear-gradient(135deg,#f9d06b,#f6b93b)", color: "#0d2a05", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(246,185,59,.35)" }}>
+              <div style={{ fontSize: 16, fontWeight: 800 }}>🔥 {resolvedStreak}-day streak milestone!</div>
+              <div style={{ fontSize: 13, fontWeight: 700, opacity: .85, marginTop: 2 }}>Tap to share your milestone card →</div>
+            </button>
+          )}
+          {sharingMilestone && (
+            <ShareCardSheet title="Share your milestone" caption={streakCaption(username, resolvedStreak)}
+              filename={`streak-${resolvedStreak}-${username}.png`}
+              render={() => renderStreakCard({ username, streak: resolvedStreak })} onClose={() => setSharingMilestone(false)} />
+          )}
           <ResultCard
             imageSrc={imageSrc}
             proofFile={proofFile}
