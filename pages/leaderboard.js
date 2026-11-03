@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Head from "next/head";
 import { supabase } from "../utils/supabase";
+import ShareCardSheet from "../components/ShareCardSheet";
+import { renderRankCard, rankCaption } from "../utils/rankShareCard";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
 import { SiteLinks, SiteMobileMenu } from "../components/SiteMenu";
@@ -193,6 +195,7 @@ export default function Leaderboard() {
   const [rankResult,  setRankResult]  = useState(null);
   const [rankLoading, setRankLoading] = useState(false);
   const [rankError,   setRankError]   = useState("");
+  const [sharingRank, setSharingRank] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
 
   useEffect(() => {
@@ -555,6 +558,13 @@ export default function Leaderboard() {
                   <div style={{ fontSize:13, color:V2.grassGreen, fontWeight:600 }}>
                     Keep touching grass and climb higher!
                   </div>
+                  {rankResult.rank > 0 && (
+                    <button onClick={()=>setSharingRank(true)}
+                      style={{ marginTop:10, border:"none", cursor:"pointer", fontFamily:V2.fontSans, fontWeight:800, fontSize:13,
+                        background:V2.gradientGrassBtn, color:"#fff", borderRadius:999, padding:"10px 18px", minHeight:40 }}>
+                      ↗ Share my rank
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -575,6 +585,11 @@ export default function Leaderboard() {
                 ))}
               </div>
             </div>
+          )}
+          {sharingRank && rankResult && (
+            <ShareCardSheet title="Share your rank" caption={rankCaption(rankResult)}
+              filename={`leaderboard-rank-${rankResult.username}.png`}
+              render={() => renderRankCard(rankResult)} onClose={()=>setSharingRank(false)} />
           )}
         </div>
       </div>
