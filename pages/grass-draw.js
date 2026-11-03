@@ -133,6 +133,16 @@ export default function GrassDraw() {
 
   const username = normalizeUsername(rawUsername);
 
+  // Public wins for the signed-in username (only revealed wins come back) -> "share your win" banner
+  const [myWins, setMyWins] = useState([]);
+  useEffect(() => {
+    if (!username) { setMyWins([]); return; }
+    let dead = false;
+    fetch(`/api/grass-draw/wins?username=${encodeURIComponent(username)}`).then(r => r.json())
+      .then(j => { if (!dead) setMyWins(j.wins || []); }).catch(() => {});
+    return () => { dead = true; };
+  }, [username]);
+
   // Load active cycle on mount
   useEffect(() => {
     (async () => {
@@ -262,6 +272,13 @@ export default function GrassDraw() {
             {liveShow.phase === "done" ? "🎉 See the winners from the live draw →"
               : ["intro","revealing"].includes(liveShow.phase) ? "🔴 LIVE NOW — watch the Grass Draw →"
               : "🍃 A live Grass Draw is coming up — watch it here →"}
+          </Link>
+        )}
+
+        {myWins.length > 0 && (
+          <Link href={`/grass-draw/winner/${username}`} style={{ display:"block", textAlign:"center", padding:"12px 16px", textDecoration:"none",
+            background:"linear-gradient(90deg,#f6b93b,#f9d06b)", color:"#0d2a05", fontWeight:800, fontSize:14 }}>
+            🎉 You won {myWins[0].prize}! Share your win →
           </Link>
         )}
 

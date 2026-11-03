@@ -16,6 +16,8 @@ const fmtClock = (ms) => {
 export default function GrassDrawLive() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState(false);
+  const [viewer, setViewer] = useState("");
+  useEffect(() => { try { const u = localStorage.getItem("pog_username"); if (u) setViewer(u.replace(/@/g, "").toLowerCase().trim()); } catch {} }, []);
   const [offset, setOffset] = useState(0);          // server time minus this device's time
   const [tick, setTick] = useState(0);
   const [fresh, setFresh] = useState(0);            // reveal number that just arrived (for the pop-in)
@@ -159,6 +161,9 @@ export default function GrassDrawLive() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <Link href={`/u/${w.username}`} style={{ fontWeight: 700, color: V2.forestGreen, textDecoration: "none", wordBreak: "break-word" }}>@{w.username}</Link>
                       <div style={{ fontSize: 13, color: V2.forestLight }}>{ICON[w.prize_type] || "🎁"} {w.prize}</div>
+                      {viewer && viewer === String(w.username).toLowerCase() && (
+                        <Link href={`/grass-draw/winner/${w.username}`} style={{ display: "inline-block", marginTop: 6, fontSize: 12, fontWeight: 800, color: V2.forestGreen, background: "#f9d06b", borderRadius: 999, padding: "6px 12px", textDecoration: "none" }}>🎉 Share your win</Link>
+                      )}
                     </div>
                     {w.chance_pct != null && <div style={{ textAlign: "right", fontSize: 12, color: V2.midGray, fontWeight: 700 }}>{w.chance_pct}%<br />of pool</div>}
                   </div>))}
