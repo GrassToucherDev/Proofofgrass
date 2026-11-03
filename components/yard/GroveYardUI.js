@@ -7,6 +7,8 @@ import { fmtDate } from "../../utils/yardStatus";
 import { yardError } from "../../utils/yardErrors";
 import { yardPost } from "../../hooks/useYard";
 import { Avatar } from "./YardUI";
+import ShareCardSheet from "../ShareCardSheet";
+import { renderYardResultCard, yardResultCaption } from "../../utils/yardResultCard";
 
 
 export function GroveBadge({ g, align = "left" }) {
@@ -33,6 +35,7 @@ export function GroveChallengeCard({ ch, grove, kind, onChange, detail }) {
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const a = ch.challenger, b = ch.challenged;
   const canAnswer = kind === "incoming" && grove?.is_owner && grove.id === b.id;
   const respond = async (action) => {
@@ -97,6 +100,16 @@ export function GroveChallengeCard({ ch, grove, kind, onChange, detail }) {
           <button type="button" className="yd-btn-sm" onClick={copy} style={{ ...V2Styles.btnSecondary, padding: "0 16px" }}>{copied ? "Copied ✓" : "Copy link"}</button>
         </div>
       )}
+      {ch.result && (
+        <div style={{ marginTop: 12 }}>
+          <button type="button" className="yd-btn-sm" onClick={() => setSharing(true)} style={{ ...V2Styles.btnSecondary, padding: "0 18px" }}>↗ Share result</button>
+        </div>
+      )}
+      {sharing && (() => {
+        const d = { kind: "grove", a: { label: a.name, banner: a.banner, days: a.days }, b: { label: b.name, banner: b.banner, days: b.days }, duration: ch.duration_days, result: ch.result,
+          winner: ch.winner_grove === a.id ? "a" : ch.winner_grove === b.id ? "b" : null, start: ch.started_at, end: ch.ends_at, link: link };
+        return <ShareCardSheet title="Grove challenge result" filename="proof-of-grass-grove-challenge.png" caption={yardResultCaption(d)} render={() => renderYardResultCard(d)} onClose={() => setSharing(false)} />;
+      })()}
       {err && <div role="alert" style={{ fontSize: 12, color: V2.danger, marginTop: 8 }}>{err}</div>}
       {!detail && <div style={{ marginTop: 12 }}><Link href={`/yard/grove/${ch.slug}`} style={{ fontSize: 13, fontWeight: 700, color: V2.forestLight }}>View challenge →</Link></div>}
     </article>
