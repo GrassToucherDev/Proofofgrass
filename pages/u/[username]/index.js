@@ -6,6 +6,7 @@ import WalletVerify from "../../../components/WalletVerify";
 import Link from "next/link";
 import Head from "next/head";
 import { useRouter } from "next/router";
+import OgMeta, { SITE_URL } from "../../../components/OgMeta";
 import { supabase } from "../../../utils/supabase";
 import { resolveActiveCover, COVER_DEFINITIONS, isCoverUrlReady } from "../../../utils/coverDefinitions";
 import { getSpotlightBadge } from "../../../utils/spotlightBadges";
@@ -345,7 +346,7 @@ function SkinPanel({ activeCover, unlockedCovers, profileRow, isOwner, onEquip }
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function ProfilePage() {
+export default function ProfilePage({ og }) {
   const router   = useRouter();
   const { username:slug } = router.query;
   const username = norm(slug??"");
@@ -566,6 +567,7 @@ export default function ProfilePage() {
 
   return (
     <>
+      {og && <OgMeta {...og} />}
       <Head>
         <title>@{username} — Proof of Grass</title>
         <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
@@ -1040,4 +1042,22 @@ export default function ProfilePage() {
       {showChallenge && <ChallengeModal targetUsername={username} viewerUsername={viewer} onClose={()=>setShowChallenge(false)} />}
     </>
   );
+}
+// Server-side so link previews (X, Discord, iMessage…) get this person's card instead of the generic site one.
+export async function getServerSideProps({ params, res }) {
+  const name = String(params.username || "").replace(/@/g, "").toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "").slice(0, 40);
+  res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=3600");
+  if (!name) return { props: { og: null } };
+  let streak = null;
+  try {
+    const { supabase } = await import("../../../utils/supabase");
+    const { data } = await supabase.from("Streaks").select("current_streak").eq("username", name).maybeSingle();
+    streak = data?.current_streak ?? null;
+  } catch {}
+  return { props: { og: {
+    title: `@${name} on Proof of Grass`,
+    description: streak ? `${streak}-day streak. See @${name}'s profile, badges and proofs on Proof of Grass.` : `See @${name}'s profile, badges and proofs on Proof of Grass.`,
+    image: `${SITE_URL}/api/og?type=profile&u=${encodeURIComponent(name)}`,
+    url: `${SITE_URL}/u/${name}`,
+  } } };
 }

@@ -1,5 +1,6 @@
 // pages/_app.js
 import "../styles/globals.css";
+import OgMeta from "../components/OgMeta";
 import { useState, useEffect } from "react";
 import { SessionProvider } from "next-auth/react";
 import ConsentGate from "../components/ConsentGate";
@@ -34,6 +35,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
       <ConnectionProvider endpoint={RPC_ENDPOINT}>
         <WalletProvider wallets={wallets} autoConnect>
           <WalletModalProvider>
+            <OgMeta />
             <Component {...pageProps} />
             <ConsentGate />
             <VersionGuard />

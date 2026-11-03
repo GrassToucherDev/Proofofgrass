@@ -1030,13 +1030,14 @@ export default function WagoDropsPage() {
       <Head>
         <title>WAGO Drops — Touch Grass</title>
         <meta name="description" content="Real-world location-based crypto drops on Solana. Go outside, find the drop, claim on-chain." />
-        <meta property="og:title" content="WAGO Drops — Touch Grass" />
-        <meta property="og:description" content="Real-world treasure hunts on a live map. Find drops, prove you were there, earn Grass Tickets." />
-        <meta property="og:image" content="https://proofofgrass.app/images/wago/wago-drops-logo.png" />
+        <meta key="og:title" property="og:title" content="WAGO Drops — Touch Grass" />
+        <meta key="og:description" property="og:description" content="Real-world treasure hunts on a live map. Find drops, prove you were there, earn Grass Tickets." />
+        <meta key="og:image" property="og:image" content="https://proofofgrass.app/images/wago/wago-drops-logo.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/images/wago/icon-32.png" />
         <link rel="icon" type="image/png" sizes="192x192" href="/images/wago/icon-192.png" />
         <link rel="apple-touch-icon" href="/images/wago/apple-touch-icon.png" />
-        <meta name="twitter:card" content="summary_large_image" />
+        <meta key="twitter:card" name="twitter:card" content="summary_large_image" />
+        <meta key="twitter:image" name="twitter:image" content="https://proofofgrass.app/images/wago/wago-drops-logo.png" />
         <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
       </Head>
       <div style={{ minHeight: "100vh", background: !session ? V2.skyBlue : T.surface, color: T.white, fontFamily: V2.fontSans }}>
