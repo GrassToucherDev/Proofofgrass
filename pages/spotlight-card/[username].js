@@ -116,19 +116,19 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // Side pills flanking the badge (week + winner), in the announcement's gold-ribbon style
   const pill = (txt, cx, cy, w) => {
     ctx.save();
-    ctx.fillStyle = GOLD; roundRect(ctx, cx - w/2, cy - 34, w, 68, 34); ctx.fill();
-    ctx.lineWidth = 5; ctx.strokeStyle = GREEN; roundRect(ctx, cx - w/2, cy - 34, w, 68, 34); ctx.stroke();
+    ctx.fillStyle = GOLD; roundRect(ctx, cx - w/2, cy - 48, w, 96, 48); ctx.fill();
+    ctx.lineWidth = 6; ctx.strokeStyle = GREEN; roundRect(ctx, cx - w/2, cy - 48, w, 96, 48); ctx.stroke();
     ctx.fillStyle = INK; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.font = "800 30px 'Fredoka','Nunito',sans-serif"; ctx.letterSpacing = "0";
-    ctx.fillText(txt, cx, cy + 2);
+    ctx.font = "700 44px 'Fredoka','Nunito',sans-serif"; ctx.letterSpacing = "0";
+    ctx.fillText(txt, cx, cy + 3);
     ctx.restore();
   };
-  pill(weekNumber(win.week_start), 215, BY + BH/2 - 22, 270);
-  pill(`${badge.emoji} Winner`, W - 215, BY + BH/2 - 22, 270);
+  pill(weekNumber(win.week_start), 205, BY + BH/2 - 22, 310);
+  pill(`${badge.emoji} Winner`, W - 205, BY + BH/2 - 22, 310);
   ctx.save();
-  ctx.fillStyle = acc.a; ctx.textAlign = "center"; ctx.font = "800 22px 'Nunito',sans-serif"; ctx.letterSpacing = "0.12em";
-  ctx.fillText(badge.label, 215, BY + BH/2 + 52);
-  ctx.fillText("SPOTLIGHT", W - 215, BY + BH/2 + 52);
+  ctx.fillStyle = acc.a; ctx.textAlign = "center"; ctx.font = "800 27px 'Nunito',sans-serif"; ctx.letterSpacing = "0.1em";
+  ctx.fillText(badge.label, 205, BY + BH/2 + 68);
+  ctx.fillText("SPOTLIGHT", W - 205, BY + BH/2 + 68);
   ctx.restore();
 
   // Stats (cream cards with forest-green borders, like the panels)
