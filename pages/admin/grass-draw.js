@@ -570,6 +570,31 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
 
   const confirmDraw = async () => { await executeDrawn(false); };
 
+  // Hand-picked NFT winners (logged like drawn winners, marked manual)
+  const [mRows,   setMRows]   = useState([{u:"",c:"screen_touchers"},{u:"",c:"screen_touchers"},{u:"",c:"screen_touchers"},{u:"",c:"screen_touchers"},{u:"",c:"grass_touchers"}]);
+  const [mNote,   setMNote]   = useState("");
+  const [mChecks, setMChecks] = useState(null);
+  const [mBusy,   setMBusy]   = useState(false);
+  const recordManual = async (dry) => {
+    if(!cycle) return flash("No active cycle","err");
+    setMBusy(true);
+    try {
+      const r = await adminFetch("/api/grass-draw/record-manual", { method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ cycle_id: cycle.id, dry_run: dry, note: mNote,
+          picks: mRows.filter(x=>x.u.trim()).map(x=>({username:x.u,collection:x.c})) }) });
+      const d = await r.json();
+      setMChecks(d.checks||null);
+      if(!r.ok) flash(d.error||"Could not check","err");
+      else if(!dry){
+        flash(`✓ ${d.saved} hand-picked NFT winner${d.saved===1?"":"s"} recorded`);
+        setMChecks(null); setMRows(rs=>rs.map(x=>({...x,u:""}))); setMNote("");
+        const {data} = await supabase.from("grass_draw_winners").select("*").eq("cycle_id",cycle.id).order("selected_at",{ascending:false});
+        setWinners(data||[]);
+      }
+    } catch(e){ flash("Error: "+e.message,"err"); }
+    setMBusy(false);
+  };
+
   const deliverReward = async (winner) => {
     try {
       const r = await adminFetch("/api/grass-draw/deliver-reward", {
@@ -673,6 +698,40 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Hand-picked NFT winners */}
+          <div style={{background:T.bg2,border:`1px solid ${T.border}`,borderRadius:12,padding:"20px",marginBottom:16}}>
+            <div style={{fontSize:12,fontWeight:700,color:T.white,marginBottom:4}}>Record hand-picked NFT winners</div>
+            <div style={{fontSize:11,color:T.dim,marginBottom:12,lineHeight:1.5}}>For prizes you choose yourself. Saved as NFT winners for {cycle?.name||"this cycle"} and marked "manual", so they show in the log, delivery tracking and the winner page. Nothing is randomised.</div>
+            {mRows.map((row,i)=>(
+              <div key={i} style={{display:"flex",gap:8,marginBottom:8}}>
+                <input style={{...inputStyle,marginBottom:0,flex:2}} placeholder="@username" value={row.u}
+                  onChange={e=>{const v=e.target.value;setMRows(rs=>rs.map((x,j)=>j===i?{...x,u:v}:x));setMChecks(null);}} />
+                <select style={{...inputStyle,marginBottom:0,flex:1.4}} value={row.c}
+                  onChange={e=>{const v=e.target.value;setMRows(rs=>rs.map((x,j)=>j===i?{...x,c:v}:x));setMChecks(null);}}>
+                  <option value="screen_touchers">Screen Toucher</option>
+                  <option value="grass_touchers">Grass Toucher</option>
+                </select>
+              </div>
+            ))}
+            <button onClick={()=>setMRows(rs=>[...rs,{u:"",c:"screen_touchers"}])} style={{...btnStyle("gold"),marginBottom:10}}>+ Add row</button>
+            <input style={inputStyle} placeholder="Note (optional), e.g. giveaway on X" value={mNote} onChange={e=>setMNote(e.target.value)} />
+            {mChecks&&mChecks.map((c,i)=>(
+              <div key={i} style={{fontSize:12,padding:"6px 0",borderBottom:`1px solid ${T.border}`}}>
+                <span style={{color:T.white}}>@{c.username||"?"}</span>
+                <span style={{color:T.dim,marginLeft:8}}>{c.collection==="grass_touchers"?"Grass Toucher":"Screen Toucher"}</span>
+                {c.problems.map((p,j)=><div key={"p"+j} style={{color:T.red,fontSize:11}}>✗ {p}</div>)}
+                {c.warnings.map((p,j)=><div key={"w"+j} style={{color:T.gold,fontSize:11}}>⚠ {p}</div>)}
+                {!c.problems.length&&!c.warnings.length&&<div style={{color:T.green,fontSize:11}}>✓ Ready</div>}
+              </div>
+            ))}
+            <div style={{display:"flex",gap:10,marginTop:12}}>
+              <button onClick={()=>recordManual(true)} disabled={mBusy} style={{...btnStyle("olive"),flex:1}}>{mBusy?"Checking…":"Check winners"}</button>
+              {mChecks&&!mChecks.some(c=>c.problems.length)&&(
+                <button onClick={()=>recordManual(false)} disabled={mBusy} style={{background:T.olive,color:"#0a0c08",border:"none",borderRadius:8,padding:"11px 20px",fontSize:13,fontWeight:700,cursor:"pointer",flex:1}}>✓ Record winners</button>
+              )}
+            </div>
           </div>
 
           {/* Winners list */}
