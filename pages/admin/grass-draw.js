@@ -535,7 +535,8 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
   const [drawLog,     setDrawLog]     = useState([]);
   const [excluded,    setExcluded]    = useState([]);
 
-  const executeDrawn = async (dry = true) => {
+  const executeDrawn = async (dryArg = true) => {
+    const dry = dryArg !== false;   // a click event (or anything but an explicit false) means preview
     if(!cycle) return flash("No active cycle","err");
     setDrawing(true);
     try {
@@ -631,7 +632,7 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
             </select>
 
             {!confirming ? (
-              <button onClick={executeDrawn} disabled={drawing}
+              <button onClick={() => executeDrawn(true)} disabled={drawing}
                 style={{background:"linear-gradient(135deg,rgba(147,168,90,0.2),rgba(200,168,75,0.1))",
                   border:`1px solid ${T.olive}`,color:T.olive,borderRadius:8,
                   padding:"12px 28px",fontSize:13,fontWeight:700,cursor:"pointer",width:"100%"}}>
