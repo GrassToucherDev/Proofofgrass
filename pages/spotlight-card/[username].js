@@ -119,7 +119,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
     ctx.fillStyle = GOLD; roundRect(ctx, cx - w/2, cy - 48, w, 96, 48); ctx.fill();
     ctx.lineWidth = 6; ctx.strokeStyle = GREEN; roundRect(ctx, cx - w/2, cy - 48, w, 96, 48); ctx.stroke();
     ctx.fillStyle = INK; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.font = "700 44px 'Fredoka','Nunito',sans-serif"; ctx.letterSpacing = "0";
+    ctx.font = "700 44px 'Fredoka','Nunito',sans-serif"; ctx.letterSpacing = "0px";
     ctx.fillText(txt, cx, cy + 3);
     ctx.restore();
   };
@@ -143,7 +143,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
       const x = (W - totalW)/2 + i * (cw + gap), cx = x + cw/2;
       ctx.fillStyle = CREAM; roundRect(ctx, x, SY, cw, SH, 28); ctx.fill();
       ctx.lineWidth = 5; ctx.strokeStyle = GREEN; roundRect(ctx, x, SY, cw, SH, 28); ctx.stroke();
-      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.letterSpacing = "0";
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.letterSpacing = "0px";
       ctx.font = "44px serif"; ctx.fillStyle = INK; ctx.fillText(st.emoji, cx, SY + 54);
       ctx.font = "800 21px 'Nunito',sans-serif"; ctx.fillStyle = "#2d5a1a"; ctx.letterSpacing = "0.06em";
       ctx.fillText(st.label.toUpperCase(), cx, SY + 90);
