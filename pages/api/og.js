@@ -84,20 +84,28 @@ export default async function handler(req) {
         </Frame>
       );
     }
+    // Site-wide preview: Spotlight-style banner (mascot + bubble title) over the meadow.
+    const outline = [[-5,0],[5,0],[0,-5],[0,5],[-4,-4],[4,-4],[-4,4],[4,4]].map(([x, y]) => `${x}px ${y}px 0 #0f4a08`).join(",");
     return (
-      <Frame origin={origin}>
-        <div style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 1200, height: 630, display: "flex", flexDirection: "column", alignItems: "center", position: "relative", background: "#c5e3f7" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`${origin}/og-meadow.jpg`} width={1200} height={630} style={{ position: "absolute", left: 0, top: 0 }} />
+        <div style={{ position: "absolute", left: 0, top: 0, width: 1200, height: 630, display: "flex", background: "linear-gradient(180deg,rgba(197,227,247,.55) 0%,rgba(238,246,226,0) 55%)" }} />
+        <div style={{ display: "flex", alignItems: "center", marginTop: 64, width: 1040, height: 280, borderRadius: 120, border: `10px solid ${GREEN}`, position: "relative", overflow: "hidden",
+          background: "linear-gradient(180deg,#6ec0f2 0%,#bfe6fa 70%,#8fd24a 100%)", boxShadow: "0 12px 30px rgba(26,74,10,.3)" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} width={250} height={250} style={{ marginRight: 44 }} />
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", fontFamily: FRED, fontSize: 96, fontWeight: 700, color: INK }}>Proof of Grass</div>
-            <div style={{ display: "flex", fontFamily: NUN, fontSize: 36, fontWeight: 800, color: "#2d5a1a", marginTop: 8 }}>Touch grass. Prove it. Build your streak.</div>
-            <div style={{ display: "flex", marginTop: 26 }}>
-              <div style={{ display: "flex", background: GOLD, border: `5px solid ${GREEN}`, borderRadius: 40, padding: "10px 30px", fontFamily: FRED, fontSize: 32, fontWeight: 700, color: INK }}>$TOUCHGRASS</div>
-            </div>
+          <img src={`${origin}/og-mascot.png`} width={532} height={240} style={{ marginLeft: 12, flexShrink: 0 }} />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginLeft: 0, width: 440, flexShrink: 0 }}>
+            <div style={{ display: "flex", fontFamily: FRED, fontSize: 52, fontWeight: 700, color: "#fff8e0", textShadow: outline, whiteSpace: "nowrap" }}>Proof of Grass</div>
+            <div style={{ display: "flex", fontFamily: FRED, fontSize: 50, fontWeight: 700, color: "#9be83a", textShadow: outline, marginTop: 8, whiteSpace: "nowrap" }}>Touch. Prove. Win.</div>
           </div>
         </div>
-      </Frame>
+        <div style={{ display: "flex", marginTop: 34, alignItems: "center" }}>
+          <div style={{ display: "flex", background: CREAM, border: `6px solid ${GREEN}`, borderRadius: 60, padding: "14px 30px", fontFamily: FRED, fontSize: 32, fontWeight: 700, color: INK, marginRight: 18 }}>Go outside. Post proof. Build your streak.</div>
+          <div style={{ display: "flex", background: GOLD, border: `6px solid ${GREEN}`, borderRadius: 60, padding: "14px 28px", fontFamily: FRED, fontSize: 32, fontWeight: 700, color: INK }}>$TOUCHGRASS</div>
+        </div>
+        <div style={{ position: "absolute", bottom: 14, display: "flex", fontFamily: NUN, fontSize: 24, fontWeight: 800, color: GREEN, letterSpacing: 3, background: "rgba(253,246,226,.85)", padding: "4px 20px", borderRadius: 20 }}>PROOFOFGRASS.APP</div>
+      </div>
     );
   };
 
