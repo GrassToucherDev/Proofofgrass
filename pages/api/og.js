@@ -12,6 +12,17 @@ const GREEN = "#1f6b12", INK = "#0d2a05", CREAM = "#fdf6e2", GOLD = "#f6b93b";
 async function rest(path) {
   try { const r = await fetch(`${SB}/rest/v1/${path}`, { headers: { apikey: KEY, Authorization: `Bearer ${KEY}` } }); return r.ok ? await r.json() : []; } catch { return []; }
 }
+// Same fonts as the site: Fredoka for headings/numbers, Nunito for labels (served from /public/fonts).
+async function loadFonts(origin) {
+  try {
+    const [a, b] = await Promise.all([
+      fetch(`${origin}/fonts/fredoka-latin-700-normal.woff`).then((r) => r.arrayBuffer()),
+      fetch(`${origin}/fonts/nunito-latin-800-normal.woff`).then((r) => r.arrayBuffer()),
+    ]);
+    return [{ name: "Fredoka", data: a, weight: 700, style: "normal" }, { name: "Nunito", data: b, weight: 800, style: "normal" }];
+  } catch { return undefined; }
+}
+const FRED = "Fredoka, Nunito, sans-serif", NUN = "Nunito, sans-serif";
 const clean = (v) => String(v || "").replace(/@/g, "").toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "").slice(0, 40);
 
 function Frame({ children, origin }) {
@@ -22,7 +33,7 @@ function Frame({ children, origin }) {
       <div style={{ width: 1080, height: 510, display: "flex", background: "#ffffff", border: `8px solid ${GREEN}`, borderRadius: 48, padding: 44, position: "relative" }}>
         {children}
       </div>
-      <div style={{ position: "absolute", bottom: 14, display: "flex", fontSize: 24, fontWeight: 800, color: GREEN, letterSpacing: 3 }}>PROOFOFGRASS.APP</div>
+      <div style={{ position: "absolute", bottom: 14, display: "flex", fontFamily: NUN, fontSize: 24, fontWeight: 800, color: GREEN, letterSpacing: 3 }}>PROOFOFGRASS.APP</div>
     </div>
   );
 }
@@ -30,8 +41,8 @@ function Frame({ children, origin }) {
 function Chip({ value, label }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: CREAM, border: `5px solid ${GREEN}`, borderRadius: 28, padding: "14px 30px", marginRight: 18 }}>
-      <div style={{ display: "flex", fontSize: 58, fontWeight: 800, color: INK }}>{value}</div>
-      <div style={{ display: "flex", fontSize: 20, fontWeight: 800, color: "#2d5a1a", letterSpacing: 2 }}>{label}</div>
+      <div style={{ display: "flex", fontFamily: FRED, fontSize: 62, fontWeight: 700, color: INK }}>{value}</div>
+      <div style={{ display: "flex", fontFamily: NUN, fontSize: 20, fontWeight: 800, color: "#2d5a1a", letterSpacing: 2 }}>{label}</div>
     </div>
   );
 }
@@ -62,8 +73,8 @@ export default async function handler(req) {
               <img src={avatar || logo} width={avatar ? 330 : 200} height={avatar ? 330 : 200} style={{ objectFit: "cover" }} />
             </div>
             <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-              <div style={{ display: "flex", fontSize: 28, fontWeight: 800, color: "#2d5a1a", letterSpacing: 4 }}>PROOF OF GRASS</div>
-              <div style={{ display: "flex", fontSize: u.length > 16 ? 60 : 78, fontWeight: 800, color: INK, marginTop: 6, marginBottom: 26 }}>@{u}</div>
+              <div style={{ display: "flex", fontFamily: NUN, fontSize: 28, fontWeight: 800, color: "#2d5a1a", letterSpacing: 4 }}>PROOF OF GRASS</div>
+              <div style={{ display: "flex", fontFamily: FRED, fontSize: u.length > 16 ? 62 : 82, fontWeight: 700, color: INK, marginTop: 6, marginBottom: 26 }}>@{u}</div>
               <div style={{ display: "flex" }}>
                 {streak ? <Chip value={String(streak.current_streak ?? 0)} label="DAY STREAK" /> : null}
                 {profile?.grass_score ? <Chip value={Number(profile.grass_score).toLocaleString("en-US")} label="GRASS SCORE" /> : null}
@@ -79,10 +90,10 @@ export default async function handler(req) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logo} width={250} height={250} style={{ marginRight: 44 }} />
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", fontSize: 92, fontWeight: 800, color: INK }}>Proof of Grass</div>
-            <div style={{ display: "flex", fontSize: 38, fontWeight: 700, color: "#2d5a1a", marginTop: 8 }}>Touch grass. Prove it. Build your streak.</div>
+            <div style={{ display: "flex", fontFamily: FRED, fontSize: 96, fontWeight: 700, color: INK }}>Proof of Grass</div>
+            <div style={{ display: "flex", fontFamily: NUN, fontSize: 36, fontWeight: 800, color: "#2d5a1a", marginTop: 8 }}>Touch grass. Prove it. Build your streak.</div>
             <div style={{ display: "flex", marginTop: 26 }}>
-              <div style={{ display: "flex", background: GOLD, border: `5px solid ${GREEN}`, borderRadius: 40, padding: "10px 30px", fontSize: 30, fontWeight: 800, color: INK }}>$TOUCHGRASS</div>
+              <div style={{ display: "flex", background: GOLD, border: `5px solid ${GREEN}`, borderRadius: 40, padding: "10px 30px", fontFamily: FRED, fontSize: 32, fontWeight: 700, color: INK }}>$TOUCHGRASS</div>
             </div>
           </div>
         </div>
@@ -90,7 +101,8 @@ export default async function handler(req) {
     );
   };
 
-  const opts = { width: 1200, height: 630, headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" } };
+  const fonts = await loadFonts(origin);
+  const opts = { width: 1200, height: 630, ...(fonts ? { fonts } : {}), headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" } };
   try {
     return new ImageResponse(build(profile?.avatar_url || null), opts);
   } catch {
