@@ -1,16 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import Head from "next/head";
+import V2Nav from "../../components/V2Nav";
+import V2BottomNav from "../../components/V2BottomNav";
+import { V2, V2GlobalCSS } from "../../utils/v2Theme";
 import { supabase } from "../../utils/supabase";
 import { SPOTLIGHT_BADGES, getSpotlightBadge, getSpotlightCaption } from "../../utils/spotlightBadges";
-
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const T = {
-  bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
-  border:"rgba(255,255,255,0.055)", borderGold:"rgba(200,168,75,0.35)",
-  olive:"#93a85a", gold:"#c8a84b",
-  white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
-};
 
 function fmtWeek(start, end) {
   if (!start || !end) return "";
@@ -26,6 +22,14 @@ function weekNumber(dateStr) {
   const start = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return `Week ${Math.ceil(((d - start) / 86400000 + start.getUTCDay() + 1) / 7)}`;
 }
+
+// Bright per-category colours (match /spotlight)
+const BRIGHT_ACCENTS = {
+  community_mvp:   { a:"#c2410c", t:"#ffe9df", tint:"#ffe9df" },
+  meme_lord:       { a:"#92700c", t:"#fdf0cf", tint:"#fdf0cf" },
+  biggest_shiller: { a:"#2d6b1a", t:"#e3f3d4", tint:"#e3f3d4" },
+  space_warrior:   { a:"#5b3fc4", t:"#ece7fb", tint:"#ece7fb" },
+};
 
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
 function loadImage(src) {
@@ -55,112 +59,49 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   const ctx = canvas.getContext("2d");
 
   const badge = getSpotlightBadge(win.category) ?? SPOTLIGHT_BADGES.community_mvp;
-  const { theme } = badge;
+  
+  const acc = BRIGHT_ACCENTS[win.category] ?? BRIGHT_ACCENTS.community_mvp;
 
-  // ── Background ──────────────────────────────────────────────────────────────
-  const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0,   theme.bg1);
-  bg.addColorStop(0.4, theme.bg2);
-  bg.addColorStop(0.8, theme.bg3);
-  bg.addColorStop(1,   "#080a06");
+  // ── Background: bright sky → soft green, same look as the site ─────────────
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0,   "#c5e3f7");
+  bg.addColorStop(0.4, "#e8f4fd");
+  bg.addColorStop(1,   "#f0f8ee");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // ── Category glow ───────────────────────────────────────────────────────────
-  const glow1 = ctx.createRadialGradient(W*0.5, H*0.3, 0, W*0.5, H*0.3, 560);
-  glow1.addColorStop(0, theme.glow1 + "2a");
-  glow1.addColorStop(1, "transparent");
+  // Landscape along the bottom (same art as the site hero), softened
+  try {
+    const land = await loadImage("/hero-landscape.png");
+    const lh = W * (land.height / land.width);
+    ctx.save(); ctx.globalAlpha = 0.55;
+    ctx.drawImage(land, 0, H - lh, W, lh);
+    ctx.restore();
+    const fade = ctx.createLinearGradient(0, H - lh, 0, H - lh + 260);
+    fade.addColorStop(0, "rgba(232,244,253,1)");
+    fade.addColorStop(1, "rgba(232,244,253,0)");
+    ctx.fillStyle = fade; ctx.fillRect(0, H - lh, W, 260);
+  } catch { /* continue */ }
+
+  // Soft category glow behind the badge
+  const glow1 = ctx.createRadialGradient(W*0.5, H*0.24, 0, W*0.5, H*0.24, 460);
+  glow1.addColorStop(0, acc.tint + "ff");
+  glow1.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = glow1;
   ctx.fillRect(0, 0, W, H);
 
-  const glow2 = ctx.createRadialGradient(W*0.15, H*0.72, 0, W*0.15, H*0.72, 360);
-  glow2.addColorStop(0, theme.glow2 + "14");
-  glow2.addColorStop(1, "transparent");
-  ctx.fillStyle = glow2;
-  ctx.fillRect(0, 0, W, H);
-
-  // Gold emerald glow at center
-  const glowC = ctx.createRadialGradient(W*0.5, H*0.5, 0, W*0.5, H*0.5, 400);
-  glowC.addColorStop(0, "rgba(147,168,90,0.06)");
-  glowC.addColorStop(1, "transparent");
-  ctx.fillStyle = glowC;
-  ctx.fillRect(0, 0, W, H);
-
-  // ── Deterministic particles ─────────────────────────────────────────────────
-  const rng = n => Math.abs(Math.sin(n * 127.1 + 311.7) * 43758.5453) % 1;
-  for (let i = 0; i < 90; i++) {
-    const x = rng(i * 1.1) * W;
-    const y = rng(i * 1.7) * H;
-    const r = rng(i * 2.3) * 1.6 + 0.2;
-    const a = rng(i * 3.1) * 0.5 + 0.08;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = theme.particle.replace("0.6", a.toFixed(2));
-    ctx.fill();
-  }
-
-  // Space Warrior audio waves
-  if (win.category === "space_warrior") {
-    ctx.save();
-    for (let i = 0; i < 6; i++) {
-      ctx.strokeStyle = `rgba(167,139,250,${0.06 + i*0.01})`;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      for (let x = 54; x < W - 54; x += 3) {
-        const amp = 7 + Math.sin(i * 1.4) * 3;
-        const yy  = H * 0.74 + i * 16 + Math.sin(x * (0.011 + i*0.002) + i) * amp;
-        x === 54 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
-      }
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  // Longest Streak sunrise rays
-  if (win.category === "community_mvp") {
-    ctx.save();
-    const cx = W/2, cy = H * 0.28;
-    for (let i = 0; i < 14; i++) {
-      const angle  = (i / 14) * Math.PI * 2;
-      const spread = Math.PI / 18;
-      const r1 = 100, r2 = 280;
-      const ray = ctx.createLinearGradient(
-        cx + Math.cos(angle)*r1, cy + Math.sin(angle)*r1,
-        cx + Math.cos(angle)*r2, cy + Math.sin(angle)*r2
-      );
-      ray.addColorStop(0, "rgba(249,115,22,0.1)");
-      ray.addColorStop(1, "transparent");
-      ctx.fillStyle = ray;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(angle)*r1, cy + Math.sin(angle)*r1);
-      ctx.lineTo(cx + Math.cos(angle-spread)*r2, cy + Math.sin(angle-spread)*r2);
-      ctx.lineTo(cx + Math.cos(angle+spread)*r2, cy + Math.sin(angle+spread)*r2);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  // ── Certificate border ──────────────────────────────────────────────────────
+  // ── White card frame ────────────────────────────────────────────────────────
   const m = 28;
-  // Outer gold border
-  ctx.strokeStyle = "rgba(200,168,75,0.45)";
-  ctx.lineWidth = 1.5;
-  roundRect(ctx, m, m, W-m*2, H-m*2, 22);
-  ctx.stroke();
-  // Inner accent
-  ctx.strokeStyle = badge.color + "22";
-  ctx.lineWidth = 1;
-  roundRect(ctx, m+10, m+10, W-(m+10)*2, H-(m+10)*2, 16);
-  ctx.stroke();
-  // Corner ornaments
-  [[m+2,m+2],[W-m-2,m+2],[m+2,H-m-2],[W-m-2,H-m-2]].forEach(([cx,cy]) => {
-    ctx.strokeStyle = "rgba(200,168,75,0.55)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2);
-    ctx.fillStyle = "rgba(200,168,75,0.45)"; ctx.fill();
-  });
+  ctx.save();
+  ctx.shadowColor = "rgba(26,74,10,0.16)"; ctx.shadowBlur = 36; ctx.shadowOffsetY = 8;
+  ctx.fillStyle = "rgba(255,255,255,0.78)";
+  roundRect(ctx, m, m, W-m*2, H-m*2, 40); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = "rgba(125,200,50,0.45)"; ctx.lineWidth = 2;
+  roundRect(ctx, m, m, W-m*2, H-m*2, 40); ctx.stroke();
+  ctx.strokeStyle = acc.a + "33"; ctx.lineWidth = 1;
+  roundRect(ctx, m+12, m+12, W-(m+12)*2, H-(m+12)*2, 30); ctx.stroke();
+
 
   // ════════════════════════════════════════════════════════════════════════
   // LAYOUT — 1080×1350 portrait, all Y coords absolute from top
@@ -178,7 +119,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   const div = (y, op = 0.32) => {
     const g = ctx.createLinearGradient(W*0.12, 0, W*0.88, 0);
     g.addColorStop(0, "transparent");
-    g.addColorStop(0.5, `rgba(200,168,75,${op})`);
+    g.addColorStop(0.5, `rgba(61,122,18,${op})`);
     g.addColorStop(1, "transparent");
     ctx.strokeStyle = g; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(W*0.12, y); ctx.lineTo(W*0.88, y); ctx.stroke();
@@ -187,7 +128,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // ── ZONE A — Branding ─────────────────────────────────────────────────────
   try {
     const logo = await loadImage("/touchgrass-transparent.png");
-    ctx.save(); ctx.globalAlpha = 0.6;
+    ctx.save(); ctx.globalAlpha = 1;
     ctx.drawImage(logo, W/2 - 16, 54, 32, 32);
     ctx.restore();
   } catch { /* continue */ }
@@ -195,12 +136,12 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   ctx.textAlign = "center";
 
   ctx.font = "600 20px 'Nunito',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.48)";
+  ctx.fillStyle = "#1a4a0a";
   ctx.letterSpacing = "0.2em";
   ctx.fillText("PROOF OF GRASS", W/2, 102);
 
   ctx.font = "700 13px 'Nunito',sans-serif";
-  ctx.fillStyle = "#c8a84b";
+  ctx.fillStyle = "#3d7a12";
   ctx.letterSpacing = "0.26em";
   ctx.fillText("COMMUNITY SPOTLIGHT", W/2, 126);
 
@@ -215,16 +156,16 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   try {
     const badgeImg = await loadImage(badge.image);
     ctx.save();
-    ctx.shadowColor = badge.color;
-    ctx.shadowBlur  = 48;
+    ctx.shadowColor = acc.a + "55";
+    ctx.shadowBlur  = 36;
     ctx.drawImage(badgeImg, badgeX, badgeY, badgeSize, badgeSize);
     ctx.restore();
     ctx.drawImage(badgeImg, badgeX, badgeY, badgeSize, badgeSize);
   } catch {
     ctx.beginPath();
     ctx.arc(W/2, badgeY + badgeSize/2, badgeSize/2, 0, Math.PI * 2);
-    ctx.fillStyle = badge.color + "18"; ctx.fill();
-    ctx.strokeStyle = badge.color + "60"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = acc.tint; ctx.fill();
+    ctx.strokeStyle = acc.a + "99"; ctx.lineWidth = 2; ctx.stroke();
     ctx.font = "72px serif";
     ctx.fillText(badge.emoji, W/2, badgeY + badgeSize/2 + 24);
   }
@@ -238,14 +179,14 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   const PILL_X = W/2 - PILL_W/2;
 
   const pillBg = ctx.createLinearGradient(PILL_X, PILL_Y, PILL_X + PILL_W, PILL_Y + PILL_H);
-  pillBg.addColorStop(0, badge.color + "30");
-  pillBg.addColorStop(1, badge.color + "14");
+  pillBg.addColorStop(0, acc.tint);
+  pillBg.addColorStop(1, "#ffffff");
   ctx.fillStyle = pillBg;
   roundRect(ctx, PILL_X, PILL_Y, PILL_W, PILL_H, 31); ctx.fill();
-  ctx.strokeStyle = badge.color + "90"; ctx.lineWidth = 1.5;
+  ctx.strokeStyle = acc.a + "aa"; ctx.lineWidth = 2;
   roundRect(ctx, PILL_X, PILL_Y, PILL_W, PILL_H, 31); ctx.stroke();
   ctx.font = "700 26px 'Nunito',sans-serif";
-  ctx.fillStyle = badge.color;
+  ctx.fillStyle = acc.a;
   ctx.letterSpacing = "0.1em";
   ctx.textAlign = "center";
   ctx.fillText(`${badge.emoji}  ${badge.label}`, W/2, PILL_Y + 40);
@@ -260,7 +201,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
     nameFontSize -= 4;
     ctx.font = `700 ${nameFontSize}px 'Fredoka',system-ui,sans-serif`;
   }
-  ctx.fillStyle = "#f0efea";
+  ctx.fillStyle = "#0d2a05";
   ctx.textAlign = "center";
   ctx.fillText(displayName, W/2, 630);
 
@@ -280,14 +221,14 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
       // Gold ring
       ctx.beginPath();
       ctx.arc(W/2, AVATAR_CY, AVATAR_R + 3, 0, Math.PI * 2);
-      ctx.strokeStyle = "#c8a84b";
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = acc.a;
+      ctx.lineWidth = 5;
       ctx.stroke();
       // Outer glow ring
       ctx.beginPath();
       ctx.arc(W/2, AVATAR_CY, AVATAR_R + 9, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(200,168,75,0.18)";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = acc.a + "33";
+      ctx.lineWidth = 3;
       ctx.stroke();
     } catch { /* skip */ }
   }
@@ -295,7 +236,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // ── ZONE D — Winner label (baseline y=930) ────────────────────────────────────
   // Avatar bottom = 900. Winner label top ~916. Baseline 930. Gap: 16px. Tight but clean.
   ctx.font = "500 16px 'Nunito',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.38)";
+  ctx.fillStyle = "#2d5a1a";
   ctx.letterSpacing = "0.2em";
   ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, 910);
 
@@ -303,18 +244,17 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   div(930, 0.2);
 
   ctx.font = "700 50px 'Fredoka',system-ui,sans-serif";
-  ctx.fillStyle = "#c8a84b";
+  ctx.fillStyle = acc.a;
   ctx.letterSpacing = "0.01em";
   ctx.fillText(weekNumber(win.week_start), W/2, 1000);
 
   ctx.font = "400 20px 'Nunito',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.58)";
+  ctx.fillStyle = "#1e3a10";
   ctx.letterSpacing = "0.04em";
   ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 1036);
 
   // ── ZONE F — Stats anchored near bottom (y=1080–1210) ────────────────────────
   // Canvas H=1350. Branding at 1290. Stats top 1042, height 148, bottom 1190. Gap to branding: 100px.
-  div(1010, 0.2);
 
   const STATS_Y = 1102;
   const CARD_H  = 148;
@@ -334,13 +274,13 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
       const cardX = cx - cardW/2;
 
       // Card background
-      const cardBg = ctx.createLinearGradient(cardX, STATS_Y, cardX, STATS_Y + CARD_H);
-      cardBg.addColorStop(0, "rgba(255,255,255,0.06)");
-      cardBg.addColorStop(1, "rgba(255,255,255,0.01)");
-      ctx.fillStyle = cardBg;
-      roundRect(ctx, cardX, STATS_Y, cardW, CARD_H, 16); ctx.fill();
-      ctx.strokeStyle = "rgba(200,168,75,0.22)"; ctx.lineWidth = 1;
-      roundRect(ctx, cardX, STATS_Y, cardW, CARD_H, 16); ctx.stroke();
+      ctx.save();
+      ctx.shadowColor = "rgba(26,74,10,0.10)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 3;
+      ctx.fillStyle = "#ffffff";
+      roundRect(ctx, cardX, STATS_Y, cardW, CARD_H, 20); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = "#cfe3bf"; ctx.lineWidth = 1.5;
+      roundRect(ctx, cardX, STATS_Y, cardW, CARD_H, 20); ctx.stroke();
 
       // Emoji
       ctx.font = "28px serif";
@@ -349,13 +289,13 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
 
       // Label ABOVE number — gives context before the number
       ctx.font = "600 16px 'Nunito',sans-serif";
-      ctx.fillStyle = "rgba(240,239,234,0.62)";
+      ctx.fillStyle = "#2d5a1a";
       ctx.letterSpacing = "0.06em";
       ctx.fillText(s.label, cx, STATS_Y + 68);
 
       // Value — large and bold
       ctx.font = "700 54px 'Fredoka',system-ui,sans-serif";
-      ctx.fillStyle = "#f0efea";
+      ctx.fillStyle = "#0d2a05";
       ctx.letterSpacing = "-0.01em";
       ctx.fillText(s.value, cx, STATS_Y + 128);
     });
@@ -365,7 +305,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   // ── ZONE G — Bottom branding ──────────────────────────────────────────────
   div(H - 90, 0.25);
   ctx.font = "500 18px 'Nunito',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.26)";
+  ctx.fillStyle = "#2d5a1a";
   ctx.letterSpacing = "0.1em";
   ctx.textAlign = "center";
   ctx.fillText("ProofOfGrass.app", W/2, H - 54);
@@ -387,9 +327,11 @@ export default function SpotlightCardPage() {
   const [loading,       setLoading]       = useState(true);
   const [isMob,         setIsMob]         = useState(false);
   const [mounted,       setMounted]       = useState(false);
+  const [viewer,        setViewer]        = useState("");
 
   useEffect(() => {
     setMounted(true);
+    try { const u = localStorage.getItem("pog_username"); if (u) setViewer(u.replace(/@/g, "").toLowerCase().trim()); } catch {}
     setIsMob(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
   }, []);
 
@@ -492,82 +434,65 @@ export default function SpotlightCardPage() {
 
   const badge = selectedWin ? getSpotlightBadge(selectedWin.category) : null;
 
-  const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html{overflow-x:hidden;}
-    body{background:#080a06;color:#f0efea;font-family:'Nunito',sans-serif;}
-    ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:#080a06;}
-    ::-webkit-scrollbar-thumb{background:#93a85a40;border-radius:2px;}
-    .win-opt{background:#141710;border:1px solid rgba(255,255,255,0.055);border-radius:10px;
-      padding:14px 16px;cursor:pointer;transition:border-color 0.15s;
-      display:flex;align-items:center;gap:10px;width:100%;text-align:left;}
-    .win-opt:hover{border-color:rgba(200,168,75,0.35);}
-    .win-opt.sel{border-color:#c8a84b;background:rgba(200,168,75,0.05);}
-    .btn{border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;
-      font-size:13px;letter-spacing:0.06em;border-radius:10px;padding:14px 28px;
-      transition:opacity 0.15s;width:100%;}
-    .btn:hover{opacity:0.85;}.btn:disabled{opacity:0.4;cursor:default;}
-    @media(max-width:640px){.preview-img{width:100%!important;height:auto!important;}}
+  const acc = BRIGHT_ACCENTS[selectedWin?.category] ?? BRIGHT_ACCENTS.community_mvp;
+
+  const css = V2GlobalCSS + `
+    .sc-bg { min-height:100vh; background:
+      linear-gradient(180deg, rgba(197,227,247,.55) 0%, rgba(232,244,253,.35) 45%, rgba(240,248,238,.75) 100%),
+      url('/hero-landscape.png') center bottom / cover no-repeat fixed, ${V2.skyBlue}; }
+    .sc-wrap { max-width:560px; margin:0 auto; padding:28px 16px calc(110px + env(safe-area-inset-bottom)); }
+    .sc-card { background:rgba(255,255,255,.94); border:1px solid ${V2.borderWhite}; border-radius:24px; padding:clamp(16px,4vw,24px); margin-bottom:16px; box-shadow:0 4px 22px rgba(26,74,10,.09); }
+    .sc-eyebrow { display:flex; align-items:center; justify-content:center; gap:10px; font-size:12px; font-weight:800; letter-spacing:.3em; text-transform:uppercase; color:${V2.grassDark}; margin-bottom:6px; }
+    .sc-eyebrow i { width:8px; height:8px; border-radius:50%; background:${V2.grassLime}; display:block; }
+    .sc-label { font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:${V2.grassDark}; margin-bottom:12px; }
+    .win-opt { background:#fff; border:1px solid ${V2.borderSoft}; border-radius:16px; padding:12px 14px; cursor:pointer; transition:border-color .15s, background .15s; display:flex; align-items:center; gap:12px; width:100%; text-align:left; font-family:inherit; min-height:56px; }
+    .win-opt:hover { border-color:${V2.grassLime}; }
+    .win-opt.sel { border-color:${V2.grassLime}; background:#eef7e6; }
+    .btn { border:none; cursor:pointer; font-family:${V2.fontSans}; font-weight:800; font-size:15px; border-radius:999px; padding:16px 28px; min-height:52px; transition:transform .15s, opacity .15s; width:100%; }
+    .btn:hover { opacity:.9; } .btn:active { transform:scale(.98); } .btn:disabled { opacity:.45; cursor:default; }
+    .btn-main { background:${V2.gradientGrassBtn}; color:#fff; box-shadow:0 4px 16px rgba(61,122,18,.28); }
+    .btn-soft { background:#e6f3d6; color:${V2.grassDark}; border:1px solid #c9e4ad; }
+    .btn-ghost { background:#fff; color:${V2.forestLight}; border:1px solid ${V2.borderSoft}; }
+    .sc-wrap a:focus-visible, .sc-wrap button:focus-visible { outline:3px solid ${V2.grassLime}; outline-offset:2px; }
+    @media(max-width:640px){ .preview-img{ width:100%!important; height:auto!important; } }
   `;
 
   if (!mounted) return null;
 
   return (
     <>
+      <Head><title>Spotlight Card | Proof of Grass</title></Head>
       <style dangerouslySetInnerHTML={{ __html:css }} />
-      <div style={{ minHeight:"100vh", background:T.bg }}>
+      <div className="sc-bg">
+        <V2Nav username={viewer} onUsernameChange={setViewer} showUpload={() => { window.location.href = "/#upload"; }} />
+        <main className="sc-wrap">
 
-        {/* NAV */}
-        <nav style={{ position:"sticky", top:0, zIndex:100, display:"flex",
-          alignItems:"center", justifyContent:"space-between",
-          padding:"0 clamp(14px,4vw,48px)", height:56,
-          background:`${T.bg}ec`, backdropFilter:"blur(18px)",
-          borderBottom:`1px solid ${T.border}` }}>
-          <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width:26,height:26,objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif",fontSize:17,fontWeight:700,color:T.white }}>touch grass</span>
-          </Link>
-          {username && (
-            <Link href={`/u/${username}`}
-              style={{ fontSize:11,color:T.dim,textDecoration:"none",letterSpacing:"0.06em" }}>
-              ← @{username}
-            </Link>
-          )}
-        </nav>
-
-        <div style={{ maxWidth:560, margin:"0 auto", padding:"32px clamp(14px,5vw,32px) 64px" }}>
-
-          {/* Header */}
-          <div style={{ textAlign:"center", marginBottom:32 }}>
-            <div style={{ fontSize:42, marginBottom:12 }}>🏆</div>
-            <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
-              fontSize:"clamp(28px,5vw,44px)", fontWeight:700, color:T.white,
-              lineHeight:1.1, marginBottom:8 }}>Spotlight Card</h1>
-            <p style={{ fontSize:13, color:T.dim, lineHeight:1.6 }}>
+          <header style={{ textAlign:"center", marginBottom:22 }}>
+            <div className="sc-eyebrow"><i aria-hidden="true" />Community Spotlight</div>
+            <h1 style={{ fontFamily:V2.fontSerif, fontWeight:700, fontSize:"clamp(30px,8vw,46px)", lineHeight:1.05,
+              color:V2.forestGreen, margin:"0 0 8px" }}>🏆 Spotlight Card</h1>
+            <p style={{ fontSize:15, color:V2.forestLight, fontWeight:500, lineHeight:1.45 }}>
               Generate your Community Spotlight award card to share on X.
             </p>
-          </div>
+            {username && (
+              <Link href="/spotlight" style={{ display:"inline-block", marginTop:10, fontSize:13, fontWeight:700,
+                color:V2.forestMid, textDecoration:"none" }}>← Back to Spotlight</Link>
+            )}
+          </header>
 
           {loading ? (
-            <div style={{ textAlign:"center", padding:"48px 0", color:T.dim }}>Loading…</div>
+            <div className="sc-card" style={{ textAlign:"center", color:V2.textMuted, fontWeight:600 }}>Loading…</div>
           ) : wins.length === 0 ? (
-            <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:16,
-              padding:"48px 24px", textAlign:"center" }}>
-              <div style={{ fontSize:32, marginBottom:12, opacity:0.3 }}>🏆</div>
-              <div style={{ fontSize:14, color:T.dim, marginBottom:6 }}>No spotlight wins yet.</div>
-              <div style={{ fontSize:12, color:T.dim }}>Spotlight cards are only available to Community Spotlight winners.</div>
+            <div className="sc-card" style={{ textAlign:"center", padding:"40px 24px" }}>
+              <div style={{ fontSize:32, marginBottom:12 }}>🏆</div>
+              <div style={{ fontSize:16, fontWeight:800, color:V2.forestGreen, marginBottom:6 }}>No spotlight wins yet.</div>
+              <div style={{ fontSize:14, color:V2.forestLight, fontWeight:500 }}>Spotlight cards are only available to Community Spotlight winners.</div>
             </div>
           ) : (
             <>
-              {/* Win selector */}
               {wins.length > 1 && (
-                <div style={{ background:T.bg2, border:`1px solid ${T.border}`,
-                  borderRadius:14, padding:20, marginBottom:20 }}>
-                  <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em",
-                    textTransform:"uppercase", color:T.dim, marginBottom:12 }}>
-                    Select Spotlight Win
-                  </div>
+                <section className="sc-card">
+                  <div className="sc-label">Select Spotlight Win</div>
                   <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                     {wins.map(w => {
                       const b = getSpotlightBadge(w.category);
@@ -575,106 +500,78 @@ export default function SpotlightCardPage() {
                       return (
                         <button key={w.id} className={`win-opt${isSel?" sel":""}`}
                           onClick={() => { setSelectedWin(w); setPreview(null); }}>
-                          {b?.image && (
-                            <img src={b.image} alt="" style={{ width:36,height:36,objectFit:"contain",flexShrink:0 }} />
-                          )}
-                          <div style={{ flex:1 }}>
-                            <div style={{ fontSize:13, fontWeight:600, color:isSel?T.gold:T.white }}>
-                              {b?.title ?? w.category}
-                            </div>
-                            <div style={{ fontSize:10, color:T.dim, marginTop:2 }}>
-                              {fmtWeek(w.week_start, w.week_end)}
-                            </div>
+                          {b?.image && <img src={b.image} alt="" style={{ width:40,height:40,objectFit:"contain",flexShrink:0 }} />}
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize:15, fontWeight:800, color:V2.forestGreen }}>{b?.title ?? w.category}</div>
+                            <div style={{ fontSize:12, color:V2.forestLight, fontWeight:600, marginTop:2 }}>{fmtWeek(w.week_start, w.week_end)}</div>
                           </div>
-                          {isSel && <span style={{ fontSize:10,color:T.gold,fontWeight:700 }}>✓</span>}
+                          {isSel && <span style={{ fontSize:14, color:V2.grassDark, fontWeight:800 }}>✓</span>}
                         </button>
                       );
                     })}
                   </div>
-                </div>
+                </section>
               )}
 
-              {/* Selected win info card */}
               {selectedWin && badge && (
-                <div style={{ background:T.bg2,
-                  border:`1px solid ${badge.color}40`,
-                  borderRadius:14, padding:20, marginBottom:20,
-                  boxShadow:`0 0 24px ${badge.color}12` }}>
+                <section className="sc-card" style={{ borderColor:acc.a + "44" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:14 }}>
                     <img src={badge.image} alt={badge.title}
-                      style={{ width:64,height:64,objectFit:"contain",flexShrink:0,
-                        filter:`drop-shadow(0 0 12px ${badge.color}60)` }} />
-                    <div>
-                      <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.14em",
-                        textTransform:"uppercase", color:badge.color, marginBottom:4 }}>
+                      style={{ width:72,height:72,objectFit:"contain",flexShrink:0 }} />
+                    <div style={{ minWidth:0 }}>
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:11, fontWeight:800,
+                        letterSpacing:".08em", textTransform:"uppercase", padding:"6px 11px", borderRadius:999,
+                        background:acc.tint, color:acc.a, marginBottom:6 }}>
                         {badge.emoji} {badge.label}
-                      </div>
-                      <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
-                        fontSize:20, fontWeight:700, color:T.white }}>{badge.title}</div>
-                      <div style={{ fontSize:11, color:T.dim, marginTop:4 }}>
-                        {fmtWeek(selectedWin.week_start, selectedWin.week_end)}
-                        {" · "}{weekNumber(selectedWin.week_start)}
+                      </span>
+                      <div style={{ fontFamily:V2.fontSerif, fontSize:22, fontWeight:700, color:V2.forestGreen }}>{badge.title}</div>
+                      <div style={{ fontSize:13, color:V2.forestLight, fontWeight:600, marginTop:3 }}>
+                        {fmtWeek(selectedWin.week_start, selectedWin.week_end)}{" · "}{weekNumber(selectedWin.week_start)}
                       </div>
                     </div>
                   </div>
                   {selectedWin.description && (
-                    <div style={{ marginTop:14, fontSize:12, color:T.muted,
-                      lineHeight:1.6, borderLeft:`2px solid ${badge.color}40`, paddingLeft:12 }}>
+                    <div style={{ marginTop:14, fontSize:14, color:V2.forestLight, fontWeight:500,
+                      lineHeight:1.5, borderLeft:`3px solid ${acc.a}66`, paddingLeft:12 }}>
                       {selectedWin.description}
                     </div>
                   )}
-                </div>
+                </section>
               )}
 
-              {/* Generate button */}
               {!preview && (
-                <button className="btn" onClick={generate} disabled={generating}
-                  style={{ background: badge?.color ?? T.gold, color:"#0e1108", marginBottom:16 }}>
+                <button className="btn btn-main" onClick={generate} disabled={generating} style={{ marginBottom:16 }}>
                   {generating ? "Generating…" : "✦ Generate Spotlight Card"}
                 </button>
               )}
 
-              {/* Caption copied toast */}
               {captionCopied && (
-                <div style={{ textAlign:"center", fontSize:11, color:T.olive,
-                  padding:"8px 0", marginBottom:8 }}>
+                <div role="status" style={{ textAlign:"center", fontSize:13, fontWeight:700, color:V2.grassDark, padding:"8px 0", marginBottom:8 }}>
                   ✓ X caption copied to clipboard — ready to paste when you share!
                 </div>
               )}
 
-              {/* Preview */}
               {preview && (
                 <div style={{ marginBottom:16 }}>
-                  <div style={{ borderRadius:14, overflow:"hidden",
-                    border:`1px solid ${T.borderGold}`,
-                    boxShadow:"0 0 40px rgba(200,168,75,0.15)", marginBottom:16 }}>
-                    <img className="preview-img" src={preview} alt="Spotlight Card"
-                      style={{ width:"100%", display:"block" }} />
+                  <div style={{ borderRadius:20, overflow:"hidden", border:"1px solid #cfe3bf",
+                    boxShadow:"0 8px 30px rgba(26,74,10,.16)", marginBottom:16, background:"#fff" }}>
+                    <img className="preview-img" src={preview} alt="Spotlight Card" style={{ width:"100%", display:"block" }} />
                   </div>
-
                   <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                    <button className="btn" onClick={download} disabled={downloading}
-                      style={{ background: badge?.color ?? T.gold, color:"#0e1108" }}>
-                      {downloading ? "Sharing…"
-                        : isMob && navigator.share ? "Share Spotlight Card"
-                        : "Download Spotlight Card"}
+                    <button className="btn btn-main" onClick={download} disabled={downloading}>
+                      {downloading ? "Sharing…" : isMob && navigator.share ? "Share Spotlight Card" : "Download Spotlight Card"}
                     </button>
-                    <button className="btn" onClick={copyCaption}
-                      style={{ background:"rgba(147,168,90,0.1)", color:T.olive,
-                        border:`1px solid rgba(147,168,90,0.3)`, fontSize:12 }}>
+                    <button className="btn btn-soft" onClick={copyCaption}>
                       {captionCopied ? "✓ Caption Copied!" : "📋 Copy X Caption"}
                     </button>
-                    <button className="btn" onClick={() => setPreview(null)}
-                      style={{ background:"transparent", color:T.dim,
-                        border:`1px solid ${T.border}`, fontSize:12 }}>
-                      Regenerate
-                    </button>
+                    <button className="btn btn-ghost" onClick={() => setPreview(null)}>Regenerate</button>
                   </div>
                 </div>
               )}
             </>
           )}
-        </div>
+        </main>
+        <V2BottomNav username={viewer} onLogProof={() => router.push("/#upload")} onMore={() => {}} />
       </div>
     </>
   );
