@@ -816,7 +816,7 @@ export default function ProfilePage({ og }) {
           {badgeShelf.length>0 && (
             <div id="badge-shelf" className="pf-card" style={{ marginBottom:16 }}>
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray, marginBottom:14 }}>Badges</div>
-              <BadgeShelf badges={badgeShelf} />
+              <BadgeShelf badges={badgeShelf} shareFor={isOwner ? username : ""} />
             </div>
           )}
 
