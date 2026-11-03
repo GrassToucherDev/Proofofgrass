@@ -156,7 +156,7 @@ async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, 
   try {
     const badgeImg = await loadImage(badge.image);
     ctx.save();
-    ctx.shadowColor = acc.a + "55";
+    ctx.shadowColor = acc.a + "33";
     ctx.shadowBlur  = 36;
     ctx.drawImage(badgeImg, badgeX, badgeY, badgeSize, badgeSize);
     ctx.restore();
