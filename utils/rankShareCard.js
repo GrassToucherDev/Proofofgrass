@@ -1,5 +1,6 @@
 // utils/rankShareCard.js — leaderboard "my rank" share card (1080×1350), same bright look as the other cards.
 import { loadImageSafe } from "./spotlightImage";
+import { drawShareHeader } from "./shareHeader";
 import { withShareTags } from "./shareTags";
 
 const INK = "#0d2a05", GREEN = "#1f6b12", CREAM = "#fdf6e2", GOLD = "#f6b93b";
@@ -38,13 +39,11 @@ export async function renderRankCard(r) {
 
   const cx = W / 2;
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-  try { const logo = await loadImageSafe("/touchgrass-transparent.png"); ctx.drawImage(logo, cx - 30, 52, 60, 60); } catch {}
-  ctx.font = "800 24px 'Nunito',sans-serif"; ctx.fillStyle = "#1a4a0a"; ctx.letterSpacing = "0.22em";
-  ctx.fillText("PROOF OF GRASS", cx, 148); ctx.letterSpacing = "0px";
+  await drawShareHeader(ctx, W, "Proof of Grass", "Leaderboard");
 
-  const rw = 760, rh = 112, rx = (W - rw) / 2, ry = 176;
-  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 56); ctx.fill();
-  ctx.lineWidth = 8; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 56); ctx.stroke();
+  const rw = 760, rh = 96, rx = (W - rw) / 2, ry = 196;
+  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 48); ctx.fill();
+  ctx.lineWidth = 8; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 48); ctx.stroke();
   ctx.fillStyle = INK; ctx.font = "700 50px 'Fredoka',system-ui,sans-serif"; ctx.textBaseline = "middle";
   ctx.fillText("🏆 LEADERBOARD RANK", cx, ry + rh / 2 + 3); ctx.textBaseline = "alphabetic";
 

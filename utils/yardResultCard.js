@@ -1,5 +1,6 @@
 // utils/yardResultCard.js — Yard challenge result share card (1080×1350): 1v1 or Grove vs Grove. Same bright look as the other cards.
 import { loadImageSafe } from "./spotlightImage";
+import { drawShareHeader } from "./shareHeader";
 import { withShareTags } from "./shareTags";
 import { bannerSrc, bannerFallbackUrl } from "./groveBanners";
 
@@ -57,18 +58,14 @@ export async function renderYardResultCard(d) {
   } catch {}
 
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  await drawShareHeader(ctx, W, "Proof of Grass", "The Yard");
   const logo = await loadImageSafe("/touchgrass-transparent.png").catch(() => null);
-  if (logo) ctx.drawImage(logo, cx - 30, 52, 60, 60);
-  ctx.font = "800 24px 'Nunito',sans-serif"; ctx.fillStyle = "#1a4a0a"; ctx.letterSpacing = "0.22em";
-  ctx.fillText("PROOF OF GRASS", cx, 148); ctx.letterSpacing = "0px";
 
-  const label = d.kind === "grove" ? "🌳 GROVE CHALLENGE" : "⚔️ CHALLENGE RESULT";
-  const rw = 800, rh = 112, rx = (W - rw) / 2, ry = 176;
-  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 56); ctx.fill();
-  ctx.lineWidth = 8; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 56); ctx.stroke();
-  ctx.fillStyle = INK; fit(ctx, label, rw - 70, 50, 30); ctx.textBaseline = "middle"; ctx.fillText(label, cx, ry + rh / 2 + 3); ctx.textBaseline = "alphabetic";
-  ctx.font = "800 28px 'Nunito',sans-serif"; ctx.fillStyle = "#2d5a1a"; ctx.letterSpacing = "0.12em";
-  ctx.fillText(`${d.duration}-DAY CHALLENGE`, cx, 330); ctx.letterSpacing = "0px";
+  const label = d.kind === "grove" ? "🌳 GROVE vs GROVE" : "⚔️ HEAD TO HEAD";
+  const rw = 640, rh = 96, rx = (W - rw) / 2, ry = 214;
+  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 48); ctx.fill();
+  ctx.lineWidth = 6; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 48); ctx.stroke();
+  ctx.fillStyle = INK; fit(ctx, `${label} · ${d.duration} DAYS`, rw - 50, 40, 24); ctx.textBaseline = "middle"; ctx.fillText(`${label} · ${d.duration} DAYS`, cx, ry + rh / 2 + 3); ctx.textBaseline = "alphabetic";
 
   const sides = [{ s: d.a, x: 290, k: "a" }, { s: d.b, x: 790, k: "b" }];
   const imgs = await Promise.all(sides.map((o) => sideImage(d, o.s)));

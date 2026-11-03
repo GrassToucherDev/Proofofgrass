@@ -1,5 +1,6 @@
 // utils/badgeShareCard.js — "Badge earned" share card (1080×1350), same bright look as the Spotlight / Grass Draw cards.
 import { loadImageSafe } from "./spotlightImage";
+import { drawShareHeader } from "./shareHeader";
 import { ROMAN, TIER_COLORS } from "./badges/registry";
 import { withShareTags } from "./shareTags";
 
@@ -38,14 +39,12 @@ export async function renderBadgeCard({ username, badge }) {
   } catch {}
 
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-  try { const logo = await loadImageSafe("/touchgrass-transparent.png"); ctx.drawImage(logo, W/2 - 30, 52, 60, 60); } catch {}
-  ctx.font = "800 24px 'Nunito',sans-serif"; ctx.fillStyle = "#1a4a0a"; ctx.letterSpacing = "0.22em";
-  ctx.fillText("PROOF OF GRASS", W/2, 148); ctx.letterSpacing = "0px";
+  await drawShareHeader(ctx, W, "Proof of Grass", "Badges");
 
   // Ribbon
-  const rw = 700, rh = 112, rx = (W - rw)/2, ry = 176;
-  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 56); ctx.fill();
-  ctx.lineWidth = 8; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 56); ctx.stroke();
+  const rw = 700, rh = 96, rx = (W - rw) / 2, ry = 196;
+  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 48); ctx.fill();
+  ctx.lineWidth = 8; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 48); ctx.stroke();
   ctx.fillStyle = INK; ctx.font = "700 52px 'Fredoka',system-ui,sans-serif"; ctx.textBaseline = "middle";
   ctx.fillText("🏅 BADGE EARNED", W/2, ry + rh/2 + 3); ctx.textBaseline = "alphabetic";
 
