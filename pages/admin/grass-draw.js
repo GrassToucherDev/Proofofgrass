@@ -646,7 +646,7 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
                 {results.map((w,i)=>(
                   <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${T.border}`}}>
                     <span style={{fontSize:13,color:T.white}}>@{w.username}</span>
-                    <span style={{fontSize:11,color:T.dim}}>{parseFloat(w.total_active_entries).toFixed(2)} entries</span>
+                    <span style={{fontSize:11,color:T.dim}}>{parseFloat(w.entries ?? w.total_active_entries).toFixed(2)} entries</span>
                   </div>
                 ))}
                 {drawSeed && (
