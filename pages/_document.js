@@ -8,13 +8,8 @@ export default function Document() {
         <meta name="description" content="Official Touch Grass application for outdoor verification, streak tracking, wallet integration, and ecosystem rewards." />
         <meta name="application-name" content="Proof of Grass" />
         <meta name="generator" content="Touch Grass" />
-        <meta property="og:title" content="Touch Grass | Proof of Grass" />
-        <meta property="og:description" content="Official Touch Grass application for outdoor verification, streak tracking, wallet integration, and ecosystem rewards." />
         <meta property="og:site_name" content="Proof of Grass" />
         <meta property="og:type" content="website" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Touch Grass | Proof of Grass" />
-        <meta name="twitter:description" content="Official Touch Grass application for outdoor verification, streak tracking, wallet integration, and ecosystem rewards." />
         <meta name="twitter:site" content="@XTouchGrass" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#080a06" />
