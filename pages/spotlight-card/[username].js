@@ -6,6 +6,7 @@ import V2Nav from "../../components/V2Nav";
 import V2BottomNav from "../../components/V2BottomNav";
 import { V2, V2GlobalCSS } from "../../utils/v2Theme";
 import { supabase } from "../../utils/supabase";
+import { renderWinnersImage, loadImageSafe } from "../../utils/spotlightImage";
 import { SPOTLIGHT_BADGES, getSpotlightBadge, getSpotlightCaption } from "../../utils/spotlightBadges";
 
 function fmtWeek(start, end) {
@@ -52,263 +53,109 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 // ─── Canvas generator ─────────────────────────────────────────────────────────
+// Matches the weekly "Community Spotlight" announcement graphic: we render that same
+// artwork with just this winner filled in, then crop the banner and the winner's panel
+// from it and build the rest of the card in the same cream / forest-green style.
+const INK = "#0d2a05", GREEN = "#1f6b12", CREAM = "#fdf6e2", GOLD = "#f6b93b";
+const PANEL = {   // outer panel bounds inside the 1672×941 announcement artwork
+  community_mvp:   { x1:158, x2:832,  y1:252, y2:575 },
+  meme_lord:       { x1:838, x2:1514, y1:252, y2:575 },
+  biggest_shiller: { x1:158, x2:832,  y1:576, y2:898 },
+  space_warrior:   { x1:838, x2:1514, y1:576, y2:898 },
+};
+
 async function generateSpotlightCard({ win, avatarUrl, streakCount, grassScore, spotlightWinCount }) {
   const W = 1080, H = 1350;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
+  try { await Promise.all([document.fonts.load("700 40px 'Fredoka'"), document.fonts.load("800 30px 'Nunito'")]); } catch {}
 
   const badge = getSpotlightBadge(win.category) ?? SPOTLIGHT_BADGES.community_mvp;
-  
-  const acc = BRIGHT_ACCENTS[win.category] ?? BRIGHT_ACCENTS.community_mvp;
+  const key = PANEL[win.category] ? win.category : "community_mvp";
+  const acc = BRIGHT_ACCENTS[key];
 
-  // ── Background: bright sky → soft green, same look as the site ─────────────
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0,   "#c5e3f7");
-  bg.addColorStop(0.4, "#e8f4fd");
-  bg.addColorStop(1,   "#f0f8ee");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
+  // Backdrop (same soft green as the announcement)
+  ctx.fillStyle = "#eef6e2"; ctx.fillRect(0, 0, W, H);
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "rgba(197,227,247,0.55)"); sky.addColorStop(0.35, "rgba(238,246,226,0)");
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
 
-  // Landscape along the bottom (same art as the site hero), softened
-  try {
-    const land = await loadImage("/hero-landscape.png");
-    const lh = W * (land.height / land.width);
-    ctx.save(); ctx.globalAlpha = 0.55;
-    ctx.drawImage(land, 0, H - lh, W, lh);
-    ctx.restore();
-    const fade = ctx.createLinearGradient(0, H - lh, 0, H - lh + 260);
-    fade.addColorStop(0, "rgba(232,244,253,1)");
-    fade.addColorStop(1, "rgba(232,244,253,0)");
-    ctx.fillStyle = fade; ctx.fillRect(0, H - lh, W, 260);
-  } catch { /* continue */ }
+  // The announcement artwork with only this winner filled in
+  const weekLabel = fmtWeek(win.week_start, win.week_end);
+  const artUrl = await renderWinnersImage({
+    weekLabel,
+    winners: { [key]: { handle: win.display_name || win.username, avatarUrl } },
+  });
+  const art = await loadImageSafe(artUrl);
 
-  // Soft category glow behind the badge
-  const glow1 = ctx.createRadialGradient(W*0.5, H*0.24, 0, W*0.5, H*0.24, 460);
-  glow1.addColorStop(0, acc.tint + "ff");
-  glow1.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = glow1;
-  ctx.fillRect(0, 0, W, H);
+  // Header banner (logo + "Community Spotlight" + date pill)
+  const hx = 125, hy = 18, hw = 1420, hh = 232;
+  const HW = 1000, HH = HW * hh / hw;
+  ctx.drawImage(art, hx, hy, hw, hh, (W - HW) / 2, 36, HW, HH);
 
-  // ── White card frame ────────────────────────────────────────────────────────
-  const m = 28;
+  // Winner panel (category ribbon, avatar, name plate)
+  const P = PANEL[key];
+  const pw = P.x2 - P.x1, ph = P.y2 - P.y1;
+  const PW = 960, PH = PW * ph / pw, PX = (W - PW) / 2, PY = 36 + HH + 14;
   ctx.save();
-  ctx.shadowColor = "rgba(26,74,10,0.16)"; ctx.shadowBlur = 36; ctx.shadowOffsetY = 8;
-  ctx.fillStyle = "rgba(255,255,255,0.78)";
-  roundRect(ctx, m, m, W-m*2, H-m*2, 40); ctx.fill();
+  roundRect(ctx, PX, PY, PW, PH, 38); ctx.clip();
+  ctx.drawImage(art, P.x1, P.y1, pw, ph, PX, PY, PW, PH);
   ctx.restore();
-  ctx.strokeStyle = "rgba(125,200,50,0.45)"; ctx.lineWidth = 2;
-  roundRect(ctx, m, m, W-m*2, H-m*2, 40); ctx.stroke();
-  ctx.strokeStyle = acc.a + "33"; ctx.lineWidth = 1;
-  roundRect(ctx, m+12, m+12, W-(m+12)*2, H-(m+12)*2, 30); ctx.stroke();
 
-
-  // ════════════════════════════════════════════════════════════════════════
-  // LAYOUT — 1080×1350 portrait, all Y coords absolute from top
-  //
-  // Zone A  54– 148  Branding (logo, PROOF OF GRASS, COMMUNITY SPOTLIGHT)
-  // Zone B 160– 500  Badge (340px — trophy removed, badge is the statement)
-  // Zone C —         (merged into Zone B)
-  // Zone D 396– 560  Category pill + username + winner label  ← order fixed
-  // Zone E 560– 680  Week number + date range
-  // Zone F 680– 820  Stats row (3 cards)
-  // Zone G 820–1350  Bottom padding + branding
-  // ════════════════════════════════════════════════════════════════════════
-
-  // ── Divider helper ────────────────────────────────────────────────────────
-  const div = (y, op = 0.32) => {
-    const g = ctx.createLinearGradient(W*0.12, 0, W*0.88, 0);
-    g.addColorStop(0, "transparent");
-    g.addColorStop(0.5, `rgba(61,122,18,${op})`);
-    g.addColorStop(1, "transparent");
-    ctx.strokeStyle = g; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(W*0.12, y); ctx.lineTo(W*0.88, y); ctx.stroke();
-  };
-
-  // ── ZONE A — Branding ─────────────────────────────────────────────────────
+  // Badge
+  const BY = PY + PH + 18, BH = 380;
   try {
-    const logo = await loadImage("/touchgrass-transparent.png");
-    ctx.save(); ctx.globalAlpha = 1;
-    ctx.drawImage(logo, W/2 - 16, 54, 32, 32);
+    const badgeImg = await loadImageSafe(badge.image);
+    const BW = BH * badgeImg.width / badgeImg.height;
+    ctx.save(); ctx.shadowColor = "rgba(26,74,10,0.25)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
+    ctx.drawImage(badgeImg, W/2 - BW/2, BY, BW, BH);
     ctx.restore();
-  } catch { /* continue */ }
+  } catch { /* skip */ }
 
-  ctx.textAlign = "center";
-
-  ctx.font = "600 20px 'Nunito',sans-serif";
-  ctx.fillStyle = "#1a4a0a";
-  ctx.letterSpacing = "0.2em";
-  ctx.fillText("PROOF OF GRASS", W/2, 102);
-
-  ctx.font = "700 13px 'Nunito',sans-serif";
-  ctx.fillStyle = "#3d7a12";
-  ctx.letterSpacing = "0.26em";
-  ctx.fillText("COMMUNITY SPOTLIGHT", W/2, 126);
-
-  div(142);
-
-  // ── ZONE B+C — Badge (340px, no trophy) ─────────────────────────────────────
-  // Trophy removed — badge IS the statement. Moved up to fill the space.
-  const badgeSize = 380;
-  const badgeX    = W/2 - badgeSize/2;
-  const badgeY    = 110;
-
-  try {
-    const badgeImg = await loadImage(badge.image);
+  // Side pills flanking the badge (week + winner), in the announcement's gold-ribbon style
+  const pill = (txt, cx, cy, w) => {
     ctx.save();
-    ctx.shadowColor = acc.a + "33";
-    ctx.shadowBlur  = 36;
-    ctx.drawImage(badgeImg, badgeX, badgeY, badgeSize, badgeSize);
+    ctx.fillStyle = GOLD; roundRect(ctx, cx - w/2, cy - 34, w, 68, 34); ctx.fill();
+    ctx.lineWidth = 5; ctx.strokeStyle = GREEN; roundRect(ctx, cx - w/2, cy - 34, w, 68, 34); ctx.stroke();
+    ctx.fillStyle = INK; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "800 30px 'Fredoka','Nunito',sans-serif"; ctx.letterSpacing = "0";
+    ctx.fillText(txt, cx, cy + 2);
     ctx.restore();
-    ctx.drawImage(badgeImg, badgeX, badgeY, badgeSize, badgeSize);
-  } catch {
-    ctx.beginPath();
-    ctx.arc(W/2, badgeY + badgeSize/2, badgeSize/2, 0, Math.PI * 2);
-    ctx.fillStyle = acc.tint; ctx.fill();
-    ctx.strokeStyle = acc.a + "99"; ctx.lineWidth = 2; ctx.stroke();
-    ctx.font = "72px serif";
-    ctx.fillText(badge.emoji, W/2, badgeY + badgeSize/2 + 24);
-  }
+  };
+  pill(weekNumber(win.week_start), 215, BY + BH/2 - 40, 270);
+  pill(`${badge.emoji} Winner`, W - 215, BY + BH/2 - 40, 270);
+  ctx.save();
+  ctx.fillStyle = acc.a; ctx.textAlign = "center"; ctx.font = "800 22px 'Nunito',sans-serif"; ctx.letterSpacing = "0.12em";
+  ctx.fillText(badge.label, 215, BY + BH/2 + 40);
+  ctx.fillText("SPOTLIGHT", W - 215, BY + BH/2 + 40);
+  ctx.restore();
 
-  // BADGE_BOTTOM = 160 + 340 = 500
-
-  // ── ZONE D — Category pill (y=524–586) ───────────────────────────────────────
-  const PILL_Y = 464;
-  const PILL_H = 62;
-  const PILL_W = 520;
-  const PILL_X = W/2 - PILL_W/2;
-
-  const pillBg = ctx.createLinearGradient(PILL_X, PILL_Y, PILL_X + PILL_W, PILL_Y + PILL_H);
-  pillBg.addColorStop(0, acc.tint);
-  pillBg.addColorStop(1, "#ffffff");
-  ctx.fillStyle = pillBg;
-  roundRect(ctx, PILL_X, PILL_Y, PILL_W, PILL_H, 31); ctx.fill();
-  ctx.strokeStyle = acc.a + "aa"; ctx.lineWidth = 2;
-  roundRect(ctx, PILL_X, PILL_Y, PILL_W, PILL_H, 31); ctx.stroke();
-  ctx.font = "700 26px 'Nunito',sans-serif";
-  ctx.fillStyle = acc.a;
-  ctx.letterSpacing = "0.1em";
-  ctx.textAlign = "center";
-  ctx.fillText(`${badge.emoji}  ${badge.label}`, W/2, PILL_Y + 40);
-
-  // ── ZONE D — Username (baseline y=660) ───────────────────────────────────────
-  // PILL bottom = 562. 660 baseline = top ~591. Gap from pill: 29px. Clean.
-  const displayName = `@${win.display_name || win.username}`;
-  let nameFontSize = 92;
-  ctx.letterSpacing = "-0.01em";
-  ctx.font = `700 ${nameFontSize}px 'Fredoka',system-ui,sans-serif`;
-  while (ctx.measureText(displayName).width > 980 && nameFontSize > 52) {
-    nameFontSize -= 4;
-    ctx.font = `700 ${nameFontSize}px 'Fredoka',system-ui,sans-serif`;
-  }
-  ctx.fillStyle = "#0d2a05";
-  ctx.textAlign = "center";
-  ctx.fillText(displayName, W/2, 630);
-
-  // ── ZONE D — Avatar (110px radius, centered below username) ──────────────────
-  // Top = 680, center = 790, bottom = 900
-  const AVATAR_R  = 110;
-  const AVATAR_CY = 770;
-  if (avatarUrl) {
-    try {
-      const avatarImg = await loadImage(avatarUrl);
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(W/2, AVATAR_CY, AVATAR_R, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(avatarImg, W/2 - AVATAR_R, AVATAR_CY - AVATAR_R, AVATAR_R*2, AVATAR_R*2);
-      ctx.restore();
-      // Gold ring
-      ctx.beginPath();
-      ctx.arc(W/2, AVATAR_CY, AVATAR_R + 3, 0, Math.PI * 2);
-      ctx.strokeStyle = acc.a;
-      ctx.lineWidth = 5;
-      ctx.stroke();
-      // Outer glow ring
-      ctx.beginPath();
-      ctx.arc(W/2, AVATAR_CY, AVATAR_R + 9, 0, Math.PI * 2);
-      ctx.strokeStyle = acc.a + "33";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-    } catch { /* skip */ }
-  }
-
-  // ── ZONE D — Winner label (baseline y=930) ────────────────────────────────────
-  // Avatar bottom = 900. Winner label top ~916. Baseline 930. Gap: 16px. Tight but clean.
-  ctx.font = "500 16px 'Nunito',sans-serif";
-  ctx.fillStyle = "#2d5a1a";
-  ctx.letterSpacing = "0.2em";
-  ctx.fillText("COMMUNITY SPOTLIGHT WINNER", W/2, 910);
-
-  // ── ZONE E — Week (y=960–1040) ────────────────────────────────────────────────
-  div(930, 0.2);
-
-  ctx.font = "700 50px 'Fredoka',system-ui,sans-serif";
-  ctx.fillStyle = acc.a;
-  ctx.letterSpacing = "0.01em";
-  ctx.fillText(weekNumber(win.week_start), W/2, 1000);
-
-  ctx.font = "400 20px 'Nunito',sans-serif";
-  ctx.fillStyle = "#1e3a10";
-  ctx.letterSpacing = "0.04em";
-  ctx.fillText(fmtWeek(win.week_start, win.week_end), W/2, 1036);
-
-  // ── ZONE F — Stats anchored near bottom (y=1080–1210) ────────────────────────
-  // Canvas H=1350. Branding at 1290. Stats top 1042, height 148, bottom 1190. Gap to branding: 100px.
-
-  const STATS_Y = 1102;
-  const CARD_H  = 148;
+  // Stats (cream cards with forest-green borders, like the panels)
   const stats = [];
-  if (streakCount)            stats.push({ emoji:"🔥", value:`${streakCount}`, label:"Current Streak" });
-  if (grassScore)             stats.push({ emoji:"⚡", value:Number(grassScore).toLocaleString(), label:"Grass Score" });
-  if (spotlightWinCount > 0)  stats.push({ emoji:"🏆", value:`${spotlightWinCount}`, label:"Spotlight Wins" });
-
-  if (stats.length > 0) {
-    const totalW = 940;
-    const colW   = Math.floor(totalW / stats.length);
-    const startX = W/2 - totalW/2;
-
-    stats.forEach((s, i) => {
-      const cx    = startX + i * colW + colW/2;
-      const cardW = colW - 14;
-      const cardX = cx - cardW/2;
-
-      // Card background
-      ctx.save();
-      ctx.shadowColor = "rgba(26,74,10,0.10)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 3;
-      ctx.fillStyle = "#ffffff";
-      roundRect(ctx, cardX, STATS_Y, cardW, CARD_H, 20); ctx.fill();
-      ctx.restore();
-      ctx.strokeStyle = "#cfe3bf"; ctx.lineWidth = 1.5;
-      roundRect(ctx, cardX, STATS_Y, cardW, CARD_H, 20); ctx.stroke();
-
-      // Emoji
-      ctx.font = "28px serif";
-      ctx.letterSpacing = "0";
-      ctx.fillText(s.emoji, cx, STATS_Y + 34);
-
-      // Label ABOVE number — gives context before the number
-      ctx.font = "600 16px 'Nunito',sans-serif";
-      ctx.fillStyle = "#2d5a1a";
-      ctx.letterSpacing = "0.06em";
-      ctx.fillText(s.label, cx, STATS_Y + 68);
-
-      // Value — large and bold
-      ctx.font = "700 54px 'Fredoka',system-ui,sans-serif";
-      ctx.fillStyle = "#0d2a05";
-      ctx.letterSpacing = "-0.01em";
-      ctx.fillText(s.value, cx, STATS_Y + 128);
+  if (streakCount)           stats.push({ emoji:"🔥", value:`${streakCount}`, label:"Current Streak" });
+  if (grassScore)            stats.push({ emoji:"⚡", value:Number(grassScore).toLocaleString(), label:"Grass Score" });
+  if (spotlightWinCount > 0) stats.push({ emoji:"🏆", value:`${spotlightWinCount}`, label:"Spotlight Wins" });
+  const SY = BY + BH + 16, SH = 130;
+  if (stats.length) {
+    const totalW = 960, gap = 18, cw = (totalW - gap * (stats.length - 1)) / stats.length;
+    stats.forEach((st, i) => {
+      const x = (W - totalW)/2 + i * (cw + gap), cx = x + cw/2;
+      ctx.fillStyle = CREAM; roundRect(ctx, x, SY, cw, SH, 28); ctx.fill();
+      ctx.lineWidth = 5; ctx.strokeStyle = GREEN; roundRect(ctx, x, SY, cw, SH, 28); ctx.stroke();
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.letterSpacing = "0";
+      ctx.font = "26px serif"; ctx.fillStyle = INK; ctx.fillText(st.emoji, cx, SY + 36);
+      ctx.font = "800 17px 'Nunito',sans-serif"; ctx.fillStyle = "#2d5a1a"; ctx.letterSpacing = "0.06em";
+      ctx.fillText(st.label.toUpperCase(), cx, SY + 62);
+      ctx.font = "700 52px 'Fredoka',system-ui,sans-serif"; ctx.fillStyle = INK; ctx.letterSpacing = "-0.01em";
+      ctx.fillText(st.value, cx, SY + 118);
     });
   }
 
-  // ── ZONE G — Bottom branding ──────────────────────────────────────────────
-  // ── ZONE G — Bottom branding ──────────────────────────────────────────────
-  div(H - 90, 0.25);
-  ctx.font = "500 18px 'Nunito',sans-serif";
-  ctx.fillStyle = "#2d5a1a";
-  ctx.letterSpacing = "0.1em";
-  ctx.textAlign = "center";
-  ctx.fillText("ProofOfGrass.app", W/2, H - 54);
+  // Footer
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  ctx.font = "800 22px 'Nunito',sans-serif"; ctx.fillStyle = GREEN; ctx.letterSpacing = "0.1em";
+  ctx.fillText("ProofOfGrass.app", W/2, H - 34);
 
   return canvas.toDataURL("image/png");
 }
