@@ -8,6 +8,7 @@ import V2Nav from "../../../components/V2Nav";
 import V2BottomNav from "../../../components/V2BottomNav";
 import { V2, V2GlobalCSS } from "../../../utils/v2Theme";
 import { loadImageSafe } from "../../../utils/spotlightImage";
+import { drawShareHeader } from "../../../utils/shareHeader";
 import { withShareTags } from "../../../utils/shareTags";
 
 const INK = "#0d2a05", GREEN = "#1f6b12", CREAM = "#fdf6e2", GOLD = "#f6b93b";
@@ -45,13 +46,10 @@ async function renderWinCard({ username, avatarUrl, win, totalWins }) {
 
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
   // Brand + ribbon
-  try { const logo = await loadImageSafe("/touchgrass-transparent.png"); ctx.drawImage(logo, W/2 - 30, 52, 60, 60); } catch {}
-  ctx.font = "800 24px 'Nunito',sans-serif"; ctx.fillStyle = "#1a4a0a"; ctx.letterSpacing = "0.22em";
-  ctx.fillText("PROOF OF GRASS", W/2, 148);
-  ctx.letterSpacing = "0px";
-  const rw = 780, rh = 118, rx = (W - rw)/2, ry = 176;
-  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 59); ctx.fill();
-  ctx.lineWidth = 8; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 59); ctx.stroke();
+  await drawShareHeader(ctx, W, "Proof of Grass", "Grass Draw");
+  const rw = 780, rh = 96, rx = (W - rw) / 2, ry = 196;
+  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 48); ctx.fill();
+  ctx.lineWidth = 8; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 48); ctx.stroke();
   ctx.fillStyle = INK; fit(ctx, "🎉 GRASS DRAW WINNER", rw - 70, 54, 32);
   ctx.textBaseline = "middle"; ctx.fillText("🎉 GRASS DRAW WINNER", W/2, ry + rh/2 + 3); ctx.textBaseline = "alphabetic";
   ctx.font = "800 28px 'Nunito',sans-serif"; ctx.fillStyle = "#2d5a1a"; ctx.letterSpacing = "0.06em";

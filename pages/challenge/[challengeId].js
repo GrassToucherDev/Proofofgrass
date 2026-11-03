@@ -3,6 +3,8 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { yardError } from "../../utils/yardErrors";
 import { supabase } from "../../utils/supabase";
+import ShareCardSheet from "../../components/ShareCardSheet";
+import { renderYardResultCard, yardResultCaption } from "../../utils/yardResultCard";
 
 const T = {
   bg:"#0a0b08", bg2:"#111209", bg3:"#181a12",
@@ -127,6 +129,7 @@ export default function ChallengePage() {
   const [accepting, setAccepting]   = useState(false);
   const [declining, setDeclining]   = useState(false);
   const [actionError, setActionError] = useState("");
+  const [sharingResult, setSharingResult] = useState(false);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("pog_username") : null;
@@ -413,8 +416,22 @@ export default function ChallengePage() {
                   ? `Final proof days: @${challenge.challenger} ${challenge.challenger_days} · @${challenge.challenged} ${challenge.challenged_days}`
                   : `${challenge.duration_days}-day challenge finished.`}
               </div>
+              <button onClick={() => setSharingResult(true)} style={{ marginTop:16, background:T.gold, color:"#0d2a05", border:"none", borderRadius:999, padding:"10px 22px", fontWeight:800, fontSize:14, cursor:"pointer", fontFamily:"inherit" }}>↗ Share result</button>
             </div>
           )}
+          {sharingResult && challenge && (() => {
+            const days = (u) => (u === challenge.challenger ? challenge.challenger_days : challenge.challenged_days) ?? (progress.find((p) => p.username === u)?.days_complete ?? 0);
+            const mk = (u) => ({ label: "@" + u, days: days(u), username: u });
+            const d = { kind: "1v1", a: mk(challenge.challenger), b: mk(challenge.challenged), duration: challenge.duration_days, result: challenge.result || (challenge.winner ? "won" : "tied"),
+              winner: challenge.winner === challenge.challenger ? "a" : challenge.winner === challenge.challenged ? "b" : null, start: challenge.started_at, end: challenge.ends_at, link: shareUrl };
+            return <ShareCardSheet title="Challenge result" filename="proof-of-grass-challenge.png" caption={yardResultCaption(d)} onClose={() => setSharingResult(false)}
+              render={async () => {
+                const { data: pr } = await supabase.from("Profiles").select("username,avatar_url").in("username", [d.a.username, d.b.username]);
+                const av = (u) => pr?.find((x) => x.username === u)?.avatar_url || null;
+                d.a.avatarUrl = av(d.a.username); d.b.avatarUrl = av(d.b.username);
+                return renderYardResultCard(d);
+              }} />;
+          })()}
 
           {/* FAILED */}
           {challenge.status === "failed" && (

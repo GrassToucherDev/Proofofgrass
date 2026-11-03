@@ -1,5 +1,6 @@
 // utils/streakShareCard.js — streak / streak-milestone share card (1080×1350), same bright look as the other cards.
 import { loadImageSafe } from "./spotlightImage";
+import { drawShareHeader } from "./shareHeader";
 import { withShareTags } from "./shareTags";
 
 export const STREAK_MILESTONES = [7, 14, 30, 50, 100, 180, 365, 500, 1000];
@@ -44,14 +45,12 @@ export async function renderStreakCard({ username, streak, best }) {
   } catch {}
 
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-  try { const logo = await loadImageSafe("/touchgrass-transparent.png"); ctx.drawImage(logo, cx - 30, 52, 60, 60); } catch {}
-  ctx.font = "800 24px 'Nunito',sans-serif"; ctx.fillStyle = "#1a4a0a"; ctx.letterSpacing = "0.22em";
-  ctx.fillText("PROOF OF GRASS", cx, 148); ctx.letterSpacing = "0px";
+  await drawShareHeader(ctx, W, "Proof of Grass", "Streaks");
 
   const label = milestone ? "🔥 STREAK MILESTONE" : "🔥 DAY STREAK";
-  const rw = 780, rh = 112, rx = (W - rw) / 2, ry = 176;
-  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 56); ctx.fill();
-  ctx.lineWidth = 8; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 56); ctx.stroke();
+  const rw = 780, rh = 96, rx = (W - rw) / 2, ry = 196;
+  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 48); ctx.fill();
+  ctx.lineWidth = 8; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 48); ctx.stroke();
   ctx.fillStyle = INK; ctx.font = "700 50px 'Fredoka',system-ui,sans-serif"; ctx.textBaseline = "middle";
   ctx.fillText(label, cx, ry + rh / 2 + 3); ctx.textBaseline = "alphabetic";
 
