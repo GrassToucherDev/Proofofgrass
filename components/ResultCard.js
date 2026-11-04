@@ -1,3 +1,4 @@
+import { compressProofPhoto } from "../utils/compressProofPhoto";
 import { useRef, useEffect, useState, useCallback } from "react";
 import InAppBrowserNote from "./InAppBrowserNote";
 import { signInWithGoogle } from "../utils/googleSignIn";
@@ -328,16 +329,22 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       const photo = proofFile instanceof File ? proofFile : null;
       if(!photo){setSubmitError("Add your outdoor photo to log your proof.");setSubmitStatus("error");return false;}
       try{
-        const ur = await fetch("/api/proof/upload-url",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername})});
-        const uj = await ur.json().catch(()=>({}));
-        if(ur.status===409&&uj.code==="already_logged"){setSubmitStatus("success");return true;}
-        if(!ur.ok){
-          setSubmitError(uj.code==="not_signed_in"?"This username is secured — sign in with Google to log your proof.":uj.code==="not_owner"?"This username belongs to another account.":uj.error||"Couldn't start the photo upload — tap again.");
-          setSubmitStatus("error");return false;
+        const small = await compressProofPhoto(photo);
+        let lastErr = null;
+        for(let attempt=0; attempt<2; attempt++){   // one automatic retry with a fresh one-time link
+          const ur = await fetch("/api/proof/upload-url",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername})});
+          const uj = await ur.json().catch(()=>({}));
+          if(ur.status===409&&uj.code==="already_logged"){setSubmitStatus("success");return true;}
+          if(!ur.ok){
+            setSubmitError(uj.code==="not_signed_in"?"This username is secured — sign in with Google to log your proof.":uj.code==="not_owner"?"This username belongs to another account.":uj.error||"Couldn't start the photo upload — tap again.");
+            setSubmitStatus("error");return false;
+          }
+          const up = await supabase.storage.from("proof-photos").uploadToSignedUrl(uj.path,uj.token,small,{contentType:small.type||"image/jpeg",upsert:true});
+          if(!up.error){ lastErr = null; break; }
+          lastErr = up.error; console.warn("[proof upload] attempt "+(attempt+1)+" failed", up.error?.message||up.error);
         }
-        const up = await supabase.storage.from("proof-photos").uploadToSignedUrl(uj.path,uj.token,photo,{contentType:photo.type||"image/png",upsert:true});
-        if(up.error){setSubmitError("Photo upload failed — tap again.");setSubmitStatus("error");return false;}
-      }catch(e){setSubmitError("Photo upload failed — tap again.");setSubmitStatus("error");return false;}
+        if(lastErr){setSubmitError("Photo upload failed — check your connection and tap again.");setSubmitStatus("error");return false;}
+      }catch(e){console.warn("[proof upload] threw",e);setSubmitError("Photo upload failed — check your connection and tap again.");setSubmitStatus("error");return false;}
     }
     const rpcWithRetry = async(retries=2)=>{
       for(let attempt=0;attempt<=retries;attempt++){
