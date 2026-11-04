@@ -33,7 +33,7 @@ function laurel(c, cx, cy, flip, sz = 1) {
 export async function drawProofCard(ctx, W, H, opts) {
   const { photo, streak, dateStr, topPct, location } = opts;
   try { await Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("800 20px Nunito")]); } catch {}
-  const [mainLogo, hero, logo] = await Promise.all([load("/touchgrass-logo-card.png"), load("/hero-landscape.png"), load("/touchgrass-transparent.png")]);
+  const [mainLogo, hero, logo] = await Promise.all([load("/touchgrass-logo-card.png"), load("/hero-landscape.png"), load("/images/touchgrass-token.png")]);
   ctx.save(); ctx.letterSpacing = "0px"; ctx.textBaseline = "alphabetic";
 
   // sky + soft meadow
