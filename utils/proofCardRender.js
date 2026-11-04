@@ -164,15 +164,15 @@ export async function drawProofCard(ctx, W, H, opts) {
   const cy = cy0 + chh / 2;
   // side-view mascot (pops slightly above the capsule)
   if (mascotImg) { const mh = 132, mw = mh * mascotImg.width / mascotImg.height; ctx.save(); ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3; ctx.drawImage(mascotImg, FX + 22, cy - mh / 2 - 8, mw, mh); ctx.restore(); }
-  ctx.textAlign = "left"; ctx.fillStyle = GREEN; ctx.font = `800 22px ${NUN}`; ctx.letterSpacing = "6px"; ctx.fillText("CERTIFIED BY", FX + 200, cy - 14); ctx.letterSpacing = "0px";
-  ctx.fillStyle = INK; ctx.font = `700 56px ${FRED}`; ctx.fillText("Touch Grass", FX + 200, cy + 40);
+  ctx.textAlign = "left"; ctx.fillStyle = GREEN; ctx.font = `800 22px ${NUN}`; ctx.letterSpacing = "6px"; ctx.fillText("CERTIFIED BY", FX + 200, cy - 16); ctx.letterSpacing = "0px";
+  ctx.fillStyle = INK; ctx.font = `700 52px ${FRED}`; ctx.fillText("Touch Grass", FX + 200, cy + 36);
   // verified seal at the capsule's right end
   const sealX = FX + lw - 76; ctx.fillStyle = LIME; ctx.beginPath(); ctx.arc(sealX, cy, 32, 0, 7); ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = "#2f7d10"; ctx.stroke();
   ctx.strokeStyle = "#fff"; ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(sealX - 13, cy + 1); ctx.lineTo(sealX - 4, cy + 10); ctx.lineTo(sealX + 14, cy - 10); ctx.stroke();
   // date
   if (calImg) ctx.drawImage(calImg, RX + 34, cy - 34, 68, 68);
-  ctx.fillStyle = GREEN; ctx.font = `800 22px ${NUN}`; ctx.letterSpacing = "3px"; ctx.fillText("DATE CERTIFIED", RX + 124, cy - 12); ctx.letterSpacing = "0px";
-  ctx.fillStyle = INK; ctx.font = `800 42px ${NUN}`; ctx.fillText(dateStr || "", RX + 124, cy + 34);
+  ctx.fillStyle = GREEN; ctx.font = `800 22px ${NUN}`; ctx.letterSpacing = "3px"; ctx.fillText("DATE CERTIFIED", RX + 124, cy - 16); ctx.letterSpacing = "0px";
+  ctx.fillStyle = INK; ctx.font = `700 52px ${FRED}`; ctx.fillText(dateStr || "", RX + 124, cy + 36);
 
   // grass tufts framing the bottom corners
   if (grassL) { const gh = 190, gw = gh * grassL.width / grassL.height; ctx.drawImage(grassL, PX - 56, H - gh + 16, gw, gh); }
