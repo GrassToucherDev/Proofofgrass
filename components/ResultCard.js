@@ -1,3 +1,4 @@
+import { drawProofCard } from "../utils/proofCardRender";
 import { compressProofPhoto } from "../utils/compressProofPhoto";
 import { useRef, useEffect, useState, useCallback } from "react";
 import InAppBrowserNote from "./InAppBrowserNote";
@@ -444,7 +445,8 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
     const canvas=canvasRef.current;
     if(!canvas||!imageSrc) return;
     const ctx=canvas.getContext("2d");
-    const W=1600,H=900;
+    const classicCard=!selectedTheme||selectedTheme==="classic";
+    const W=1600,H=classicCard?1200:900;
     // Each run owns the (shared) canvas until a newer run starts. A stale run whose image
     // finishes loading late must NOT draw or publish its result, otherwise an old streak
     // number ends up on the card after the new one was drawn.
@@ -453,7 +455,18 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
     canvas.width=W;canvas.height=H;
     const img=new Image();
     img.onerror=()=>{console.error("[canvas] failed to load imageSrc:",imageSrc);};
-    img.onload=()=>{if(cancelled) return; try{
+    img.onload=()=>{if(cancelled) return;
+      if(classicCard){
+        const loc=locationMode==="manual"&&locationCity.trim()?[locationCity.trim(),locationRegion.trim()].filter(Boolean).join(", "):"";
+        drawProofCard(ctx,W,H,{photo:img,streak:currentStreak,dateStr,topPct:getTopPercent(currentStreak),location:loc}).then(()=>{
+          if(cancelled) return;
+          const dataUrl=canvas.toDataURL("image/png");
+          setDownloadUrl(dataUrl);setCardStreak(currentStreak);
+          try{fetch(dataUrl).then(r=>r.blob()).then(blob=>{if(cancelled) return;sharableFileRef.current=new File([blob],"proof-of-grass.png",{type:"image/png"});});}catch{}
+        }).catch(e=>console.error("[canvas] v2 render error:",e));
+        return;
+      }
+      try{
       const scale=Math.max(W/img.width,H/img.height);
       const dw=img.width*scale,dh=img.height*scale;
       const overflow=dw-W;
@@ -545,7 +558,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
     }catch(canvasErr){console.error("[canvas] render error:",canvasErr?.message,canvasErr);if(!cancelled){try{setDownloadUrl(canvas.toDataURL("image/png"));setCardStreak(currentStreak);}catch{}}}};
     img.src=imageSrc;
     return ()=>{cancelled=true;};
-  },[imageSrc,dateStr,currentStreak,selectedTheme]);
+  },[imageSrc,dateStr,currentStreak,selectedTheme,locationMode,locationCity,locationRegion]);
 
   // ── V2 UI constants ───────────────────────────────────────────────────────
   const V2G = {
