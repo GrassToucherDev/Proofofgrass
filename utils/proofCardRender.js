@@ -26,7 +26,11 @@ function laurel(c, cx, cy, flip, sz = 1) {
 export async function drawProofCard(ctx, W, H, opts) {
   const { photo, streak, dateStr, topPct, location } = opts;
   try { await Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("800 20px Nunito")]); } catch {}
-  const [mainLogo, bgImg, logo, laurelImg, crownImg, grassL, grassR] = await Promise.all([load("/touchgrass-logo-card.png"), load("/card/bg.jpg"), load("/images/touchgrass-token.png"), load("/card/laurel.png"), load("/card/crown.png"), load("/card/grass-l.png"), load("/card/grass-r.png")]);
+  const tierName = tierFor(streak), tierIdx = ["ROOTED", "LOCKED IN", "ELITE", "LEGENDARY", "IMMORTAL", "MYTHIC", "ETERNAL", "ASCENDED", "TRANSCENDENT"].indexOf(tierName) + 1;
+  const bgSrc = streak >= 365 ? "/card/bg-night.jpg" : streak >= 100 ? "/card/bg-sunset.jpg" : "/card/bg.jpg";
+  const [mainLogo, bgImg, logo, laurelImg, grassL, grassR, sparkles, cornerImg, pinImg, calImg, medalImg, shieldImg] = await Promise.all([
+    load("/touchgrass-logo-card.png"), load(bgSrc), load("/images/touchgrass-token.png"), load("/card/laurel.png"), load("/card/grass-l.png"), load("/card/grass-r.png"),
+    load("/card/sparkles.png"), load("/card/corner.png"), load("/card/pin.png"), load("/card/cal.png"), load("/card/medal.png"), tierIdx ? load(`/card/tier-${tierIdx}.png`) : Promise.resolve(null)]);
   LAUREL = laurelImg;
   ctx.save(); ctx.letterSpacing = "0px"; ctx.textBaseline = "alphabetic";
 
@@ -44,6 +48,7 @@ export async function drawProofCard(ctx, W, H, opts) {
   ctx.fillStyle = "rgba(125,200,50,0.16)"; ctx.beginPath(); ctx.ellipse(W * 0.72, PY + PH + 30, 760, 120, 0, 0, 7); ctx.fill();
   ctx.fillStyle = "rgba(125,200,50,0.12)"; ctx.beginPath(); ctx.ellipse(W * 0.25, PY + PH + 50, 700, 100, 0, 0, 7); ctx.fill();
   ctx.restore();
+  if (sparkles) ctx.drawImage(sparkles, 0, 0, W, H);
 
   // header: mascot + wordmark | title
   if (mainLogo) { // official Touch Grass logo
@@ -65,6 +70,14 @@ export async function drawProofCard(ctx, W, H, opts) {
   if (photo) { const sc = Math.max(FW / photo.width, FH / photo.height), dw = photo.width * sc, dh = photo.height * sc; ctx.drawImage(photo, FX + (FW - dw) / 2, FY + (FH - dh) / 2, dw, dh); }
   else { ctx.fillStyle = "#cfe8b8"; ctx.fillRect(FX, FY, FW, FH); }
   ctx.restore();
+
+  // glossy corner ornaments on the photo frame
+  if (cornerImg) {
+    const cw0 = 96, ch0 = cw0 * cornerImg.height / cornerImg.width;
+    [[FX - 14, FY - 14, 1, 1], [FX + FW + 14, FY - 14, -1, 1], [FX - 14, FY + FH + 14, 1, -1], [FX + FW + 14, FY + FH + 14, -1, -1]].forEach(([x0, y0, sx, sy]) => {
+      ctx.save(); ctx.translate(x0, y0); ctx.scale(sx, sy); ctx.drawImage(cornerImg, 0, 0, cw0, ch0); ctx.restore();
+    });
+  }
 
   // right column
   const RX = FX + FW + 60, RW = PX + PW - 56 - RX, RC = RX + RW / 2;
@@ -91,18 +104,30 @@ export async function drawProofCard(ctx, W, H, opts) {
     ctx.save(); const tg = ctx.createLinearGradient(0, y, 0, y + 84); tg.addColorStop(0, "#fff0b8"); tg.addColorStop(1, "#f2c14e");
     ctx.shadowColor = "rgba(184,150,46,.35)"; ctx.shadowBlur = 14; ctx.fillStyle = tg; rr(ctx, RX, y, RW, 84, 42); ctx.fill(); ctx.restore();
     ctx.lineWidth = 3; ctx.strokeStyle = "#d9a82c"; rr(ctx, RX, y, RW, 84, 42); ctx.stroke();
-    ctx.fillStyle = "#5a3e00"; ctx.font = `italic 800 ${tier.length > 9 ? 36 : 44}px ${SERIF}`; const tsz = tier.length > 9 ? 36 : 44; ctx.font = `italic 800 ${tsz}px ${SERIF}`;
-    const tw2 = ctx.measureText(tier).width, ch = 48, cwid = crownImg ? ch * crownImg.width / crownImg.height : 0, gap = crownImg ? 14 : 0, total = cwid + gap + tw2, x0 = RC - total / 2;
-    if (crownImg) ctx.drawImage(crownImg, x0, y + 42 - ch / 2 + 2, cwid, ch);
-    ctx.textAlign = "left"; ctx.fillText(tier, x0 + cwid + gap, y + 58); ctx.textAlign = "center";
-    y += 112;
+    const tsz = tier.length > 9 ? 36 : 44; ctx.fillStyle = "#5a3e00"; ctx.font = `italic 800 ${tsz}px ${SERIF}`;
+    const sh = 104, sw = shieldImg ? sh * shieldImg.width / shieldImg.height : 0;
+    if (shieldImg) ctx.drawImage(shieldImg, RX + 14, y + 42 - sh / 2, sw, sh);
+    ctx.fillText(tier, RX + 14 + sw + (RW - 14 - sw) / 2, y + 58);
+    y += 108;
   }
-  if (topPct) { ctx.fillStyle = INK; ctx.font = `italic 800 42px ${SERIF}`; ctx.fillText(`Top ${topPct}%`, RC, y + 30); laurel(ctx, RC - 104, y + 22, false, 0.62); laurel(ctx, RC + 104, y + 22, true, 0.62); y += 72; }
+  if (topPct) {
+    const mh = 100, mw = medalImg ? mh * medalImg.width / medalImg.height : 0, gx = 22, tx = 300; // text block ~300 wide
+    const x0 = RC - (mw + gx + tx) / 2;
+    if (medalImg) {
+      ctx.drawImage(medalImg, x0, y, mw, mh);
+      ctx.textAlign = "center"; ctx.fillStyle = "#5a3e00"; ctx.font = `800 12px ${NUN}`; ctx.fillText("TOP", x0 + mw / 2, y + 31);
+      ctx.font = `italic 800 23px ${SERIF}`; ctx.fillText(`${topPct}%`, x0 + mw / 2, y + 54);
+    }
+    ctx.textAlign = "left"; ctx.fillStyle = INK; ctx.font = `italic 800 40px ${SERIF}`; ctx.fillText(`Top ${topPct}%`, x0 + mw + gx, y + 44);
+    ctx.fillStyle = GREEN; ctx.font = `800 24px ${NUN}`; ctx.fillText("of all Grass Touchers", x0 + mw + gx, y + 80);
+    ctx.textAlign = "center"; y += 112;
+  }
   ctx.fillStyle = "rgba(31,107,18,.18)"; ctx.fillRect(RX, y, RW, 3); y += 46;
   if (location) {
     ctx.textAlign = "left"; ctx.font = `800 34px ${NUN}`; ctx.fillStyle = INK;
     let t = location; while (ctx.measureText(t).width > RW - 60 && t.length > 4) t = t.slice(0, -2);
-    ctx.fillText("📍 " + (t === location ? t : t + "…"), RX + 8, y);
+    if (pinImg) ctx.drawImage(pinImg, RX + 8, y - 34, 34 * pinImg.width / pinImg.height, 34);
+    ctx.fillText(t === location ? t : t + "…", RX + 58, y);
   }
 
   // footer: certified + date
@@ -112,13 +137,15 @@ export async function drawProofCard(ctx, W, H, opts) {
   ctx.textAlign = "left"; ctx.fillStyle = INK; ctx.font = `italic 700 40px ${SERIF}`; ctx.fillText("Certified by ", FX + 164, bY + 50);
   const cw = ctx.measureText("Certified by ").width; ctx.fillStyle = LIME; ctx.font = `italic 800 44px ${SERIF}`; ctx.fillText("Touch Grass", FX + 164 + cw, bY + 50);
   ctx.fillStyle = "rgba(31,107,18,.35)"; ctx.fillRect(RX - 20, bY, 3, 80);
-  ctx.font = "56px sans-serif"; ctx.fillStyle = INK; ctx.fillText("📅", RX + 6, bY + 62);
+  if (calImg) ctx.drawImage(calImg, RX + 6, bY + 12, 58, 58);
   ctx.fillStyle = GREEN; ctx.font = `800 24px ${NUN}`; ctx.fillText("Date of Certification", RX + 84, bY + 28);
   ctx.fillStyle = INK; ctx.font = `800 40px ${NUN}`; ctx.fillText(dateStr || "", RX + 84, bY + 72);
 
   // grass tufts framing the bottom corners
   if (grassL) { const gh = 190, gw = gh * grassL.width / grassL.height; ctx.drawImage(grassL, PX - 56, H - gh + 16, gw, gh); }
   if (grassR) { const gh = 190, gw = gh * grassR.width / grassR.height; ctx.drawImage(grassR, W - PX + 56 - gw, H - gh + 16, gw, gh); }
-  ctx.textAlign = "center"; ctx.fillStyle = "rgba(31,107,18,.8)"; ctx.font = `800 24px ${NUN}`; ctx.letterSpacing = "4px"; ctx.fillText("PROOFOFGRASS.APP", W / 2, H - 22);
+  ctx.textAlign = "center"; ctx.font = `800 24px ${NUN}`; ctx.letterSpacing = "4px";
+  const uw = ctx.measureText("PROOFOFGRASS.APP").width + 44; ctx.fillStyle = "rgba(253,246,226,.9)"; rr(ctx, W / 2 - uw / 2, H - 58, uw, 40, 20); ctx.fill();
+  ctx.fillStyle = GREEN; ctx.fillText("PROOFOFGRASS.APP", W / 2 + 2, H - 30);
   ctx.restore();
 }
