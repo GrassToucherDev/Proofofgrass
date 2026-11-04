@@ -329,9 +329,9 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       const photo = proofFile instanceof File ? proofFile : null;
       if(!photo){setSubmitError("Add your outdoor photo to log your proof.");setSubmitStatus("error");return false;}
       try{
-        const small = await compressProofPhoto(photo);
         let lastErr = null;
-        for(let attempt=0; attempt<2; attempt++){   // one automatic retry with a fresh one-time link
+        for(let attempt=0; attempt<2; attempt++){   // first try: the original photo. If it fails, one retry with a fresh link and a shrunk copy
+          const small = attempt===0 ? photo : await compressProofPhoto(photo, 2000, 0.88, true);
           const ur = await fetch("/api/proof/upload-url",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername})});
           const uj = await ur.json().catch(()=>({}));
           if(ur.status===409&&uj.code==="already_logged"){setSubmitStatus("success");return true;}

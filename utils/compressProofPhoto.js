@@ -1,10 +1,10 @@
-// Shrinks a proof photo before upload: phone cameras produce 5–15 MB files that fail on weak mobile connections.
-// Longest side 1600px, JPEG ~0.85 (normally 300–700 KB). Falls back to the original file if anything goes wrong
+// Fallback for a failed upload: phone cameras produce 5–15 MB files that can fail on weak mobile connections.
+// Used only on the retry. Longest side 2000px, JPEG ~0.88. Falls back to the original file if anything goes wrong
 // or if the result isn't smaller.
-export async function compressProofPhoto(file, maxSide = 1600, quality = 0.85) {
+export async function compressProofPhoto(file, maxSide = 2000, quality = 0.88, force = false) {
   try {
     if (!(file instanceof Blob) || typeof document === "undefined") return file;
-    if (file.size < 600 * 1024 && /jpe?g|png|webp/i.test(file.type || "")) return file;   // already small
+    if (!force && file.size < 600 * 1024 && /jpe?g|png|webp/i.test(file.type || "")) return file;   // already small
     let bmp;
     try { bmp = await createImageBitmap(file, { imageOrientation: "from-image" }); }
     catch {
