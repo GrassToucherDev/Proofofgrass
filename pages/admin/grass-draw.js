@@ -521,13 +521,19 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
   const [confirming,  setConfirming]  = useState(false);
   const [drawing,     setDrawing]     = useState(false);
   const [winners,     setWinners]     = useState([]);
+  const loadWinners = async () => {
+    if(!cycle) return;
+    try {
+      const r = await adminFetch("/api/grass-draw/admin-winners?cycle_id="+cycle.id);
+      const d = await r.json();
+      setWinners(d.winners||[]);
+    } catch { setWinners([]); }
+  };
 
   useEffect(()=>{
     if(!cycle) return;
     (async()=>{
-      const {data} = await supabase.from("grass_draw_winners")
-        .select("*").eq("cycle_id",cycle.id).order("selected_at",{ascending:false});
-      setWinners(data||[]);
+      await loadWinners();
     })();
   },[cycle]);
 
@@ -560,9 +566,7 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
       else {
         flash(`✓ ${d.winners_count} winners saved — seed: ${d.draw_seed?.slice(0,20)}…`);
         setConfirming(false); setResults([]);
-        const {data} = await supabase.from("grass_draw_winners")
-          .select("*").eq("cycle_id",cycle.id).order("selected_at",{ascending:false});
-        setWinners(data||[]);
+        await loadWinners();
       }
     } catch(e){ flash("Draw error: "+e.message,"err"); }
     setDrawing(false);
@@ -588,8 +592,7 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
       else if(!dry){
         flash(`✓ ${d.saved} hand-picked NFT winner${d.saved===1?"":"s"} recorded`);
         setMChecks(null); setMRows(rs=>rs.map(x=>({...x,u:""}))); setMNote("");
-        const {data} = await supabase.from("grass_draw_winners").select("*").eq("cycle_id",cycle.id).order("selected_at",{ascending:false});
-        setWinners(data||[]);
+        await loadWinners();
       }
     } catch(e){ flash("Error: "+e.message,"err"); }
     setMBusy(false);
@@ -609,18 +612,14 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
         flash(`✓ ${d.reward_type} delivered to @${d.username}`);
       }
     } catch(e){ flash("Error: "+e.message,"err"); }
-    const {data} = await supabase.from("grass_draw_winners")
-      .select("*").eq("cycle_id",cycle.id).order("selected_at",{ascending:false});
-    setWinners(data||[]);
+    await loadWinners();
   };
 
   const markDelivered = async (id) => {
     await adminDb.from("grass_draw_winners")
       .update({delivered:true,delivered_at:new Date().toISOString()}).eq("id",id);
     flash("✓ Marked as delivered");
-    const {data} = await supabase.from("grass_draw_winners")
-      .select("*").eq("cycle_id",cycle.id).order("selected_at",{ascending:false});
-    setWinners(data||[]);
+    await loadWinners();
   };
 
   const voidWinner = async (id,username) => {
@@ -628,9 +627,7 @@ function DrawTab({ cycle, rewards, totals, flash, reload }) {
     await adminDb.from("grass_draw_winners")
       .update({voided:true,void_reason:"Admin voided"}).eq("id",id);
     flash(`✓ Voided reward for @${username}`);
-    const {data} = await supabase.from("grass_draw_winners")
-      .select("*").eq("cycle_id",cycle.id).order("selected_at",{ascending:false});
-    setWinners(data||[]);
+    await loadWinners();
   };
 
   const DRAW_TYPES = [
