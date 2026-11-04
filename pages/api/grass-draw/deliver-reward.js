@@ -85,14 +85,17 @@ export default async function handler(req, res) {
         if (scErr) console.warn('[deliver-reward] shield_count sync failed', scErr.message);
       }
 
-      // Log consumable event
-      await supabase.from('ConsumableEvents').insert([{
-        username:        username.toLowerCase(),
-        consumable_type: 'shield',
-        event_type:      'granted',
-        quantity:        1,
-        metadata:        { source: 'grass_draw', cycle_id, winner_id },
-      }]).catch(() => {}); // non-fatal if ConsumableEvents doesn't exist
+      // Log consumable event (non-fatal if the table is missing or the insert fails)
+      try {
+        const { error: evErr } = await supabase.from('ConsumableEvents').insert([{
+          username:        username.toLowerCase(),
+          consumable_type: 'shield',
+          event_type:      'granted',
+          quantity:        1,
+          metadata:        { source: 'grass_draw', cycle_id, winner_id },
+        }]);
+        if (evErr) console.warn('[deliver-reward] ConsumableEvents log failed', evErr.message);
+      } catch (e) { console.warn('[deliver-reward] ConsumableEvents log failed', e?.message); }
 
       // Mark delivered
       await supabase.from('grass_draw_winners')
