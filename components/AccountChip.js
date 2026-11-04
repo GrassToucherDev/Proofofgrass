@@ -26,8 +26,16 @@ const CSS = `
   .ac-link { display:block; width:100%; text-align:left; padding:10px 12px; border-radius:10px; border:none; background:transparent; cursor:pointer;
     font-family:${V2.fontSans}; font-size:13.5px; font-weight:600; color:${V2.forestGreen}; text-decoration:none; }
   .ac-link:hover { background:rgba(125,200,50,0.10); }
+  .ac-btn.ac-cta { width:auto; height:34px; border-radius:20px; padding:0 14px; gap:6px; white-space:nowrap; font-size:13px;
+    border:none; background:linear-gradient(135deg,#7dc832,#5ba622); color:#fff; box-shadow:0 2px 8px rgba(91,166,34,0.35); }
+  .ac-cta .ac-long { display:inline; } .ac-cta .ac-short { display:none; }
+  .ac-steps { margin:0 0 12px; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px; }
+  .ac-steps li { display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:1.4; color:${V2.textSecondary}; }
+  .ac-steps b { color:${V2.forestGreen}; }
+  .ac-num { flex-shrink:0; width:20px; height:20px; border-radius:50%; background:rgba(125,200,50,0.18); color:${V2.forestGreen}; font-weight:800; font-size:11.5px; display:inline-flex; align-items:center; justify-content:center; }
   .ac-m { display:none; } .ac-d { display:inline-flex; }
   @media (max-width:1100px) { .ac-m { display:inline-flex; } .ac-d { display:none; } }
+  @media (max-width:480px) { .ac-cta .ac-long { display:none; } .ac-cta .ac-short { display:inline; } .ac-btn.ac-cta { padding:0 12px; } }
 `;
 
 function PersonIcon() {
@@ -52,6 +60,20 @@ export default function AccountChip({ variant = "d", username: usernameProp }) {
     if (usernameProp) { setUsername(usernameProp); return; }
     try { setUsername(localStorage.getItem("pog_username") || ""); } catch {}
   }, [usernameProp, open]);
+
+  // Returning user on a fresh device: pull the username their Google account secured.
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    let dead = false;
+    (async () => {
+      try {
+        if (localStorage.getItem("pog_username")) return;
+        const r = await fetch("/api/username/mine"); const j = await r.json();
+        if (!dead && j?.username) { localStorage.setItem("pog_username", j.username); setUsername(j.username); }
+      } catch {}
+    })();
+    return () => { dead = true; };
+  }, [status]);
 
   useLayoutEffect(() => {
     if (!open || !btn.current) return;
@@ -90,7 +112,7 @@ export default function AccountChip({ variant = "d", username: usernameProp }) {
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <button ref={btn} type="button" onClick={() => setOpen((o) => !o)}
-        className={`ac-btn ${variant === "m" ? "ac-m" : "ac-d"} ${signedIn ? "in" : ""}`}
+        className={`ac-btn ${variant === "m" ? "ac-m" : "ac-d"} ${signedIn ? "in" : ""} ${!signedIn && !loading ? "ac-cta" : ""}`}
         aria-haspopup="dialog" aria-expanded={open}
         aria-label={signedIn ? "Account: signed in" : loading ? "Account" : "Account: not signed in. Tap to sign in"}
         style={{ opacity: loading ? 0.5 : 1 }}>
@@ -98,9 +120,9 @@ export default function AccountChip({ variant = "d", username: usernameProp }) {
           ? (image && imgOk
               ? <img src={image} alt="" referrerPolicy="no-referrer" onError={() => setImgOk(false)} />
               : <span aria-hidden="true">{initial}</span>)
-          : <PersonIcon />}
+          : loading ? <PersonIcon />
+          : <><PersonIcon /><span className="ac-long">Sign in / Sign up</span><span className="ac-short">Sign in</span></>}
         {signedIn && <span className="ac-badge" aria-hidden="true">✓</span>}
-        {!signedIn && !loading && <span className="ac-dot" aria-hidden="true" />}
       </button>
 
       {open && typeof document !== "undefined" && createPortal(
@@ -124,15 +146,20 @@ export default function AccountChip({ variant = "d", username: usernameProp }) {
             </>
           ) : (
             <>
-              <div style={{ fontWeight: 800, fontSize: 14, color: V2.forestGreen, marginBottom: 4 }}>You're not signed in</div>
-              <div style={{ fontSize: 12.5, color: V2.textSecondary, lineHeight: 1.45, marginBottom: 10 }}>
-                Sign in with Google to secure your username, keep your streak safe and buy in the Marketplace. Your email is never shown to others.
-              </div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: V2.forestGreen, marginBottom: 8 }}>🌱 Welcome to Proof of Grass</div>
+              <ol className="ac-steps">
+                <li><span className="ac-num">1</span><span><b>Go outside</b> and snap a photo of yourself touching grass.</span></li>
+                <li><span className="ac-num">2</span><span><b>Post your proof</b> with your username to start a streak and climb the leaderboard.</span></li>
+                <li><span className="ac-num">3</span><span><b>Sign in with Google</b> to lock your username, protect your streak and unlock the Marketplace.</span></li>
+              </ol>
               <InAppBrowserNote style={{ margin: "0 0 10px" }} />
               <button type="button" onClick={() => signInWithGoogle({ callbackUrl: typeof window !== "undefined" ? window.location.href : "/" })}
                 style={{ ...V2Styles.btnPrimary, padding: "10px 20px", width: "100%" }}>
-                Continue with Google
+                Sign up / Sign in with Google
               </button>
+              <div style={{ fontSize: 11.5, color: V2.textSecondary, textAlign: "center", marginTop: 8 }}>
+                New or returning, it's the same button. Your email is never shown to others.
+              </div>
             </>
           )}
         </div>, document.body)}
