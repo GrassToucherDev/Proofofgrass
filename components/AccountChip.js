@@ -55,6 +55,11 @@ export default function AccountChip({ variant = "d", username: usernameProp }) {
   const [username, setUsername] = useState(usernameProp || "");
   const btn = useRef(null);
   const pop = useRef(null);
+  const [draft, setDraft] = useState("");
+  const [chk, setChk] = useState(null);     // status for draft (signed out) or saved username (signed in)
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const clean = (v) => String(v || "").replace(/@/g, "").toLowerCase().trim().slice(0, 64);
 
   useEffect(() => {
     if (usernameProp) { setUsername(usernameProp); return; }
@@ -74,6 +79,34 @@ export default function AccountChip({ variant = "d", username: usernameProp }) {
     })();
     return () => { dead = true; };
   }, [status]);
+
+  // Live availability check: the typed name when signed out, the saved name when signed in.
+  useEffect(() => {
+    const u = clean(status === "authenticated" ? username : draft);
+    if (!open || !u || status === "loading") { setChk(null); return; }
+    let off = false;
+    const t = setTimeout(() => {
+      fetch(`/api/username/status?username=${encodeURIComponent(u)}`).then(r => r.json())
+        .then(d => { if (!off) setChk({ ...d, u }); }).catch(() => {});
+    }, 350);
+    return () => { off = true; clearTimeout(t); };
+  }, [draft, username, status, open]);
+
+  const startGoogle = () => {
+    const u = clean(draft);
+    const taken = chk && chk.u === u && chk.claimed;
+    if (u && !taken) { try { localStorage.setItem("pog_username", u); } catch {} }
+    signInWithGoogle({ callbackUrl: typeof window !== "undefined" ? window.location.href : "/" });
+  };
+  const secure = async () => {
+    setBusy(true); setErr("");
+    try {
+      const r = await fetch("/api/username/claim", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: clean(username) }) });
+      const d = await r.json();
+      if (!r.ok) setErr(d.error || "Something went wrong."); else setChk({ ...chk, claimed: true, mine: true });
+    } catch { setErr("Network error. Try again."); }
+    setBusy(false);
+  };
 
   useLayoutEffect(() => {
     if (!open || !btn.current) return;
@@ -141,6 +174,16 @@ export default function AccountChip({ variant = "d", username: usernameProp }) {
               <div style={{ fontSize: 12.5, color: V2.textSecondary, lineHeight: 1.45, marginBottom: 8 }}>
                 Your Google account is linked on this device. Your email is never shown to others.
               </div>
+              {username && chk && chk.u === clean(username) && (
+                chk.mine ? <div style={{ fontSize: 12.5, color: "#3d8a12", fontWeight: 700, marginBottom: 8 }}>✓ @{username} is secured to your account</div>
+                : chk.claimed ? <div style={{ fontSize: 12.5, color: "#b3261e", marginBottom: 8 }}>@{username} is secured by another account.</div>
+                : chk.posted ? (
+                  <button type="button" onClick={secure} disabled={busy} style={{ ...V2Styles.btnPrimary, padding: "9px 16px", width: "100%", marginBottom: 8 }}>
+                    {busy ? "Securing…" : `Secure @${username}`}
+                  </button>
+                ) : <div style={{ fontSize: 12.5, color: V2.textSecondary, lineHeight: 1.45, marginBottom: 8 }}>Post your first proof as @{username}, then come back here to secure it.</div>
+              )}
+              {err && <div role="alert" style={{ fontSize: 12.5, color: "#b3261e", marginBottom: 8 }}>{err}</div>}
               {username && <Link href={`/u/${username}`} className="ac-link" onClick={() => setOpen(false)}>My profile (@{username})</Link>}
               <button type="button" className="ac-link" onClick={doSignOut}>Sign out</button>
             </>
@@ -148,17 +191,27 @@ export default function AccountChip({ variant = "d", username: usernameProp }) {
             <>
               <div style={{ fontWeight: 800, fontSize: 15, color: V2.forestGreen, marginBottom: 8 }}>🌱 Welcome to Proof of Grass</div>
               <ol className="ac-steps">
-                <li><span className="ac-num">1</span><span><b>Go outside</b> and snap a photo of yourself touching grass.</span></li>
-                <li><span className="ac-num">2</span><span><b>Post your proof</b> with your username to start a streak and climb the leaderboard.</span></li>
-                <li><span className="ac-num">3</span><span><b>Sign in with Google</b> to lock your username, protect your streak and unlock the Marketplace.</span></li>
+                <li><span className="ac-num">1</span><span><b>Pick your username</b> — it's how you show up on the leaderboard.</span></li>
+                <li><span className="ac-num">2</span><span><b>Sign in with Google</b> so your name and streak are yours.</span></li>
+                <li><span className="ac-num">3</span><span><b>Go touch grass</b> and post your first proof, then secure your name.</span></li>
               </ol>
+              <input value={draft} onChange={(e) => setDraft(e.target.value.replace(/@/g, "").toLowerCase())} placeholder="your username (new here? pick one)"
+                maxLength={64} autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid rgba(200,220,190,0.9)", fontFamily: V2.fontSans, fontSize: 14, marginBottom: 6 }} />
+              <div style={{ minHeight: 18, fontSize: 12, marginBottom: 8, color: V2.textSecondary }}>
+                {chk && chk.u === clean(draft) && (
+                  chk.claimed ? <span style={{ color: "#b3261e" }}>@{chk.u} is already secured by someone. Try another name.</span>
+                  : chk.posted ? <span>@{chk.u} is already on the board — if that's you, sign in to secure it.</span>
+                  : <span style={{ color: "#3d8a12", fontWeight: 700 }}>✓ @{chk.u} is available</span>
+                )}
+              </div>
               <InAppBrowserNote style={{ margin: "0 0 10px" }} />
-              <button type="button" onClick={() => signInWithGoogle({ callbackUrl: typeof window !== "undefined" ? window.location.href : "/" })}
+              <button type="button" onClick={startGoogle}
                 style={{ ...V2Styles.btnPrimary, padding: "10px 20px", width: "100%" }}>
                 Sign up / Sign in with Google
               </button>
               <div style={{ fontSize: 11.5, color: V2.textSecondary, textAlign: "center", marginTop: 8 }}>
-                New or returning, it's the same button. Your email is never shown to others.
+                Returning? Leave the name blank and sign in. Your email is never shown to others.
               </div>
             </>
           )}
