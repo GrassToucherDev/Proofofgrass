@@ -33,7 +33,7 @@ function laurel(c, cx, cy, flip, sz = 1) {
 export async function drawProofCard(ctx, W, H, opts) {
   const { photo, streak, dateStr, topPct, location } = opts;
   try { await Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("800 20px Nunito")]); } catch {}
-  const [frame, hero, logo] = await Promise.all([load("/spotlight-frame.webp"), load("/hero-landscape.png"), load("/touchgrass-transparent.png")]);
+  const [mainLogo, hero, logo] = await Promise.all([load("/touchgrass-logo-card.png"), load("/hero-landscape.png"), load("/touchgrass-transparent.png")]);
   ctx.save(); ctx.letterSpacing = "0px"; ctx.textBaseline = "alphabetic";
 
   // sky + soft meadow
@@ -53,12 +53,9 @@ export async function drawProofCard(ctx, W, H, opts) {
   ctx.restore();
 
   // header: mascot + wordmark | title
-  if (frame) {
-    const sw = 486, sh = 232, h = 168, w = Math.round(sw * h / sh);
-    const oc = document.createElement("canvas"); oc.width = w; oc.height = h; const o = oc.getContext("2d");
-    o.drawImage(frame, 125, 18, sw, sh, 0, 0, w, h);
-    o.globalCompositeOperation = "destination-out"; const m = o.createLinearGradient(w - 36, 0, w, 0); m.addColorStop(0, "rgba(0,0,0,0)"); m.addColorStop(1, "rgba(0,0,0,1)"); o.fillStyle = m; o.fillRect(w - 36, 0, 36, h);
-    ctx.drawImage(oc, PX + 56, PY + 40);
+  if (mainLogo) { // official Touch Grass logo
+    const lw = 440, lh = lw * mainLogo.height / mainLogo.width;
+    ctx.drawImage(mainLogo, PX + 56 + (500 - lw) / 2, PY + 40 + (170 - lh) / 2, lw, lh);
   }
   ctx.fillStyle = "rgba(31,107,18,.35)"; ctx.fillRect(612, PY + 60, 3, 130);
   ctx.textAlign = "center";
