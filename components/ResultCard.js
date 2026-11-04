@@ -446,7 +446,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
     if(!canvas||!imageSrc) return;
     const ctx=canvas.getContext("2d");
     const classicCard=!selectedTheme||selectedTheme==="classic";
-    const W=1600,H=classicCard?1200:900;
+    const W=1600,H=classicCard?1360:900;
     // Each run owns the (shared) canvas until a newer run starts. A stale run whose image
     // finishes loading late must NOT draw or publish its result, otherwise an old streak
     // number ends up on the card after the new one was drawn.

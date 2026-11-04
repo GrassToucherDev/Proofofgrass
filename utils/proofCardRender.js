@@ -59,7 +59,7 @@ export async function drawProofCard(ctx, W, H, opts) {
   else { const sk = ctx.createLinearGradient(0, 0, 0, H); sk.addColorStop(0, "#b9ddf6"); sk.addColorStop(0.55, "#e6f3fc"); sk.addColorStop(1, "#eaf5dc"); ctx.fillStyle = sk; ctx.fillRect(0, 0, W, H); }
 
   // glass panel
-  const PX = 70, PY = 80, PW = W - 140, PH = 1040;
+  const PX = 70, PY = 80, PW = W - 140, PH = 1040 + (H - 1200);
   ctx.save(); ctx.shadowColor = "rgba(26,74,10,.22)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12;
   ctx.fillStyle = "rgba(255,255,255,0.90)"; rr(ctx, PX, PY, PW, PH, 64); ctx.fill(); ctx.restore();
   ctx.lineWidth = 4; ctx.strokeStyle = "rgba(255,255,255,0.95)"; rr(ctx, PX, PY, PW, PH, 64); ctx.stroke();
@@ -84,7 +84,7 @@ export async function drawProofCard(ctx, W, H, opts) {
   ctx.fillRect(742, PY + 166, 70, 3); ctx.fillRect(1388, PY + 166, 70, 3);
 
   // photo
-  const FX = PX + 56, FY = PY + 250, FW = 780, FH = 590;
+  const FX = PX + 56, FY = PY + 250, FW = 840, FH = 590 + (H - 1200);
   ctx.save(); ctx.shadowColor = "rgba(26,74,10,.28)"; ctx.shadowBlur = 26; ctx.shadowOffsetY = 10; ctx.fillStyle = "#fff"; rr(ctx, FX - 8, FY - 8, FW + 16, FH + 16, 46); ctx.fill(); ctx.restore();
   ctx.save(); rr(ctx, FX, FY, FW, FH, 40); ctx.clip();
   if (photo) { const sc = Math.max(FW / photo.width, FH / photo.height), dw = photo.width * sc, dh = photo.height * sc; ctx.drawImage(photo, FX + (FW - dw) / 2, FY + (FH - dh) / 2, dw, dh); }
@@ -115,7 +115,7 @@ export async function drawProofCard(ctx, W, H, opts) {
   while (fit() > RW && ns > 70) ns -= 6;
   ctx.font = `700 ${Math.round(ns * 0.62)}px ${FRED}`; const dayW = ctx.measureText("DAY ").width;
   ctx.font = `700 ${ns}px ${FRED}`; const numW = ctx.measureText(num).width;
-  const sx = RC - (dayW + numW) / 2, by = FY + 250;
+  const sx = RC - (dayW + numW) / 2, by = FY + 250 + Math.round((H - 1200) * 0.25);
   ctx.font = `700 ${Math.round(ns * 0.62)}px ${FRED}`; ctx.fillStyle = INK; ctx.fillText("DAY ", sx, by);
   ctx.font = `700 ${ns}px ${FRED}`; ctx.fillStyle = LIME; ctx.fillText(num, sx + dayW, by);
   ctx.textAlign = "center"; ctx.fillStyle = GREEN; ctx.font = `800 28px ${NUN}`; ctx.letterSpacing = "8px"; ctx.fillText("CURRENT STREAK", RC, by + 56); ctx.letterSpacing = "0px";
