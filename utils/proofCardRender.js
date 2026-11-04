@@ -77,7 +77,7 @@ export async function drawProofCard(ctx, W, H, opts) {
   }
   ctx.fillStyle = "rgba(31,107,18,.35)"; ctx.fillRect(612, PY + 60, 3, 130);
   ctx.textAlign = "center";
-  ctx.fillStyle = INK; ctx.font = `800 76px ${SERIF}`; ctx.fillText("PROOF OF GRASS", 1090, PY + 126);
+  ctx.fillStyle = INK; ctx.font = `800 76px ${FRED}`; ctx.fillText("PROOF OF GRASS", 1090, PY + 126);
   const tw = ctx.measureText("PROOF OF GRASS").width;
   laurel(ctx, 1090 - tw / 2 - 44, PY + 98, false, 1.0); laurel(ctx, 1090 + tw / 2 + 44, PY + 98, true, 1.0);
   ctx.fillStyle = GREEN; ctx.font = `800 28px ${NUN}`; ctx.letterSpacing = "10px"; ctx.fillText("VERIFIED OUTDOORS", 1100, PY + 176); ctx.letterSpacing = "0px";
@@ -102,21 +102,22 @@ export async function drawProofCard(ctx, W, H, opts) {
   // right column
   const RX = FX + FW + 60, RW = PX + PW - 56 - RX, RC = RX + RW / 2;
   glossPill(ctx, RX, FY, RW, 76, { a: "#9be85a", b: "#4fb21a", bd: "#2f7d10" });
-  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(RX + 54, FY + 38, 25, 0, 7); ctx.fill();
-  ctx.strokeStyle = "#3f9a14"; ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(RX + 42, FY + 39); ctx.lineTo(RX + 51, FY + 48); ctx.lineTo(RX + 67, FY + 29); ctx.stroke();
-  ctx.save(); ctx.textAlign = "left"; ctx.fillStyle = "#fff"; ctx.font = `800 36px ${NUN}`; ctx.shadowColor = "rgba(20,70,10,.5)"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 2;
-  ctx.fillText("Verified Outdoors", RX + 100, FY + 51); ctx.restore();
+  ctx.save(); ctx.font = `700 38px ${FRED}`; const vw = ctx.measureText("Verified Outdoors").width, vgap = 18, vcir = 50, vx = RC - (vcir + vgap + vw) / 2;
+  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(vx + vcir / 2, FY + 38, vcir / 2, 0, 7); ctx.fill();
+  ctx.strokeStyle = "#3f9a14"; ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(vx + 13, FY + 39); ctx.lineTo(vx + 22, FY + 48); ctx.lineTo(vx + 38, FY + 29); ctx.stroke();
+  ctx.textAlign = "left"; ctx.fillStyle = "#fff"; ctx.shadowColor = "rgba(20,70,10,.5)"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 2;
+  ctx.fillText("Verified Outdoors", vx + vcir + vgap, FY + 51); ctx.restore();
 
   // DAY + number, fitted to the column
   ctx.textAlign = "left";
   const num = String(streak); let ns = 180;
-  const fit = () => { ctx.font = `italic 800 ${Math.round(ns * 0.62)}px ${SERIF}`; const dw = ctx.measureText("DAY ").width; ctx.font = `italic 800 ${ns}px ${SERIF}`; return dw + ctx.measureText(num).width; };
+  const fit = () => { ctx.font = `700 ${Math.round(ns * 0.62)}px ${FRED}`; const dw = ctx.measureText("DAY ").width; ctx.font = `700 ${ns}px ${FRED}`; return dw + ctx.measureText(num).width; };
   while (fit() > RW && ns > 70) ns -= 6;
-  ctx.font = `italic 800 ${Math.round(ns * 0.62)}px ${SERIF}`; const dayW = ctx.measureText("DAY ").width;
-  ctx.font = `italic 800 ${ns}px ${SERIF}`; const numW = ctx.measureText(num).width;
+  ctx.font = `700 ${Math.round(ns * 0.62)}px ${FRED}`; const dayW = ctx.measureText("DAY ").width;
+  ctx.font = `700 ${ns}px ${FRED}`; const numW = ctx.measureText(num).width;
   const sx = RC - (dayW + numW) / 2, by = FY + 250;
-  ctx.font = `italic 800 ${Math.round(ns * 0.62)}px ${SERIF}`; ctx.fillStyle = INK; ctx.fillText("DAY ", sx, by);
-  ctx.font = `italic 800 ${ns}px ${SERIF}`; ctx.fillStyle = LIME; ctx.fillText(num, sx + dayW, by);
+  ctx.font = `700 ${Math.round(ns * 0.62)}px ${FRED}`; ctx.fillStyle = INK; ctx.fillText("DAY ", sx, by);
+  ctx.font = `700 ${ns}px ${FRED}`; ctx.fillStyle = LIME; ctx.fillText(num, sx + dayW, by);
   ctx.textAlign = "center"; ctx.fillStyle = GREEN; ctx.font = `800 28px ${NUN}`; ctx.letterSpacing = "8px"; ctx.fillText("CURRENT STREAK", RC, by + 56); ctx.letterSpacing = "0px";
 
   let y = by + 92;
@@ -124,7 +125,7 @@ export async function drawProofCard(ctx, W, H, opts) {
   if (tier) {
     const pal = TIER_PAL[tierIdx] || TIER_PAL[4];
     glossPill(ctx, RX, y, RW, 88, pal);
-    const tsz = tier.length > 9 ? 38 : 46; ctx.font = `italic 800 ${tsz}px ${SERIF}`;
+    const tsz = tier.length > 9 ? 38 : 46; ctx.font = `700 ${tsz}px ${FRED}`;
     const sh = 112, sw = shieldImg ? sh * shieldImg.width / shieldImg.height : 0;
     if (shieldImg) { ctx.save(); ctx.shadowColor = "rgba(0,0,0,.3)"; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4; ctx.drawImage(shieldImg, RX + 16, y + 44 - sh / 2, sw, sh); ctx.restore(); }
     ctx.save(); ctx.fillStyle = pal.tx; if (pal.dark) { ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowOffsetY = 2; } else { ctx.shadowColor = "rgba(255,255,255,.7)"; ctx.shadowOffsetY = 2; }
@@ -137,9 +138,9 @@ export async function drawProofCard(ctx, W, H, opts) {
     if (medalImg) {
       ctx.drawImage(medalImg, x0, y, mw, mh);
       ctx.textAlign = "center"; ctx.fillStyle = "#5a3e00"; ctx.font = `800 12px ${NUN}`; ctx.fillText("TOP", x0 + mw / 2, y + 31);
-      ctx.font = `italic 800 23px ${SERIF}`; ctx.fillText(`${topPct}%`, x0 + mw / 2, y + 54);
+      ctx.font = `700 23px ${FRED}`; ctx.fillText(`${topPct}%`, x0 + mw / 2, y + 54);
     }
-    ctx.textAlign = "left"; ctx.fillStyle = INK; ctx.font = `italic 800 40px ${SERIF}`; ctx.fillText(`Top ${topPct}%`, x0 + mw + gx, y + 44);
+    ctx.textAlign = "left"; ctx.fillStyle = INK; ctx.font = `700 40px ${FRED}`; ctx.fillText(`Top ${topPct}%`, x0 + mw + gx, y + 44);
     ctx.fillStyle = GREEN; ctx.font = `800 24px ${NUN}`; ctx.fillText("of all Grass Touchers", x0 + mw + gx, y + 80);
     ctx.textAlign = "center"; y += 112;
   }
@@ -166,7 +167,7 @@ export async function drawProofCard(ctx, W, H, opts) {
   ctx.lineWidth = 6; ctx.strokeStyle = "#f6b93b"; ctx.beginPath(); ctx.arc(FX + 78, cy, 46, 0, 7); ctx.stroke();
   if (logo) ctx.drawImage(logo, FX + 78 - 32, cy - 32, 64, 64);
   ctx.textAlign = "left"; ctx.fillStyle = GREEN; ctx.font = `800 22px ${NUN}`; ctx.letterSpacing = "6px"; ctx.fillText("CERTIFIED BY", FX + 150, cy - 14); ctx.letterSpacing = "0px";
-  ctx.fillStyle = INK; ctx.font = `italic 800 56px ${SERIF}`; ctx.fillText("Touch Grass", FX + 150, cy + 40);
+  ctx.fillStyle = INK; ctx.font = `700 56px ${FRED}`; ctx.fillText("Touch Grass", FX + 150, cy + 40);
   // verified seal at the capsule's right end
   const sealX = FX + lw - 76; ctx.fillStyle = LIME; ctx.beginPath(); ctx.arc(sealX, cy, 32, 0, 7); ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = "#2f7d10"; ctx.stroke();
   ctx.strokeStyle = "#fff"; ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(sealX - 13, cy + 1); ctx.lineTo(sealX - 4, cy + 10); ctx.lineTo(sealX + 14, cy - 10); ctx.stroke();
