@@ -323,6 +323,9 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
     if(!effectiveUsername) return false;
     if(submitStatus==="success") return true;
     setSubmitStatus("loading");setSubmitError("");
+    // Nothing should be able to hang forever on a weak connection: every network step gets a time limit.
+    const tf=(url,opts,ms)=>{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),ms);return fetch(url,{...opts,signal:ac.signal}).finally(()=>clearTimeout(t));};
+    const tmo=(pr,ms)=>Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej(new Error("timed out")),ms))]);
     // 1) The proof photo goes up first, through a one-time link from the server (the browser can't write to the
     //    proof-photo folders directly any more). No photo, no streak.
     {
@@ -332,14 +335,14 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
         let lastErr = null;
         for(let attempt=0; attempt<2; attempt++){   // first try: the original photo. If it fails, one retry with a fresh link and a shrunk copy
           const small = attempt===0 ? photo : await compressProofPhoto(photo, 2000, 0.88, true);
-          const ur = await fetch("/api/proof/upload-url",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername})});
+          const ur = await tf("/api/proof/upload-url",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername})},20000);
           const uj = await ur.json().catch(()=>({}));
           if(ur.status===409&&uj.code==="already_logged"){setSubmitStatus("success");return true;}
           if(!ur.ok){
             setSubmitError(uj.code==="not_signed_in"?"This username is secured — sign in with Google to log your proof.":uj.code==="not_owner"?"This username belongs to another account.":uj.error||"Couldn't start the photo upload — tap again.");
             setSubmitStatus("error");return false;
           }
-          const up = await supabase.storage.from("proof-photos").uploadToSignedUrl(uj.path,uj.token,small,{contentType:small.type||"image/jpeg",upsert:true});
+          const up = await tmo(supabase.storage.from("proof-photos").uploadToSignedUrl(uj.path,uj.token,small,{contentType:small.type||"image/jpeg",upsert:true}),attempt===0?40000:30000).catch(e=>({error:e}));
           if(!up.error){ lastErr = null; break; }
           lastErr = up.error; console.warn("[proof upload] attempt "+(attempt+1)+" failed", up.error?.message||up.error);
         }
@@ -348,7 +351,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           try{
             const tiny = await compressProofPhoto(photo, 1600, 0.8, true);
             const b64 = await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result||"").split(",")[1]||"");fr.onerror=rej;fr.readAsDataURL(tiny);});
-            const dr = await fetch("/api/proof/upload-direct",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername,image:b64})});
+            const dr = await tf("/api/proof/upload-direct",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername,image:b64})},30000);
             const dj = await dr.json().catch(()=>({}));
             if(dr.status===409&&dj.code==="already_logged"){setSubmitStatus("success");return true;}
             if(!dr.ok) throw new Error(dj.error||("server "+dr.status));
@@ -367,7 +370,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               ?{p_location_city:locationCity.trim()||null,p_location_region:locationRegion.trim()||null,p_location_country:locationCountry.trim()||null,p_location_label:[locationCity.trim(),locationRegion.trim()].filter(Boolean).join(", ")||null,p_location_source:"manual"}
               :{p_location_source:"none"};
           // Logged by the server (the database function is no longer callable from the browser).
-          const httpRes = await fetch("/api/proof/log",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername,...locationPayload})});
+          const httpRes = await tf("/api/proof/log",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername,...locationPayload})},30000);
           const body = await httpRes.json().catch(()=>({}));
           if(httpRes.ok) return {data:body.result,error:null};
           const failure = {data:null,error:{message:body.error||"Streak log failed.",code:body.code||"failed",status:httpRes.status}};
