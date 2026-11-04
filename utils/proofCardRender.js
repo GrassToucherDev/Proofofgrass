@@ -50,7 +50,7 @@ export async function drawProofCard(ctx, W, H, opts) {
   const bgSrc = streak >= 365 ? "/card/bg-night.jpg" : streak >= 100 ? "/card/bg-sunset.jpg" : "/card/bg.jpg";
   const [mainLogo, bgImg, mascotImg, laurelImg, grassL, grassR, sparkles, cornerImg, pinImg, calImg, medalImg, shieldImg] = await Promise.all([
     load("/touchgrass-logo-card.png"), load(bgSrc), load("/card/mascot-side.png"), load("/card/laurel.png"), load("/card/grass-l.png"), load("/card/grass-r.png"),
-    load("/card/sparkles.png"), load("/card/corner.png"), load("/card/pin.png"), load("/card/cal.png"), load("/card/medal.png"), tierIdx ? load(`/card/tier-${tierIdx}.png`) : Promise.resolve(null)]);
+    load("/card/sparkles.png"), load("/card/corner.png"), load("/card/pin.png"), load("/card/cal.png"), load("/card/medal.png"), tierIdx ? load(`/card/tier-${tierIdx}.png`) : (streak >= 1 && streak < 7 ? load("/card/tier-1.png") : Promise.resolve(null))]);
   LAUREL = laurelImg;
   ctx.save(); ctx.letterSpacing = "0px"; ctx.textBaseline = "alphabetic";
 
@@ -122,6 +122,7 @@ export async function drawProofCard(ctx, W, H, opts) {
 
   let y = by + 92;
   const tier = tierFor(streak);
+  const newcomer = !tier && streak >= 1 && streak < 7;
   if (tier) {
     const pal = TIER_PAL[tierIdx] || TIER_PAL[4];
     glossPill(ctx, RX, y, RW, 88, pal);
@@ -131,6 +132,33 @@ export async function drawProofCard(ctx, W, H, opts) {
     ctx.save(); ctx.fillStyle = pal.tx; if (pal.dark) { ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowOffsetY = 2; } else { ctx.shadowColor = "rgba(255,255,255,.7)"; ctx.shadowOffsetY = 2; }
     ctx.letterSpacing = "2px"; ctx.fillText(tier, RX + 16 + sw + (RW - 16 - sw) / 2 + 1, y + 60); ctx.restore();
     y += 112;
+  }
+  if (newcomer) {
+    const pal = { a: "#b8f0e6", b: "#4fcfb4", bd: "#1f8f7a", tx: "#06342c" };
+    glossPill(ctx, RX, y, RW, 88, pal);
+    const bx = RX + 16 + 44, byc = y + 44;
+    ctx.save(); ctx.shadowColor = "rgba(0,0,0,.3)"; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
+    const bg = ctx.createLinearGradient(0, byc - 44, 0, byc + 44); bg.addColorStop(0, "#c8f27a"); bg.addColorStop(1, "#4fb21a");
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(bx, byc, 44, 0, 7); ctx.fill(); ctx.restore();
+    ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; ctx.beginPath(); ctx.arc(bx, byc, 41, 0, 7); ctx.stroke();
+    ctx.lineWidth = 3; ctx.strokeStyle = "#2f7d10"; ctx.beginPath(); ctx.arc(bx, byc, 46, 0, 7); ctx.stroke();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(bx, byc + 22); ctx.quadraticCurveTo(bx + 1, byc + 4, bx, byc - 6); ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.ellipse(bx - 14, byc - 8, 15, 8, -0.6, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(bx + 14, byc - 14, 15, 8, 0.6, 0, 7); ctx.fill();
+    ctx.save(); ctx.font = `700 46px ${FRED}`; ctx.textAlign = "center"; ctx.fillStyle = pal.tx; ctx.shadowColor = "rgba(255,255,255,.7)"; ctx.shadowOffsetY = 2;
+    ctx.letterSpacing = "2px"; ctx.fillText("NEWCOMER", RX + 16 + 88 + (RW - 16 - 88) / 2 + 1, y + 60); ctx.restore();
+    y += 112;
+    // next badge progress
+    const mh = 100, mw = shieldImg ? mh * shieldImg.width / shieldImg.height : 0, gx = 22, tx = 300, x0 = RC - (mw + gx + tx) / 2, left = 7 - streak;
+    if (shieldImg) ctx.drawImage(shieldImg, x0, y, mw, mh);
+    const tx0 = x0 + mw + gx;
+    ctx.textAlign = "left"; ctx.fillStyle = GREEN; ctx.font = `800 22px ${NUN}`; ctx.letterSpacing = "4px"; ctx.fillText("NEXT BADGE", tx0, y + 24); ctx.letterSpacing = "0px";
+    ctx.fillStyle = INK; ctx.font = `700 38px ${FRED}`; ctx.fillText(`Rooted in ${left} day${left === 1 ? "" : "s"}`, tx0, y + 64);
+    ctx.fillStyle = "rgba(31,107,18,.18)"; rr(ctx, tx0, y + 78, tx, 16, 8); ctx.fill();
+    const pg = ctx.createLinearGradient(tx0, 0, tx0 + tx, 0); pg.addColorStop(0, "#9be85a"); pg.addColorStop(1, "#4fb21a");
+    ctx.fillStyle = pg; rr(ctx, tx0, y + 78, Math.max(16, tx * streak / 7), 16, 8); ctx.fill();
+    ctx.textAlign = "center"; y += 112;
   }
   if (topPct) {
     const mh = 100, mw = medalImg ? mh * medalImg.width / medalImg.height : 0, gx = 22, tx = 300; // text block ~300 wide
