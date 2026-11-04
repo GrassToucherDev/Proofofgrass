@@ -45,6 +45,7 @@ const TIER_PAL = [null,
 // opts: { photo: HTMLImageElement, streak, dateStr, topPct, location }
 export async function drawProofCard(ctx, W, H, opts) {
   const { photo, streak, dateStr, topPct, location } = opts;
+  const handle = (opts.username || "").replace(/^@+/, "").trim();
   try { await Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("800 20px Nunito")]); } catch {}
   const tierName = tierFor(streak), tierIdx = ["ROOTED", "LOCKED IN", "ELITE", "LEGENDARY", "IMMORTAL", "MYTHIC", "ETERNAL", "ASCENDED", "TRANSCENDENT"].indexOf(tierName) + 1;
   const bgSrc = streak >= 365 ? "/card/bg-night.jpg" : streak >= 100 ? "/card/bg-sunset.jpg" : "/card/bg.jpg";
@@ -80,7 +81,11 @@ export async function drawProofCard(ctx, W, H, opts) {
   ctx.fillStyle = INK; ctx.font = `800 76px ${FRED}`; ctx.fillText("PROOF OF GRASS", 1090, PY + 126);
   const tw = ctx.measureText("PROOF OF GRASS").width;
   laurel(ctx, 1090 - tw / 2 - 44, PY + 98, false, 1.0); laurel(ctx, 1090 + tw / 2 + 44, PY + 98, true, 1.0);
-  ctx.fillStyle = GREEN; ctx.font = `800 28px ${NUN}`; ctx.letterSpacing = "10px"; ctx.fillText("VERIFIED OUTDOORS", 1100, PY + 176); ctx.letterSpacing = "0px";
+  ctx.fillStyle = GREEN; ctx.letterSpacing = handle ? "2px" : "10px";
+  let sub = handle ? "@" + handle : "DAILY OUTDOOR PROOF", ssz = handle ? 36 : 28;
+  ctx.font = `800 ${ssz}px ${NUN}`; while (ctx.measureText(sub).width > 520 && ssz > 20) { ssz -= 2; ctx.font = `800 ${ssz}px ${NUN}`; }
+  if (ctx.measureText(sub).width > 520) { while (ctx.measureText(sub + "…").width > 520 && sub.length > 4) sub = sub.slice(0, -1); sub += "…"; }
+  ctx.fillText(sub, 1100, PY + 176); ctx.letterSpacing = "0px";
   ctx.fillRect(742, PY + 166, 70, 3); ctx.fillRect(1388, PY + 166, 70, 3);
 
   // photo

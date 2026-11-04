@@ -458,7 +458,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
     img.onload=()=>{if(cancelled) return;
       if(classicCard){
         const loc=locationMode==="manual"&&locationCity.trim()?[locationCity.trim(),locationRegion.trim()].filter(Boolean).join(", "):"";
-        drawProofCard(ctx,W,H,{photo:img,streak:currentStreak,dateStr,topPct:getTopPercent(currentStreak),location:loc}).then(()=>{
+        drawProofCard(ctx,W,H,{photo:img,streak:currentStreak,dateStr,topPct:getTopPercent(currentStreak),location:loc,username:sunsetUser()}).then(()=>{
           if(cancelled) return;
           const dataUrl=canvas.toDataURL("image/png");
           setDownloadUrl(dataUrl);setCardStreak(currentStreak);
