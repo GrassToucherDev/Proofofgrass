@@ -1,6 +1,7 @@
 // /yard/grove/[slug] — one Grove vs Grove challenge (the link the owner shares).
 import { useState, useEffect, useCallback } from "react";
 import Head from "next/head";
+import OgMeta, { SITE_URL } from "../../../components/OgMeta";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import V2Nav from "../../../components/V2Nav";
@@ -26,6 +27,7 @@ export default function GroveChallengePage() {
   return (
     <>
       <Head><title>{ch ? `${ch.challenger.name} vs ${ch.challenged.name}` : "Grove challenge"} | The Yard</title><meta name="viewport" content="width=device-width, initial-scale=1" /></Head>
+      <OgMeta title="Grove vs Grove | The Yard" description="Two Groves, one challenge. See who touches grass the most on Proof of Grass." image={`${SITE_URL}/api/og?type=groves&v=1`} />
       <style>{V2GlobalCSS + yardCSS}</style>
       <V2Nav />
       <main className="yd-wrap" style={{ paddingTop: 22, maxWidth: 720 }}>
