@@ -55,7 +55,8 @@ export async function renderBadgeCard({ username, badge }) {
   ctx.fillStyle = INK2; fitText(ctx, badge.label, 900, 80, 44); ctx.fillText(badge.label, cx, ny);
   ctx.font = `800 32px ${NUN}`; ctx.fillStyle = "#b8741a"; ctx.letterSpacing = "2px";
   ctx.fillText(`${badge.count.toLocaleString()} ${badge.unit}`.toUpperCase(), cx + 1, ny + 48); ctx.letterSpacing = "0px";
-  ctx.fillStyle = "#2d5a1a"; fitText(ctx, badge.blurb, 840, 26, 18, 700, NUN); ctx.fillText(badge.blurb, cx, ny + 92);
+  const blurb = /[.!?]$/.test(badge.blurb) ? badge.blurb : badge.blurb + ".";
+  ctx.fillStyle = "#2d5a1a"; fitText(ctx, blurb, 840, 26, 18, 700, NUN); ctx.fillText(blurb, cx, ny + 92);
 
   // tier dots
   if (badge.maxTier > 1) {
