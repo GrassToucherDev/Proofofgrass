@@ -3,7 +3,7 @@
 const GREEN = "#1f6b12", LIME = "#4fb21a", INK = "#12380a", SERIF = "Georgia,'Times New Roman',serif";
 const FRED = "Fredoka,'Nunito',system-ui,sans-serif", NUN = "Nunito,system-ui,sans-serif";
 
-const rr = (c, x, y, w, h, r) => {
+export const rr = (c, x, y, w, h, r) => {
   c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r); c.lineTo(x + w, y + h - r);
   c.quadraticCurveTo(x + w, y + h, x + w - r, y + h); c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath();
 };
@@ -23,7 +23,7 @@ function laurel(c, cx, cy, flip, sz = 1) {
 }
 
 // Glossy pill: gradient body, coloured rim, soft shadow, top highlight and an inner light rim.
-function glossPill(c, x, y, w, h, pal, r = h / 2) {
+export function glossPill(c, x, y, w, h, pal, r = h / 2) {
   c.save(); c.shadowColor = "rgba(20,40,10,.28)"; c.shadowBlur = 16; c.shadowOffsetY = 6;
   let g;
   if (pal.rainbow) { g = c.createLinearGradient(x, 0, x + w, 0); ["#ffd1f0", "#d6c4ff", "#bfe4ff", "#c8f7d4", "#fff3b0"].forEach((col, i, arr) => g.addColorStop(i / (arr.length - 1), col)); }
@@ -35,7 +35,7 @@ function glossPill(c, x, y, w, h, pal, r = h / 2) {
   c.lineWidth = 4; c.strokeStyle = pal.bd; rr(c, x, y, w, h, r); c.stroke();
   c.lineWidth = 2; c.strokeStyle = "rgba(255,255,255,.55)"; rr(c, x + 6, y + 6, w - 12, h - 12, Math.max(4, r - 6)); c.stroke();
 }
-const TIER_PAL = [null,
+export const TIER_PAL = [null,
   { a: "#c9f27d", b: "#6fc02f", bd: "#3f8a16", tx: "#12380a" }, { a: "#9fe58a", b: "#2fa84a", bd: "#1b6e30", tx: "#0b3016" },
   { a: "#f7f9fb", b: "#b9c4d0", bd: "#8a97a6", tx: "#25303c" }, { a: "#fff0b8", b: "#f2c14e", bd: "#d9a82c", tx: "#5a3e00" },
   { a: "#ffe08a", b: "#e8a21c", bd: "#b97a0c", tx: "#4a2e00" }, { a: "#e2c4ff", b: "#9a5be6", bd: "#6a30b8", tx: "#ffffff", dark: true },
