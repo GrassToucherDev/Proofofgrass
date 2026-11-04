@@ -608,41 +608,31 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           {/* ── Step 2: Card Type ─────────────────────────────────────────── */}
           <div style={{ margin:"16px 0" }}>
             <StepHeader n={2} title="Card type" hint="What would you like to share?" />
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-              <button onClick={()=>selectShareStyle("outdoor_photo")}
-                style={{ flex:1, padding:"14px 12px", borderRadius:12, cursor:"pointer",
-                  border:`2px solid ${shareStyle==="outdoor_photo"?V2G.green:V2G.border}`,
-                  background:shareStyle==="outdoor_photo"?"rgba(125,200,50,0.08)":"white",
-                  display:"flex", flexDirection:"column", gap:6, textAlign:"left",
-                  fontFamily:"Nunito,sans-serif" }}>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                  <span style={{ fontSize:20 }}>📸</span>
-                  {shareStyle==="outdoor_photo" && (
-                    <div style={{ width:20, height:20, borderRadius:"50%", background:V2G.green,
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      fontSize:10, color:"white" }}>✓</div>
-                  )}
-                </div>
-                <div style={{ fontSize:12, fontWeight:700, color:V2G.darkGreen }}>Outdoor Photo</div>
-                <div style={{ fontSize:10, color:V2G.midGray }}>+ Proof Details</div>
-              </button>
-              <button onClick={()=>selectShareStyle("result_card")}
-                style={{ flex:1, padding:"14px 12px", borderRadius:12, cursor:"pointer",
-                  border:`2px solid ${shareStyle==="result_card"?V2G.green:V2G.border}`,
-                  background:shareStyle==="result_card"?"rgba(125,200,50,0.08)":"white",
-                  display:"flex", flexDirection:"column", gap:6, textAlign:"left",
-                  fontFamily:"Nunito,sans-serif" }}>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                  <span style={{ fontSize:20 }}>✨</span>
-                  {shareStyle==="result_card" && (
-                    <div style={{ width:20, height:20, borderRadius:"50%", background:V2G.green,
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      fontSize:10, color:"white" }}>✓</div>
-                  )}
-                </div>
-                <div style={{ fontSize:12, fontWeight:700, color:V2G.darkGreen }}>Result Card</div>
-                <div style={{ fontSize:10, color:V2G.midGray }}>Styled Share</div>
-              </button>
+            <div role="radiogroup" aria-label="Card type" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              {[
+                {id:"outdoor_photo",title:"Original photo",sub:"Just your photo, exactly as taken",src:imageSrc,fit:"contain"},
+                {id:"result_card",title:"Result card",sub:"Your streak, tier and stats",src:downloadUrl,fit:"cover"},
+              ].map(o=>{
+                const on=shareStyle===o.id;
+                return (
+                  <button key={o.id} role="radio" aria-checked={on} onClick={()=>selectShareStyle(o.id)}
+                    style={{ position:"relative", minWidth:0, padding:8, borderRadius:14, cursor:"pointer", textAlign:"left",
+                      border:`2px solid ${on?V2G.green:V2G.border}`, background:on?"rgba(125,200,50,0.08)":"white",
+                      boxShadow:on?"0 2px 12px rgba(125,200,50,0.25)":"none", display:"flex", flexDirection:"column", gap:8,
+                      fontFamily:"Nunito,sans-serif" }}>
+                    <div style={{ position:"relative", width:"100%", aspectRatio:"4 / 3", borderRadius:10, overflow:"hidden", background:"rgba(200,220,190,0.25)" }}>
+                      {o.src && <img src={o.src} alt="" style={{ width:"100%", height:"100%", objectFit:o.fit, display:"block" }} />}
+                      <span aria-hidden="true" style={{ position:"absolute", right:6, top:6, width:22, height:22, borderRadius:"50%",
+                        background:on?V2G.green:"rgba(255,255,255,0.9)", border:on?"none":"1.5px solid rgba(200,220,190,0.9)",
+                        color:"white", fontSize:12, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{on?"✓":""}</span>
+                    </div>
+                    <div style={{ padding:"0 2px 2px" }}>
+                      <div style={{ fontSize:13.5, fontWeight:800, color:V2G.darkGreen }}>{o.title}</div>
+                      <div style={{ fontSize:11.5, color:V2G.midGray, marginTop:1 }}>{o.sub}</div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -902,7 +892,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:14}}>
               <div style={{flex:1,minWidth:0}}>
                 <div id="share-sheet-title" style={{fontSize:19,fontWeight:800,color:"#0d2a05",lineHeight:1.2}}>Share your proof</div>
-                <div style={{fontSize:12.5,color:"#6b7d60",marginTop:3}}>Pick the image that goes with your post.</div>
+                <div style={{fontSize:12.5,color:"#6b7d60",marginTop:3}}>Two ways to share. Either one is a great post.</div>
               </div>
               <button onClick={()=>setShowStylePicker(false)} aria-label="Close"
                 style={{width:34,height:34,borderRadius:"50%",border:"1px solid rgba(200,220,190,0.8)",background:"white",
@@ -911,8 +901,8 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
 
             <div role="radiogroup" aria-label="Proof style" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
               {[
-                {id:"outdoor_photo",title:"Outdoor photo",sub:"Authentic and simple",src:imageSrc},
-                {id:"result_card",title:"Result card",sub:"Branded, streak-focused",src:downloadUrl},
+                {id:"outdoor_photo",title:"Original photo",sub:"Just your photo, exactly as taken",src:imageSrc,fit:"contain"},
+                {id:"result_card",title:"Result card",sub:"Your streak, tier and stats",src:downloadUrl,fit:"cover"},
               ].map(o=>{
                 const on=shareStyle===o.id;
                 return (
@@ -923,7 +913,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                       boxShadow:on?"0 2px 12px rgba(125,200,50,0.25)":"none",
                       transition:"all .15s",fontFamily:"Nunito,sans-serif",display:"flex",flexDirection:"column",gap:8}}>
                     <div style={{position:"relative",width:"100%",aspectRatio:"4 / 3",borderRadius:10,overflow:"hidden",background:"rgba(200,220,190,0.25)"}}>
-                      {o.src && <img src={o.src} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />}
+                      {o.src && <img src={o.src} alt="" style={{width:"100%",height:"100%",objectFit:o.fit||"cover",display:"block"}} />}
                       <span aria-hidden="true" style={{position:"absolute",right:6,top:6,width:22,height:22,borderRadius:"50%",
                         background:on?"#5ba622":"rgba(255,255,255,0.9)",border:on?"none":"1.5px solid rgba(200,220,190,0.9)",
                         color:"white",fontSize:12,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{on?"✓":""}</span>
