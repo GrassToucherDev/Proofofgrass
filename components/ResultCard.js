@@ -343,7 +343,19 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           if(!up.error){ lastErr = null; break; }
           lastErr = up.error; console.warn("[proof upload] attempt "+(attempt+1)+" failed", up.error?.message||up.error);
         }
-        if(lastErr){setSubmitError("Photo upload failed — check your connection and tap again.");setSubmitStatus("error");return false;}
+        if(lastErr){
+          // Third try: send a small copy through our own server (works when the phone can't reach storage directly).
+          try{
+            const tiny = await compressProofPhoto(photo, 1600, 0.8, true);
+            const b64 = await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result||"").split(",")[1]||"");fr.onerror=rej;fr.readAsDataURL(tiny);});
+            const dr = await fetch("/api/proof/upload-direct",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername,image:b64})});
+            const dj = await dr.json().catch(()=>({}));
+            if(dr.status===409&&dj.code==="already_logged"){setSubmitStatus("success");return true;}
+            if(!dr.ok) throw new Error(dj.error||("server "+dr.status));
+            lastErr = null;
+          }catch(e2){ console.warn("[proof upload] server fallback failed",e2); lastErr = {message:(lastErr?.message||"")+" / "+(e2?.message||"")}; }
+        }
+        if(lastErr){const why=String(lastErr.message||"").slice(0,90);setSubmitError("Photo upload failed — check your connection and tap again."+(why?` (${why})`:""));setSubmitStatus("error");return false;}
       }catch(e){console.warn("[proof upload] threw",e);setSubmitError("Photo upload failed — check your connection and tap again.");setSubmitStatus("error");return false;}
     }
     const rpcWithRetry = async(retries=2)=>{
