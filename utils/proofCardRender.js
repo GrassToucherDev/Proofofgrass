@@ -48,8 +48,8 @@ export async function drawProofCard(ctx, W, H, opts) {
   try { await Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("800 20px Nunito")]); } catch {}
   const tierName = tierFor(streak), tierIdx = ["ROOTED", "LOCKED IN", "ELITE", "LEGENDARY", "IMMORTAL", "MYTHIC", "ETERNAL", "ASCENDED", "TRANSCENDENT"].indexOf(tierName) + 1;
   const bgSrc = streak >= 365 ? "/card/bg-night.jpg" : streak >= 100 ? "/card/bg-sunset.jpg" : "/card/bg.jpg";
-  const [mainLogo, bgImg, logo, laurelImg, grassL, grassR, sparkles, cornerImg, pinImg, calImg, medalImg, shieldImg] = await Promise.all([
-    load("/touchgrass-logo-card.png"), load(bgSrc), load("/card/flower.png"), load("/card/laurel.png"), load("/card/grass-l.png"), load("/card/grass-r.png"),
+  const [mainLogo, bgImg, mascotImg, laurelImg, grassL, grassR, sparkles, cornerImg, pinImg, calImg, medalImg, shieldImg] = await Promise.all([
+    load("/touchgrass-logo-card.png"), load(bgSrc), load("/card/mascot-side.png"), load("/card/laurel.png"), load("/card/grass-l.png"), load("/card/grass-r.png"),
     load("/card/sparkles.png"), load("/card/corner.png"), load("/card/pin.png"), load("/card/cal.png"), load("/card/medal.png"), tierIdx ? load(`/card/tier-${tierIdx}.png`) : Promise.resolve(null)]);
   LAUREL = laurelImg;
   ctx.save(); ctx.letterSpacing = "0px"; ctx.textBaseline = "alphabetic";
@@ -162,12 +162,10 @@ export async function drawProofCard(ctx, W, H, opts) {
   };
   capsule(FX, lw); capsule(RX, RW);
   const cy = cy0 + chh / 2;
-  // token badge
-  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.2)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(FX + 78, cy, 46, 0, 7); ctx.fill(); ctx.restore();
-  ctx.lineWidth = 6; ctx.strokeStyle = "#f6b93b"; ctx.beginPath(); ctx.arc(FX + 78, cy, 46, 0, 7); ctx.stroke();
-  if (logo) { const fh = 66, fw = fh * logo.width / logo.height, k = fw > 66 ? 66 / fw : 1; ctx.drawImage(logo, FX + 78 - fw * k / 2, cy - fh * k / 2, fw * k, fh * k); }
-  ctx.textAlign = "left"; ctx.fillStyle = GREEN; ctx.font = `800 22px ${NUN}`; ctx.letterSpacing = "6px"; ctx.fillText("CERTIFIED BY", FX + 150, cy - 14); ctx.letterSpacing = "0px";
-  ctx.fillStyle = INK; ctx.font = `700 56px ${FRED}`; ctx.fillText("Touch Grass", FX + 150, cy + 40);
+  // side-view mascot (pops slightly above the capsule)
+  if (mascotImg) { const mh = 132, mw = mh * mascotImg.width / mascotImg.height; ctx.save(); ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3; ctx.drawImage(mascotImg, FX + 22, cy - mh / 2 - 8, mw, mh); ctx.restore(); }
+  ctx.textAlign = "left"; ctx.fillStyle = GREEN; ctx.font = `800 22px ${NUN}`; ctx.letterSpacing = "6px"; ctx.fillText("CERTIFIED BY", FX + 200, cy - 14); ctx.letterSpacing = "0px";
+  ctx.fillStyle = INK; ctx.font = `700 56px ${FRED}`; ctx.fillText("Touch Grass", FX + 200, cy + 40);
   // verified seal at the capsule's right end
   const sealX = FX + lw - 76; ctx.fillStyle = LIME; ctx.beginPath(); ctx.arc(sealX, cy, 32, 0, 7); ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = "#2f7d10"; ctx.stroke();
   ctx.strokeStyle = "#fff"; ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(sealX - 13, cy + 1); ctx.lineTo(sealX - 4, cy + 10); ctx.lineTo(sealX + 14, cy - 10); ctx.stroke();
