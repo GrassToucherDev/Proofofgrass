@@ -1,5 +1,6 @@
 // pages/groves.js — squads of 3–6 who share a streak and can gift shields.
 // Requires a secured (Google-claimed) username to create or join.
+import OgMeta, { SITE_URL } from "../components/OgMeta";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { signInWithGoogle } from "../utils/googleSignIn";
 import Head from "next/head";
@@ -198,6 +199,7 @@ export default function GrovesPage() {
   return (
     <>
       <Head><title>Groves | Proof of Grass</title></Head>
+      <OgMeta title="Groves | Proof of Grass" description="Start or join a Grove, build streaks together and take on other Groves in The Yard." image={`${SITE_URL}/api/og?type=groves&v=1`} url={`${SITE_URL}/groves`} />
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>
         <V2Nav username={username} onUsernameChange={setUsername} showUpload={() => { window.location.href = "/#upload"; }} />

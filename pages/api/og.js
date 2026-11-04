@@ -1,4 +1,4 @@
-// GET /api/og?type=site|profile&u=<username> — 1200×630 link-preview image (Open Graph / X card).
+// GET /api/og?type=site|groves|profile&u=<username> — 1200×630 link-preview image (Open Graph / X card).
 // Reads public data only (Profiles avatar + grass score, Streaks), so nothing private can leak and
 // no free text is accepted, so nobody can mint a fake card under our domain.
 import { ImageResponse } from "next/og";
@@ -82,6 +82,25 @@ export default async function handler(req) {
             </div>
           </div>
         </Frame>
+      );
+    }
+    if (type === "groves") {
+      return (
+        <div style={{ width: 1200, height: 630, display: "flex", flexDirection: "column", alignItems: "center", position: "relative", background: "#c5e3f7" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`${origin}/og-meadow.jpg`} width={1200} height={630} style={{ position: "absolute", left: 0, top: 0 }} />
+          <div style={{ position: "absolute", left: 0, top: 0, width: 1200, height: 630, display: "flex", background: "linear-gradient(180deg,rgba(197,227,247,.55) 0%,rgba(238,246,226,0) 55%)" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 56, width: 1040, height: 290, borderRadius: 120, border: `10px solid ${GREEN}`, position: "relative", overflow: "hidden",
+            background: "linear-gradient(180deg,#6ec0f2 0%,#bfe6fa 70%,#8fd24a 100%)", boxShadow: "0 12px 30px rgba(26,74,10,.3)" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`${origin}/og-groves-logo.png`} width={720} height={240} />
+          </div>
+          <div style={{ display: "flex", marginTop: 34, alignItems: "center" }}>
+            <div style={{ display: "flex", background: CREAM, border: `6px solid ${GREEN}`, borderRadius: 60, padding: "14px 30px", fontFamily: FRED, fontSize: 32, fontWeight: 700, color: INK, marginRight: 18 }}>Team up. Touch grass together.</div>
+            <div style={{ display: "flex", background: GOLD, border: `6px solid ${GREEN}`, borderRadius: 60, padding: "14px 28px", fontFamily: FRED, fontSize: 32, fontWeight: 700, color: INK }}>Grove vs Grove</div>
+          </div>
+          <div style={{ position: "absolute", bottom: 14, display: "flex", fontFamily: NUN, fontSize: 24, fontWeight: 800, color: GREEN, letterSpacing: 3, background: "rgba(253,246,226,.85)", padding: "4px 20px", borderRadius: 20 }}>PROOFOFGRASS.APP</div>
+        </div>
       );
     }
     // Site-wide preview: Spotlight-style banner (mascot + bubble title) over the meadow.
