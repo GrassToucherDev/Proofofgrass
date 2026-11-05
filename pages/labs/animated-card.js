@@ -72,7 +72,7 @@ export default function AnimatedCardDemo() {
       {err && <div role="alert" style={{ color: "#b3261e", fontWeight: 700 }}>{err}</div>}
       {res && (<div>
         <video src={url} controls playsInline loop autoPlay muted style={{ width: "100%", borderRadius: 16, background: "#000" }} />
-        <p style={{ fontSize: 13 }}>{res.mime.split(";")[0]} · {res.width}×{res.height} · {(res.blob.size / 1048576).toFixed(2)} MB · {res.seconds}s</p>
+        <p style={{ fontSize: 13 }}>{res.mime.split(";")[0]} · {res.width}×{res.height} · {(res.blob.size / 1048576).toFixed(2)} MB · {res.seconds}s · {res.fps}fps · {res.codec}{res.frames ? ` · ${res.frames} frames` : ""} · {res.compat === "h264" ? "H.264 ✓ (works on X, TikTok, Instagram)" : "NOT H.264 — may be rejected by X/TikTok/Instagram"}{res.fallback ? " · fallback recorder" : ""}</p>
         <button style={btn} onClick={share}>Share / Save video</button>
       </div>)}
     </div>

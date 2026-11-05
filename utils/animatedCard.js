@@ -36,6 +36,42 @@ export async function recordCanvas(out, frame, { seconds = 4, fps = 30, onProgre
   const blob = new Blob(chunks, { type: rec.mime.split(";")[0] });
   return { blob, mime: rec.mime, ext: rec.ext, width: out.width, height: out.height, seconds };
 }
+
+// Deterministic encoder: renders EVERY frame at an exact timestamp (no real-time dropping) and writes an MP4 via WebCodecs + mp4-muxer.
+// Prefers H.264 (what X, TikTok, Instagram accept); falls back to VP9, then to the real-time MediaRecorder. Returns compat info for the UI.
+export async function encodeCanvas(out, frame, { seconds = 4, fps = 30, bitrate = 6_000_000, onProgress } = {}) {
+  try {
+    if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined") throw new Error("no webcodecs");
+    const { Muxer, ArrayBufferTarget } = await import("mp4-muxer");
+    const W = out.width, H = out.height;
+    const tries = [["avc1.64002A", "avc", "h264"], ["avc1.4D002A", "avc", "h264"], ["avc1.42002A", "avc", "h264"], ["vp09.00.40.08", "vp9", "vp9"]];
+    let pick = null;
+    for (const [codec, mux, name] of tries) {
+      try { const s = await VideoEncoder.isConfigSupported({ codec, width: W, height: H, bitrate, framerate: fps, ...(mux === "avc" ? { avc: { format: "avc" } } : {}) }); if (s.supported) { pick = { codec, mux, name }; break; } } catch {}
+    }
+    if (!pick) throw new Error("no supported codec");
+    const target = new ArrayBufferTarget();
+    const muxer = new Muxer({ target, video: { codec: pick.mux, width: W, height: H, frameRate: fps }, fastStart: "in-memory", firstTimestampBehavior: "offset" });
+    let encErr = null;
+    const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: (e) => { encErr = e; } });
+    enc.configure({ codec: pick.codec, width: W, height: H, bitrate, framerate: fps, ...(pick.mux === "avc" ? { avc: { format: "avc" } } : {}) });
+    const total = Math.round(seconds * fps);
+    for (let i = 0; i < total; i++) {
+      if (encErr) throw encErr;
+      frame((i * 1000) / fps);
+      const vf = new VideoFrame(out, { timestamp: Math.round((i * 1e6) / fps), duration: Math.round(1e6 / fps) });
+      enc.encode(vf, { keyFrame: i % fps === 0 }); vf.close();
+      while (enc.encodeQueueSize > 6) await new Promise((r) => setTimeout(r, 4));
+      if (i % 4 === 0) { onProgress?.(i / total); await new Promise((r) => setTimeout(r)); } // keep the page responsive
+    }
+    await enc.flush(); if (encErr) throw encErr; muxer.finalize(); onProgress?.(1);
+    const blob = new Blob([target.buffer], { type: "video/mp4" });
+    return { blob, mime: "video/mp4", ext: "mp4", width: W, height: H, seconds, fps, frames: total, codec: pick.codec, compat: pick.name === "h264" ? "h264" : "other" };
+  } catch (e) {
+    const r = await recordCanvas(out, frame, { seconds, fps, onProgress });
+    return r ? { ...r, fps, codec: r.mime, compat: /avc1|h264/i.test(r.mime) ? "h264" : "other", fallback: true } : null;
+  }
+}
 export const loadImg = ld;
 
 
@@ -140,7 +176,7 @@ export async function renderAnimatedCard(staticCard, { format = "4:5", seconds =
     ctx.fillStyle = "#1f6b12"; ctx.fillText("PROOFOFGRASS.APP", W / 2 - 150 + 2, uy + 9); ctx.restore();
   };
 
-  return recordCanvas(out, frame, { seconds, fps, onProgress });
+  return encodeCanvas(out, frame, { seconds, fps, onProgress });
 }
 
 // Flex card: animated cover art behind the (static, transparent-background) foreground panel.
@@ -176,5 +212,5 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
       const hy = fgY - 90; ctx.lineWidth = 20; ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.strokeText(headline, W / 2, hy); ctx.fillStyle = "#fff"; ctx.fillText(headline, W / 2, hy); ctx.restore();
     }
   };
-  return recordCanvas(out, frame, { seconds, fps, onProgress });
+  return encodeCanvas(out, frame, { seconds, fps, onProgress });
 }
