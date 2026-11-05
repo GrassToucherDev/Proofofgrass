@@ -714,7 +714,7 @@ export default function Home() {
     .v2-hero-left { flex: 1; min-width: 0; }
     .v2-hero-right { flex-shrink: 0; width: clamp(280px,40%,480px); display: flex; flex-direction: column; gap: 10px; }
     .v2-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .v2-more-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; padding: 8px clamp(14px,4vw,40px) 20px; }
+    .v2-more-row { display: grid; grid-template-columns: repeat(6,1fr); gap: 10px; padding: 8px clamp(14px,4vw,40px) 20px; }
     .v2-feature-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; padding: 24px clamp(14px,4vw,40px); }
     .v2-bottom-grid > :nth-child(2) { order: -1; }
     .v2-bottom-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; padding: 24px clamp(14px,4vw,40px); align-items: start; }
@@ -1004,14 +1004,15 @@ export default function Home() {
             ["ticket","Grass Draw","/grass-draw"],
             ["swords","The Yard","/yard"],
             ["group","Groves","/groves"],
-            ["palette","Backgrounds","/marketplace"],
+            ["store","Marketplace","/marketplace"],
             ["wheat","Harvest","https://harvest.touchgrass.today"],
+            ["logo","Touch Grass","https://touchgrass.today"],
           ].map(([ic,label,href]) => {
             const ext = href.startsWith("http");
-            const st = { ...V2Styles.glassCard, display:"flex", alignItems:"center", justifyContent:"center", gap:10, padding:"12px 14px", textDecoration:"none", color:V2.forestGreen, fontWeight:800, fontSize:14, minWidth:0 };
+            const st = { ...V2Styles.glassCard, display:"flex", alignItems:"center", justifyContent:"flex-start", gap:10, padding:"12px 16px", textDecoration:"none", color:V2.forestGreen, fontWeight:800, fontSize:14, minWidth:0 };
             return ext
-              ? <a key={label} href={href} target="_blank" rel="noopener noreferrer" style={st}><Ico n={ic} size={26} /><span>{label}</span></a>
-              : <Link key={label} href={href} style={st}><Ico n={ic} size={26} /><span>{label}</span></Link>;
+              ? <a key={label} href={href} target="_blank" rel="noopener noreferrer" style={st}><span style={{width:30,flexShrink:0,display:"flex",justifyContent:"center"}}>{ic==="logo"?<img src="/touchgrass-transparent.png" alt="" width={26} height={26} style={{width:26,height:26,objectFit:"contain",flexShrink:0}} />:<Ico n={ic} size={26} />}</span><span>{label}</span></a>
+              : <Link key={label} href={href} style={st}><span style={{width:30,flexShrink:0,display:"flex",justifyContent:"center"}}>{ic==="logo"?<img src="/touchgrass-transparent.png" alt="" width={26} height={26} style={{width:26,height:26,objectFit:"contain",flexShrink:0}} />:<Ico n={ic} size={26} />}</span><span>{label}</span></Link>;
           })}
         </div>
 
