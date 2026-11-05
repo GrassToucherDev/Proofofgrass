@@ -267,8 +267,10 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
   const TAGS   = "$TOUCHGRASS #TouchGrass #ProofOfGrass";
 
   const buildShareText = useCallback(()=>{
-    return `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE}`;
-  },[caption,currentStreak]);
+    const u=sunsetUser();
+    const link=u?`proofofgrass.app/?ref=${u}`:"proofofgrass.app";
+    return `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\nJoin me: ${link}\n\n${TAGS}\n${HANDLE}`;
+  },[caption,currentStreak,username]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleNewCaption = useCallback(()=>{
     setCaption(prev=>pickCaption(currentStreak,prev));setCopied(false);
@@ -969,7 +971,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               </div>
               <div style={{padding:"10px 12px 12px",maxHeight:150,overflowY:"auto"}}>
                 <p style={{margin:0,fontSize:13.5,color:"#0d2a05",lineHeight:1.5,fontWeight:600,wordBreak:"break-word"}}>{caption}</p>
-                <p style={{margin:"6px 0 0",fontSize:12,color:"#6b7d60",fontWeight:600}}>Day {currentStreak} · proof of grass 🌿</p>
+                <p style={{margin:"6px 0 0",fontSize:12,color:"#6b7d60",fontWeight:600,wordBreak:"break-word"}}>Day {currentStreak} · proof of grass 🌿<br/>Join me: {(()=>{const u=sunsetUser();return u?`proofofgrass.app/?ref=${u}`:"proofofgrass.app";})()}</p>
                 <p style={{margin:"6px 0 0",fontSize:12.5,color:"#3d7a12",lineHeight:1.5,fontWeight:600,wordBreak:"break-word"}}>{TAGS}<br/>{HANDLE}</p>
               </div>
             </div>
