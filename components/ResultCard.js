@@ -591,13 +591,13 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                     style={{ gridColumn:"1 / -1", padding:"12px 10px", borderRadius:12, cursor:"pointer",
                       border:`1.5px solid ${V2G.green}`, background:"rgba(125,200,50,0.10)",
                       color:V2G.darkGreen, fontSize:13, fontWeight:700, fontFamily:"Nunito,sans-serif", whiteSpace:"nowrap" }}>
-                    📍 {gpsRequesting?"Locating…":"Use my location"}
+                    <Ico inline n="pin" size={18} />{gpsRequesting?"Locating…":"Use my location"}
                   </button>
                   <button onClick={()=>setLocationMode("manual")}
                     style={{ padding:"11px 8px", borderRadius:12, cursor:"pointer",
                       border:`1.5px solid ${V2G.border}`, background:"white",
                       color:V2G.darkGreen, fontSize:13, fontWeight:600, fontFamily:"Nunito,sans-serif", whiteSpace:"nowrap" }}>
-                    ✏️ Enter city
+                    <Ico inline n="pencil" size={18} />Enter city
                   </button>
                   <button onClick={()=>setLocationMode("none")}
                     style={{ padding:"11px 8px", borderRadius:12, cursor:"pointer",
@@ -655,7 +655,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             )}
             {(locationCity||gpsLat) && (
               <div style={{ fontSize:11, color:V2G.midGray, marginTop:6 }}>
-                📍 {locationMode==="gps"?"Nearby Region (approx.)":[locationCity,locationRegion,locationCountry].filter(Boolean).join(", ")}
+                <Ico inline n="pin" size={16} />{locationMode==="gps"?"Nearby Region (approx.)":[locationCity,locationRegion,locationCountry].filter(Boolean).join(", ")}
               </div>
             )}
           </div>
@@ -726,7 +726,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                   style={{ background:"rgba(200,168,75,0.15)", border:"1px solid rgba(200,168,75,0.4)",
                     borderRadius:8, padding:"8px 14px", color:"#c8a84b", fontSize:12, fontWeight:700,
                     cursor:"pointer", flexShrink:0, opacity:activatingSunset?0.6:1, fontFamily:"Nunito,sans-serif" }}>
-                  {activatingSunset?"Activating…":"🌅 Activate Pass"}
+                  {activatingSunset?"Activating…":<><Ico inline n="sunrise" size={18} />Activate Pass</>}
                 </button>
               )}
             </div>
@@ -734,7 +734,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           {sunsetActivated && (
             <div style={{ fontSize:12, color:"#5ba622", padding:"8px 12px", borderRadius:8,
               background:"rgba(125,200,50,0.08)", border:"1px solid rgba(125,200,50,0.2)" }}>
-              🌅 Sunset Pass active — {sunsetMode==="apply"?"this post will count for yesterday":"deadline extended to 2:00 AM UTC"}
+              <Ico inline n="sunrise" size={18} />Sunset Pass active — {sunsetMode==="apply"?"this post will count for yesterday":"deadline extended to 2:00 AM UTC"}
             </div>
           )}
 
@@ -750,7 +750,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               display:"flex", alignItems:"center", justifyContent:"center", gap:10, letterSpacing:"0.02em",
               WebkitAppearance:"none", touchAction:"manipulation", userSelect:"none",
             }}>
-            {submitStatus==="loading"?"⏳ Locking in…":"🔒 Lock In My Streak"}
+            {submitStatus==="loading"?<><Ico inline n="hourglass" size={20} />Locking in…</>:<><Ico inline n="lock" size={22} />Lock In My Streak</>}
           </button>
 
           {/* Secondary — Share to X */}
@@ -764,7 +764,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               display:"flex", alignItems:"center", justifyContent:"center", gap:8,
               WebkitAppearance:"none", touchAction:"manipulation", userSelect:"none",
             }}>
-            🚀 Share to X
+            <Ico inline n="rocket" size={20} />Share to X
           </button>
 
           {shareHint && (
@@ -798,7 +798,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               style={{ width:64, height:64, objectFit:"contain", flexShrink:0 }} />
             <div style={{ flex:1 }}>
               <div style={{ fontSize:15, fontWeight:700, color:"#1a4a0a", marginBottom:2 }}>
-                Day {currentStreak} Locked In! 🎉
+                Day {currentStreak} Locked In! <Ico inline n="confetti" size={24} />
               </div>
               <div style={{ fontSize:12, color:"#5ba622" }}>{shieldSaved?"A shield covered your missed day. Your streak is safe.":"Your streak is saved for today."}</div>
             </div>
@@ -808,7 +808,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer",
                 background:"rgba(125,200,50,0.12)", border:"1.5px solid rgba(125,200,50,0.3)",
                 color:"#5ba622", fontSize:13, fontWeight:700, fontFamily:"Nunito,sans-serif" }}>
-              📤 Share to X
+              <Ico inline n="share" size={20} />Share to X
             </button>
             <a href={downloadUrl} download={`proof-of-grass-day-${currentStreak}.png`}
               style={{ flex:1, padding:"11px", borderRadius:10, cursor:"pointer",

@@ -2,6 +2,7 @@
 // V2 shared navigation — glass white, horizontal links, avatar pill
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Ico from "./Ico";
 import { useRouter } from "next/router";
 import { V2, V2Styles } from "../utils/v2Theme";
 import { SiteLinks, SiteMobileMenu } from "./SiteMenu";
@@ -200,7 +201,7 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
           {/* Avatar if logged in */}
           {username && (
             <div className="v2nav-avatar" onClick={() => router.push(`/u/${username}`)}>
-              🌿
+              <Ico n="leaf" size={22} />
             </div>
           )}
 
