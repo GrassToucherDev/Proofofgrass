@@ -16,6 +16,28 @@ export function pickRecorderMime() {
   return null;
 }
 
+
+// Shared recorder: drives frame(t_ms) in real time while MediaRecorder captures the canvas.
+export async function recordCanvas(out, frame, { seconds = 4, fps = 30, onProgress } = {}) {
+  const rec = pickRecorderMime(); if (!rec) return null;
+  const D = seconds * 1000;
+  frame(0);
+  const stream = out.captureStream(fps);
+  const mr = new MediaRecorder(stream, { mimeType: rec.mime, videoBitsPerSecond: 6_000_000 });
+  const chunks = []; mr.ondataavailable = (e) => e.data && e.data.size && chunks.push(e.data);
+  const done = new Promise((res) => { mr.onstop = res; });
+  mr.start(250);
+  const t0 = performance.now();
+  await new Promise((res) => {
+    const tick = () => { const t = performance.now() - t0; frame(Math.min(t, D)); onProgress?.(clamp01(t / D)); if (t < D) requestAnimationFrame(tick); else res(); };
+    requestAnimationFrame(tick);
+  });
+  mr.stop(); await done;
+  const blob = new Blob(chunks, { type: rec.mime.split(";")[0] });
+  return { blob, mime: rec.mime, ext: rec.ext, width: out.width, height: out.height, seconds };
+}
+export const loadImg = ld;
+
 function star(ctx, x, y, r, rot) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.beginPath();
   for (let i = 0; i < 8; i++) { const a = (Math.PI / 4) * i, rr = i % 2 ? r * 0.28 : r; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
@@ -24,12 +46,12 @@ function star(ctx, x, y, r, rot) {
 function rrPath(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
 
 // staticCard: any share-card canvas (the result card is 1600×1200). format: "4:5" (X / Instagram feed) or "9:16" (TikTok / Reels / Stories).
-export async function renderAnimatedCard(staticCard, { format = "4:5", seconds = 4, fps = 30, headline = "", onProgress } = {}) {
-  const rec = pickRecorderMime(); if (!rec) return null;
+export async function renderAnimatedCard(staticCard, { format = "4:5", seconds = 4, fps = 30, headline = "", bgImage, fx, confetti = true, onProgress } = {}) {
+  if (!pickRecorderMime()) return null;
   const W = 1080, H = format === "9:16" ? 1920 : 1350, D = seconds * 1000;
   const out = document.createElement("canvas"); out.width = W; out.height = H;
   const ctx = out.getContext("2d");
-  const [bg, wago] = await Promise.all([ld("/card/bg.jpg"), ld("/mascot/wago-celebrate.webp")]);
+  const [bg, wago] = await Promise.all([bgImage ? Promise.resolve(bgImage) : ld("/card/bg.jpg"), ld("/mascot/wago-celebrate.webp")]);
 
   // layout of the card inside the frame
   const cw = W * 0.94, ch = cw * staticCard.height / staticCard.width;
@@ -45,9 +67,10 @@ export async function renderAnimatedCard(staticCard, { format = "4:5", seconds =
     // background
     if (bg) { const sc = Math.max(W / bg.width, H / bg.height); ctx.drawImage(bg, (W - bg.width * sc) / 2, (H - bg.height * sc) / 2, bg.width * sc, bg.height * sc); }
     else { ctx.fillStyle = "#cfe8f7"; ctx.fillRect(0, 0, W, H); }
+    fx?.under?.(ctx, t);
     // twinkling sparkles
     ctx.fillStyle = "#fff";
-    twinkle.forEach((s) => { const a = 0.5 + 0.5 * Math.sin(t / 1000 * 4 + s.ph); ctx.globalAlpha = 0.25 + 0.6 * a; star(ctx, s.x, s.y, s.s * (0.6 + a * 0.6), t / 1500 + s.ph); });
+    if (!fx) twinkle.forEach((s) => { const a = 0.5 + 0.5 * Math.sin(t / 1000 * 4 + s.ph); ctx.globalAlpha = 0.25 + 0.6 * a; star(ctx, s.x, s.y, s.s * (0.6 + a * 0.6), t / 1500 + s.ph); });
     ctx.globalAlpha = 1;
     // headline pops in above the card
     if (headline) {
@@ -86,12 +109,13 @@ export async function renderAnimatedCard(staticCard, { format = "4:5", seconds =
     }
     // confetti burst
     const ct = (t - 500) / 1000;
-    if (ct > 0) conf.forEach((p) => {
+    if (confetti && ct > 0) conf.forEach((p) => {
       const x = W / 2 + Math.cos(p.a) * p.v * ct, y = cy0 + ch * 0.32 + Math.sin(p.a) * p.v * ct + 1500 * ct * ct;
       if (y > H + 40 || ct > 2.6) return;
       ctx.save(); ctx.translate(x, y); ctx.rotate(p.r + p.vr * ct); ctx.globalAlpha = clamp01(1.3 - ct / 2.2); ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
     });
     ctx.globalAlpha = 1;
+    fx?.over?.(ctx, t);
     // url pill
     ctx.save(); ctx.font = "800 28px Nunito,system-ui,sans-serif"; ctx.letterSpacing = "4px"; ctx.textAlign = "center";
     const uw = ctx.measureText("PROOFOFGRASS.APP").width + 56, uy = H - (format === "9:16" ? 150 : 70);
@@ -99,18 +123,45 @@ export async function renderAnimatedCard(staticCard, { format = "4:5", seconds =
     ctx.fillStyle = "#1f6b12"; ctx.fillText("PROOFOFGRASS.APP", W / 2 - 150 + 2, uy + 9); ctx.restore();
   };
 
-  frame(0);
-  const stream = out.captureStream(fps);
-  const mr = new MediaRecorder(stream, { mimeType: rec.mime, videoBitsPerSecond: 6_000_000 });
-  const chunks = []; mr.ondataavailable = (e) => e.data && e.data.size && chunks.push(e.data);
-  const done = new Promise((res) => { mr.onstop = res; });
-  mr.start(250);
-  const t0 = performance.now();
-  await new Promise((res) => {
-    const tick = () => { const t = performance.now() - t0; frame(Math.min(t, D)); onProgress?.(clamp01(t / D)); if (t < D) requestAnimationFrame(tick); else res(); };
-    requestAnimationFrame(tick);
-  });
-  mr.stop(); await done;
-  const blob = new Blob(chunks, { type: rec.mime.split(";")[0] });
-  return { blob, mime: rec.mime, ext: rec.ext, width: W, height: H, seconds };
+  return recordCanvas(out, frame, { seconds, fps, onProgress });
+}
+
+// Flex card: animated cover art behind the (static, transparent-background) foreground panel.
+// fgCanvas: drawFlexCard output on a transparent canvas (1080×1080). bgImage: the cover art (or null).
+export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", seconds = 4, fps = 30, fx, headline = "", onProgress } = {}) {
+  if (!pickRecorderMime()) return null;
+  const W = 1080, H = format === "9:16" ? 1920 : format === "4:5" ? 1350 : 1080;
+  const out = document.createElement("canvas"); out.width = W; out.height = H;
+  const ctx = out.getContext("2d");
+  try { await Promise.all([document.fonts.load("800 80px Fredoka"), document.fonts.load("800 24px Nunito")]); } catch {}
+  const fgW = W, fgH = fgCanvas.height * (W / fgCanvas.width), fgY = (H - fgH) / 2 + (format === "9:16" ? 30 : 0);
+  const frame = (t) => {
+    const s = t / 1000;
+    ctx.fillStyle = "#0b0b12"; ctx.fillRect(0, 0, W, H);
+    if (bgImage) { // slow drift + breathing zoom
+      const z = 1.1 + 0.03 * Math.sin(s * 0.9), sc = Math.max(W / bgImage.width, H / bgImage.height) * z;
+      const dx = Math.sin(s * 0.6) * 24, dy = Math.cos(s * 0.5) * 18;
+      ctx.drawImage(bgImage, (W - bgImage.width * sc) / 2 + dx, (H - bgImage.height * sc) / 2 + dy, bgImage.width * sc, bgImage.height * sc);
+    }
+    fx?.under?.(ctx, t);
+    const k = clamp01(t / 700), a = easeOutCubic(clamp01(t / 450)), sc2 = 0.95 + 0.05 * easeOutBack(k), fl = Math.sin(s * 2) * 4 * clamp01((t - 600) / 400);
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(W / 2, fgY + fgH / 2 + fl); ctx.scale(sc2, sc2);
+    ctx.drawImage(fgCanvas, -fgW / 2, -fgH / 2, fgW, fgH);
+    const sk = clamp01((t - 1200) / 900);
+    if (sk > 0 && sk < 1) { // shine sweep
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.beginPath(); ctx.rect(-fgW / 2, -fgH / 2, fgW, fgH); ctx.clip();
+      const x = -fgW / 2 - 300 + (fgW + 600) * easeOutCubic(sk), g = ctx.createLinearGradient(x - 140, 0, x + 140, 0);
+      g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(0.5, "rgba(255,255,255,.22)"); g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.rotate(-0.35); ctx.fillStyle = g; ctx.fillRect(x - 140, -fgH, 280, fgH * 2); ctx.restore();
+    }
+    ctx.restore(); ctx.globalAlpha = 1;
+    fx?.over?.(ctx, t);
+    if (headline && format !== "1:1") {
+      let px = 104; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`;
+      while (ctx.measureText(headline).width > W * 0.9 && px > 48) { px -= 4; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`; }
+      ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.globalAlpha = easeOutCubic(clamp01((t - 200) / 500));
+      const hy = fgY - 90; ctx.lineWidth = 20; ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.strokeText(headline, W / 2, hy); ctx.fillStyle = "#fff"; ctx.fillText(headline, W / 2, hy); ctx.restore();
+    }
+  };
+  return recordCanvas(out, frame, { seconds, fps, onProgress });
 }
