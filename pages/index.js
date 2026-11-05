@@ -49,7 +49,7 @@ function Skel({ w = "100%", h = 16, r = 8 }) {
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
-const ICO3D = new Set(["camera","lock","share","check","flame","shield","trophy","sprout"]);
+const ICO3D = new Set(["camera","lock","share","check","flame","shield","trophy","sprout","bolt"]);
 function Ico({ n, size = 24 }) {
   if (!ICO3D.has(n)) return <span style={{ fontSize: size * 0.8, lineHeight: 1 }}>{n}</span>;
   return <img src={`/icons3d/${n}.webp`} alt="" width={size} height={size} style={{ width: size, height: size, objectFit: "contain", display: "block", margin: "0 auto" }} />;
@@ -834,7 +834,7 @@ export default function Home() {
                 loading={false}
               />
               <StatCard
-                icon="⚡"
+                icon="bolt"
                 value={userStats?.grass_score != null ? userStats.grass_score.toLocaleString() : "—"}
                 label="Grass Score"
                 sub={!hasUser ? "Starts with your first proof" : null}
