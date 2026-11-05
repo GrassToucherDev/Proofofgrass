@@ -335,7 +335,7 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
   return (
     <div style={{ ...V2Styles.glassCard, padding: "28px 24px" }}>
       <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div style={{ fontSize: 28, marginBottom: 8 }}>🌿</div>
+        <div style={{ marginBottom: 8 }}><Ico n="sprout" size={40} /></div>
         <h2 style={{ fontFamily: V2.fontSans, fontSize: 22, fontWeight: 800,
           color: V2.forestGreen, marginBottom: 8 }}>{lockedIn ? "You're locked in" : "Let's get outside"}</h2>
         <p style={{ fontSize: 13, color: V2.textMuted }}>{lockedIn ? "Nice work. Today's proof is in." : hasUser ? "Add your outdoor photo to log today's proof." : "Two quick steps: pick a username, then add a photo from outside."}</p>
@@ -806,11 +806,11 @@ export default function Home() {
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <button onClick={scrollToUpload}
                 style={{ ...V2Styles.btnPrimary, fontSize: 15, padding: "14px 28px" }}>
-                {hasUser ? "🌿 Log Your Proof" : "🌿 Log Your First Proof"}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Ico n="camera" size={22} />{hasUser ? "Log Your Proof" : "Log Your First Proof"}</span>
               </button>
               <Link href="/leaderboard"
                 style={{ ...V2Styles.btnSecondary, fontSize: 15, padding: "13px 28px", textDecoration: "none" }}>
-                👑 View Leaderboard
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Ico n="trophy" size={22} />View Leaderboard</span>
               </Link>
             </div>
           </div>
@@ -996,7 +996,7 @@ export default function Home() {
         </div>
 
         {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
-        <div style={{ padding: "8px clamp(14px,4vw,40px) 0", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ padding: "28px clamp(14px,4vw,40px) 4px", display: "flex", alignItems: "center", gap: 12 }}>
           <img src="/mascot/wago-point.webp" alt="" width={72} height={72} style={{ width: 72, height: 72, objectFit: "contain", flexShrink: 0 }} />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen }}>Explore</div>
