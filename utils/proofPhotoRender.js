@@ -33,7 +33,7 @@ export async function drawPhotoCard(ctx, W, H, opts) {
   const handle = (opts.username || "").replace(/^@+/, "").trim();
   try { await Promise.race([Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("800 20px Nunito")]), new Promise((r) => setTimeout(r, 2500))]); } catch {}
   const tierName = tierFor(streak), tIdx = TIERS.indexOf(tierName) + 1, newcomer = !tierName;
-  const [logo, shield, medal, pin] = await Promise.all([ld("/touchgrass-logo-card.png"), tIdx ? ld(`/card/tier-${tIdx}.png`) : null, ld("/card/medal.png"), ld("/card/pin.png")]);
+  const logo = await ld("/touchgrass-logo-card.png");
   ctx.save(); ctx.textBaseline = "alphabetic"; ctx.letterSpacing = "0px";
 
   // photo, cover-fitted
@@ -54,42 +54,22 @@ export async function drawPhotoCard(ctx, W, H, opts) {
   if (logo) { const lw = 330, lh = lw * logo.height / logo.width; // no chip: the logo sits straight on the photo with a soft shadow
     ctx.save(); ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 4; ctx.drawImage(logo, W - M - lw, M - 6, lw, lh); ctx.restore(); }
 
-  // bottom glass bar
-  const BH = 200, BX = M, BW = W - M * 2, BY = H - M - BH;
-  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8; ctx.fillStyle = "rgba(255,255,255,.64)"; rr(ctx, BX, BY, BW, BH, 70); ctx.fill(); ctx.restore();
-  ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.85)"; rr(ctx, BX, BY, BW, BH, 70); ctx.stroke();
-  // badge pops out of the bar's left end
-  const bcx = BX + 120, bcy = BY + BH / 2 - 6;
-  if (shield) { const sh = 190, sw = sh * shield.width / shield.height; ctx.save(); ctx.shadowColor = "rgba(0,0,0,.3)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 6; ctx.drawImage(shield, bcx - sw / 2, bcy - sh / 2 - 12, sw, sh); ctx.restore(); }
-  else sprout(ctx, bcx, bcy - 6, 66);
-  // DAY N
-  const nx = BX + 240; ctx.textAlign = "left";
-  const num = String(streak); let ns = 120; ctx.font = `700 ${ns}px ${FRED}`;
-  const fit = () => { ctx.font = `700 ${Math.round(ns * 0.5)}px ${FRED}`; const d = ctx.measureText("DAY ").width; ctx.font = `700 ${ns}px ${FRED}`; return d + ctx.measureText(num).width; };
-  while (fit() > 400 && ns > 64) ns -= 4;
-  ctx.font = `700 ${Math.round(ns * 0.5)}px ${FRED}`; const dw = ctx.measureText("DAY ").width; ctx.fillStyle = INK; ctx.fillText("DAY ", nx, BY + 128);
-  ctx.font = `700 ${ns}px ${FRED}`; ctx.fillStyle = LIME; ctx.fillText(num, nx + dw, BY + 128);
-  ctx.fillStyle = GREEN; ctx.font = `800 20px ${NUN}`; ctx.letterSpacing = "5px"; ctx.fillText("CURRENT STREAK", nx + 2, BY + 164); ctx.letterSpacing = "0px";
-  // divider
-  const dx = nx + 470; ctx.fillStyle = "rgba(31,107,18,.22)"; ctx.fillRect(dx, BY + 34, 3, BH - 68);
-  // right block: tier pill, @username, date / location
-  const rx = dx + 34, rw = BX + BW - 40 - rx;
-  const pal = newcomer ? { a: "#b8f0e6", b: "#4fcfb4", bd: "#1f8f7a", tx: "#06342c" } : (TIER_PAL[tIdx] || TIER_PAL[4]);
-  const tlabel = newcomer ? "NEWCOMER" : tierName; ctx.font = `700 34px ${FRED}`; ctx.letterSpacing = "1px";
-  const tw = ctx.measureText(tlabel).width + 64;
-  glossPill(ctx, rx, BY + 30, tw, 62, pal);
-  ctx.save(); ctx.fillStyle = pal.tx; if (pal.dark) { ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowOffsetY = 2; } else { ctx.shadowColor = "rgba(255,255,255,.7)"; ctx.shadowOffsetY = 2; }
-  ctx.textAlign = "center"; ctx.fillText(tlabel, rx + tw / 2, BY + 30 + 44); ctx.restore(); ctx.letterSpacing = "0px";
-  if (topPct && medal) { const mh = 62, mw = mh * medal.width / medal.height, mx = rx + tw + 18;
-    ctx.drawImage(medal, mx, BY + 30, mw, mh);
-    ctx.textAlign = "center"; ctx.fillStyle = "#5a3e00"; ctx.font = `800 8px ${NUN}`; ctx.fillText("TOP", mx + mw / 2, BY + 30 + 19); ctx.font = `700 15px ${FRED}`; ctx.fillText(`${topPct}%`, mx + mw / 2, BY + 30 + 34);
-    ctx.textAlign = "left"; ctx.fillStyle = INK; ctx.font = `700 30px ${FRED}`; ctx.fillText(`Top ${topPct}%`, mx + mw + 12, BY + 30 + 42); }
-  ctx.textAlign = "left"; ctx.fillStyle = INK;
-  let hs = 50; ctx.font = `800 ${hs}px ${NUN}`; const hnd = handle ? `@${handle}` : "Touch Grass";
-  while (ctx.measureText(hnd).width > rw && hs > 28) { hs -= 2; ctx.font = `800 ${hs}px ${NUN}`; }
-  ctx.fillText(hnd, rx, BY + 138);
+  // bottom glass name plate: slim, translucent. Day shown subtly on the left, then @username and date/location.
+  const BH = 136, BX = M, BW = W - M * 2, BY = H - M - BH;
+  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8; ctx.fillStyle = "rgba(255,255,255,.64)"; rr(ctx, BX, BY, BW, BH, 68); ctx.fill(); ctx.restore();
+  ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.85)"; rr(ctx, BX, BY, BW, BH, 68); ctx.stroke();
+  const num = String(streak); ctx.textAlign = "left";
+  ctx.font = `700 34px ${FRED}`; const dayW = ctx.measureText("DAY ").width; ctx.font = `700 66px ${FRED}`; const numW = ctx.measureText(num).width;
+  const gx = BX + 52, gy = BY + BH / 2 + 22;
+  ctx.font = `700 34px ${FRED}`; ctx.fillStyle = INK; ctx.fillText("DAY ", gx, gy);
+  ctx.font = `700 66px ${FRED}`; ctx.fillStyle = LIME; ctx.fillText(num, gx + dayW, gy);
+  const dx = gx + dayW + numW + 40; ctx.fillStyle = "rgba(31,107,18,.28)"; ctx.fillRect(dx, BY + 28, 3, BH - 56);
+  const rx = dx + 36, rw = BX + BW - 48 - rx;
+  ctx.fillStyle = INK; let hs = 46; ctx.font = `800 ${hs}px ${NUN}`; const hnd = handle ? `@${handle}` : "Touch Grass";
+  while (ctx.measureText(hnd).width > rw && hs > 26) { hs -= 2; ctx.font = `800 ${hs}px ${NUN}`; }
+  ctx.fillText(hnd, rx, BY + 66);
   ctx.fillStyle = GREEN; ctx.font = `700 26px ${NUN}`;
   const sub = [dateStr, location].filter(Boolean).join("  ·  ");
-  let st = sub; while (ctx.measureText(st).width > rw && st.length > 6) st = st.slice(0, -2); ctx.fillText(st === sub ? st : st + "…", rx, BY + 174);
+  let st = sub; while (ctx.measureText(st).width > rw && st.length > 6) st = st.slice(0, -2); ctx.fillText(st === sub ? st : st + "…", rx, BY + 106);
   ctx.restore();
 }
