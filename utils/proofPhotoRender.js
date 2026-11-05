@@ -65,8 +65,18 @@ export async function drawPhotoCard(ctx, W, H, opts) {
   ctx.font = `700 26px ${NUN}`; let st = sub; while (ctx.measureText(st).width > maxText && st.length > 6) st = st.slice(0, -2); if (st !== sub) st += "…";
   const subW = ctx.measureText(st).width, textW = Math.max(hndW, subW);
   const BW = Math.min(W - M * 2, PADL + dayW + numW + 40 + 3 + GAP + textW + PADR);
-  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8; ctx.fillStyle = "rgba(255,255,255,.64)"; rr(ctx, BX, BY, BW, BH, 68); ctx.fill(); ctx.restore();
-  ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.85)"; rr(ctx, BX, BY, BW, BH, 68); ctx.stroke();
+  // frosted glass: the photo behind the plate is blurred (where the browser supports ctx.filter), then lightly tinted white
+  const frosted = photo && typeof ctx.filter === "string";
+  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.14)"; ctx.shadowBlur = 22; ctx.shadowOffsetY = 6; ctx.fillStyle = frosted ? "rgba(255,255,255,.01)" : "rgba(255,255,255,.55)"; rr(ctx, BX, BY, BW, BH, 68); ctx.fill(); ctx.restore();
+  if (frosted) {
+    ctx.save(); rr(ctx, BX, BY, BW, BH, 68); ctx.clip();
+    ctx.filter = "blur(16px)";
+    const sc = Math.max(W / photo.width, H / photo.height), dw = photo.width * sc, dh = photo.height * sc; ctx.drawImage(photo, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    ctx.filter = "none"; ctx.fillStyle = "rgba(255,255,255,.34)"; ctx.fillRect(BX, BY, BW, BH);
+    const sheen = ctx.createLinearGradient(0, BY, 0, BY + BH); sheen.addColorStop(0, "rgba(255,255,255,.28)"); sheen.addColorStop(0.55, "rgba(255,255,255,0)"); ctx.fillStyle = sheen; ctx.fillRect(BX, BY, BW, BH);
+    ctx.restore();
+  }
+  ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.75)"; rr(ctx, BX, BY, BW, BH, 68); ctx.stroke();
   const gx = BX + PADL, gy = BY + BH / 2 + 22;
   ctx.font = `700 34px ${FRED}`; ctx.fillStyle = INK; ctx.fillText("DAY ", gx, gy);
   ctx.font = `700 66px ${FRED}`; ctx.fillStyle = LIME; ctx.fillText(num, gx + dayW, gy);
