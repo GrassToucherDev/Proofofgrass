@@ -1003,7 +1003,7 @@ export default function Home() {
           {[
             ["ticket","Grass Draw","/grass-draw"],
             ["swords","The Yard","/yard"],
-            ["shield","Shields","/marketplace"],
+            ["group","Groves","/groves"],
             ["palette","Backgrounds","/marketplace"],
             ["wheat","Harvest","https://harvest.touchgrass.today"],
           ].map(([ic,label,href]) => {
