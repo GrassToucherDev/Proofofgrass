@@ -41,28 +41,28 @@ const P = (tf, x, y) => [tf.ox + x * tf.k * tf.sc, tf.oy + y * tf.k * tf.sc];
 
 export function y2kFx(variant, W, H) {
   const rnd = mul(variant.length * 97 + 11), hot = HOT[variant] || HOT.chrome;
-  const motes = Array.from({ length: variant === "chrome" ? 34 : 22 }, () => ({ x: rnd() * W, ph: rnd(), sp: 18 + rnd() * 40, w: rnd() * 6.28, r: 3 + rnd() * 5 }));
-  const bubs = Array.from({ length: variant === "bubble" ? 12 : variant === "dream" ? 8 : variant === "aqua" ? 9 : 0 }, () => ({ x: rnd() * W, ph: rnd(), r: 22 + rnd() * 46, sp: 60 + rnd() * 90, w: rnd() * 6.28, hue: 170 + rnd() * 150 }));
-  const shim = hot.shimmer.map(([x, y, w, h]) => ({ x, y, w, h, pts: Array.from({ length: 38 }, () => ({ u: rnd(), v: rnd(), ph: rnd() * 6.28, sp: 2 + rnd() * 4 })) }));
+  const motes = Array.from({ length: variant === "chrome" ? 48 : 32 }, () => ({ x: rnd() * W, ph: rnd(), sp: 18 + rnd() * 40, w: rnd() * 6.28, r: 3 + rnd() * 5 }));
+  const bubs = Array.from({ length: variant === "bubble" ? 16 : variant === "dream" ? 11 : variant === "aqua" ? 12 : 4 }, () => ({ x: rnd() * W, ph: rnd(), r: 22 + rnd() * 46, sp: 60 + rnd() * 90, w: rnd() * 6.28, hue: 170 + rnd() * 150 }));
+  const shim = hot.shimmer.map(([x, y, w, h]) => ({ x, y, w, h, pts: Array.from({ length: 64 }, () => ({ u: rnd(), v: rnd(), ph: rnd() * 6.28, sp: 2 + rnd() * 4 })) }));
   const tint = variant === "cyber" ? "0,255,200" : variant === "dream" ? "255,200,255" : "255,255,255";
   return {
     // art-anchored effects: drawn right after the cover, so they sit IN the scene
     bg(ctx, t, tf) {
       const s = t / 1000;
       ctx.save(); ctx.globalCompositeOperation = "screen";
-      hot.glows.forEach(([x, y, r, rgb], i) => { const [X, Y] = P(tf, x, y), R = r * tf.k * tf.sc, a = 0.16 + 0.16 * (0.5 + 0.5 * Math.sin(s * 2.2 + i * 1.7));
+      hot.glows.forEach(([x, y, r, rgb], i) => { const [X, Y] = P(tf, x, y), R = r * tf.k * tf.sc, a = 0.22 + 0.22 * (0.5 + 0.5 * Math.sin(s * 2.2 + i * 1.7));
         const g = ctx.createRadialGradient(X, Y, 0, X, Y, R); g.addColorStop(0, `rgba(${rgb},${a * 2.2})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.fillRect(X - R, Y - R, R * 2, R * 2); });
       ctx.restore();
       shim.forEach((z) => { const [X, Y] = P(tf, z.x, z.y), w = z.w * tf.k * tf.sc, h = z.h * tf.k * tf.sc;
-        z.pts.forEach((p) => { const a = Math.max(0, Math.sin(s * p.sp + p.ph)); if (a < 0.55) return; sparkle(ctx, X + p.u * w, Y + p.v * h, (6 + 12 * a) * tf.k * tf.sc * 1.4, s * 0.5 + p.ph, `rgba(255,255,255,${0.85 * a})`); }); });
+        z.pts.forEach((p) => { const a = Math.max(0, Math.sin(s * p.sp + p.ph)); if (a < 0.4) return; sparkle(ctx, X + p.u * w, Y + p.v * h, (6 + 12 * a) * tf.k * tf.sc * 1.4, s * 0.5 + p.ph, `rgba(255,255,255,${0.85 * a})`); }); });
       hot.glints.forEach(([x, y, size], i) => { const [X, Y] = P(tf, x, y), a = 0.5 + 0.5 * Math.sin(s * (2.4 + (i % 3) * 0.7) + i * 2.1);
-        sparkle(ctx, X, Y, size * tf.k * tf.sc * (0.45 + a * 0.75), s * 0.35 + i, `rgba(255,255,255,${0.35 + 0.65 * a})`); });
+        sparkle(ctx, X, Y, size * tf.k * tf.sc * (0.55 + a * 1.0), s * 0.35 + i, `rgba(255,255,255,${0.35 + 0.65 * a})`); });
     },
     // screen-space effects on top
     over(ctx, t) {
       const s = t / 1000;
       bubs.forEach((b) => { const y = H + b.r - ((s * b.sp + b.ph * H * 1.3) % (H + b.r * 2)); bubble(ctx, b.x + Math.sin(s * 1.3 + b.w) * 24, y, b.r, b.hue, 0.8); });
-      motes.forEach((m) => { const y = H - ((s * m.sp + m.ph * H) % (H + 20)), x = m.x + Math.sin(s * 0.9 + m.w) * 30, a = 0.35 + 0.35 * Math.sin(s * 3 + m.w);
+      motes.forEach((m) => { const y = H - ((s * m.sp + m.ph * H) % (H + 20)), x = m.x + Math.sin(s * 0.9 + m.w) * 30, a = 0.45 + 0.45 * Math.sin(s * 3 + m.w);
         ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = `rgb(${tint})`; ctx.shadowColor = `rgb(${tint})`; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(x, y, m.r, 0, 7); ctx.fill(); ctx.restore(); });
       if (variant === "dream") { const c = (s % 2.4) / 0.55; if (c < 1) { const x = W * (0.15 + 0.7 * ((Math.floor(s / 2.4) % 3) / 3)) + c * 380, y = H * 0.12 + c * 240;
         const g = ctx.createLinearGradient(x, y, x - 240, y - 150); g.addColorStop(0, "rgba(255,255,255,.95)"); g.addColorStop(1, "rgba(255,255,255,0)");
