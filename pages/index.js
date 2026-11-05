@@ -858,7 +858,7 @@ export default function Home() {
                 borderColor: V2.borderGold,
                 background: "rgba(255,243,216,0.8)",
               }}>
-                <span style={{ fontSize: 24 }}>⚡</span>
+                <span style={{ fontSize: 24 }}><Ico n="⚡" size={22} /></span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: V2.forestGreen }}>
                     @{ch.challenger} challenged you to a {ch.duration_days}-day streak!
@@ -1055,7 +1055,7 @@ export default function Home() {
             display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap",
             background: "linear-gradient(135deg,rgba(125,200,50,0.12),rgba(232,160,32,0.08))",
           }}>
-            <span style={{ fontSize: 48 }}>🌾</span>
+            <span style={{ fontSize: 48 }}><Ico n="🌾" size={22} /></span>
             <div style={{ flex: 1, minWidth: 200 }}>
               <h3 style={{ fontFamily: V2.fontSans, fontSize: 22, fontWeight: 800,
                 color: V2.forestGreen, marginBottom: 6 }}>

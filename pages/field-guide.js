@@ -6,6 +6,7 @@ import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
 import { SiteLinks, SiteMobileMenu } from "../components/SiteMenu";
+import Ico from "../components/Ico";
 function norm(v) { return String(v ?? "").replace(/@/g, "").toLowerCase().trim(); }
 
 // ── Collection definitions — rendered dynamically ─────────────────────────────
@@ -324,7 +325,7 @@ function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
               <img src={preview} alt="" style={{ width:"100%", maxHeight:260, objectFit:"cover" }} />
             ) : (
               <div style={{ textAlign:"center", padding:32 }}>
-                <div style={{ fontSize:40, marginBottom:8 }}>📸</div>
+                <div style={{ fontSize:40, marginBottom:8 }}><Ico n="📸" size={22} /></div>
                 <div style={{ fontSize:14, fontWeight:600, color:V2.forestGreen, marginBottom:4 }}>
                   Tap to choose a photo
                 </div>
@@ -728,9 +729,7 @@ export default function FieldGuide() {
               <div style={{ display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
                 <div style={{ width:64, height:64, borderRadius:16, flexShrink:0,
                   background:"rgba(125,200,50,0.1)", border:`2px solid ${V2.borderGreen}`,
-                  display:"flex", alignItems:"center", justifyContent:"center", fontSize:32 }}>
-                  📖
-                </div>
+                  display:"flex", alignItems:"center", justifyContent:"center", fontSize:32 }}><Ico n="📖" size={22} /></div>
                 <div style={{ flex:1, minWidth:200 }}>
                   <div style={{ fontSize:15, fontWeight:800, color:V2.forestGreen, marginBottom:4 }}>
                     Field Guide Master

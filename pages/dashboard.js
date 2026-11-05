@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "../utils/supabase";
+import Ico from "../components/Ico";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -608,7 +609,7 @@ export default function Dashboard() {
             )}
 
             <div style={{ marginTop: 20, padding: "12px 16px", borderRadius: 10, background: T.bg3, border: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 18 }}>🛡</span>
+              <span style={{ fontSize: 18 }}><Ico n="🛡" size={22} /></span>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: T.white }}>Shield Protection</div>
                 <div style={{ fontSize: 11, color: T.dim }}>Protect your streak · 50,000 $TOUCHGRASS</div>

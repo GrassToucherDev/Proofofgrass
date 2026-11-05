@@ -8,6 +8,7 @@ import { useRouter } from "next/router";
 import { V2, V2GlobalCSS } from "../utils/v2Theme";
 import V2Nav from "../components/V2Nav";
 import V2BottomNav from "../components/V2BottomNav";
+import Ico from "../components/Ico";
 
 const CommunityMap = dynamic(() => import("../components/CommunityMap"), {
   ssr: false,
@@ -273,7 +274,7 @@ export default function CommunityMapPage() {
                 )}
               </div>
               <div className="pm-note">
-                <span aria-hidden="true">🔒</span>
+                <span aria-hidden="true"><Ico n="🔒" size={22} /></span>
                 <span>Only locations shared with a proof appear. Locations are approximate.</span>
               </div>
             </section>

@@ -19,6 +19,7 @@ import MyCollectibles from "../../../components/frightbits/MyCollectibles";
 import { V2, V2Styles, V2GlobalCSS, getV2Tier } from "../../../utils/v2Theme";
 
 import { SiteLinks, SiteMobileMenu } from "../../../components/SiteMenu";
+import Ico from "../../../components/Ico";
 function norm(v) { return String(v??"").replace(/@/g,"").toLowerCase().trim(); }
 
 // ── Data constants — all preserved ───────────────────────────────────────────
@@ -1023,7 +1024,7 @@ export default function ProfilePage({ og }) {
               </Link>
             </div>
             {/* Decorative tree */}
-            <div style={{ fontSize:64, flexShrink:0, opacity:0.6 }}>🌳</div>
+            <div style={{ fontSize:64, flexShrink:0, opacity:0.6 }}><Ico n="🌳" size={22} /></div>
           </div>
         </div>
       </div>

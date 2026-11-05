@@ -12,6 +12,7 @@ import { V2, V2Styles } from "../utils/v2Theme";
 import { signInWithGoogle, forgetGoogleHint } from "../utils/googleSignIn";
 import InAppBrowserNote from "./InAppBrowserNote";
 
+import Ico from "./Ico";
 const CSS = `
   .ac-btn { position:relative; width:34px; height:34px; border-radius:50%; flex-shrink:0; cursor:pointer; padding:0;
     display:inline-flex; align-items:center; justify-content:center; font-family:${V2.fontSans}; font-weight:800; font-size:14px;
@@ -189,7 +190,7 @@ export default function AccountChip({ variant = "d", username: usernameProp }) {
             </>
           ) : (
             <>
-              <div style={{ fontWeight: 800, fontSize: 15, color: V2.forestGreen, marginBottom: 8 }}>🌱 Welcome to Proof of Grass</div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: V2.forestGreen, marginBottom: 8 }}><Ico inline n="🌱" size={18} />Welcome to Proof of Grass</div>
               <ol className="ac-steps">
                 <li><span className="ac-num">1</span><span><b>Pick your username</b> — it's how you show up on the leaderboard.</span></li>
                 <li><span className="ac-num">2</span><span><b>Sign in with Google</b> so your name and streak are yours.</span></li>

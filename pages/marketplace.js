@@ -14,6 +14,7 @@ import WheelTeaser from "../components/wheel/WheelTeaser";
 import FrightBitsBanner from "../components/frightbits/FrightBitsBanner";
 import TokenLogo from "../components/TokenLogo";
 import { BANNER_PURCHASE_NOTICE } from "../utils/groveBanners";
+import Ico from "../components/Ico";
 const BURN_ADDR       = "GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K";
 const TOUCHGRASS_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const SUPABASE_URL    = "https://fndhqtnsdqlyedpwecys.supabase.co/storage/v1/object/public";
@@ -766,7 +767,7 @@ export default function Marketplace() {
                 background:"rgba(255,255,255,0.85)", borderRadius:20,
                 padding:"10px 18px", border:`1px solid ${V2.borderSoft}`,
                 boxShadow:"0 2px 10px rgba(26,74,10,0.08)", backdropFilter:"blur(8px)" }}>
-                <span style={{ fontSize:16 }}>🔥</span>
+                <span style={{ fontSize:16 }}><Ico n="🔥" size={22} /></span>
                 <span style={{ fontSize:13, fontWeight:700, color:V2.forestGreen }}>
                   <BurnTotal /> $TOUCHGRASS spent all-time
                 </span>
@@ -807,7 +808,7 @@ export default function Marketplace() {
                 <>
                   <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen,
                     marginBottom:14, display:"flex", alignItems:"center", gap:8 }}>
-                    <span>⚡</span> Utility Items
+                    <span><Ico n="⚡" size={22} /></span> Utility Items
                   </div>
                   <div className="mp-pack-grid" style={{ marginBottom:32 }}>
                     {utilityItems.map(item=>(
@@ -916,7 +917,7 @@ export default function Marketplace() {
           <div style={{ background:"white", borderRadius:24, padding:"40px 32px",
             maxWidth:400, width:"100%", textAlign:"center",
             boxShadow:"0 20px 60px rgba(26,74,10,0.2)" }}>
-            <div style={{ fontSize:56, marginBottom:16 }}>🎉</div>
+            <div style={{ fontSize:56, marginBottom:16 }}><Ico n="🎉" size={22} /></div>
             <h2 style={{ fontFamily:V2.fontSans, fontSize:22, fontWeight:800,
               color:V2.forestGreen, marginBottom:8 }}>Pack Unlocked!</h2>
             <p style={{ fontSize:13, color:V2.textMuted, lineHeight:1.6, marginBottom:24 }}>

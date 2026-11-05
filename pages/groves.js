@@ -17,6 +17,7 @@ import { renderGroveCard } from "../utils/groveShareImage";
 import { BANNER_PERMISSION_NOTE } from "../utils/groveBanners";
 
 import { withShareTags } from "../utils/shareTags";
+import Ico from "../components/Ico";
 const ERRORS = {
   already_in_grove: "You're already in a grove. Leave it first to join another.",
   cooldown: "You recently left a grove. You can join or create another after the 48-hour cooldown.",
@@ -298,7 +299,7 @@ export default function GrovesPage() {
                 <div style={{ padding: 20 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
                     <span style={{ fontWeight: 800, color: V2.forestGreen, fontSize: 18 }}>Your Grove</span>
-                    {amOwner && <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10" }}>👑 Owner</span>}
+                    {amOwner && <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10" }}><Ico inline n="👑" size={18} />Owner</span>}
                   </div>
                   <div className="gv-stats">
                     <div className="gv-stat"><div className="gv-stat-n">🔥 {counted ? (streak?.streak ?? 0) : 0}<span> days</span></div><div className="gv-stat-l">Grove streak</div></div>
@@ -309,7 +310,7 @@ export default function GrovesPage() {
                     <div style={{ fontSize: 13, color: V2.textBody, marginTop: 10 }}>
                       {data.perfect.tier > 0 && <img src={`/badges/perfect-grove-${data.perfect.tier}.png`} alt={`Perfect Grove ${["", "I", "II", "III"][data.perfect.tier]}`} width={56} height={56} style={{ float: "left", marginRight: 12 }} />}
                       {data.perfect.today_perfect
-                        ? <b>✨ Perfect day today: everyone locked in!</b>
+                        ? <b><Ico inline n="✨" size={18} />Perfect day today: everyone locked in!</b>
                         : <>A perfect day is when <b>every</b> member locks in. A Shield doesn't count.</>}
                       {" "}Current run {data.perfect.current}d · best {data.perfect.best}d
                       {data.perfect.next_target ? <> · next badge at {data.perfect.next_target} perfect days ({data.perfect.bracket} member groves)</> : <> · top badge reached 🏅</>}
@@ -349,7 +350,7 @@ export default function GrovesPage() {
                         <div style={{ position: "relative" }}>
                           <GroveBanner banner={b} height={96} radius={10} />
                           {active && <span className="gv-check" aria-label="Active banner">✓</span>}
-                          {!b.unlocked && <span className="gv-lock" aria-hidden>🔒</span>}
+                          {!b.unlocked && <span className="gv-lock" aria-hidden><Ico n="🔒" size={22} /></span>}
                         </div>
                         <div style={{ fontWeight: 700, color: V2.forestGreen, fontSize: 14, margin: "8px 0 4px" }}>{b.name}</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", minHeight: 28 }}>
@@ -443,7 +444,7 @@ export default function GrovesPage() {
 
           {/* Leaderboard */}
           <div className="gv-card">
-            <div className="gv-h" style={{ fontSize: 20 }}>🏆 Top Groves</div>
+            <div className="gv-h" style={{ fontSize: 20 }}><Ico inline n="🏆" size={18} />Top Groves</div>
             <div style={{ display: "flex", gap: 8, margin: "4px 0 12px" }}>
               {[["streak", "🔥 Streak"], ["perfect", "✨ Perfect days"]].map(([k, l]) => (
                 <button key={k} onClick={() => setBoardTab(k)} className="gv-pill"

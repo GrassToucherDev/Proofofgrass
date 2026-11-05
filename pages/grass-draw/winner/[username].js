@@ -12,6 +12,7 @@ import { glossPill, TIER_PAL, rr as rrP } from "../../../utils/proofCardRender";
 import { drawFrame, drawFooter, loadFrameAssets, fitText, todayStr, INK as INK2, NUN } from "../../../utils/cardFrame";
 import { withShareTags } from "../../../utils/shareTags";
 
+import Ico from "../../../components/Ico";
 const INK = "#0d2a05", GREEN = "#1f6b12", CREAM = "#fdf6e2", GOLD = "#f6b93b";
 const PRIZE_ART = { grass_score: "/badges/grass-score-2.png", shield: "/wheel/shield.png", profile_pack: "/wheel/pack-retro-covers.png", nft: "/wheel/nft.png" };
 
@@ -154,7 +155,7 @@ export default function GrassDrawWinnerPage() {
         <V2Nav username={viewer} onUsernameChange={setViewer} showUpload={() => { window.location.href = "/#upload"; }} />
         <main className="gw-wrap">
           <header style={{ textAlign: "center", marginBottom: 22 }}>
-            <h1 style={{ fontFamily: V2.fontSerif, fontWeight: 700, fontSize: "clamp(30px,8vw,46px)", lineHeight: 1.05, color: V2.forestGreen, margin: "0 0 8px" }}>🎉 Grass Draw Winner</h1>
+            <h1 style={{ fontFamily: V2.fontSerif, fontWeight: 700, fontSize: "clamp(30px,8vw,46px)", lineHeight: 1.05, color: V2.forestGreen, margin: "0 0 8px" }}><Ico inline n="🎉" size={18} />Grass Draw Winner</h1>
             <p style={{ fontSize: 15, color: V2.forestLight, fontWeight: 500, lineHeight: 1.45 }}>Share your Grass Draw win.</p>
             <Link href="/grass-draw" style={{ display: "inline-block", marginTop: 10, fontSize: 13, fontWeight: 700, color: V2.forestMid, textDecoration: "none" }}>← Back to Grass Draw</Link>
           </header>

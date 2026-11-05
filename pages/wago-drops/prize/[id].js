@@ -8,6 +8,7 @@ import { T } from "../../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../../components/wago-drops/WagoDropsNav";
 import { SponsorLine } from "../../../components/wago-drops/PrizeUI";
 
+import Ico from "../../../components/Ico";
 function dist(a, b, c, d) {
   const r = Math.PI / 180, R = 6371000;
   const x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2;
@@ -122,7 +123,7 @@ export default function PrizePage() {
             })}
             {p.spots.length === 0 && <div style={{ ...card, color: T.muted }}>No spots are available right now. They may be getting restocked.</div>}
 
-            {p.you_found && <div style={{ ...card, borderColor: "rgba(74,222,128,0.4)", color: T.green, fontWeight: 700 }}>🎉 You found this prize! The sponsor's details are on this page. If it needs shipping, we'll ask you first.</div>}
+            {p.you_found && <div style={{ ...card, borderColor: "rgba(74,222,128,0.4)", color: T.green, fontWeight: 700 }}><Ico inline n="🎉" size={18} />You found this prize! The sponsor's details are on this page. If it needs shipping, we'll ask you first.</div>}
 
             {!p.you_found && open && (
               <div style={card}>

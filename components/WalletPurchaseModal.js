@@ -17,6 +17,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
+import Ico from "./Ico";
 const MINT_ADDRESS  = new PublicKey("5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump");
 const MINT_STR      = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const BURN_ADDRESS  = new PublicKey("GBxEuaVDSNqF6mAbryHbGjVNuQEvfJyCnyqesZVSy5K");
@@ -330,7 +331,7 @@ export default function WalletPurchaseModal({
         {/* Success state */}
         {step === "success" && (
           <div style={{textAlign:"center",padding:"16px 0"}}>
-            <div style={{fontSize:44,marginBottom:14}}>🎉</div>
+            <div style={{fontSize:44,marginBottom:14}}><Ico n="🎉" size={22} /></div>
             <div style={{fontFamily:V2.fontSans,fontSize:21,fontWeight:800,lineHeight:1.25,color:T.white,marginBottom:8}}>
               Purchase Complete!
             </div>

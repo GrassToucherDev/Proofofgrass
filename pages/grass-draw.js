@@ -381,7 +381,7 @@ export default function GrassDraw() {
               <div style={{ flex:1, minWidth:200, display:"flex", alignItems:"center", gap:10,
                 background:"rgba(125,200,50,0.04)", border:`1.5px solid ${V2.borderSoft}`,
                 borderRadius:12, padding:"12px 16px" }}>
-                <span style={{ fontSize:18, color:V2.midGray }}>👤</span>
+                <span style={{ fontSize:18, color:V2.midGray }}><Ico n="👤" size={22} /></span>
                 <input
                   value={rawUsername}
                   onChange={e => setRawUsername(e.target.value)}
@@ -517,7 +517,7 @@ export default function GrassDraw() {
             <div style={{ background:"white", borderRadius:16, padding:"24px",
               marginBottom:20, textAlign:"center",
               border:`1px solid rgba(230,80,80,0.3)` }}>
-              <div style={{ fontSize:32, marginBottom:8 }}>🔍</div>
+              <div style={{ fontSize:32, marginBottom:8 }}><Ico n="🔍" size={22} /></div>
               <div style={{ fontSize:14, fontWeight:700, color:"#e05050", marginBottom:4 }}>{error}</div>
               <div style={{ fontSize:12, color:V2.midGray }}>Check the spelling and try again.</div>
             </div>

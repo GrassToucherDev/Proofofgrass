@@ -6,6 +6,7 @@ import {
   RARITY_TIERS, getRarityTier, getRarityTierByKey, getUnlockedTiers, formatCardNumber,
 } from "../../utils/burnThemes";
 
+import Ico from "../../components/Ico";
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
   border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)", borderGold:"rgba(200,168,75,0.4)",
@@ -818,7 +819,7 @@ export default function BurnerCollectionPage() {
         <div style={{ maxWidth:680, margin:"0 auto", padding:"32px clamp(14px,5vw,32px) 64px" }}>
 
           <div style={{ textAlign:"center", marginBottom:28 }}>
-            <div style={{ fontSize:36, marginBottom:10 }}>🔥</div>
+            <div style={{ fontSize:36, marginBottom:10 }}><Ico n="🔥" size={22} /></div>
             <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:"clamp(26px,5vw,40px)",
               fontWeight:700, color:T.white, marginBottom:6 }}>Double Burner Collection</h1>
             <p style={{ fontSize:12.5, color:T.dim }}>Exclusive share cards for Double Burner badge holders.</p>
@@ -834,7 +835,7 @@ export default function BurnerCollectionPage() {
           ) : !isHolder ? (
             <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:16,
               padding:"56px 24px", textAlign:"center" }}>
-              <div style={{ fontSize:42, marginBottom:16, opacity:0.4 }}>🔒</div>
+              <div style={{ fontSize:42, marginBottom:16, opacity:0.4 }}><Ico n="🔒" size={22} /></div>
               <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:20,
                 color:T.white, marginBottom:10 }}>
                 🔥 Earn the Double Burner badge to unlock this collection.
@@ -890,7 +891,7 @@ export default function BurnerCollectionPage() {
                             filter: tier.isLegendary && isUnlocked ? "grayscale(0.5) brightness(0.7)" : "none" }}
                           onError={e => { e.target.style.display = "none"; }} />
                         {!isUnlocked && (
-                          <div style={{ position:"absolute", top:8, right:8, fontSize:16 }}>🔒</div>
+                          <div style={{ position:"absolute", top:8, right:8, fontSize:16 }}><Ico n="🔒" size={22} /></div>
                         )}
                         <div style={{ position:"absolute", bottom:0, left:0, right:0,
                           background:"linear-gradient(transparent,rgba(0,0,0,0.92))",

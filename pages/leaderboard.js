@@ -55,8 +55,8 @@ function SkelRow() {
 // ── Medal ─────────────────────────────────────────────────────────────────────
 function Medal({ rank }) {
   if (rank === 1) return <div style={{ width:36 }}><Ico n="🥇" size={30} /></div>;
-  if (rank === 2) return <div style={{ fontSize:28, width:36, textAlign:"center" }}>🥈</div>;
-  if (rank === 3) return <div style={{ fontSize:28, width:36, textAlign:"center" }}>🥉</div>;
+  if (rank === 2) return <div style={{ fontSize:28, width:36, textAlign:"center" }}><Ico n="🥈" size={22} /></div>;
+  if (rank === 3) return <div style={{ fontSize:28, width:36, textAlign:"center" }}><Ico n="🥉" size={22} /></div>;
   return <div style={{ width:36, textAlign:"center", fontFamily:V2.fontSerif,
     fontSize:16, fontWeight:700, color:V2.midGray }}>{rank}</div>;
 }
@@ -438,7 +438,7 @@ export default function Leaderboard() {
               gap:20, flexWrap:"wrap" }}>
               <div>
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-                  <span style={{ fontSize:18 }}>🌱</span>
+                  <span style={{ fontSize:18 }}><Ico n="🌱" size={22} /></span>
                   <span style={{ fontSize:16, fontWeight:800, color:V2.forestGreen }}>Check Your Rank</span>
                 </div>
                 <div style={{ fontSize:13, color:V2.textMuted }}>Type your username to see where you stand.</div>
@@ -447,7 +447,7 @@ export default function Leaderboard() {
                 <div style={{ flex:1, minWidth:160, display:"flex", alignItems:"center", gap:8,
                   background:"rgba(125,200,50,0.04)", border:`1.5px solid ${V2.borderSoft}`,
                   borderRadius:12, padding:"10px 14px" }}>
-                  <span style={{ fontSize:16, color:V2.midGray }}>🔍</span>
+                  <span style={{ fontSize:16, color:V2.midGray }}><Ico n="🔍" size={22} /></span>
                   <input value={rankInput} onChange={e=>setRankInput(e.target.value)}
                     onKeyDown={e=>e.key==="Enter"&&checkRank()}
                     placeholder="Enter username..."
@@ -476,7 +476,7 @@ export default function Leaderboard() {
               display:"flex", alignItems:"center", justifyContent:"space-between" }}>
               <div>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:18 }}>🌱</span>
+                  <span style={{ fontSize:18 }}><Ico n="🌱" size={22} /></span>
                   <span style={{ fontSize:16, fontWeight:800, color:V2.forestGreen }}>
                     Top Grass Touchers
                   </span>
@@ -505,7 +505,7 @@ export default function Leaderboard() {
               </div>
             ) : rows.length === 0 ? (
               <div style={{ padding:"60px 24px", textAlign:"center" }}>
-                <div style={{ fontSize:32, marginBottom:12 }}>🌱</div>
+                <div style={{ fontSize:32, marginBottom:12 }}><Ico n="🌱" size={22} /></div>
                 <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen, marginBottom:6 }}>
                   No entries yet
                 </div>
@@ -613,7 +613,7 @@ export default function Leaderboard() {
             alignItems:"center", justifyContent:"center", gap:3, textDecoration:"none",
             color:tab.active?V2.grassGreen:V2.midGray, fontSize:10,
             fontWeight:tab.active?700:500, fontFamily:V2.fontSans }}>
-            <span style={{ fontSize:20 }}>{tab.icon}</span>
+            <span style={{ width:24 }}><Ico n={tab.icon} size={24} /></span>
             <span>{tab.label}</span>
           </Link>
         ))}

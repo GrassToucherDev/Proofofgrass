@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "../utils/supabase";
+import Ico from "../components/Ico";
 
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
@@ -335,7 +336,7 @@ export default function FightPage() {
                       border:`1px solid ${previewTier ? previewTier.color+"40" : T.border}`,
                       borderRadius:8, display:"flex", alignItems:"center",
                       gap:10, flexWrap:"wrap" }}>
-                      <span style={{ fontSize:16 }}>🥊</span>
+                      <span style={{ fontSize:16 }}><Ico n="🥊" size={22} /></span>
                       <div>
                         <div style={{ fontSize:12, fontWeight:700,
                           color: previewTier?.color || T.dim }}>
@@ -369,7 +370,7 @@ export default function FightPage() {
                           borderRadius:8, objectFit:"contain" }} />
                     ) : (
                       <>
-                        <div style={{ fontSize:28, marginBottom:8, opacity:0.4 }}>📸</div>
+                        <div style={{ fontSize:28, marginBottom:8, opacity:0.4 }}><Ico n="📸" size={22} /></div>
                         <div style={{ fontSize:12, color:T.muted }}>
                           Drag & drop or tap to upload
                         </div>
@@ -425,7 +426,7 @@ export default function FightPage() {
                     border:`1px solid ${T.border}`, borderRadius:10,
                     padding:"12px 16px", display:"flex",
                     alignItems:"center", gap:12, flexWrap:"wrap" }}>
-                    <span style={{ fontSize:20 }}>🥊</span>
+                    <span style={{ fontSize:20 }}><Ico n="🥊" size={22} /></span>
                     <div style={{ flex:1 }}>
                       <div style={{ display:"flex", alignItems:"center",
                         gap:8, flexWrap:"wrap" }}>
