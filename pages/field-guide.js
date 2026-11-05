@@ -535,7 +535,7 @@ export default function FieldGuide() {
 
           {/* Background illustration */}
           <div style={{ position:"absolute", inset:0, pointerEvents:"none", opacity:0.15 }}>
-            <div style={{ position:"absolute", fontSize:200, bottom:-20, right:80, lineHeight:1 }}>🌲</div>
+            <div style={{ position:"absolute", fontSize:200, bottom:-20, right:80, lineHeight:1 }}><Ico n="🌲" size={22} /></div>
             <div style={{ position:"absolute", fontSize:120, bottom:10, right:260, lineHeight:1 }}>🦋</div>
             <div style={{ position:"absolute", fontSize:80, top:20, right:180, lineHeight:1 }}><Ico n="🌸" size={22} /></div>
           </div>
@@ -773,7 +773,7 @@ export default function FieldGuide() {
         <style>{`@media(min-width:768px){.fg-bottom-nav{display:none!important;}}`}</style>
         {[
           { href:"/",              label:"Home",       icon:"🏠" },
-          { href:"/#upload",       label:"Log Proof",  icon:"🌿" },
+          { href:"/#upload",       label:"Log Proof",  icon:"camera" },
           { href:`/u/${username||""}`, label:"Profile",icon:"👤" },
           { href:"/leaderboard",   label:"Leaderboard",icon:"🏆" },
           { href:"/field-guide",   label:"Field Guide",icon:"📖", active:true },
@@ -782,7 +782,7 @@ export default function FieldGuide() {
             alignItems:"center", justifyContent:"center", gap:3, textDecoration:"none",
             color:tab.active?V2.grassGreen:V2.midGray, fontSize:10,
             fontWeight:tab.active?700:500, fontFamily:V2.fontSans }}>
-            <span style={{ fontSize:20 }}>{tab.icon}</span>
+            <span style={{ width:24 }}><Ico n={tab.icon} size={24} /></span>
             <span>{tab.label}</span>
           </Link>
         ))}

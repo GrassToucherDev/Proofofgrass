@@ -903,7 +903,7 @@ export default function Home() {
                       alignItems: "center", justifyContent: "center", fontSize: 22 }}><Ico n="🌿" size={22} /></div>
                     <div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: V2.forestGreen }}>@{username}</div>
-                      <div style={{ fontSize: 12, color: tier.color }}>{tier.emoji} {tier.name}</div>
+                      <div style={{ fontSize: 12, color: tier.color }}><Ico inline n={tier.emoji} size={18} />{tier.name}</div>
                     </div>
                   </div>
                 </Link>
