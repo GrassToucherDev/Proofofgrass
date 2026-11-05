@@ -333,6 +333,8 @@ export const V2GlobalCSS = `
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
+  /* Safety net: a single over-wide element must never widen the page on phones (clip, unlike hidden, keeps sticky headers working) */
+  html, body { max-width: 100%; overflow-x: clip; }
   body {
     font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
     background: ${V2.gradientSky};

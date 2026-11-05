@@ -136,6 +136,11 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
       .v2nav-input:focus { width: 130px; }
     }
     @media (max-width: 480px) {
+      .v2nav { gap: 8px; padding-left: 12px; padding-right: 12px; min-width: 0; }
+      .v2nav-logo { min-width: 0; gap: 6px; }
+      .v2nav-right { flex: 1 1 auto; min-width: 0; justify-content: flex-end; gap: 6px; }
+      .v2nav-input-wrap { flex: 1 1 0; min-width: 0; }
+      .v2nav-input, .v2nav-input:focus { width: 100%; min-width: 0; box-sizing: border-box; }
       .v2nav-logo-sub { display: none; }
     }
     @media (max-width: 360px) {
