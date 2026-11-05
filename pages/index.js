@@ -5,7 +5,7 @@ import Head from "next/head";
 import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
 import ShareCardSheet from "../components/ShareCardSheet";
-import { renderStreakCard, streakCaption, isStreakMilestone } from "../utils/streakShareCard";
+import { renderStreakCard, streakCaption, isStreakMilestone, STREAK_MILESTONES } from "../utils/streakShareCard";
 import V2Nav from "../components/V2Nav";
 import FrightBitsHeroBanner from "../components/frightbits/FrightBitsHeroBanner";
 import V2BottomNav from "../components/V2BottomNav";
@@ -359,9 +359,63 @@ function UsernameStep({ onPick }) {
   );
 }
 
+function LockedInToday({ username, streak }) {
+  const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const n = Number(streak) || 1;
+  const next = STREAK_MILESTONES.find(m => m > n);
+  const link = `proofofgrass.app/?ref=${username}`;
+  const copy = () => {
+    try { navigator.clipboard.writeText(`https://${link}`).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {}); } catch {}
+  };
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: 16, borderRadius: 18,
+        background: "linear-gradient(160deg,#f2fbe8,#e3f4d2)", border: "1.5px solid rgba(91,166,34,.4)" }}>
+        <div style={{ width: 76, height: 76, borderRadius: 22, flexShrink: 0, color: "#fff",
+          background: "linear-gradient(160deg,#9be05a,#4e9a1c)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ fontFamily: V2.fontSans, fontSize: 11, fontWeight: 700, letterSpacing: ".1em" }}>DAY</div>
+          <div style={{ fontFamily: V2.fontSans, fontSize: 34, fontWeight: 800, lineHeight: 1 }}>{n}</div>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", color: V2.grassGreen }}>✓ Locked in today</div>
+          <div style={{ fontFamily: V2.fontSans, fontSize: 19, fontWeight: 800, color: V2.forestGreen, marginTop: 3 }}>See you tomorrow</div>
+          {next && <div style={{ fontSize: 12.5, fontWeight: 700, color: V2.textMuted, marginTop: 2 }}>{next - n} {next - n === 1 ? "day" : "days"} to the Day {next} milestone</div>}
+        </div>
+      </div>
+
+      <button onClick={() => setSharing(true)}
+        style={{ ...V2Styles.btnPrimary, width: "100%", justifyContent: "center", marginTop: 12, fontSize: 15, padding: "14px 20px" }}>
+        Share your streak
+      </button>
+      {sharing && (
+        <ShareCardSheet title="Share your streak" caption={streakCaption(username, n)}
+          filename={`streak-${n}-${username}.png`}
+          render={() => renderStreakCard({ username, streak: n })} onClose={() => setSharing(false)} />
+      )}
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, padding: "12px 14px", borderRadius: 16,
+        border: "1px solid rgba(200,220,190,.8)", background: "white" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", color: V2.grassGreen }}>Bring a friend</div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: V2.textMuted, marginTop: 2, lineHeight: 1.35 }}>Your link counts when they reach Day 10.</div>
+        </div>
+        <button onClick={copy} style={{ ...V2Styles.btnSecondary, padding: "8px 14px", fontSize: 12.5, whiteSpace: "nowrap" }}>{copied ? "Copied ✓" : "Copy link"}</button>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <Link href="/groves" style={{ ...V2Styles.btnSecondary, flex: 1, justifyContent: "center", fontSize: 12.5, padding: "10px 8px", textDecoration: "none" }}>Check your Grove</Link>
+        <Link href="/grass-draw" style={{ ...V2Styles.btnSecondary, flex: 1, justifyContent: "center", fontSize: 12.5, padding: "10px 8px", textDecoration: "none" }}>Grass Draw</Link>
+      </div>
+    </div>
+  );
+}
+
 function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, hasPostedToday,
   onUpload, onRetake, onPickUsername, streakStatus, streakTone, resolvedStreak, loadingUser }) {
   const [sharingMilestone, setSharingMilestone] = useState(false);
+  // Already posted today and not in the middle of a fresh upload: show the locked-in recap instead of another upload box.
+  const lockedIn = hasUser && hasPostedToday === true && !showResult;
 
   const toneColor = {
     success: V2.success, warning: V2.warning, reset: V2.danger, neutral: V2.midGray,
@@ -372,12 +426,12 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
       <div style={{ textAlign: "center", marginBottom: 24 }}>
         <div style={{ fontSize: 28, marginBottom: 8 }}>🌿</div>
         <h2 style={{ fontFamily: V2.fontSans, fontSize: 22, fontWeight: 800,
-          color: V2.forestGreen, marginBottom: 8 }}>Let's get outside</h2>
-        <p style={{ fontSize: 13, color: V2.textMuted }}>{hasUser ? "Add your outdoor photo to log today's proof." : "Two quick steps: pick a username, then add a photo from outside."}</p>
+          color: V2.forestGreen, marginBottom: 8 }}>{lockedIn ? "You're locked in" : "Let's get outside"}</h2>
+        <p style={{ fontSize: 13, color: V2.textMuted }}>{lockedIn ? "Nice work. Today's proof is in." : hasUser ? "Add your outdoor photo to log today's proof." : "Two quick steps: pick a username, then add a photo from outside."}</p>
       </div>
 
       {/* Streak status */}
-      {hasUser && streakStatus && (
+      {hasUser && streakStatus && !lockedIn && (
         <div style={{
           padding: "10px 16px", borderRadius: 20, marginBottom: 20,
           background: streakTone === "success" ? "rgba(125,200,50,0.1)" : "rgba(232,160,32,0.1)",
@@ -392,7 +446,8 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
       {!hasUser && !showResult && <UsernameStep onPick={onPickUsername} />}
 
       {/* Upload area */}
-      {hasUser && !showResult && (
+      {lockedIn && <LockedInToday username={username} streak={resolvedStreak} />}
+      {hasUser && !lockedIn && !showResult && (
         <div style={{
           border: `2px dashed ${V2.borderGreen}`,
           borderRadius: 16, padding: "32px 16px",
@@ -433,7 +488,7 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
       )}
 
       {/* Next steps */}
-      {!showResult && (
+      {!showResult && !lockedIn && (
         <div style={{ marginTop: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
             textTransform: "uppercase", color: V2.midGray, marginBottom: 10 }}>
