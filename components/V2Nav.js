@@ -173,7 +173,7 @@ export default function V2Nav({ username, onUsernameChange, showUpload }) {
           {/* Username input */}
           <div className="v2nav-input-wrap">
             <input className="v2nav-input" type="text"
-              placeholder="your username"
+              placeholder="username"
               value={raw}
               onChange={e => setRaw(e.target.value.replace(/@/g, "").toLowerCase())}
               onKeyDown={e => {

@@ -334,8 +334,33 @@ function FeaturedPostsSection() {
   );
 }
 
+function UsernameStep({ onPick }) {
+  const [val, setVal] = useState("");
+  const [err, setErr] = useState("");
+  const submit = () => {
+    const u = normalizeUsername(val).replace(/[^a-z0-9_.-]/g, "");
+    if (u.length < 2) { setErr("Pick a username with at least 2 letters or numbers."); return; }
+    setErr(""); onPick(u);
+  };
+  return (
+    <div style={{ marginBottom: 16, padding: "18px 16px", borderRadius: 16, background: "rgba(125,200,50,0.07)", border: "1.5px solid rgba(91,166,34,0.35)" }}>
+      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen, marginBottom: 6 }}>Step 1</div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: V2.forestGreen, marginBottom: 4 }}>Pick your username</div>
+      <div style={{ fontSize: 12.5, color: V2.textMuted, lineHeight: 1.45, marginBottom: 12 }}>This is the name on your streak and the leaderboard. You can use your X handle.</div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input value={val} onChange={e => { setVal(e.target.value.replace(/@/g, "").toLowerCase()); setErr(""); }}
+          onKeyDown={e => { if (e.key === "Enter") submit(); }}
+          placeholder="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-label="Username"
+          style={{ flex: 1, minWidth: 0, padding: "12px 14px", borderRadius: 14, border: "1.5px solid rgba(200,220,190,0.9)", fontSize: 16, fontFamily: "inherit", color: V2.forestGreen, background: "white", outline: "none" }} />
+        <button onClick={submit} style={{ ...V2Styles.btnPrimary, padding: "12px 18px", fontSize: 14, whiteSpace: "nowrap" }}>Continue</button>
+      </div>
+      {err && <div role="alert" style={{ marginTop: 8, fontSize: 12.5, color: "#b45309", fontWeight: 700 }}>{err}</div>}
+    </div>
+  );
+}
+
 function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, hasPostedToday,
-  onUpload, onRetake, streakStatus, streakTone, resolvedStreak, loadingUser }) {
+  onUpload, onRetake, onPickUsername, streakStatus, streakTone, resolvedStreak, loadingUser }) {
   const [sharingMilestone, setSharingMilestone] = useState(false);
 
   const toneColor = {
@@ -348,7 +373,7 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
         <div style={{ fontSize: 28, marginBottom: 8 }}>🌿</div>
         <h2 style={{ fontFamily: V2.fontSans, fontSize: 22, fontWeight: 800,
           color: V2.forestGreen, marginBottom: 8 }}>Let's get outside</h2>
-        <p style={{ fontSize: 13, color: V2.textMuted }}>Upload your outdoor photo to log today's proof.</p>
+        <p style={{ fontSize: 13, color: V2.textMuted }}>{hasUser ? "Add your outdoor photo to log today's proof." : "Two quick steps: pick a username, then add a photo from outside."}</p>
       </div>
 
       {/* Streak status */}
@@ -363,8 +388,11 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
         </div>
       )}
 
+      {/* Step 1 for brand-new visitors: choose a username right here, so nothing is lost at lock-in */}
+      {!hasUser && !showResult && <UsernameStep onPick={onPickUsername} />}
+
       {/* Upload area */}
-      {!showResult && (
+      {hasUser && !showResult && (
         <div style={{
           border: `2px dashed ${V2.borderGreen}`,
           borderRadius: 16, padding: "32px 16px",
@@ -412,9 +440,9 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
             Next Steps
           </div>
           {[
-            { icon: "𝕏", text: "Share your proof on X" },
-            { icon: "🔄", text: "Come back and confirm" },
+            { icon: "📸", text: "Add a photo from outside" },
             { icon: "🔒", text: "Lock in your streak" },
+            { icon: "𝕏", text: "Share it on X" },
           ].map((s, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10,
               padding: "8px 0", borderBottom: i < 2 ? `1px solid ${V2.borderSoft}` : "none" }}>
@@ -687,6 +715,11 @@ export default function Home() {
     setChallengeActioning(null);
   }, [username]);
 
+  const handlePickUsername = useCallback((u) => {
+    try { localStorage.setItem("pog_username", u); } catch {}
+    setRawUsername(u);
+  }, []);
+
   // Image upload
   const handleImageUpload = useCallback(async (file) => {
     if (!file || !(file instanceof Blob)) return;
@@ -724,13 +757,13 @@ export default function Home() {
     .v2-bottom-grid { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 16px; padding: 24px clamp(14px,4vw,40px); align-items: start; }
     @media (max-width: 1024px) {
       .v2-feature-grid { grid-template-columns: repeat(2,1fr); }
-      .v2-bottom-grid { grid-template-columns: 1fr 1fr; }
+      .v2-bottom-grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
     }
     @media (max-width: 768px) {
       .v2-hero { flex-direction: column; min-height: auto; padding: 32px 16px; gap: 32px; }
       .v2-hero-right { width: 100%; }
       .v2-feature-grid { grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; }
-      .v2-bottom-grid { grid-template-columns: 1fr; padding: 16px; }
+      .v2-bottom-grid { grid-template-columns: minmax(0,1fr); padding: 16px; }
     }
     @media (max-width: 480px) {
       .v2-feature-grid { grid-template-columns: 1fr 1fr; }
@@ -820,8 +853,8 @@ export default function Home() {
               <StatCard
                 icon="🔥"
                 value={resolvedStreak ?? (topStreaker?.streak ?? "—")}
-                label="Day Streak"
-                sub={tier.name}
+                label={hasUser ? "Day Streak" : "Top Streak"}
+                sub={hasUser ? tier.name : "Best on the platform"}
                 accent={tier.color}
                 loading={loadingUser}
               />
@@ -836,11 +869,12 @@ export default function Home() {
                 icon="⚡"
                 value={userStats?.grass_score != null ? userStats.grass_score.toLocaleString() : "—"}
                 label="Grass Score"
+                sub={!hasUser ? "Starts with your first proof" : null}
                 loading={loadingUser}
               />
               <StatCard
                 icon="🏆"
-                value={userStats?.rank != null ? `#${userStats.rank}` : "#1"}
+                value={userStats?.rank != null ? `#${userStats.rank}` : (hasUser ? "#1" : "—")}
                 label="Global Rank"
                 sub={userStats?.rank != null && userStats.rank <= 100 ? "Top 1%" : null}
                 loading={loadingUser}
@@ -1017,6 +1051,7 @@ export default function Home() {
             hasPostedToday={hasPostedToday}
             onUpload={handleImageUpload}
             onRetake={handleRetake}
+            onPickUsername={handlePickUsername}
             streakStatus={streakStatus}
             streakTone={streakTone}
             resolvedStreak={resolvedStreak}
