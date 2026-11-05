@@ -10,6 +10,7 @@ import { yardCSS, StatCard, FeatureCard, ChallengeCard, WagoEmpty, Avatar } from
 import CreateChallengeSheet from "../../components/yard/CreateChallengeSheet";
 import { GroveChallengeCard } from "../../components/yard/GroveYardUI";
 import { EventCard } from "../../components/yard/EventUI";
+import Ico from "../../components/Ico";
 
 export default function Yard() {
   const router = useRouter();
@@ -133,7 +134,7 @@ export default function Yard() {
               <div style={{ padding: 14, fontWeight: 500, color: V2.textBody }}>No results yet. The first finished challenge puts someone on the board.</div>
             ) : board.slice(0, 5).map((p) => (
               <div className="yd-row" key={p.username}>
-                <span aria-label={`Rank ${p.rank}`} style={{ width: 30, fontWeight: 800, fontSize: 16, textAlign: "center" }}>{["🥇", "🥈", "🥉"][p.rank - 1] || `#${p.rank}`}</span>
+                <span aria-label={`Rank ${p.rank}`} style={{ width: 30, fontWeight: 800, fontSize: 16, textAlign: "center" }}>{p.rank<=3?<Ico n={["🥇","🥈","🥉"][p.rank-1]} size={26} />:`#${p.rank}`}</span>
                 <Avatar name={p.username} src={p.avatar_url} size={38} />
                 <Link href={`/u/${p.username}`} style={{ flex: 1, fontWeight: 800, color: V2.forestGreen, textDecoration: "none", overflowWrap: "anywhere" }}>@{p.username}</Link>
                 <span style={{ fontSize: 13, fontWeight: 700, color: V2.dimGray }}>{p.wins}W · {p.winRate}%</span>

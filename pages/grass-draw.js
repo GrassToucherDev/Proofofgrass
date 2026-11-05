@@ -6,6 +6,7 @@ import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
 import { SiteLinks, SiteMobileMenu } from "../components/SiteMenu";
+import Ico from "../components/Ico";
 function normalizeUsername(v) {
   return String(v ?? "").replace(/@/g, "").toLowerCase().trim();
 }
@@ -607,7 +608,7 @@ export default function GrassDraw() {
                       }}>
                         <div style={{ width:32, textAlign:"center", flexShrink:0 }}>
                           {medal
-                            ? <span style={{ fontSize:18 }}>{medal}</span>
+                            ? <Ico n={medal} size={24} />
                             : <span style={{ fontSize:13, fontWeight:700, color:V2.midGray }}>{i+1}</span>
                           }
                         </div>

@@ -6,6 +6,7 @@ import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
 import ShareCardSheet from "../components/ShareCardSheet";
 import { renderStreakCard, streakCaption, isStreakMilestone, STREAK_MILESTONES } from "../utils/streakShareCard";
+import Ico from "../components/Ico";
 import V2Nav from "../components/V2Nav";
 import FrightBitsHeroBanner from "../components/frightbits/FrightBitsHeroBanner";
 import V2BottomNav from "../components/V2BottomNav";
@@ -49,12 +50,6 @@ function Skel({ w = "100%", h = 16, r = 8 }) {
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
-const ICO3D = new Set(["camera","lock","share","check","flame","shield","trophy","sprout","bolt"]);
-function Ico({ n, size = 24 }) {
-  if (!ICO3D.has(n)) return <span style={{ fontSize: size * 0.8, lineHeight: 1 }}>{n}</span>;
-  return <img src={`/icons3d/${n}.webp`} alt="" width={size} height={size} style={{ width: size, height: size, objectFit: "contain", display: "block", margin: "0 auto" }} />;
-}
-
 function StatCard({ icon, value, label, sub, accent, loading }) {
   return (
     <div style={{
@@ -959,7 +954,7 @@ export default function Home() {
                     <div key={l.username+i} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0",
                       borderBottom:i<rows.length-1?"1px solid rgba(200,220,190,0.4)":"none" }}>
                       <div style={{ width:28, textAlign:"center", fontWeight:700, color:"#6b7d60", fontSize:14 }}>
-                        {i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}
+                        {i<3?<Ico n={["🥇","🥈","🥉"][i]} size={26} />:i+1}
                       </div>
                       <Link href={"/u/"+l.username} style={{ flex:1, fontSize:13, fontWeight:600, color:"#1a4a0a", textDecoration:"none" }}>{"@"+l.username}</Link>
                       <div style={{ fontSize:13, fontWeight:700, color:"#5ba622" }}>{l.value.toLocaleString()}{l.suffix}</div>

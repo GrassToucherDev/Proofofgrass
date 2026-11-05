@@ -8,6 +8,7 @@ import { renderRankCard, rankCaption } from "../utils/rankShareCard";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
 import { SiteLinks, SiteMobileMenu } from "../components/SiteMenu";
+import Ico from "../components/Ico";
 function norm(v) { return String(v ?? "").replace(/@/g, "").toLowerCase().trim(); }
 
 const PAGE_SIZE = 20;
@@ -53,7 +54,7 @@ function SkelRow() {
 
 // ── Medal ─────────────────────────────────────────────────────────────────────
 function Medal({ rank }) {
-  if (rank === 1) return <div style={{ fontSize:28, width:36, textAlign:"center" }}>🥇</div>;
+  if (rank === 1) return <div style={{ width:36 }}><Ico n="🥇" size={30} /></div>;
   if (rank === 2) return <div style={{ fontSize:28, width:36, textAlign:"center" }}>🥈</div>;
   if (rank === 3) return <div style={{ fontSize:28, width:36, textAlign:"center" }}>🥉</div>;
   return <div style={{ width:36, textAlign:"center", fontFamily:V2.fontSerif,

@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { V2 } from "../utils/v2Theme";
 import AccountChip from "./AccountChip";
+import Ico from "./Ico";
 
 const HARVEST = "https://harvest.touchgrass.today";
 
@@ -16,9 +17,9 @@ export const MENU_GROUPS = [
   {
     id: "pog", label: "Proof of Grass", icon: "🌿", home: "/",
     items: [
-      { href: "/",         label: "Dashboard", icon: "🏠" },
-      { href: "/#upload",  label: "Log Proof", icon: "🌿", action: "log" },
-      { href: "@profile",  label: "My Profile", icon: "👤", needsUser: true },
+      { href: "/",         label: "Dashboard", icon: "home" },
+      { href: "/#upload",  label: "Log Proof", icon: "camera", action: "log" },
+      { href: "@profile",  label: "My Profile", icon: "profile", needsUser: true },
     ],
   },
   {
@@ -31,7 +32,7 @@ export const MENU_GROUPS = [
   {
     id: "play", label: "Play", icon: "🎮",
     items: [
-      { href: "/grass-draw", label: "Grass Draw", icon: "🌱" },
+      { href: "/grass-draw", label: "Grass Draw", icon: "sprout" },
       { href: "/wheel",      label: "WAGO Wheel", icon: "🎡", needsWheel: true },
       { href: "/groves",     label: "Groves",     icon: "🌳" },
       { href: "/yard",       label: "The Yard",   icon: "⚔️" },
@@ -41,7 +42,7 @@ export const MENU_GROUPS = [
 ];
 
 export const SOLO_LINKS = [
-  { href: "/leaderboard", label: "Leaderboard", icon: "🏆" },
+  { href: "/leaderboard", label: "Leaderboard", icon: "trophy" },
   { href: "/marketplace", label: "Marketplace", icon: "🏪" },
   { href: "/token",       label: "$TOUCHGRASS", icon: "🪙" },
   { href: "/spotlight",   label: "Spotlight",   icon: "🌟" },
@@ -132,7 +133,7 @@ function ItemLink({ item, username, pathname, onNavigate, onLogProof, className 
   const active = isActivePath(pathname, href);
   const inner = (
     <>
-      <span className="ic">{item.icon}</span>{item.label}
+      <span className="ic"><Ico n={item.icon} size={22} /></span>{item.label}
       {item.external && <span className="ext">↗</span>}
     </>
   );

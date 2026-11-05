@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { V2 } from "../utils/v2Theme";
+import Ico from "./Ico";
 
 const TABS = [
-  { href: "/",            label: "Home",       icon: "🏠" },
-  { href: "#upload",      label: "Log Proof",  icon: "🌿", action: true },
-  { href: "/u/",          label: "Profile",    icon: "👤", profile: true },
-  { href: "/leaderboard", label: "Leaderboard",icon: "🏆" },
+  { href: "/",            label: "Home",       icon: "home" },
+  { href: "#upload",      label: "Log Proof",  icon: "camera", action: true },
+  { href: "/u/",          label: "Profile",    icon: "profile", profile: true },
+  { href: "/leaderboard", label: "Leaderboard",icon: "trophy" },
   { href: "#more",        label: "More",       icon: "···", more: true },
 ];
 
@@ -68,7 +69,7 @@ export default function V2BottomNav({ username, onLogProof, onMore }) {
             <button key={i} className="v2-bottom-nav-tab"
               onClick={onLogProof} style={{ position: "relative" }}>
               <div className="v2-bottom-nav-action">
-                <div className="v2-bottom-nav-icon">{tab.icon}</div>
+                <div className="v2-bottom-nav-icon"><Ico n={tab.icon} size={24} /></div>
                 <div className="v2-bottom-nav-label">{tab.label}</div>
               </div>
             </button>
@@ -77,9 +78,7 @@ export default function V2BottomNav({ username, onLogProof, onMore }) {
           if (tab.more) return (
             <button key={i} className="v2-bottom-nav-tab"
               onClick={() => { onMore?.(); try { window.dispatchEvent(new Event("pog:open-menu")); } catch {} }}>
-              <div className="v2-bottom-nav-icon" style={{ fontSize: 16, letterSpacing: 2 }}>
-                •••
-              </div>
+              <div className="v2-bottom-nav-icon"><Ico n="more" size={22} /></div>
               <div className="v2-bottom-nav-label">{tab.label}</div>
             </button>
           );
@@ -88,7 +87,7 @@ export default function V2BottomNav({ username, onLogProof, onMore }) {
             <Link key={i}
               href={username ? `/u/${username}` : "/"}
               className={`v2-bottom-nav-tab${isActive ? " active" : ""}`}>
-              <div className="v2-bottom-nav-icon">{tab.icon}</div>
+              <div className="v2-bottom-nav-icon"><Ico n={tab.icon} size={24} /></div>
               <div className="v2-bottom-nav-label">{tab.label}</div>
             </Link>
           );
@@ -96,7 +95,7 @@ export default function V2BottomNav({ username, onLogProof, onMore }) {
           return (
             <Link key={i} href={tab.href}
               className={`v2-bottom-nav-tab${isActive ? " active" : ""}`}>
-              <div className="v2-bottom-nav-icon">{tab.icon}</div>
+              <div className="v2-bottom-nav-icon"><Ico n={tab.icon} size={24} /></div>
               <div className="v2-bottom-nav-label">{tab.label}</div>
             </Link>
           );
