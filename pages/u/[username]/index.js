@@ -68,7 +68,7 @@ function StatItem({ icon, label, value, sub, chip, loading }) {
       minWidth:0, flex:1 }}>
       <div style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
         color:V2.midGray, marginBottom:6, display:"flex", alignItems:"center", gap:4 }}>
-        <span>{icon}</span><span>{label}</span>
+        <span><Ico n={icon} size={20} /></span><span>{label}</span>
       </div>
       {loading ? <Skel h={32} r={4} w="60%" /> : (
         <div style={{ fontFamily:V2.fontSerif, fontSize:"clamp(24px,3.5vw,36px)", fontWeight:700,
@@ -96,7 +96,7 @@ function BadgeItem({ b }) {
         transition:"transform 0.15s" }}
         onMouseEnter={e=>e.currentTarget.style.transform="scale(1.1)"}
         onMouseLeave={e=>e.currentTarget.style.transform=""}>
-        {b.emoji}
+        <Ico n={b.emoji} size={28} />
       </div>
       <div style={{ fontSize:9, fontWeight:600, color:b.earned?V2.forestGreen:V2.midGray,
         textAlign:"center", lineHeight:1.3, maxWidth:64 }}>{b.name}</div>
@@ -154,7 +154,7 @@ function MilestoneCard({ current, loading }) {
             <div style={{ fontFamily:V2.fontSerif, fontSize:22, fontWeight:700, color:V2.forestGreen, marginBottom:4 }}>
               {current} Day Streak
             </div>
-            <div style={{ fontSize:14, fontWeight:700, color:tier.color }}>{tier.emoji} {tier.name}</div>
+            <div style={{ fontSize:14, fontWeight:700, color:tier.color }}><Ico inline n={tier.emoji} size={18} />{tier.name}</div>
           </div>
 
           {/* Badge illustration */}
@@ -593,7 +593,7 @@ export default function ProfilePage({ og }) {
         <SiteLinks />
         <div style={{ flex:1 }} className="sm-spacer" />
         <div style={{ marginLeft:"auto", display:"flex", gap:8, flexShrink:0 }}>
-          {isOwner&&<button onClick={()=>setEditMode(v=>!v)} className="pf-action-btn" style={{ fontSize:11, padding:"6px 12px" }}>{editMode?"✓ Done":"✏ Edit"}</button>}
+          {isOwner&&<button onClick={()=>setEditMode(v=>!v)} className="pf-action-btn" style={{ fontSize:11, padding:"6px 12px" }}>{editMode?"Done":<><Ico inline n="✏️" size={16} />Edit</>}</button>}
           <button onClick={copyProfile} style={{ ...V2Styles.btnPrimary, padding:"8px 18px", fontSize:12 }}>{copied?"✓ Copied":"↗ Share"}</button>
           <SiteMobileMenu />
         </div>
@@ -641,7 +641,7 @@ export default function ProfilePage({ og }) {
                       ? <img src={profileRow.avatar_url} alt="" style={{ width:"100%", height:"100%", borderRadius:"50%", objectFit:"cover" }} />
                       : loading?username?.[0]?.toUpperCase()??"?":(profileRow?.avatar_emoji||"🌿")
                     }
-                    {editMode&&<div style={{ position:"absolute", inset:0, borderRadius:"50%", background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>✏</div>}
+                    {editMode&&<div style={{ position:"absolute", inset:0, borderRadius:"50%", background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}><Ico n="✏️" size={22} /></div>}
                   </div>
 
                   <div>
@@ -649,7 +649,7 @@ export default function ProfilePage({ og }) {
                       fontSize:"clamp(22px,4vw,42px)", color:V2.forestGreen,
                       lineHeight:1, marginBottom:6 }}>@{username||"—"}</h1>
                     <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                      <span style={{ fontSize:12, fontWeight:700, color:accent }}>{tier.emoji} {tier.name}</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:accent }}><Ico inline n={tier.emoji} size={18} />{tier.name}</span>
                       {joinDate && <span style={{ fontSize:12, color:V2.midGray }}>📅 Joined {joinDate}</span>}
                     </div>
                   </div>
@@ -680,14 +680,14 @@ export default function ProfilePage({ og }) {
                     </button>
                   )}
                   <Link href={`/flex/${username}`} className="pf-action-btn">
-                    ✦ Flex Card
+                    <Ico inline n="✦" size={16} />Flex Card
                   </Link>
                   {!isOwner&&username&&(
                     <button onClick={()=>setShowChallenge(true)} className="pf-action-btn">
-                      ⚡ Challenge
+                      <Ico inline n="⚡" size={16} />Challenge
                     </button>
                   )}
-                  <button className="pf-action-btn" style={{ padding:"8px 12px" }}>•••</button>
+                  <button className="pf-action-btn" style={{ padding:"8px 12px" }}><Ico n="more" size={18} /></button>
                 </div>
 
                 {/* Spotlight recognition */}
@@ -726,7 +726,7 @@ export default function ProfilePage({ og }) {
                   )}
                   <div style={{ marginTop:12, fontSize:13, fontWeight:700, color:accent,
                     display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-                    <span><Ico n="✦" size={22} /></span>{tier.name}<span><Ico n="✦" size={22} /></span>
+                    <span><Ico n="✦" size={14} /></span>{tier.name}<span><Ico n="✦" size={14} /></span>
                   </div>
                 </div>
               </div>
@@ -739,7 +739,7 @@ export default function ProfilePage({ og }) {
           <div className="pf-card" style={{ textAlign:"center" }}>
             <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.16em", textTransform:"uppercase", color:V2.midGray, marginBottom:4 }}>Current Streak</div>
             <div style={{ fontFamily:V2.fontSerif, fontSize:56, fontWeight:700, color:V2.forestGreen, lineHeight:1 }}>{current}</div>
-            <div style={{ fontSize:13, fontWeight:700, color:accent }}>{tier.emoji} {tier.name}</div>
+            <div style={{ fontSize:13, fontWeight:700, color:accent }}><Ico inline n={tier.emoji} size={18} />{tier.name}</div>
           </div>
         </div>
 
@@ -902,7 +902,7 @@ export default function ProfilePage({ og }) {
                       background:"transparent", border:"none", borderBottom:i===0?`1px solid ${V2.borderSoft}`:"none",
                       cursor:"pointer", textAlign:"left" }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                      <span style={{ fontSize:16 }}>{item.icon}</span>
+                      <span style={{ width:20 }}><Ico n={item.icon} size={20} /></span>
                       <span style={{ fontSize:13, fontWeight:500, color:V2.forestGreen }}>{item.label}</span>
                     </div>
                     <span style={{ color:V2.midGray, fontSize:16 }}>›</span>
@@ -986,7 +986,7 @@ export default function ProfilePage({ og }) {
                       <div style={{ position:"absolute", bottom:0, left:0, right:0,
                         background:"linear-gradient(180deg,transparent,rgba(0,0,0,0.7))", padding:"4px 7px" }}>
                         <div style={{ fontSize:9, fontWeight:700, color:"white" }}>{cov.name}</div>
-                        {isActive && <div style={{ fontSize:7, color:V2.grassLime }}><Ico inline n="✦" size={18} />Active</div>}
+                        {isActive && <div style={{ fontSize:7, color:V2.grassLime }}><Ico inline n="✦" size={9} />Active</div>}
                       </div>
                     </div>
                   );
@@ -1039,7 +1039,7 @@ export default function ProfilePage({ og }) {
         <style>{`@media(min-width:768px){.pf-bottom-nav{display:none!important;}}`}</style>
         {[
           { href:"/",            label:"Home",       icon:"🏠" },
-          { href:"/#upload",     label:"Log Proof",  icon:"🌿" },
+          { href:"/#upload",     label:"Log Proof",  icon:"camera" },
           { href:`/u/${username}`,label:"Profile",   icon:"👤", active:true },
           { href:"/leaderboard", label:"Leaderboard",icon:"🏆" },
           { href:"/grass-draw",  label:"Grass Draw", icon:"🌱" },
@@ -1048,7 +1048,7 @@ export default function ProfilePage({ og }) {
             alignItems:"center", justifyContent:"center", gap:3, textDecoration:"none",
             color:tab.active?V2.grassGreen:V2.midGray, fontSize:10, fontWeight:tab.active?700:500,
             fontFamily:V2.fontSans }}>
-            <span style={{ fontSize:20 }}>{tab.icon}</span>
+            <span style={{ width:24 }}><Ico n={tab.icon} size={24} /></span>
             <span>{tab.label}</span>
           </Link>
         ))}

@@ -4,7 +4,7 @@ const NAMES = new Set(["camera","lock","share","check","flame","shield","trophy"
   "home","profile","more","medal1","medal2","medal3","crown","sparkle","calendar","pin",
   "clock","handshake","glove","hourglass","sunrise","confetti","clover","tree","wheat","gem","ticket","gift",
   "palette","magnifier","book","backpack","box","megaphone","headphones","coin",
-  "group","warning","rocket","mountain","sun","drop","flower","bookmark","clipboard","pencil","swords","store","map","spotlight","leaf"]);
+  "group","warning","rocket","mountain","sun","drop","flower","bookmark","clipboard","pencil","swords","store","map","spotlight","leaf","wheel"]);
 const EMOJI = {
   "🏠":"home","👤":"profile","🥇":"medal1","🥈":"medal2","🥉":"medal3","👑":"crown",
   "✦":"sparkle","✨":"sparkle","📅":"calendar","📍":"pin","🔥":"flame","🏆":"trophy",
@@ -13,8 +13,8 @@ const EMOJI = {
   "🍀":"clover","🌳":"tree","🌾":"wheat","💎":"gem","🎟️":"ticket","🎁":"gift","🎨":"palette","🔍":"magnifier",
   "📖":"book","🎒":"backpack","📦":"box","📣":"megaphone","🎧":"headphones","🪙":"coin","💰":"coin",
   "👥":"group","⚠️":"warning","⚠":"warning","🚀":"rocket","🏔️":"mountain","☀️":"sun","💧":"drop","🌸":"flower",
-  "🔖":"bookmark","📋":"clipboard","✏️":"pencil","✍️":"pencil",
-  "⚔️":"swords","⚔":"swords","🏪":"store","🗺️":"map","🌟":"spotlight","⭐":"spotlight","🌿":"leaf","🍃":"leaf","☘️":"clover",
+  "🔖":"bookmark","📋":"clipboard","✏️":"pencil","✏":"pencil","✍️":"pencil",
+  "⚔️":"swords","⚔":"swords","🏪":"store","🗺️":"map","🌟":"spotlight","⭐":"spotlight","🌿":"leaf","🍃":"leaf","☘️":"clover","🎡":"wheel",
 };
 
 export default function Ico({ n, size = 24, style, inline }) {

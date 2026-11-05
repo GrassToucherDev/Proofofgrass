@@ -773,7 +773,7 @@ export default function FieldGuide() {
         <style>{`@media(min-width:768px){.fg-bottom-nav{display:none!important;}}`}</style>
         {[
           { href:"/",              label:"Home",       icon:"🏠" },
-          { href:"/#upload",       label:"Log Proof",  icon:"🌿" },
+          { href:"/#upload",       label:"Log Proof",  icon:"camera" },
           { href:`/u/${username||""}`, label:"Profile",icon:"👤" },
           { href:"/leaderboard",   label:"Leaderboard",icon:"🏆" },
           { href:"/field-guide",   label:"Field Guide",icon:"📖", active:true },
@@ -782,7 +782,7 @@ export default function FieldGuide() {
             alignItems:"center", justifyContent:"center", gap:3, textDecoration:"none",
             color:tab.active?V2.grassGreen:V2.midGray, fontSize:10,
             fontWeight:tab.active?700:500, fontFamily:V2.fontSans }}>
-            <span style={{ fontSize:20 }}>{tab.icon}</span>
+            <span style={{ width:24 }}><Ico n={tab.icon} size={24} /></span>
             <span>{tab.label}</span>
           </Link>
         ))}

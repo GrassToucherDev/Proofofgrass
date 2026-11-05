@@ -604,7 +604,7 @@ export default function Leaderboard() {
         <style>{`@media(min-width:768px){.lb-bottom-nav{display:none!important;}}`}</style>
         {[
           { href:"/",             label:"Home",        icon:"🏠" },
-          { href:"/#upload",      label:"Log Proof",   icon:"🌿" },
+          { href:"/#upload",      label:"Log Proof",   icon:"camera" },
           { href:`/u/${currentUser||""}`, label:"Profile", icon:"👤" },
           { href:"/leaderboard",  label:"Leaderboard", icon:"🏆", active:true },
           { href:"/grass-draw",   label:"Grass Draw",  icon:"🌱" },
