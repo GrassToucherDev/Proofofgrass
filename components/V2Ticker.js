@@ -15,6 +15,7 @@ const MILESTONE_LABELS = {
   milestone_500: "hit Day 500 🌌",
   lucky_touch_rare:   "got a Rare Lucky Touch ✨",
   lucky_touch_common: "got a Lucky Touch 🍀",
+  lucky_touch_legendary: "got the Sun's Blessing ☀️",
 };
 
 export default function V2Ticker() {
