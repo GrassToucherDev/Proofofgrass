@@ -1,6 +1,7 @@
 // utils/yardResultCard.js — Yard challenge result share card (1080×1350): 1v1 or Grove vs Grove. Same bright look as the other cards.
 import { loadImageSafe } from "./spotlightImage";
-import { drawShareHeader } from "./shareHeader";
+import { glossPill, TIER_PAL, rr as rrP } from "./proofCardRender";
+import { drawFrame, drawFooter, loadFrameAssets, fitText, todayStr, INK as INK2, GREEN as GREEN2, NUN, FRED } from "./cardFrame";
 import { withShareTags } from "./shareTags";
 import { bannerSrc, bannerFallbackUrl } from "./groveBanners";
 
@@ -39,43 +40,29 @@ async function sideImage(d, side) {
 }
 
 export async function renderYardResultCard(d) {
-  const W = 1080, H = 1350, cx = W / 2;
+  const W = 1080, H = 1350;
   const c = document.createElement("canvas"); c.width = W; c.height = H;
   const ctx = c.getContext("2d");
-  try { await Promise.all([document.fonts.load("700 40px 'Fredoka'"), document.fonts.load("800 30px 'Nunito'")]); } catch {}
+  try { await Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("800 20px Nunito")]); } catch {}
+  const a = await loadFrameAssets("/card/bg.jpg", ["/touchgrass-transparent.png"]);
+  const g = drawFrame(ctx, W, H, a, "THE YARD");
+  const { cx } = g, logo = a.extra[0];
 
-  ctx.fillStyle = "#eef6e2"; ctx.fillRect(0, 0, W, H);
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, "rgba(197,227,247,0.7)"); sky.addColorStop(0.4, "rgba(238,246,226,0)");
-  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-  try {
-    const land = await loadImageSafe("/hero-landscape.png");
-    const lh = W * land.height / land.width;
-    ctx.save(); ctx.globalAlpha = 0.5; ctx.drawImage(land, 0, H - lh, W, lh); ctx.restore();
-    const f = ctx.createLinearGradient(0, H - lh, 0, H - lh + 240);
-    f.addColorStop(0, "rgba(238,246,226,1)"); f.addColorStop(1, "rgba(238,246,226,0)");
-    ctx.fillStyle = f; ctx.fillRect(0, H - lh, W, 240);
-  } catch {}
+  // mode pill
+  const label = `${d.kind === "grove" ? "GROVE VS GROVE" : "HEAD TO HEAD"} · ${d.duration} DAYS`, pal = TIER_PAL[4];
+  const pw0 = 660, py0 = 386;
+  glossPill(ctx, cx - pw0 / 2, py0, pw0, 66, pal);
+  ctx.save(); ctx.fillStyle = pal.tx; ctx.shadowColor = "rgba(255,255,255,.7)"; ctx.shadowOffsetY = 2; ctx.letterSpacing = "2px";
+  fitText(ctx, label, pw0 - 60, 36, 22); ctx.textAlign = "center"; ctx.fillText(label, cx + 1, py0 + 46); ctx.restore();
 
-  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-  await drawShareHeader(ctx, W, "Proof of Grass", "The Yard");
-  const logo = await loadImageSafe("/touchgrass-transparent.png").catch(() => null);
-
-  const label = d.kind === "grove" ? "🌳 GROVE vs GROVE" : "⚔️ HEAD TO HEAD";
-  const rw = 640, rh = 96, rx = (W - rw) / 2, ry = 214;
-  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 48); ctx.fill();
-  ctx.lineWidth = 6; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 48); ctx.stroke();
-  ctx.fillStyle = INK; fit(ctx, `${label} · ${d.duration} DAYS`, rw - 50, 40, 24); ctx.textBaseline = "middle"; ctx.fillText(`${label} · ${d.duration} DAYS`, cx, ry + rh / 2 + 3); ctx.textBaseline = "alphabetic";
-
-  const sides = [{ s: d.a, x: 290, k: "a" }, { s: d.b, x: 790, k: "b" }];
+  const sides = [{ s: d.a, x: 300, k: "a" }, { s: d.b, x: 780, k: "b" }];
   const imgs = await Promise.all(sides.map((o) => sideImage(d, o.s)));
-  const VY = 410, VS = 240;
+  const VY = 490, VS = 200, vcy = VY + VS / 2;
   for (let i = 0; i < 2; i++) {
     const { s, x, k } = sides[i], win = d.winner === k, im = imgs[i];
-    const vcy = VY + VS / 2;
     ctx.save();
     if (d.kind === "grove") {
-      const bw = 400, bh = VS - 10, bx = x - bw / 2, by = VY + 5;
+      const bw = 380, bh = VS - 10, bx = x - bw / 2, by = VY + 5;
       ctx.save(); ctx.shadowColor = win ? "rgba(246,185,59,0.7)" : "rgba(26,74,10,0.18)"; ctx.shadowBlur = win ? 36 : 18; ctx.fillStyle = "#cfe8c0"; rr(ctx, bx, by, bw, bh, 30); ctx.fill(); ctx.restore();
       ctx.save(); rr(ctx, bx, by, bw, bh, 30); ctx.clip(); if (im) cover(ctx, im, bx, by, bw, bh); ctx.restore();
       ctx.lineWidth = win ? 9 : 6; ctx.strokeStyle = win ? GOLD : GREEN; rr(ctx, bx, by, bw, bh, 30); ctx.stroke();
@@ -83,42 +70,45 @@ export async function renderYardResultCard(d) {
       const R = VS / 2;
       ctx.save(); ctx.shadowColor = win ? "rgba(246,185,59,0.8)" : "rgba(26,74,10,0.18)"; ctx.shadowBlur = win ? 40 : 18; ctx.fillStyle = "#e3f3d4"; ctx.beginPath(); ctx.arc(x, vcy, R, 0, Math.PI * 2); ctx.fill(); ctx.restore();
       ctx.save(); ctx.beginPath(); ctx.arc(x, vcy, R, 0, Math.PI * 2); ctx.clip();
-      if (im) cover(ctx, im, x - R, vcy - R, R * 2, R * 2); else if (logo) ctx.drawImage(logo, x - 80, vcy - 80, 160, 160);
+      if (im) cover(ctx, im, x - R, vcy - R, R * 2, R * 2); else if (logo) ctx.drawImage(logo, x - 70, vcy - 70, 140, 140);
       ctx.restore();
       ctx.lineWidth = win ? 11 : 8; ctx.strokeStyle = win ? GOLD : GREEN; ctx.beginPath(); ctx.arc(x, vcy, R + 2, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.restore();
-    if (win) {
-      const pw = 230, ph = 56, px = x - pw / 2, py = VY - 34;
-      ctx.fillStyle = GOLD; rr(ctx, px, py, pw, ph, 28); ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = GREEN; rr(ctx, px, py, pw, ph, 28); ctx.stroke();
-      ctx.fillStyle = INK; ctx.font = "700 30px 'Fredoka',system-ui,sans-serif"; ctx.textBaseline = "middle"; ctx.fillText("🏆 WINNER", x, py + ph / 2 + 2); ctx.textBaseline = "alphabetic";
+    if (win) { // winner badge sits on the bottom edge of the avatar
+      const bw2 = 210, bh2 = 52, by2 = VY + VS - 24;
+      glossPill(ctx, x - bw2 / 2, by2, bw2, bh2, TIER_PAL[4]);
+      ctx.save(); ctx.fillStyle = TIER_PAL[4].tx; ctx.font = `700 30px ${FRED}`; ctx.letterSpacing = "2px"; ctx.textAlign = "center"; ctx.fillText("WINNER", x + 1, by2 + 38); ctx.restore();
     }
-    ctx.fillStyle = INK; fit(ctx, s.label, 440, 50, 28); ctx.fillText(s.label, x, 742);
-    // score card
-    const cw = 420, ch = 170, cxl = x - cw / 2, cy = 785;
-    ctx.fillStyle = CREAM; rr(ctx, cxl, cy, cw, ch, 32); ctx.fill();
-    ctx.lineWidth = 6; ctx.strokeStyle = win ? GOLD : GREEN; rr(ctx, cxl, cy, cw, ch, 32); ctx.stroke();
-    ctx.fillStyle = INK; ctx.font = "700 92px 'Fredoka',system-ui,sans-serif"; ctx.fillText(String(s.days ?? 0), x, cy + 98);
-    ctx.font = "800 22px 'Nunito',sans-serif"; ctx.fillStyle = "#2d5a1a"; ctx.letterSpacing = "0.06em";
-    ctx.fillText(`OF ${d.duration} DAYS`, x, cy + 144); ctx.letterSpacing = "0px";
+    ctx.textAlign = "center"; ctx.fillStyle = INK2; fitText(ctx, s.label, 430, 46, 26); ctx.fillText(s.label, x, VY + VS + 82);
+    // score capsule
+    const cw = 380, ch = 138, cxl = x - cw / 2, cy = VY + VS + 108;
+    ctx.save(); ctx.shadowColor = "rgba(26,74,10,.16)"; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+    const gr = ctx.createLinearGradient(0, cy, 0, cy + ch); gr.addColorStop(0, "#fffef6"); gr.addColorStop(1, "#f6edcf"); ctx.fillStyle = gr; rrP(ctx, cxl, cy, cw, ch, 34); ctx.fill(); ctx.restore();
+    ctx.lineWidth = 5; ctx.strokeStyle = win ? GOLD : GREEN; rrP(ctx, cxl, cy, cw, ch, 34); ctx.stroke();
+    ctx.fillStyle = INK2; ctx.font = `700 84px ${FRED}`; ctx.fillText(String(s.days ?? 0), x, cy + 84);
+    ctx.font = `800 20px ${NUN}`; ctx.fillStyle = GREEN; ctx.letterSpacing = "4px"; ctx.fillText(`OF ${d.duration} DAYS`, x + 2, cy + 118); ctx.letterSpacing = "0px";
   }
-  // VS
-  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(cx, VY + VS / 2, 50, 0, Math.PI * 2); ctx.fill();
-  ctx.lineWidth = 7; ctx.strokeStyle = GREEN; ctx.beginPath(); ctx.arc(cx, VY + VS / 2, 50, 0, Math.PI * 2); ctx.stroke();
-  ctx.fillStyle = INK; ctx.font = "700 44px 'Fredoka',system-ui,sans-serif"; ctx.textBaseline = "middle"; ctx.fillText("VS", cx, VY + VS / 2 + 3); ctx.textBaseline = "alphabetic";
+  // VS badge
+  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.25)"; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+  const vg = ctx.createLinearGradient(0, vcy - 46, 0, vcy + 46); vg.addColorStop(0, "#fff0b8"); vg.addColorStop(1, "#f2c14e"); ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(cx, vcy, 46, 0, 7); ctx.fill(); ctx.restore();
+  ctx.lineWidth = 6; ctx.strokeStyle = GREEN; ctx.beginPath(); ctx.arc(cx, vcy, 46, 0, 7); ctx.stroke();
+  ctx.fillStyle = INK2; ctx.font = `700 40px ${FRED}`; ctx.textBaseline = "middle"; ctx.fillText("VS", cx, vcy + 3); ctx.textBaseline = "alphabetic";
 
-  // Result ribbon
+  // result pill
   const w = d.winner === "a" ? d.a : d.winner === "b" ? d.b : null;
-  const res = d.result === "won" && w ? `🏆 ${w.label} won` : d.result === "tied" ? "🤝 It's a tie" : "💤 No finish";
-  const bw = 900, bh = 120, bx = (W - bw) / 2, by = 1000;
-  ctx.fillStyle = CREAM; rr(ctx, bx, by, bw, bh, 60); ctx.fill();
-  ctx.lineWidth = 7; ctx.strokeStyle = GREEN; rr(ctx, bx, by, bw, bh, 60); ctx.stroke();
-  ctx.fillStyle = INK; fit(ctx, res, bw - 80, 58, 32); ctx.textBaseline = "middle"; ctx.fillText(res, cx, by + bh / 2 + 3); ctx.textBaseline = "alphabetic";
+  const res = d.result === "won" && w ? `${w.label} WON` : d.result === "tied" ? "IT'S A TIE" : "NO FINISH";
+  const rp = d.result === "won" ? TIER_PAL[4] : d.result === "tied" ? TIER_PAL[3] : { a: "#e9eee2", b: "#bcc6b0", bd: "#8b9a7c", tx: "#2d3a22" };
+  const rw = 860, rh = 90, ry = 966;
+  glossPill(ctx, cx - rw / 2, ry, rw, rh, rp);
+  ctx.save(); ctx.fillStyle = rp.tx; ctx.shadowColor = "rgba(255,255,255,.7)"; ctx.shadowOffsetY = 2; ctx.letterSpacing = "2px";
+  fitText(ctx, res, rw - 80, 52, 28); ctx.textAlign = "center"; ctx.fillText(res, cx + 1, ry + rh / 2 + 18); ctx.restore();
+
+  let rightLabel = "DATE", rightText = todayStr();
   if (d.start && d.end) {
     const f = (x) => new Date(x).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-    ctx.font = "800 28px 'Nunito',sans-serif"; ctx.fillStyle = "#2d5a1a"; ctx.fillText(`${f(d.start)} → ${f(d.end)}`, cx, 1180);
+    rightLabel = "DATES"; rightText = `${f(d.start)} → ${f(d.end)}`;
   }
-  ctx.font = "800 24px 'Nunito',sans-serif"; ctx.fillStyle = GREEN; ctx.letterSpacing = "0.1em";
-  ctx.fillText("ProofOfGrass.app", cx, H - 40); ctx.letterSpacing = "0px";
+  drawFooter(ctx, W, H, a, g, { leftLabel: "CERTIFIED BY", leftText: "Touch Grass", rightLabel, rightText });
   return c.toDataURL("image/png");
 }
