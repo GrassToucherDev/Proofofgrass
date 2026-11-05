@@ -29,40 +29,44 @@ function bubble(ctx, x, y, r, hue, alpha) {
   ctx.fillStyle = "rgba(255,255,255,.9)"; ctx.beginPath(); ctx.ellipse(x - r * 0.4, y - r * 0.45, r * 0.18, r * 0.1, -0.7, 0, 7); ctx.fill(); ctx.restore();
 }
 
+// Art-anchored hotspots, in the 2000px-wide cover space ([x, y, size]); tuned to the actual Y2K covers.
+const HOT = {
+  aqua:   { glints: [[625,103,70],[493,175,46],[478,462,40],[240,350,34],[1560,395,30],[1230,420,30]], glows: [[625,103,230,"255,245,220"],[493,175,140,"255,255,255"]], shimmer: [[130,345,1330,215]] },
+  bubble: { glints: [[200,125,52],[530,135,46],[255,385,50],[1540,130,44],[720,40,34]], glows: [[405,255,95,"120,150,255"],[450,265,80,"140,120,255"],[580,325,80,"120,160,255"],[855,380,80,"120,170,255"],[1540,235,90,"140,130,255"],[1300,365,80,"120,170,255"],[1905,215,80,"130,150,255"]], shimmer: [[780,520,500,130]] },
+  chrome: { glints: [[115,540,80],[1690,520,90],[1685,225,70],[1840,385,60],[460,115,56],[1425,110,56],[375,440,40]], glows: [[1690,0,330,"255,250,225"]], shimmer: [] },
+  cyber:  { glints: [[1100,40,44],[520,90,40],[1180,300,50],[330,255,44],[1590,200,50],[860,300,36]], glows: [[1180,300,170,"120,230,255"],[1230,490,130,"120,230,255"],[330,255,130,"120,230,255"],[1590,200,150,"120,230,255"],[1830,260,110,"120,230,255"]], shimmer: [[700,480,820,170]] },
+  dream:  { glints: [[1215,225,52],[670,270,48],[960,100,40],[1060,290,34],[1475,380,36],[545,520,36]], glows: [[1115,110,260,"255,245,235"],[1780,360,130,"170,210,255"],[1420,490,100,"170,210,255"],[540,525,100,"170,210,255"]], shimmer: [[680,555,580,90]] },
+};
+const P = (tf, x, y) => [tf.ox + x * tf.k * tf.sc, tf.oy + y * tf.k * tf.sc];
+
 export function y2kFx(variant, W, H) {
-  const rnd = mul(variant.length * 97 + 11);
-  const stars = Array.from({ length: 26 }, () => ({ x: rnd() * W, y: rnd() * H, ph: rnd() * 6.28, s: 10 + rnd() * 26, sp: 2 + rnd() * 3 }));
-  const bubs = Array.from({ length: variant === "bubble" ? 22 : 16 }, () => ({ x: rnd() * W, ph: rnd(), r: 18 + rnd() * (variant === "bubble" ? 70 : 44), sp: 70 + rnd() * 120, w: rnd() * 6.28, hue: 170 + rnd() * 150 }));
-  const cols = Array.from({ length: 26 }, (_, i) => ({ x: (i + 0.5) * (W / 26), ph: rnd() * 5, sp: 220 + rnd() * 380, len: 8 + ((rnd() * 10) | 0) }));
-  const iri = (t, a) => { // moving iridescent sheen, additive
-    return (ctx) => { const s = t / 1000, g = ctx.createLinearGradient(((s * 0.25) % 2 - 0.5) * W * 1.6, 0, ((s * 0.25) % 2 + 0.5) * W * 1.6, H);
-      const h = (s * 40) % 360; g.addColorStop(0, `hsla(${h},100%,70%,0)`); g.addColorStop(0.5, `hsla(${(h + 60) % 360},100%,72%,${a})`); g.addColorStop(1, `hsla(${(h + 120) % 360},100%,70%,0)`);
-      ctx.save(); ctx.globalCompositeOperation = "screen"; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore(); };
-  };
+  const rnd = mul(variant.length * 97 + 11), hot = HOT[variant] || HOT.chrome;
+  const motes = Array.from({ length: variant === "chrome" ? 34 : 22 }, () => ({ x: rnd() * W, ph: rnd(), sp: 18 + rnd() * 40, w: rnd() * 6.28, r: 3 + rnd() * 5 }));
+  const bubs = Array.from({ length: variant === "bubble" ? 12 : variant === "dream" ? 8 : variant === "aqua" ? 9 : 0 }, () => ({ x: rnd() * W, ph: rnd(), r: 22 + rnd() * 46, sp: 60 + rnd() * 90, w: rnd() * 6.28, hue: 170 + rnd() * 150 }));
+  const shim = hot.shimmer.map(([x, y, w, h]) => ({ x, y, w, h, pts: Array.from({ length: 38 }, () => ({ u: rnd(), v: rnd(), ph: rnd() * 6.28, sp: 2 + rnd() * 4 })) }));
+  const tint = variant === "cyber" ? "0,255,200" : variant === "dream" ? "255,200,255" : "255,255,255";
   return {
-    under(ctx, t) { iri(t, variant === "cyber" ? 0.05 : 0.16)(ctx); },
+    // art-anchored effects: drawn right after the cover, so they sit IN the scene
+    bg(ctx, t, tf) {
+      const s = t / 1000;
+      ctx.save(); ctx.globalCompositeOperation = "screen";
+      hot.glows.forEach(([x, y, r, rgb], i) => { const [X, Y] = P(tf, x, y), R = r * tf.k * tf.sc, a = 0.16 + 0.16 * (0.5 + 0.5 * Math.sin(s * 2.2 + i * 1.7));
+        const g = ctx.createRadialGradient(X, Y, 0, X, Y, R); g.addColorStop(0, `rgba(${rgb},${a * 2.2})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.fillRect(X - R, Y - R, R * 2, R * 2); });
+      ctx.restore();
+      shim.forEach((z) => { const [X, Y] = P(tf, z.x, z.y), w = z.w * tf.k * tf.sc, h = z.h * tf.k * tf.sc;
+        z.pts.forEach((p) => { const a = Math.max(0, Math.sin(s * p.sp + p.ph)); if (a < 0.55) return; sparkle(ctx, X + p.u * w, Y + p.v * h, (6 + 12 * a) * tf.k * tf.sc * 1.4, s * 0.5 + p.ph, `rgba(255,255,255,${0.85 * a})`); }); });
+      hot.glints.forEach(([x, y, size], i) => { const [X, Y] = P(tf, x, y), a = 0.5 + 0.5 * Math.sin(s * (2.4 + (i % 3) * 0.7) + i * 2.1);
+        sparkle(ctx, X, Y, size * tf.k * tf.sc * (0.45 + a * 0.75), s * 0.35 + i, `rgba(255,255,255,${0.35 + 0.65 * a})`); });
+    },
+    // screen-space effects on top
     over(ctx, t) {
       const s = t / 1000;
-      if (variant === "aqua" || variant === "bubble") {
-        bubs.forEach((b) => { const y = H + b.r - ((s * b.sp + b.ph * H * 1.3) % (H + b.r * 2)); bubble(ctx, b.x + Math.sin(s * 1.3 + b.w) * 24, y, b.r, b.hue, 0.85); });
-      }
-      if (variant === "chrome" || variant === "dream" || variant === "bubble") {
-        stars.forEach((st) => { const a = 0.5 + 0.5 * Math.sin(s * st.sp + st.ph); sparkle(ctx, st.x, st.y, st.s * (0.5 + a * 0.7), s * 0.4 + st.ph, `rgba(255,255,255,${0.2 + 0.75 * a})`); });
-      }
-      if (variant === "dream") { // shooting star every ~2s
-        const c = (s % 2) / 0.55; if (c < 1) { const x = W * (0.1 + 0.8 * (Math.floor(s / 2) % 3) / 3) + c * 420, y = H * 0.1 + c * 260;
-          const g = ctx.createLinearGradient(x, y, x - 260, y - 160); g.addColorStop(0, "rgba(255,255,255,.95)"); g.addColorStop(1, "rgba(255,255,255,0)");
-          ctx.save(); ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.strokeStyle = g; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 260, y - 160); ctx.stroke(); sparkle(ctx, x, y, 34, 0, "#fff"); ctx.restore(); } }
-      if (variant === "chrome") { // lens flare glint crossing the frame
-        const c = ((s * 0.35) % 1.4) - 0.2, x = c * W, y = H * 0.22 + c * H * 0.2; const g = ctx.createRadialGradient(x, y, 0, x, y, 190);
-        g.addColorStop(0, "rgba(255,255,255,.55)"); g.addColorStop(1, "rgba(255,255,255,0)"); ctx.save(); ctx.globalCompositeOperation = "screen"; ctx.fillStyle = g; ctx.fillRect(x - 200, y - 200, 400, 400); ctx.restore(); }
-      if (variant === "cyber") { // green digital rain + scanline sweep
-        ctx.save(); ctx.font = "800 26px monospace"; ctx.textAlign = "center";
-        cols.forEach((c, i) => { const head = ((s * c.sp + c.ph * 400) % (H + c.len * 30)) ; for (let k = 0; k < c.len; k++) { const y = head - k * 30; if (y < -30 || y > H + 30) continue;
-          ctx.fillStyle = `rgba(0,255,136,${k === 0 ? 0.95 : 0.55 * (1 - k / c.len)})`; ctx.fillText(((i * 7 + k * 13 + Math.floor(s * 6)) % 2) ? "1" : "0", c.x, y); } });
-        const sy = ((s * 0.4) % 1.2 - 0.1) * H; const g = ctx.createLinearGradient(0, sy - 60, 0, sy + 60);
-        g.addColorStop(0, "rgba(0,255,136,0)"); g.addColorStop(0.5, "rgba(0,255,136,.18)"); g.addColorStop(1, "rgba(0,255,136,0)"); ctx.fillStyle = g; ctx.fillRect(0, sy - 60, W, 120);
-        ctx.fillStyle = "rgba(0,0,0,.10)"; for (let y = 0; y < H; y += 6) ctx.fillRect(0, y, W, 2); ctx.restore(); }
+      bubs.forEach((b) => { const y = H + b.r - ((s * b.sp + b.ph * H * 1.3) % (H + b.r * 2)); bubble(ctx, b.x + Math.sin(s * 1.3 + b.w) * 24, y, b.r, b.hue, 0.8); });
+      motes.forEach((m) => { const y = H - ((s * m.sp + m.ph * H) % (H + 20)), x = m.x + Math.sin(s * 0.9 + m.w) * 30, a = 0.35 + 0.35 * Math.sin(s * 3 + m.w);
+        ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = `rgb(${tint})`; ctx.shadowColor = `rgb(${tint})`; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(x, y, m.r, 0, 7); ctx.fill(); ctx.restore(); });
+      if (variant === "dream") { const c = (s % 2.4) / 0.55; if (c < 1) { const x = W * (0.15 + 0.7 * ((Math.floor(s / 2.4) % 3) / 3)) + c * 380, y = H * 0.12 + c * 240;
+        const g = ctx.createLinearGradient(x, y, x - 240, y - 150); g.addColorStop(0, "rgba(255,255,255,.95)"); g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.save(); ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.strokeStyle = g; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 240, y - 150); ctx.stroke(); sparkle(ctx, x, y, 34, 0, "#fff"); ctx.restore(); } }
     },
   };
 }

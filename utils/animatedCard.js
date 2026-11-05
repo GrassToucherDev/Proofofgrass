@@ -38,6 +38,22 @@ export async function recordCanvas(out, frame, { seconds = 4, fps = 30, onProgre
 }
 export const loadImg = ld;
 
+
+// Draws cover art as the animated backdrop. Wide panoramas (≥1.8:1) slowly PAN across the whole scene; others breathe/drift.
+// Returns the image→canvas transform so theme effects can anchor to spots in the art (sun, flowers, waterfalls…).
+export function drawCoverBg(ctx, img, W, H, tMs, durMs) {
+  const s = tMs / 1000, wide = img.width / img.height >= 1.8;
+  let z = wide ? 1.0 : 1.1 + 0.03 * Math.sin(s * 0.9);
+  const sc = Math.max(W / img.width, H / img.height) * z;
+  let ox, oy;
+  if (wide) {
+    const range = Math.max(0, img.width * sc - W), u = 0.5 - 0.5 * Math.cos(Math.PI * clamp01(tMs / durMs));
+    ox = -range * (0.12 + 0.76 * u); oy = (H - img.height * sc) / 2;
+  } else { ox = (W - img.width * sc) / 2 + Math.sin(s * 0.6) * 24; oy = (H - img.height * sc) / 2 + Math.cos(s * 0.5) * 18; }
+  ctx.drawImage(img, ox, oy, img.width * sc, img.height * sc);
+  return { ox, oy, sc, k: img.width / 2000 };
+}
+
 function star(ctx, x, y, r, rot) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.beginPath();
   for (let i = 0; i < 8; i++) { const a = (Math.PI / 4) * i, rr = i % 2 ? r * 0.28 : r; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
@@ -65,7 +81,8 @@ export async function renderAnimatedCard(staticCard, { format = "4:5", seconds =
 
   const frame = (t) => {
     // background
-    if (bg) { const sc = Math.max(W / bg.width, H / bg.height); ctx.drawImage(bg, (W - bg.width * sc) / 2, (H - bg.height * sc) / 2, bg.width * sc, bg.height * sc); }
+    if (bg && fx) { const tf = drawCoverBg(ctx, bg, W, H, t, D); fx.bg?.(ctx, t, tf); }
+    else if (bg) { const sc = Math.max(W / bg.width, H / bg.height); ctx.drawImage(bg, (W - bg.width * sc) / 2, (H - bg.height * sc) / 2, bg.width * sc, bg.height * sc); }
     else { ctx.fillStyle = "#cfe8f7"; ctx.fillRect(0, 0, W, H); }
     fx?.under?.(ctx, t);
     // twinkling sparkles
@@ -138,11 +155,7 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
   const frame = (t) => {
     const s = t / 1000;
     ctx.fillStyle = "#0b0b12"; ctx.fillRect(0, 0, W, H);
-    if (bgImage) { // slow drift + breathing zoom
-      const z = 1.1 + 0.03 * Math.sin(s * 0.9), sc = Math.max(W / bgImage.width, H / bgImage.height) * z;
-      const dx = Math.sin(s * 0.6) * 24, dy = Math.cos(s * 0.5) * 18;
-      ctx.drawImage(bgImage, (W - bgImage.width * sc) / 2 + dx, (H - bgImage.height * sc) / 2 + dy, bgImage.width * sc, bgImage.height * sc);
-    }
+    if (bgImage) { const tf = drawCoverBg(ctx, bgImage, W, H, t, seconds * 1000); fx?.bg?.(ctx, t, tf); }
     fx?.under?.(ctx, t);
     const k = clamp01(t / 700), a = easeOutCubic(clamp01(t / 450)), sc2 = 0.95 + 0.05 * easeOutBack(k), fl = Math.sin(s * 2) * 4 * clamp01((t - 600) / 400);
     ctx.save(); ctx.globalAlpha = a; ctx.translate(W / 2, fgY + fgH / 2 + fl); ctx.scale(sc2, sc2);
