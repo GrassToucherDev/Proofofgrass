@@ -6,6 +6,7 @@ import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
 import { SiteLinks, SiteMobileMenu } from "../components/SiteMenu";
+import Ico from "../components/Ico";
 function normalizeUsername(v) {
   return String(v ?? "").replace(/@/g, "").toLowerCase().trim();
 }
@@ -301,7 +302,7 @@ export default function GrassDraw() {
               <div className="gd-user" style={{ display:"flex", alignItems:"center", gap:8, background:"white",
                 border:`1px solid ${V2.borderSoft}`, borderRadius:20, padding:"6px 14px",
                 boxShadow:"0 1px 6px rgba(26,74,10,0.06)" }}>
-                <span style={{ fontSize:16 }}>🌿</span>
+                <span style={{ fontSize:16 }}><Ico n="🌿" size={22} /></span>
                 <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{username}</span>
               </div>
             )}
@@ -334,7 +335,7 @@ export default function GrassDraw() {
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, marginBottom:16,
               background:"rgba(255,255,255,0.85)", border:`1px solid ${V2.borderGreen}`,
               borderRadius:20, padding:"6px 16px", backdropFilter:"blur(8px)" }}>
-              <span style={{ fontSize:16 }}>🌿</span>
+              <span style={{ fontSize:16 }}><Ico n="🌿" size={22} /></span>
               <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em",
                 textTransform:"uppercase", color:V2.grassGreen }}>Monthly Draw</span>
             </div>
@@ -380,7 +381,7 @@ export default function GrassDraw() {
               <div style={{ flex:1, minWidth:200, display:"flex", alignItems:"center", gap:10,
                 background:"rgba(125,200,50,0.04)", border:`1.5px solid ${V2.borderSoft}`,
                 borderRadius:12, padding:"12px 16px" }}>
-                <span style={{ fontSize:18, color:V2.midGray }}>👤</span>
+                <span style={{ fontSize:18, color:V2.midGray }}><Ico n="👤" size={22} /></span>
                 <input
                   value={rawUsername}
                   onChange={e => setRawUsername(e.target.value)}
@@ -410,7 +411,7 @@ export default function GrassDraw() {
               boxShadow:"0 4px 24px rgba(26,74,10,0.10)", border:`1px solid ${V2.borderSoft}`,
               marginBottom:20 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20 }}>
-                <span style={{ fontSize:20 }}>🌿</span>
+                <span style={{ fontSize:20 }}><Ico n="🌿" size={22} /></span>
                 <span style={{ fontSize:16, fontWeight:800, color:V2.forestGreen }}>My Entries</span>
               </div>
 
@@ -516,7 +517,7 @@ export default function GrassDraw() {
             <div style={{ background:"white", borderRadius:16, padding:"24px",
               marginBottom:20, textAlign:"center",
               border:`1px solid rgba(230,80,80,0.3)` }}>
-              <div style={{ fontSize:32, marginBottom:8 }}>🔍</div>
+              <div style={{ fontSize:32, marginBottom:8 }}><Ico n="🔍" size={22} /></div>
               <div style={{ fontSize:14, fontWeight:700, color:"#e05050", marginBottom:4 }}>{error}</div>
               <div style={{ fontSize:12, color:V2.midGray }}>Check the spelling and try again.</div>
             </div>
@@ -607,7 +608,7 @@ export default function GrassDraw() {
                       }}>
                         <div style={{ width:32, textAlign:"center", flexShrink:0 }}>
                           {medal
-                            ? <span style={{ fontSize:18 }}>{medal}</span>
+                            ? <Ico n={medal} size={24} />
                             : <span style={{ fontSize:13, fontWeight:700, color:V2.midGray }}>{i+1}</span>
                           }
                         </div>
@@ -647,7 +648,7 @@ export default function GrassDraw() {
             </div>
 
             <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-              <span style={{ fontSize:20 }}>🌿</span>
+              <span style={{ fontSize:20 }}><Ico n="🌿" size={22} /></span>
               <h2 style={{ fontFamily:V2.fontSans, fontSize:18, fontWeight:800, color:V2.forestGreen }}>
                 How It Works
               </h2>

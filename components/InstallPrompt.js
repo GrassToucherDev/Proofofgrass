@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import Ico from "./Ico";
 
 // ── Install tracking helpers ──────────────────────────────────────────────────
 const STORAGE_KEYS = {
@@ -252,7 +253,7 @@ function InstallSuccess({ onClose }) {
         borderRadius:16, padding:28, textAlign:"center",
         boxShadow:"0 20px 60px rgba(0,0,0,0.5)",
       }}>
-        <div style={{ fontSize:52, marginBottom:16 }}>🌱</div>
+        <div style={{ fontSize:52, marginBottom:16 }}><Ico n="🌱" size={22} /></div>
         <div style={{ fontFamily:"'Georgia',serif", fontSize:20, fontWeight:700,
           color:T.white, marginBottom:8 }}>Proof of Grass Installed</div>
         <div style={{ fontSize:13, color:T.dim, lineHeight:1.6, marginBottom:24 }}>

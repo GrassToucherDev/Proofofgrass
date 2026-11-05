@@ -9,6 +9,7 @@ import { EventCard } from "../../components/yard/EventUI";
 import { yardCSS, Avatar, WagoEmpty } from "../../components/yard/YardUI";
 import GroveBanner from "../../components/GroveBanner";
 import { GroveMembers } from "../../components/yard/GroveYardUI";
+import Ico from "../../components/Ico";
 
 const TABS = [["individual", "Individual"], ["groves", "Groves"], ["seasonal", "Seasonal"]];
 const METRICS = [["wins", "Most wins"], ["rate", "Win rate"], ["completed", "Most played"]];
@@ -65,7 +66,7 @@ export default function YardLeaderboards() {
                 <div role="table" aria-label="Individual Yard leaderboard">
                   {rows.map((p) => (
                     <div role="row" className="yd-row" key={p.username} style={p.username === me ? { background: "#f1fbe6", borderRadius: 14 } : {}}>
-                      <span role="cell" aria-label={`Rank ${p.rank}`} style={{ width: 34, fontWeight: 800, textAlign: "center" }}>{["🥇", "🥈", "🥉"][p.rank - 1] || `#${p.rank}`}</span>
+                      <span role="cell" aria-label={`Rank ${p.rank}`} style={{ width: 34, fontWeight: 800, textAlign: "center" }}>{p.rank<=3?<Ico n={["🥇","🥈","🥉"][p.rank-1]} size={26} />:`#${p.rank}`}</span>
                       <Avatar name={p.username} src={p.avatar_url} size={40} />
                       <span role="cell" style={{ flex: 1, minWidth: 0 }}>
                         <Link href={`/u/${p.username}`} style={{ fontWeight: 800, color: V2.forestGreen, textDecoration: "none", overflowWrap: "anywhere" }}>@{p.username}</Link>{p.username === me && <span style={{ fontSize: 11, fontWeight: 700, color: "#2d6b1a" }}> (you)</span>}
@@ -94,7 +95,7 @@ export default function YardLeaderboards() {
                 <div role="table" aria-label="Grove Yard leaderboard">
                   {groves.map((g) => (
                     <div role="row" className="yd-row" key={g.id} style={{ flexWrap: "wrap" }}>
-                      <span role="cell" aria-label={`Rank ${g.rank}`} style={{ width: 34, fontWeight: 800, textAlign: "center" }}>{["🥇", "🥈", "🥉"][g.rank - 1] || `#${g.rank}`}</span>
+                      <span role="cell" aria-label={`Rank ${g.rank}`} style={{ width: 34, fontWeight: 800, textAlign: "center" }}>{g.rank<=3?<Ico n={["🥇","🥈","🥉"][g.rank-1]} size={26} />:`#${g.rank}`}</span>
                       <GroveBanner banner={g.banner} height={40} radius={10} style={{ width: 64, flex: "none" }} />
                       <span role="cell" style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ fontWeight: 800, color: V2.forestGreen, overflowWrap: "anywhere" }}>{g.name}</span>

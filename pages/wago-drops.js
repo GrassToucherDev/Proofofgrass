@@ -24,6 +24,7 @@ import { T } from "../utils/wagoTheme";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
 import { withShareTags } from "../utils/shareTags";
+import Ico from "../components/Ico";
 // ─── Reward display (any Solana token) ───────────────────────────────────────
 const rewardIconUrl = rewardLogo;
 
@@ -772,7 +773,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
               display: "flex", alignItems: "flex-start", gap: 10,
               animation: "fadeIn 0.2s ease",
             }}>
-              <span style={{ fontSize: 16, flexShrink: 0 }}>📍</span>
+              <span style={{ fontSize: 16, flexShrink: 0 }}><Ico n="📍" size={22} /></span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#fbbf24", marginBottom: 3 }}>
                   Location access blocked
@@ -859,7 +860,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                   <button onClick={() => handleShare(claimResult)} style={{
                     flex: 1, background: T.olive, color: T.bg, border: "none",
                     borderRadius: 999, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                  }}>🌿 Share</button>
+                  }}><Ico inline n="🌿" size={18} />Share</button>
                 )}
                 <button onClick={() => { setClaimResult(null); setSelected(null); }} style={{
                   flex: 1, background: T.card, color: T.muted, border: `1px solid ${T.border}`,

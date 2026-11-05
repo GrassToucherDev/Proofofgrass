@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { V2 } from "../utils/v2Theme";
 
+import Ico from "./Ico";
 const STYLE = "mapbox://styles/mapbox/outdoors-v12";
 const WORLD = { center: [10, 22], zoom: 1.3 };
 
@@ -175,7 +176,7 @@ export default function CommunityMap({ points, loading, onSelect, fullscreen, on
       {error && (
         <div role="alert" style={{ position: "absolute", inset: 0, zIndex: 4, background: "linear-gradient(180deg,#e8f4fd,#f0f8ee)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ maxWidth: 420, textAlign: "center" }}>
-            <div style={{ fontSize: 34, marginBottom: 6 }}>🗺️</div>
+            <div style={{ fontSize: 34, marginBottom: 6 }}><Ico n="🗺️" size={22} /></div>
             <div style={{ fontWeight: 800, fontSize: 16, color: V2.forestGreen, marginBottom: 6 }}>The map couldn't load</div>
             <div style={{ fontSize: 13, color: V2.forestLight, lineHeight: 1.5, fontWeight: 600 }}>{error.msg}</div>
           </div>

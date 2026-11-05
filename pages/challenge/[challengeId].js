@@ -5,6 +5,7 @@ import { yardError } from "../../utils/yardErrors";
 import { supabase } from "../../utils/supabase";
 import ShareCardSheet from "../../components/ShareCardSheet";
 import { renderYardResultCard, yardResultCaption } from "../../utils/yardResultCard";
+import Ico from "../../components/Ico";
 
 const T = {
   bg:"#0a0b08", bg2:"#111209", bg3:"#181a12",
@@ -110,7 +111,7 @@ function ParticipantCard({ username, progress, streakRow, duration }) {
         </span>
       </div>
       {progress.shield_used && (
-        <div style={{ fontSize:10, color:T.gold, marginTop:4 }}>🛡 Shield used</div>
+        <div style={{ fontSize:10, color:T.gold, marginTop:4 }}><Ico inline n="🛡" size={18} />Shield used</div>
       )}
     </div>
   );
@@ -406,7 +407,7 @@ export default function ChallengePage() {
           {challenge.status === "completed" && (
             <div style={{ background:`${T.gold}0e`, border:`1px solid ${T.gold}40`,
               borderRadius:14, padding:24, textAlign:"center", marginBottom:24 }}>
-              <div style={{ fontSize:32, marginBottom:8 }}>🏆</div>
+              <div style={{ fontSize:32, marginBottom:8 }}><Ico n="🏆" size={22} /></div>
               <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                 fontSize:28, fontWeight:700, color:T.gold, marginBottom:6 }}>
                 {challenge.result === "won" ? `@${challenge.winner} won` : challenge.result === "tied" ? "It's a tie" : challenge.result === "no_finish" ? "No proofs this time" : challenge.winner ? `@${challenge.winner} won` : "Challenge Complete"}

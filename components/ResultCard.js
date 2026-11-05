@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 import { signIn } from "next-auth/react";
 import { supabase } from "../utils/supabase";
 
+import Ico from "./Ico";
 // ── Premium+ Themes ──────────────────────────────────────────────────────────
 const THEMES = {
   classic:         { name:"Classic",         bgOverlay:null,                    accent:null,                    border:null,                    bracket:null,                    muted:null },
@@ -531,7 +532,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           {imageSrc
             ? <img src={imageSrc} alt="Your proof" style={{ width:"100%", objectFit:"cover", maxHeight:300 }} />
             : <div style={{ padding:40, textAlign:"center", color:V2G.midGray }}>
-                <div style={{ fontSize:40, marginBottom:8 }}>🌿</div>
+                <div style={{ fontSize:40, marginBottom:8 }}><Ico n="🌿" size={22} /></div>
                 <div style={{ fontSize:13 }}>Upload your outdoor photo</div>
               </div>
           }
@@ -631,7 +632,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
                 padding:"10px 14px", borderRadius:10, background:"rgba(125,200,50,0.08)",
                 border:`1px solid ${V2G.green}` }}>
-                <span style={{ fontSize:12, color:V2G.green }}>📍 Approximate location added</span>
+                <span style={{ fontSize:12, color:V2G.green }}><Ico inline n="📍" size={18} />Approximate location added</span>
                 <button onClick={()=>{setLocationMode(null);setGpsLat(null);setGpsLng(null);}}
                   style={{ fontSize:11, color:V2G.midGray, background:"none", border:"none",
                     cursor:"pointer", textDecoration:"underline", fontFamily:"Nunito,sans-serif" }}>

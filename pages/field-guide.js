@@ -6,6 +6,7 @@ import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
 import { SiteLinks, SiteMobileMenu } from "../components/SiteMenu";
+import Ico from "../components/Ico";
 function norm(v) { return String(v ?? "").replace(/@/g, "").toLowerCase().trim(); }
 
 // ── Collection definitions — rendered dynamically ─────────────────────────────
@@ -324,7 +325,7 @@ function UploadModal({ collection, slotNum, username, onClose, onSuccess }) {
               <img src={preview} alt="" style={{ width:"100%", maxHeight:260, objectFit:"cover" }} />
             ) : (
               <div style={{ textAlign:"center", padding:32 }}>
-                <div style={{ fontSize:40, marginBottom:8 }}>📸</div>
+                <div style={{ fontSize:40, marginBottom:8 }}><Ico n="📸" size={22} /></div>
                 <div style={{ fontSize:14, fontWeight:600, color:V2.forestGreen, marginBottom:4 }}>
                   Tap to choose a photo
                 </div>
@@ -519,7 +520,7 @@ export default function FieldGuide() {
             <Link href={`/u/${username}`} style={{ display:"flex", alignItems:"center", gap:8,
               background:"white", border:`1px solid ${V2.borderSoft}`, borderRadius:20,
               padding:"6px 14px", textDecoration:"none", flexShrink:0 }}>
-              <span style={{ fontSize:16 }}>🌿</span>
+              <span style={{ fontSize:16 }}><Ico n="🌿" size={22} /></span>
               <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{username}</span>
             </Link>
           )}
@@ -536,7 +537,7 @@ export default function FieldGuide() {
           <div style={{ position:"absolute", inset:0, pointerEvents:"none", opacity:0.15 }}>
             <div style={{ position:"absolute", fontSize:200, bottom:-20, right:80, lineHeight:1 }}>🌲</div>
             <div style={{ position:"absolute", fontSize:120, bottom:10, right:260, lineHeight:1 }}>🦋</div>
-            <div style={{ position:"absolute", fontSize:80, top:20, right:180, lineHeight:1 }}>🌸</div>
+            <div style={{ position:"absolute", fontSize:80, top:20, right:180, lineHeight:1 }}><Ico n="🌸" size={22} /></div>
           </div>
 
           {/* Left — headline */}
@@ -544,7 +545,7 @@ export default function FieldGuide() {
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, marginBottom:16,
               background:"rgba(255,255,255,0.85)", border:`1px solid ${V2.borderGreen}`,
               borderRadius:20, padding:"6px 16px" }}>
-              <span style={{ fontSize:14 }}>🌿</span>
+              <span style={{ fontSize:14 }}><Ico n="🌿" size={22} /></span>
               <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em",
                 textTransform:"uppercase", color:V2.grassGreen }}>Proof of Grass</span>
             </div>
@@ -689,7 +690,7 @@ export default function FieldGuide() {
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
               marginBottom:16 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ fontSize:18 }}>🌿</span>
+                <span style={{ fontSize:18 }}><Ico n="🌿" size={22} /></span>
                 <span style={{ fontSize:16, fontWeight:800, color:V2.forestGreen,
                   textTransform:"uppercase", letterSpacing:"0.08em", fontSize:13 }}>
                   Recent Finds
@@ -707,7 +708,7 @@ export default function FieldGuide() {
             ) : (
               <div style={{ background:"white", borderRadius:16, padding:"48px 24px",
                 textAlign:"center", border:`1px solid ${V2.borderSoft}` }}>
-                <div style={{ fontSize:32, marginBottom:12 }}>🌿</div>
+                <div style={{ fontSize:32, marginBottom:12 }}><Ico n="🌿" size={22} /></div>
                 <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen, marginBottom:6 }}>
                   No finds yet
                 </div>
@@ -728,9 +729,7 @@ export default function FieldGuide() {
               <div style={{ display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
                 <div style={{ width:64, height:64, borderRadius:16, flexShrink:0,
                   background:"rgba(125,200,50,0.1)", border:`2px solid ${V2.borderGreen}`,
-                  display:"flex", alignItems:"center", justifyContent:"center", fontSize:32 }}>
-                  📖
-                </div>
+                  display:"flex", alignItems:"center", justifyContent:"center", fontSize:32 }}><Ico n="📖" size={22} /></div>
                 <div style={{ flex:1, minWidth:200 }}>
                   <div style={{ fontSize:15, fontWeight:800, color:V2.forestGreen, marginBottom:4 }}>
                     Field Guide Master

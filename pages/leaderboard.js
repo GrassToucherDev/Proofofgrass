@@ -8,6 +8,7 @@ import { renderRankCard, rankCaption } from "../utils/rankShareCard";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
 import { SiteLinks, SiteMobileMenu } from "../components/SiteMenu";
+import Ico from "../components/Ico";
 function norm(v) { return String(v ?? "").replace(/@/g, "").toLowerCase().trim(); }
 
 const PAGE_SIZE = 20;
@@ -53,9 +54,9 @@ function SkelRow() {
 
 // ── Medal ─────────────────────────────────────────────────────────────────────
 function Medal({ rank }) {
-  if (rank === 1) return <div style={{ fontSize:28, width:36, textAlign:"center" }}>🥇</div>;
-  if (rank === 2) return <div style={{ fontSize:28, width:36, textAlign:"center" }}>🥈</div>;
-  if (rank === 3) return <div style={{ fontSize:28, width:36, textAlign:"center" }}>🥉</div>;
+  if (rank === 1) return <div style={{ width:36 }}><Ico n="🥇" size={30} /></div>;
+  if (rank === 2) return <div style={{ fontSize:28, width:36, textAlign:"center" }}><Ico n="🥈" size={22} /></div>;
+  if (rank === 3) return <div style={{ fontSize:28, width:36, textAlign:"center" }}><Ico n="🥉" size={22} /></div>;
   return <div style={{ width:36, textAlign:"center", fontFamily:V2.fontSerif,
     fontSize:16, fontWeight:700, color:V2.midGray }}>{rank}</div>;
 }
@@ -353,7 +354,7 @@ export default function Leaderboard() {
             <Link href={`/u/${currentUser}`} style={{ display:"flex", alignItems:"center", gap:8,
               background:"white", border:`1px solid ${V2.borderSoft}`, borderRadius:20,
               padding:"6px 14px", textDecoration:"none", flexShrink:0 }}>
-              <span style={{ fontSize:16 }}>🌿</span>
+              <span style={{ fontSize:16 }}><Ico n="🌿" size={22} /></span>
               <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{currentUser}</span>
             </Link>
           )}
@@ -379,7 +380,7 @@ export default function Leaderboard() {
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, marginBottom:16,
               background:"rgba(255,255,255,0.85)", border:`1px solid ${V2.borderGreen}`,
               borderRadius:20, padding:"6px 16px" }}>
-              <span style={{ fontSize:14 }}>🌿</span>
+              <span style={{ fontSize:14 }}><Ico n="🌿" size={22} /></span>
               <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em",
                 textTransform:"uppercase", color:V2.grassGreen }}>Community</span>
             </div>
@@ -437,7 +438,7 @@ export default function Leaderboard() {
               gap:20, flexWrap:"wrap" }}>
               <div>
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-                  <span style={{ fontSize:18 }}>🌱</span>
+                  <span style={{ fontSize:18 }}><Ico n="🌱" size={22} /></span>
                   <span style={{ fontSize:16, fontWeight:800, color:V2.forestGreen }}>Check Your Rank</span>
                 </div>
                 <div style={{ fontSize:13, color:V2.textMuted }}>Type your username to see where you stand.</div>
@@ -446,7 +447,7 @@ export default function Leaderboard() {
                 <div style={{ flex:1, minWidth:160, display:"flex", alignItems:"center", gap:8,
                   background:"rgba(125,200,50,0.04)", border:`1.5px solid ${V2.borderSoft}`,
                   borderRadius:12, padding:"10px 14px" }}>
-                  <span style={{ fontSize:16, color:V2.midGray }}>🔍</span>
+                  <span style={{ fontSize:16, color:V2.midGray }}><Ico n="🔍" size={22} /></span>
                   <input value={rankInput} onChange={e=>setRankInput(e.target.value)}
                     onKeyDown={e=>e.key==="Enter"&&checkRank()}
                     placeholder="Enter username..."
@@ -475,7 +476,7 @@ export default function Leaderboard() {
               display:"flex", alignItems:"center", justifyContent:"space-between" }}>
               <div>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:18 }}>🌱</span>
+                  <span style={{ fontSize:18 }}><Ico n="🌱" size={22} /></span>
                   <span style={{ fontSize:16, fontWeight:800, color:V2.forestGreen }}>
                     Top Grass Touchers
                   </span>
@@ -504,7 +505,7 @@ export default function Leaderboard() {
               </div>
             ) : rows.length === 0 ? (
               <div style={{ padding:"60px 24px", textAlign:"center" }}>
-                <div style={{ fontSize:32, marginBottom:12 }}>🌱</div>
+                <div style={{ fontSize:32, marginBottom:12 }}><Ico n="🌱" size={22} /></div>
                 <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen, marginBottom:6 }}>
                   No entries yet
                 </div>
@@ -612,7 +613,7 @@ export default function Leaderboard() {
             alignItems:"center", justifyContent:"center", gap:3, textDecoration:"none",
             color:tab.active?V2.grassGreen:V2.midGray, fontSize:10,
             fontWeight:tab.active?700:500, fontFamily:V2.fontSans }}>
-            <span style={{ fontSize:20 }}>{tab.icon}</span>
+            <span style={{ width:24 }}><Ico n={tab.icon} size={24} /></span>
             <span>{tab.label}</span>
           </Link>
         ))}

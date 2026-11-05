@@ -6,6 +6,7 @@ import { supabase } from "../../utils/supabase";
 
 
 import { adminLoginOk } from "../../utils/adminLogin";
+import Ico from "../../components/Ico";
 const LEAF_COLORS = [
   "#4a7c3f","#5a8f4a","#6ba55a","#3d6b35","#7ab86a",
   "#8faa6a","#c8a84b","#93a85a","#2d5a27","#4e7a44",
@@ -223,7 +224,7 @@ export default function LeafDraw() {
         alignItems:"center", justifyContent:"center" }}>
         <div style={{ background:"#0e100b", border:"1px solid rgba(147,168,90,0.2)",
           borderRadius:16, padding:"40px 36px", width:"100%", maxWidth:360, textAlign:"center" }}>
-          <div style={{ fontSize:40, marginBottom:16 }}>🍃</div>
+          <div style={{ fontSize:40, marginBottom:16 }}><Ico n="🍃" size={22} /></div>
           <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
             fontSize:24, fontWeight:700, color:"#f0efea", marginBottom:24 }}>
             Leaf Draw
@@ -338,7 +339,7 @@ export default function LeafDraw() {
                 color:"rgba(200,168,75,0.7)", marginBottom:12 }}>
                 {DRAW_TYPES.find(t=>t.value===drawType)?.label} Winner
               </div>
-              <div style={{ fontSize:56, marginBottom:16 }}>🍃</div>
+              <div style={{ fontSize:56, marginBottom:16 }}><Ico n="🍃" size={22} /></div>
               <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                 fontSize:"clamp(36px,6vw,64px)", fontWeight:700,
                 color:"#c8a84b", lineHeight:1, marginBottom:8,

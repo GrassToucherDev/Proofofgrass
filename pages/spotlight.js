@@ -9,6 +9,7 @@ import { supabase } from "../utils/supabase";
 import V2Nav from "../components/V2Nav";
 import V2BottomNav from "../components/V2BottomNav";
 import { V2, V2GlobalCSS } from "../utils/v2Theme";
+import Ico from "../components/Ico";
 
 // Category presentation. Keys match SPOTLIGHT_BADGES / the CommunitySpotlights.category column.
 const CATEGORIES = [
@@ -67,7 +68,7 @@ function WinnerCard({ cat, winner, viewer }) {
         <span className="sp-pill" style={{ background: cat.tint, color: cat.accent }}>
           <span aria-hidden="true">{cat.emoji}</span> {cat.name}
         </span>
-        {!empty && <span className="sp-crown" role="img" aria-label="Winner" title="Winner">👑</span>}
+        {!empty && <span className="sp-crown" role="img" aria-label="Winner" title="Winner"><Ico n="👑" size={22} /></span>}
       </div>
       <div className="sp-winner-body">
         <Avatar winner={winner} size={56} accent={cat.accent} />
@@ -87,7 +88,7 @@ function WinnerCard({ cat, winner, viewer }) {
             {winner.x_link && <a href={winner.x_link} target="_blank" rel="noopener noreferrer" className="sp-link">𝕏 View post</a>}
             {winner.proof_link && <a href={winner.proof_link} target="_blank" rel="noopener noreferrer" className="sp-link">🔗 Proof</a>}
             {viewer && viewer === winner.username && (
-              <Link href={`/spotlight-card/${winner.username}`} className="sp-link sp-link-strong">🏆 Generate Spotlight Card</Link>
+              <Link href={`/spotlight-card/${winner.username}`} className="sp-link sp-link-strong"><Ico inline n="🏆" size={18} />Generate Spotlight Card</Link>
             )}
           </div>
         </div>
@@ -241,7 +242,7 @@ export default function SpotlightPage() {
 
           <section className="sp-card" aria-labelledby="sp-this-week">
             <div className="sp-card-head">
-              <h2 className="sp-h2" id="sp-this-week"><span aria-hidden="true">🏆</span> This Week's Winners</h2>
+              <h2 className="sp-h2" id="sp-this-week"><span aria-hidden="true"><Ico n="🏆" size={22} /></span> This Week's Winners</h2>
               <span className="sp-range">{weekLabel}</span>
             </div>
             {loading ? (
@@ -255,7 +256,7 @@ export default function SpotlightPage() {
           </section>
 
           <section className="sp-card" aria-labelledby="sp-how">
-            <h2 className="sp-h2" id="sp-how" style={{ marginBottom: 6 }}><span aria-hidden="true">🌿</span> How Winners Are Chosen</h2>
+            <h2 className="sp-h2" id="sp-how" style={{ marginBottom: 6 }}><span aria-hidden="true"><Ico n="🌿" size={22} /></span> How Winners Are Chosen</h2>
             <div>
               {CATEGORIES.map(cat => (
                 <div key={cat.key} className="sp-chosen-row">

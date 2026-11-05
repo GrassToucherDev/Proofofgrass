@@ -14,6 +14,7 @@ import CoverImage from "../../../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../../../components/wago-drops/ProofBonusFlow";
 
 import { withShareTags } from "../../../utils/shareTags";
+import Ico from "../../../components/Ico";
 const rewardIconUrl = rewardLogo;
 
 function haversineM(lat1, lng1, lat2, lng2) {
@@ -310,7 +311,7 @@ export default function DropDetail() {
                   <button onClick={handleShare} style={{
                     flex: 1, background: T.olive, color: "#fff", border: "none",
                     borderRadius: 999, padding: "13px", fontSize: 14, fontWeight: 700, cursor: "pointer",
-                  }}>🌿 Share Drop</button>
+                  }}><Ico inline n="🌿" size={18} />Share Drop</button>
                   <Link href="/wago-drops/my-drops" style={{
                     flex: 1, textAlign: "center",
                     background: T.card, color: T.muted, border: `1px solid ${T.border}`,
@@ -358,7 +359,7 @@ export default function DropDetail() {
                       background: T.card, color: T.muted, border: `1px solid ${T.border}`,
                       borderRadius: 10, padding: "11px", fontSize: 13, textDecoration: "none",
                       display: "block",
-                    }}>🗺️ Map</Link>
+                    }}><Ico inline n="🗺️" size={18} />Map</Link>
                   </div>
                 </div>
               )}

@@ -9,6 +9,7 @@ import { useRouter } from "next/router";
 import { T } from "../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../components/wago-drops/WagoDropsNav";
 import WalletConnect from "../../components/wago-drops/WalletConnect";
+import Ico from "../../components/Ico";
 
 export default function WagoDropsSettings() {
   const { data: session, status } = useSession();
@@ -137,7 +138,7 @@ export default function WagoDropsSettings() {
                 borderRadius: 8, padding: "10px 14px", marginBottom: 20,
                 display: "flex", gap: 10, alignItems: "flex-start",
               }}>
-                <span style={{ fontSize: 15, flexShrink: 0 }}>⏳</span>
+                <span style={{ fontSize: 15, flexShrink: 0 }}><Ico n="⏳" size={22} /></span>
                 <div style={{ fontSize: 13, color: T.yellow, lineHeight: 1.5 }}>
                   Wallet can be updated once every 24 hours. Available again in <strong>{cooldownRemaining}</strong>.
                 </div>

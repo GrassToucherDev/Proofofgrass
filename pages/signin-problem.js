@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { signInWithGoogle } from "../utils/googleSignIn";
 import { explainSigninError, safeReturnPath } from "../utils/signinError";
 
+import Ico from "../components/Ico";
 // Where NextAuth sends people when a Google sign-in fails. Shows what happened and lets them retry,
 // instead of dropping them on an unrelated page.
 export default function SigninProblem() {
@@ -13,7 +14,7 @@ export default function SigninProblem() {
   return (
     <div style={{ minHeight: "100vh", background: "#080a06", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito',sans-serif", color: "#f0efea", textAlign: "center", padding: 24 }}>
       <Head><title>Sign-in problem · Proof of Grass</title><meta name="robots" content="noindex" /></Head>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>🌿</div>
+      <div style={{ fontSize: 56, marginBottom: 16 }}><Ico n="🌿" size={22} /></div>
       <h1 style={{ fontFamily: "'Georgia',serif", fontSize: 26, fontWeight: 700, marginBottom: 12 }}>Sign-in didn't work</h1>
       <p style={{ fontSize: 14, color: "rgba(240,239,234,0.65)", lineHeight: 1.7, maxWidth: 340 }}>{msg}</p>
       <p style={{ fontSize: 13, color: "rgba(240,239,234,0.5)", lineHeight: 1.7, maxWidth: 340, marginTop: 10 }}>

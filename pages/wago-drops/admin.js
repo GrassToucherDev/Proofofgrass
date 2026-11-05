@@ -8,6 +8,7 @@ import Wago from "../../components/wago-drops/Wago";
 import { uploadCover } from "../../utils/wagoCoverUpload";
 import TrailBuilder from "../../components/wago-drops/trails/TrailBuilder";
 
+import Ico from "../../components/Ico";
 function Input({label,...props}){
   return(
     <label style={{display:"block",marginBottom:14}}>
@@ -638,7 +639,7 @@ export default function WagoAdminPage(){
         <link rel="apple-touch-icon" href="/images/wago/apple-touch-icon.png" /></Head>
       <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
         <form onSubmit={checkAuth} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:14,padding:32,width:320}}>
-          <h2 style={{fontFamily:"'Fredoka',serif",color:T.white,margin:"0 0 20px",textAlign:"center"}}>🗺️ Admin Access</h2>
+          <h2 style={{fontFamily:"'Fredoka',serif",color:T.white,margin:"0 0 20px",textAlign:"center"}}><Ico inline n="🗺️" size={18} />Admin Access</h2>
           <Input label="Admin Secret" type="password" value={secret} onChange={e=>setSecret(e.target.value)}/>
           {authErr && <p style={{fontSize:13,color:T.red,margin:"0 0 12px"}}>{authErr}</p>}
           <button type="submit" style={{width:"100%",background:T.olive,color:T.bg,border:"none",borderRadius:8,padding:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>Enter</button>

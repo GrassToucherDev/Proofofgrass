@@ -8,6 +8,7 @@ import { T } from "../../../utils/wagoTheme";
 import { WagoDropsNav, WagoDropsBottomNav } from "../../../components/wago-drops/WagoDropsNav";
 import { SponsorLine } from "../../../components/wago-drops/PrizeUI";
 
+import Ico from "../../../components/Ico";
 function dist(a, b, c, d) {
   const r = Math.PI / 180, R = 6371000;
   const x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2;
@@ -106,7 +107,7 @@ export default function PrizePage() {
                     {d === null ? "Turn on location to see how far you are." : here ? "You're in range ✓" : `${d < 1000 ? d + "m" : (d / 1000).toFixed(1) + "km"} away`}
                   </div>
                   {sp.last_seen_at && sp.remaining > 0 && <div style={{ fontSize: 11.5, color: T.dim, marginTop: 2 }}>Last confirmed there {ago(sp.last_seen_at)}</div>}
-                  <Link href={`/wago-drops?flyTo=${sp.lat},${sp.lng}`} style={{ display: "inline-block", marginTop: 6, fontSize: 13, color: T.green, fontWeight: 700, textDecoration: "none" }}>🗺️ View on map</Link>
+                  <Link href={`/wago-drops?flyTo=${sp.lat},${sp.lng}`} style={{ display: "inline-block", marginTop: 6, fontSize: 13, color: T.green, fontWeight: 700, textDecoration: "none" }}><Ico inline n="🗺️" size={18} />View on map</Link>
                   {session && sp.revealed && sp.remaining > 0 && !p.you_found && (
                     <div style={{ marginTop: 10, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
                       <div style={{ fontSize: 12, color: T.muted, marginBottom: 6 }}>Is it there?</div>
@@ -122,7 +123,7 @@ export default function PrizePage() {
             })}
             {p.spots.length === 0 && <div style={{ ...card, color: T.muted }}>No spots are available right now. They may be getting restocked.</div>}
 
-            {p.you_found && <div style={{ ...card, borderColor: "rgba(74,222,128,0.4)", color: T.green, fontWeight: 700 }}>🎉 You found this prize! The sponsor's details are on this page. If it needs shipping, we'll ask you first.</div>}
+            {p.you_found && <div style={{ ...card, borderColor: "rgba(74,222,128,0.4)", color: T.green, fontWeight: 700 }}><Ico inline n="🎉" size={18} />You found this prize! The sponsor's details are on this page. If it needs shipping, we'll ask you first.</div>}
 
             {!p.you_found && open && (
               <div style={card}>
@@ -149,7 +150,7 @@ export default function PrizePage() {
               <div style={card}>
                 <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em", color: T.dim, marginBottom: 8 }}>Found by</div>
                 {p.finders.map((f, i) => (
-                  <div key={i} style={{ fontSize: 14, padding: "3px 0" }}>🌿 <b>{f.name}</b> <span style={{ color: T.dim, fontSize: 12 }}>· {new Date(f.at).toLocaleDateString()}</span></div>
+                  <div key={i} style={{ fontSize: 14, padding: "3px 0" }}><Ico n="🌿" size={22} /><b>{f.name}</b> <span style={{ color: T.dim, fontSize: 12 }}>· {new Date(f.at).toLocaleDateString()}</span></div>
                 ))}
               </div>
             )}

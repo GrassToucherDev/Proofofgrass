@@ -5,6 +5,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { V2, V2Styles, V2GlobalCSS } from "../../utils/v2Theme";
 import { SiteLinks, SiteMobileMenu } from "../../components/SiteMenu";
+import Ico from "../../components/Ico";
 
 const ICON = { grass_score: "⚡", shield: "🛡️", profile_pack: "🎨", nft: "🖼️" };
 const fmtClock = (ms) => {
@@ -84,7 +85,7 @@ export default function GrassDrawLive() {
     if (!data && !err) return <div className="gdl-stage"><div className="gdl-sub">Loading…</div></div>;
     if (err && !data) return <div className="gdl-stage"><div className="gdl-sub">Couldn't reach the draw. Retrying…</div></div>;
     if (phase === "none") return (
-      <div className="gdl-stage"><div style={{ fontSize: 54 }}>🍃</div>
+      <div className="gdl-stage"><div style={{ fontSize: 54 }}><Ico n="🍃" size={22} /></div>
         <div className="gdl-big" style={{ fontSize: "clamp(28px,7vw,48px)", marginTop: 10 }}>No live draw right now</div>
         <div className="gdl-sub">We'll announce the next one. Keep earning tickets.</div></div>);
     const chips = (pool.length ? pool : []).slice(0, 36);
@@ -105,7 +106,7 @@ export default function GrassDrawLive() {
             <div className="gdl-big">{Math.max(1, Math.ceil((untilGo ?? 0) / 1000))}</div>
             <div className="gdl-sub">Get ready</div></>)}
           {phase === "intro" && (<>
-            <div style={{ fontSize: 72 }} className="gdl-swirl">🍃</div>
+            <div style={{ fontSize: 72 }} className="gdl-swirl"><Ico n="🍃" size={22} /></div>
             <div className="gdl-big" style={{ fontSize: "clamp(30px,8vw,56px)", marginTop: 8 }}>Drawing…</div>
             <div className="gdl-sub">{data.total} winner{data.total === 1 ? "" : "s"} to be revealed</div></>)}
           {phase === "revealing" && last && (<>
@@ -114,7 +115,7 @@ export default function GrassDrawLive() {
             <div style={{ fontSize: 22, marginTop: 10 }}>{ICON[last.prize_type] || "🎁"} {last.prize}</div>
             {last.chance_pct != null && <div className="gdl-sub">Held {last.entries} entries · {last.chance_pct}% of the pool</div>}</>)}
           {phase === "done" && (<>
-            <div style={{ fontSize: 54 }}>🎉</div>
+            <div style={{ fontSize: 54 }}><Ico n="🎉" size={22} /></div>
             <div className="gdl-big" style={{ fontSize: "clamp(32px,8vw,60px)", marginTop: 8 }}>Congratulations!</div>
             <div className="gdl-sub">{data.total} winners · see the full list below</div></>)}
         </div>
@@ -162,7 +163,7 @@ export default function GrassDrawLive() {
                       <Link href={`/u/${w.username}`} style={{ fontWeight: 700, color: V2.forestGreen, textDecoration: "none", wordBreak: "break-word" }}>@{w.username}</Link>
                       <div style={{ fontSize: 13, color: V2.forestLight }}>{ICON[w.prize_type] || "🎁"} {w.prize}</div>
                       {viewer && viewer === String(w.username).toLowerCase() && (
-                        <Link href={`/grass-draw/winner/${w.username}`} style={{ display: "inline-block", marginTop: 6, fontSize: 12, fontWeight: 800, color: V2.forestGreen, background: "#f9d06b", borderRadius: 999, padding: "6px 12px", textDecoration: "none" }}>🎉 Share your win</Link>
+                        <Link href={`/grass-draw/winner/${w.username}`} style={{ display: "inline-block", marginTop: 6, fontSize: 12, fontWeight: 800, color: V2.forestGreen, background: "#f9d06b", borderRadius: 999, padding: "6px 12px", textDecoration: "none" }}><Ico inline n="🎉" size={18} />Share your win</Link>
                       )}
                     </div>
                     {w.chance_pct != null && <div style={{ textAlign: "right", fontSize: 12, color: V2.midGray, fontWeight: 700 }}>{w.chance_pct}%<br />of pool</div>}

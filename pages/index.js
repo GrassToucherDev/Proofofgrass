@@ -6,6 +6,7 @@ import UploadBox from "../components/UploadBox";
 import ResultCard from "../components/ResultCard";
 import ShareCardSheet from "../components/ShareCardSheet";
 import { renderStreakCard, streakCaption, isStreakMilestone, STREAK_MILESTONES } from "../utils/streakShareCard";
+import Ico from "../components/Ico";
 import V2Nav from "../components/V2Nav";
 import FrightBitsHeroBanner from "../components/frightbits/FrightBitsHeroBanner";
 import V2BottomNav from "../components/V2BottomNav";
@@ -49,12 +50,6 @@ function Skel({ w = "100%", h = 16, r = 8 }) {
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
-const ICO3D = new Set(["camera","lock","share","check","flame","shield","trophy","sprout","bolt"]);
-function Ico({ n, size = 24 }) {
-  if (!ICO3D.has(n)) return <span style={{ fontSize: size * 0.8, lineHeight: 1 }}>{n}</span>;
-  return <img src={`/icons3d/${n}.webp`} alt="" width={size} height={size} style={{ width: size, height: size, objectFit: "contain", display: "block", margin: "0 auto" }} />;
-}
-
 function StatCard({ icon, value, label, sub, accent, loading }) {
   return (
     <div style={{
@@ -335,7 +330,7 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
   return (
     <div style={{ ...V2Styles.glassCard, padding: "28px 24px" }}>
       <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div style={{ fontSize: 28, marginBottom: 8 }}>🌿</div>
+        <div style={{ marginBottom: 8 }}><Ico n="sprout" size={40} /></div>
         <h2 style={{ fontFamily: V2.fontSans, fontSize: 22, fontWeight: 800,
           color: V2.forestGreen, marginBottom: 8 }}>{lockedIn ? "You're locked in" : "Let's get outside"}</h2>
         <p style={{ fontSize: 13, color: V2.textMuted }}>{lockedIn ? "Nice work. Today's proof is in." : hasUser ? "Add your outdoor photo to log today's proof." : "Two quick steps: pick a username, then add a photo from outside."}</p>
@@ -806,11 +801,11 @@ export default function Home() {
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <button onClick={scrollToUpload}
                 style={{ ...V2Styles.btnPrimary, fontSize: 15, padding: "14px 28px" }}>
-                {hasUser ? "🌿 Log Your Proof" : "🌿 Log Your First Proof"}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Ico n="camera" size={22} />{hasUser ? "Log Your Proof" : "Log Your First Proof"}</span>
               </button>
               <Link href="/leaderboard"
                 style={{ ...V2Styles.btnSecondary, fontSize: 15, padding: "13px 28px", textDecoration: "none" }}>
-                👑 View Leaderboard
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Ico n="trophy" size={22} />View Leaderboard</span>
               </Link>
             </div>
           </div>
@@ -863,7 +858,7 @@ export default function Home() {
                 borderColor: V2.borderGold,
                 background: "rgba(255,243,216,0.8)",
               }}>
-                <span style={{ fontSize: 24 }}>⚡</span>
+                <span style={{ fontSize: 24 }}><Ico n="⚡" size={22} /></span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: V2.forestGreen }}>
                     @{ch.challenger} challenged you to a {ch.duration_days}-day streak!
@@ -905,7 +900,7 @@ export default function Home() {
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                     <div style={{ width: 48, height: 48, borderRadius: "50%",
                       background: V2.gradientGrassBtn, display: "flex",
-                      alignItems: "center", justifyContent: "center", fontSize: 22 }}>🌿</div>
+                      alignItems: "center", justifyContent: "center", fontSize: 22 }}><Ico n="🌿" size={22} /></div>
                     <div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: V2.forestGreen }}>@{username}</div>
                       <div style={{ fontSize: 12, color: tier.color }}>{tier.emoji} {tier.name}</div>
@@ -959,7 +954,7 @@ export default function Home() {
                     <div key={l.username+i} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0",
                       borderBottom:i<rows.length-1?"1px solid rgba(200,220,190,0.4)":"none" }}>
                       <div style={{ width:28, textAlign:"center", fontWeight:700, color:"#6b7d60", fontSize:14 }}>
-                        {i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}
+                        {i<3?<Ico n={["🥇","🥈","🥉"][i]} size={26} />:i+1}
                       </div>
                       <Link href={"/u/"+l.username} style={{ flex:1, fontSize:13, fontWeight:600, color:"#1a4a0a", textDecoration:"none" }}>{"@"+l.username}</Link>
                       <div style={{ fontSize:13, fontWeight:700, color:"#5ba622" }}>{l.value.toLocaleString()}{l.suffix}</div>
@@ -996,7 +991,7 @@ export default function Home() {
         </div>
 
         {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
-        <div style={{ padding: "8px clamp(14px,4vw,40px) 0", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ padding: "28px clamp(14px,4vw,40px) 4px", display: "flex", alignItems: "center", gap: 12 }}>
           <img src="/mascot/wago-point.webp" alt="" width={72} height={72} style={{ width: 72, height: 72, objectFit: "contain", flexShrink: 0 }} />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen }}>Explore</div>
@@ -1060,7 +1055,7 @@ export default function Home() {
             display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap",
             background: "linear-gradient(135deg,rgba(125,200,50,0.12),rgba(232,160,32,0.08))",
           }}>
-            <span style={{ fontSize: 48 }}>🌾</span>
+            <span style={{ fontSize: 48 }}><Ico n="🌾" size={22} /></span>
             <div style={{ flex: 1, minWidth: 200 }}>
               <h3 style={{ fontFamily: V2.fontSans, fontSize: 22, fontWeight: 800,
                 color: V2.forestGreen, marginBottom: 6 }}>
