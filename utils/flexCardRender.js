@@ -6,7 +6,12 @@ import { fitText, ellipsize, INK, GREEN, NUN, FRED } from "./cardFrame";
 const TIERS = ["ROOTED", "LOCKED IN", "ELITE", "LEGENDARY", "IMMORTAL", "MYTHIC", "ETERNAL", "ASCENDED", "TRANSCENDENT"];
 const THS = [7, 14, 30, 50, 100, 180, 365, 500, 1000];
 const GOLD = "#f6b93b";
-const ld = (src) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+// Image loader that can never hang: resolves null on error or after 8s, so the card still builds without that image.
+const ld = (src) => new Promise((res) => {
+  const t = setTimeout(() => res(null), 8000);
+  const i = new Image(); i.onload = () => { clearTimeout(t); res(i); }; i.onerror = () => { clearTimeout(t); res(null); }; i.src = src;
+});
+const withTimeout = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(r, ms))]);
 
 function sprout(ctx, x, y, r) {
   const k = r / 44;
@@ -29,7 +34,7 @@ function cream(ctx, x, y, w, h, r, border = GREEN) {
 
 export async function drawFlexCard(ctx, W, H, p, loadAvatar) {
   const { username, streak, grassScore, rank, best, tierTitle, theme } = p;
-  try { await Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("800 20px Nunito")]); } catch {}
+  try { await withTimeout(Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("800 20px Nunito")]), 2500); } catch {}
   const accent = theme?.accentColor || "#7dc832", accent2 = theme?.progressTo || "#5ba622";
   const tierName = tierFor(streak), tIdx = TIERS.indexOf(tierName) + 1, newcomer = !tierName;
   const nxt = THS.find((t) => t > streak) || 1000, nIdx = THS.indexOf(nxt) + 1;
@@ -45,7 +50,7 @@ export async function drawFlexCard(ctx, W, H, p, loadAvatar) {
   ctx.save(); ctx.shadowColor = accent + "88"; ctx.shadowBlur = 24; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(acx, acy, R + 12, 0, 7); ctx.fill(); ctx.restore();
   ctx.save(); ctx.beginPath(); ctx.arc(acx, acy, R, 0, 7); ctx.clip();
   let ok = false;
-  if (p.avatarUrl) { try { const im = await loadAvatar(p.avatarUrl); ctx.drawImage(im, acx - R, acy - R, R * 2, R * 2); ok = true; } catch {} }
+  if (p.avatarUrl) { try { const im = await withTimeout(loadAvatar(p.avatarUrl), 20000); if (!im) throw new Error("avatar timeout"); ctx.drawImage(im, acx - R, acy - R, R * 2, R * 2); ok = true; } catch {} }
   if (!ok) { ctx.fillStyle = "#e3f3d4"; ctx.fillRect(acx - R, acy - R, R * 2, R * 2); try { const lg = await loadAvatar("/touchgrass-transparent.png"); ctx.drawImage(lg, acx - 58, acy - 58, 116, 116); } catch {} }
   ctx.restore();
   ctx.lineWidth = 8; ctx.strokeStyle = accent; ctx.beginPath(); ctx.arc(acx, acy, R + 2, 0, 7); ctx.stroke();
