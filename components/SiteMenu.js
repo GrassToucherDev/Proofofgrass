@@ -43,6 +43,7 @@ export const MENU_GROUPS = [
 export const SOLO_LINKS = [
   { href: "/leaderboard", label: "Leaderboard", icon: "🏆" },
   { href: "/marketplace", label: "Marketplace", icon: "🏪" },
+  { href: "/token",       label: "$TOUCHGRASS", icon: "🪙" },
   { href: "/spotlight",   label: "Spotlight",   icon: "🌟" },
 ];
 
