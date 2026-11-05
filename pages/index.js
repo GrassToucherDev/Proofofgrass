@@ -242,8 +242,13 @@ function UsernameStep({ onPick }) {
   };
   return (
     <div style={{ marginBottom: 16, padding: "18px 16px", borderRadius: 16, background: "rgba(125,200,50,0.07)", border: "1.5px solid rgba(91,166,34,0.35)" }}>
-      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen, marginBottom: 6 }}>Step 1</div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: V2.forestGreen, marginBottom: 4 }}>Pick your username</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen, marginBottom: 6 }}>Step 1</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: V2.forestGreen }}>Pick your username</div>
+        </div>
+        <img src="/mascot/wago-wave.webp" alt="" width={84} height={84} style={{ width: 84, height: 84, objectFit: "contain", flexShrink: 0 }} />
+      </div>
       <div style={{ fontSize: 12.5, color: V2.textMuted, lineHeight: 1.45, marginBottom: 12 }}>This is the name on your streak and the leaderboard. You can use your X handle.</div>
       <div style={{ display: "flex", gap: 8 }}>
         <input value={val} onChange={e => { setVal(e.target.value.replace(/@/g, "").toLowerCase()); setErr(""); }}
@@ -268,6 +273,8 @@ function LockedInToday({ username, streak }) {
   };
   return (
     <div style={{ marginBottom: 16 }}>
+      <img src="/mascot/wago-sleep.webp" alt="" width={120} height={114}
+        style={{ width: 120, height: "auto", display: "block", margin: "0 auto 4px" }} />
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: 16, borderRadius: 18,
         background: "linear-gradient(160deg,#f2fbe8,#e3f4d2)", border: "1.5px solid rgba(91,166,34,.4)" }}>
         <div style={{ width: 76, height: 76, borderRadius: 22, flexShrink: 0, color: "#fff",
@@ -983,9 +990,12 @@ export default function Home() {
         </div>
 
         {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
-        <div style={{ padding: "8px clamp(14px,4vw,40px) 0" }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen }}>Explore</div>
-          <div style={{ fontSize: 13, color: V2.textMuted, marginTop: 2 }}>More to do once your streak is going.</div>
+        <div style={{ padding: "8px clamp(14px,4vw,40px) 0", display: "flex", alignItems: "center", gap: 12 }}>
+          <img src="/mascot/wago-point.webp" alt="" width={72} height={72} style={{ width: 72, height: 72, objectFit: "contain", flexShrink: 0 }} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen }}>Explore</div>
+            <div style={{ fontSize: 13, color: V2.textMuted, marginTop: 2 }}>More to do once your streak is going.</div>
+          </div>
         </div>
         <div className="v2-feature-grid">
           <FeatureCard
