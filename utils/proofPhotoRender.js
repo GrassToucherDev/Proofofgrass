@@ -51,15 +51,13 @@ export async function drawPhotoCard(ctx, W, H, opts) {
   ctx.strokeStyle = "#3f9a14"; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); ctx.moveTo(M + 28, M + vh / 2 + 1); ctx.lineTo(M + 36, M + vh / 2 + 9); ctx.lineTo(M + 50, M + vh / 2 - 8); ctx.stroke();
   ctx.save(); ctx.fillStyle = "#fff"; ctx.shadowColor = "rgba(20,70,10,.5)"; ctx.shadowOffsetY = 2; ctx.textAlign = "left"; ctx.font = `700 34px ${FRED}`; ctx.fillText(vlabel, M + 14 + 48 + 14, M + vh / 2 + 12); ctx.restore();
   // top-right: logo on a soft glass chip
-  if (logo) { const lw = 300, lh = lw * logo.height / logo.width, cw = lw + 36, ch = lh + 24, cx0 = W - M - cw;
-    ctx.save(); ctx.shadowColor = "rgba(0,0,0,.25)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6; ctx.fillStyle = "rgba(255,255,255,.9)"; rr(ctx, cx0, M, cw, ch, 34); ctx.fill(); ctx.restore();
-    ctx.drawImage(logo, cx0 + 18, M + 12, lw, lh); }
+  if (logo) { const lw = 330, lh = lw * logo.height / logo.width; // no chip: the logo sits straight on the photo with a soft shadow
+    ctx.save(); ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 4; ctx.drawImage(logo, W - M - lw, M - 6, lw, lh); ctx.restore(); }
 
   // bottom glass bar
   const BH = 200, BX = M, BW = W - M * 2, BY = H - M - BH;
-  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10; ctx.fillStyle = "rgba(255,255,255,.90)"; rr(ctx, BX, BY, BW, BH, 70); ctx.fill(); ctx.restore();
-  ctx.lineWidth = 4; ctx.strokeStyle = "rgba(255,255,255,.95)"; rr(ctx, BX, BY, BW, BH, 70); ctx.stroke();
-  ctx.lineWidth = 2; ctx.strokeStyle = "rgba(246,185,59,.6)"; rr(ctx, BX + 8, BY + 8, BW - 16, BH - 16, 62); ctx.stroke();
+  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8; ctx.fillStyle = "rgba(255,255,255,.64)"; rr(ctx, BX, BY, BW, BH, 70); ctx.fill(); ctx.restore();
+  ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.85)"; rr(ctx, BX, BY, BW, BH, 70); ctx.stroke();
   // badge pops out of the bar's left end
   const bcx = BX + 120, bcy = BY + BH / 2 - 6;
   if (shield) { const sh = 190, sw = sh * shield.width / shield.height; ctx.save(); ctx.shadowColor = "rgba(0,0,0,.3)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 6; ctx.drawImage(shield, bcx - sw / 2, bcy - sh / 2 - 12, sw, sh); ctx.restore(); }
