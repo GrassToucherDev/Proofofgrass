@@ -714,18 +714,21 @@ export default function Home() {
     .v2-hero-left { flex: 1; min-width: 0; }
     .v2-hero-right { flex-shrink: 0; width: clamp(280px,40%,480px); display: flex; flex-direction: column; gap: 10px; }
     .v2-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .v2-more-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; padding: 8px clamp(14px,4vw,40px) 20px; }
     .v2-feature-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; padding: 24px clamp(14px,4vw,40px); }
-    .v2-bottom-grid { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 16px; padding: 24px clamp(14px,4vw,40px); align-items: start; }
+    .v2-bottom-grid > :nth-child(2) { order: -1; }
+    .v2-bottom-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; padding: 24px clamp(14px,4vw,40px); align-items: start; }
     @media (max-width: 1024px) {
       .v2-feature-grid { grid-template-columns: repeat(2,1fr); }
+      .v2-more-row { grid-template-columns: repeat(3,1fr); }
       .v2-bottom-grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
     }
     @media (max-width: 768px) {
       .v2-hero { flex-direction: column; min-height: auto; padding: 32px 16px; gap: 32px; }
       .v2-hero-right { width: 100%; }
       .v2-visitor-stats { display: none; }
-      .v2-bottom-grid > :nth-child(2) { order: -1; }
       .v2-feature-grid { grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; }
+      .v2-more-row { grid-template-columns: 1fr 1fr; padding: 8px 16px 16px; }
       .v2-bottom-grid { grid-template-columns: minmax(0,1fr); padding: 16px; }
     }
     @media (max-width: 480px) {
@@ -986,8 +989,6 @@ export default function Home() {
             loadingUser={loadingUser}
           />
 
-          {/* Column 3 — Marketplace preview */}
-          <MarketplacePreview />
         </div>
 
         {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
@@ -998,35 +999,20 @@ export default function Home() {
             <div style={{ fontSize: 13, color: V2.textMuted, marginTop: 2 }}>More to do once your streak is going.</div>
           </div>
         </div>
-        <div className="v2-feature-grid">
-          <FeatureCard
-            icon="/icons/harvest.png"
-            title="Harvest"
-            desc="Lock $TOUCHGRASS for 6 months and earn rewards when it unlocks."
-            cta="View Harvest"
-            href="https://harvest.touchgrass.today"
-          />
-          <FeatureCard
-            icon="/icons/grass-draw.png"
-            title="Grass Draw"
-            desc="Earn entries by logging proofs. Win monthly prizes."
-            cta="View Draw"
-            href="/grass-draw"
-          />
-          <FeatureCard
-            icon="/icons/shields.png"
-            title="Shields"
-            desc="Miss a day without losing your streak."
-            cta="Manage Shields"
-            href="/marketplace"
-          />
-          <FeatureCard
-            icon="/icons/challenges.png"
-            title="The Yard"
-            desc="Challenge a friend to a streak showdown."
-            cta="Enter The Yard"
-            href="/yard"
-          />
+        <div className="v2-more-row">
+          {[
+            ["ticket","Grass Draw","/grass-draw"],
+            ["swords","The Yard","/yard"],
+            ["shield","Shields","/marketplace"],
+            ["palette","Backgrounds","/marketplace"],
+            ["wheat","Harvest","https://harvest.touchgrass.today"],
+          ].map(([ic,label,href]) => {
+            const ext = href.startsWith("http");
+            const st = { ...V2Styles.glassCard, display:"flex", alignItems:"center", justifyContent:"center", gap:10, padding:"12px 14px", textDecoration:"none", color:V2.forestGreen, fontWeight:800, fontSize:14, minWidth:0 };
+            return ext
+              ? <a key={label} href={href} target="_blank" rel="noopener noreferrer" style={st}><Ico n={ic} size={26} /><span>{label}</span></a>
+              : <Link key={label} href={href} style={st}><Ico n={ic} size={26} /><span>{label}</span></Link>;
+          })}
         </div>
 
         {/* ── TOKEN STRIP ──────────────────────────────────────────────────── */}
@@ -1041,36 +1027,6 @@ export default function Home() {
           </Link>
         </div>
 
-
-        {/* ── FEATURED POSTS ───────────────────────────────────────────────── */}
-        <div style={{ background: "rgba(255,255,255,0.4)", borderTop: `1px solid ${V2.borderSoft}` }}>
-          <FeaturedPostsSection />
-        </div>
-
-        {/* ── PROMO BANNER ─────────────────────────────────────────────────── */}
-        <div style={{ padding: "24px clamp(14px,4vw,40px)" }}>
-          <div style={{
-            ...V2Styles.glassCard,
-            padding: "28px 32px",
-            display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap",
-            background: "linear-gradient(135deg,rgba(125,200,50,0.12),rgba(232,160,32,0.08))",
-          }}>
-            <span style={{ fontSize: 48 }}><Ico n="🌾" size={22} /></span>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <h3 style={{ fontFamily: V2.fontSans, fontSize: 22, fontWeight: 800,
-                color: V2.forestGreen, marginBottom: 6 }}>
-                Harvest — Lock. Grow. Claim.
-              </h3>
-              <p style={{ fontSize: 13, color: V2.textMuted }}>
-                Deposit $TOUCHGRASS for 6 months. On Harvest Day, claim your principal + rewards.
-              </p>
-            </div>
-            <a href="https://harvest.touchgrass.today" target="_blank" rel="noopener noreferrer"
-              style={{ ...V2Styles.btnPrimary, textDecoration: "none", flexShrink: 0 }}>
-              Go to Harvest →
-            </a>
-          </div>
-        </div>
 
         {/* ── FOOTER ───────────────────────────────────────────────────────── */}
         <footer style={{
@@ -1092,7 +1048,7 @@ export default function Home() {
             </p>
             <button onClick={scrollToUpload}
               style={{ ...V2Styles.btnPrimary, fontSize: 14 }}>
-              Start Your Streak 🌿
+              Start Your Streak
             </button>
           </div>
           <div style={{ width: "100%", borderTop: "1px solid rgba(255,255,255,0.1)",
