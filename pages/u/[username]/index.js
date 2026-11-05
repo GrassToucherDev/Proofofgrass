@@ -115,7 +115,7 @@ function ProofCard({ proof }) {
         ? <img src={proof.photo_url} alt="" loading="lazy" onError={()=>setFailed(true)}
             style={{ width:"100%", height:110, objectFit:"cover" }} />
         : <div style={{ height:110, display:"flex", alignItems:"center",
-            justifyContent:"center", fontSize:32 }}>🌿</div>
+            justifyContent:"center", fontSize:32 }}><Ico n="🌿" size={22} /></div>
       }
       <div style={{ padding:"6px 8px", background:"rgba(255,255,255,0.9)" }}>
         <div style={{ display:"flex", alignItems:"center", gap:4, marginBottom:2 }}>
@@ -195,7 +195,7 @@ function MilestoneCard({ current, loading }) {
             <div style={{ padding:"12px 14px", borderRadius:12,
               background:"rgba(125,200,50,0.08)", border:`1px solid ${V2.borderGreen}`,
               textAlign:"center" }}>
-              <div style={{ fontSize:14, fontWeight:700, color:V2.grassGreen }}>✦ Maximum tier reached</div>
+              <div style={{ fontSize:14, fontWeight:700, color:V2.grassGreen }}><Ico inline n="✦" size={18} />Maximum tier reached</div>
             </div>
           )}
         </>
@@ -726,7 +726,7 @@ export default function ProfilePage({ og }) {
                   )}
                   <div style={{ marginTop:12, fontSize:13, fontWeight:700, color:accent,
                     display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-                    <span>✦</span>{tier.name}<span>✦</span>
+                    <span><Ico n="✦" size={22} /></span>{tier.name}<span><Ico n="✦" size={22} /></span>
                   </div>
                 </div>
               </div>
@@ -986,7 +986,7 @@ export default function ProfilePage({ og }) {
                       <div style={{ position:"absolute", bottom:0, left:0, right:0,
                         background:"linear-gradient(180deg,transparent,rgba(0,0,0,0.7))", padding:"4px 7px" }}>
                         <div style={{ fontSize:9, fontWeight:700, color:"white" }}>{cov.name}</div>
-                        {isActive && <div style={{ fontSize:7, color:V2.grassLime }}>✦ Active</div>}
+                        {isActive && <div style={{ fontSize:7, color:V2.grassLime }}><Ico inline n="✦" size={18} />Active</div>}
                       </div>
                     </div>
                   );

@@ -107,7 +107,7 @@ export default function PrizePage() {
                     {d === null ? "Turn on location to see how far you are." : here ? "You're in range ✓" : `${d < 1000 ? d + "m" : (d / 1000).toFixed(1) + "km"} away`}
                   </div>
                   {sp.last_seen_at && sp.remaining > 0 && <div style={{ fontSize: 11.5, color: T.dim, marginTop: 2 }}>Last confirmed there {ago(sp.last_seen_at)}</div>}
-                  <Link href={`/wago-drops?flyTo=${sp.lat},${sp.lng}`} style={{ display: "inline-block", marginTop: 6, fontSize: 13, color: T.green, fontWeight: 700, textDecoration: "none" }}>🗺️ View on map</Link>
+                  <Link href={`/wago-drops?flyTo=${sp.lat},${sp.lng}`} style={{ display: "inline-block", marginTop: 6, fontSize: 13, color: T.green, fontWeight: 700, textDecoration: "none" }}><Ico inline n="🗺️" size={18} />View on map</Link>
                   {session && sp.revealed && sp.remaining > 0 && !p.you_found && (
                     <div style={{ marginTop: 10, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
                       <div style={{ fontSize: 12, color: T.muted, marginBottom: 6 }}>Is it there?</div>
@@ -150,7 +150,7 @@ export default function PrizePage() {
               <div style={card}>
                 <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em", color: T.dim, marginBottom: 8 }}>Found by</div>
                 {p.finders.map((f, i) => (
-                  <div key={i} style={{ fontSize: 14, padding: "3px 0" }}>🌿 <b>{f.name}</b> <span style={{ color: T.dim, fontSize: 12 }}>· {new Date(f.at).toLocaleDateString()}</span></div>
+                  <div key={i} style={{ fontSize: 14, padding: "3px 0" }}><Ico n="🌿" size={22} /><b>{f.name}</b> <span style={{ color: T.dim, fontSize: 12 }}>· {new Date(f.at).toLocaleDateString()}</span></div>
                 ))}
               </div>
             )}

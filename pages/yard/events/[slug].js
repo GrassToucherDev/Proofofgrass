@@ -15,6 +15,7 @@ import { GroveMembers } from "../../../components/yard/GroveYardUI";
 import GroveBanner from "../../../components/GroveBanner";
 import { fmtDate } from "../../../utils/yardStatus";
 
+import Ico from "../../../components/Ico";
 export default function YardEvent() {
   const { query, isReady } = useRouter();
   const [d, setD] = useState(undefined);
@@ -66,7 +67,7 @@ export default function YardEvent() {
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "16px 0 8px" }}>
               <PhasePill phase={ev.phase} />
-              <span className="yd-pill" style={{ background: "#e8f0fa", color: "#2a4f7a" }}>{isGrove ? "🌳" : "🧑"} {typeLabel(ev.event_type)}</span>
+              <span className="yd-pill" style={{ background: "#e8f0fa", color: "#2a4f7a" }}>{isGrove ? <><Ico inline n="🌳" size={18} /></> : "🧑"} {typeLabel(ev.event_type)}</span>
             </div>
             <h1 style={{ fontSize: "clamp(28px,5vw,40px)", fontWeight: 800, color: V2.forestGreen, overflowWrap: "anywhere" }}>{ev.title}</h1>
             <p style={{ fontSize: 13, fontWeight: 600, color: V2.dimGray, margin: "4px 0 12px" }}>{fmtDate(ev.starts_at)} → {fmtDate(ev.ends_at)} · {timeLeft(ev)} · {ev.entrants} {isGrove ? "Groves" : "players"} entered</p>

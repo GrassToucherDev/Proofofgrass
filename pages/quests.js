@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "../utils/supabase";
 
+import Ico from "../components/Ico";
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const T = {
   bg:"#0a0b08", bg2:"#111209", bg3:"#181a12", bg4:"#1e2016",
@@ -442,7 +443,7 @@ export default function QuestsPage() {
                 <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                   fontSize:32, fontWeight:700, color:T.gold, lineHeight:1,
                   marginBottom:6 }}>{WEEKLY_GOAL.toLocaleString()}</div>
-                <div style={{ fontSize:11, color:T.dim }}>🌿 TouchGrass Together</div>
+                <div style={{ fontSize:11, color:T.dim }}><Ico inline n="🌿" size={18} />TouchGrass Together</div>
               </div>
             </div>
           </div>
@@ -484,7 +485,7 @@ export default function QuestsPage() {
             background:"linear-gradient(135deg,#1a2d0e,#2a4a1a)",
             border:`1px solid ${T.olive}30`,
             padding:24, position:"relative" }}>
-            <div style={{ position:"absolute", right:20, top:20, fontSize:48, opacity:0.15 }}>🌿</div>
+            <div style={{ position:"absolute", right:20, top:20, fontSize:48, opacity:0.15 }}><Ico n="🌿" size={22} /></div>
             <div style={{ fontSize:9, letterSpacing:"0.18em", color:T.olive,
               textTransform:"uppercase", marginBottom:8, fontWeight:700 }}>
               ✦ Community Quest

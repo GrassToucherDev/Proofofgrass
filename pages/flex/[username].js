@@ -889,7 +889,7 @@ export default function FlexCardPage() {
                 <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
                   <div style={{ width:36, height:36, borderRadius:10,
                     background:"linear-gradient(135deg,#1a4a0a,#2d7a1a)",
-                    display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🌿</div>
+                    display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}><Ico n="🌿" size={22} /></div>
                   <div>
                     <div style={{ fontSize:14, fontWeight:700, color:"#1a4a0a" }}>Milestone Covers</div>
                     <div style={{ fontSize:11, color:"#6b7d60" }}>Unlocked by reaching streak milestones</div>
@@ -1018,7 +1018,7 @@ export default function FlexCardPage() {
                 boxShadow:cardReady?"0 4px 16px rgba(125,200,50,0.35)":"none",
                 fontFamily:"Nunito,sans-serif",
                 display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
-              {!cardReady?"⏳ Building Card…":"🚀 Share Flex Card to X"}
+              {!cardReady? <><Ico inline n="⏳" size={18} />Building Card…</> : <><Ico inline n="🚀" size={18} />Share Flex Card to X</>}
             </button>
 
             {/* Download + copy */}

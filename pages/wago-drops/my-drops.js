@@ -86,7 +86,7 @@ export default function MyDrops() {
           {/* Signed-out state */}
           {!session && (
             <div style={{ textAlign: "center", paddingTop: 60 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
+              <div style={{ fontSize: 40, marginBottom: 12 }}><Ico n="🗺️" size={22} /></div>
               <p style={{ color: T.muted, fontSize: 14 }}>Sign in to view your WAGO Drops profile.</p>
               <Link href="/wago-drops" style={{
                 display: "inline-block", marginTop: 16,
@@ -154,7 +154,7 @@ export default function MyDrops() {
               }}>
                 <Wago pose="ticket" size={64} style={{ flexShrink: 0, marginTop: -14 }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.white }}>🎟️ Grass Tickets this month</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.white }}><Ico inline n="🎟️" size={18} />Grass Tickets this month</div>
                   <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>Earned from Proof bonuses · resets each month</div>
                 </div>
                 <div style={{ fontSize: 28, fontWeight: 800, color: T.olive }}>{ticketsMonth}</div>

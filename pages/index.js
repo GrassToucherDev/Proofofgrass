@@ -900,7 +900,7 @@ export default function Home() {
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                     <div style={{ width: 48, height: 48, borderRadius: "50%",
                       background: V2.gradientGrassBtn, display: "flex",
-                      alignItems: "center", justifyContent: "center", fontSize: 22 }}>🌿</div>
+                      alignItems: "center", justifyContent: "center", fontSize: 22 }}><Ico n="🌿" size={22} /></div>
                     <div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: V2.forestGreen }}>@{username}</div>
                       <div style={{ fontSize: 12, color: tier.color }}>{tier.emoji} {tier.name}</div>

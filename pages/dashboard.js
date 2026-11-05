@@ -126,7 +126,7 @@ function ProofCard({ username, streak, created_at }) {
         background: `linear-gradient(135deg, #2a3d1a, #3d6a28)`,
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: 22, border: `1px solid ${T.border}`,
-      }}>🌿</div>
+      }}><Ico n="🌿" size={22} /></div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: T.white, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>@{username}</div>
         <div style={{ fontSize: 10, color: T.dim }}>{when}</div>
@@ -155,13 +155,13 @@ function ResultCardPreview({ day }) {
         background: "linear-gradient(135deg, #2a3d1a 0%, #3d5a2a 40%, #1a2d12 100%)",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: 48, opacity: 0.4,
-      }}>🌿</div>
+      }}><Ico n="🌿" size={22} /></div>
       <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "55%", background: "linear-gradient(90deg, transparent, rgba(8,10,6,0.97))" }} />
       <div style={{
         position: "absolute", right: 12, top: 10, bottom: 10, width: "44%",
         display: "flex", flexDirection: "column", justifyContent: "center",
       }}>
-        <div style={{ fontSize: 5, letterSpacing: "0.2em", color: "rgba(147,168,90,0.65)", textTransform: "uppercase", marginBottom: 3 }}>✦ OFFICIAL CERTIFICATE ✦</div>
+        <div style={{ fontSize: 5, letterSpacing: "0.2em", color: "rgba(147,168,90,0.65)", textTransform: "uppercase", marginBottom: 3 }}><Ico inline n="✦" size={18} />OFFICIAL CERTIFICATE ✦</div>
         <div style={{ fontSize: 15, fontWeight: 900, color: T.white, fontFamily: "'Fredoka',system-ui,sans-serif", lineHeight: 1 }}>VERIFIED</div>
         <div style={{ fontSize: 9, fontWeight: 700, color: T.olive, marginBottom: 6 }}>GRASS TOUCHER</div>
         <div style={{ height: "0.5px", background: `linear-gradient(90deg, transparent, ${T.olive}50, transparent)`, marginBottom: 6 }} />

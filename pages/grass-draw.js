@@ -302,7 +302,7 @@ export default function GrassDraw() {
               <div className="gd-user" style={{ display:"flex", alignItems:"center", gap:8, background:"white",
                 border:`1px solid ${V2.borderSoft}`, borderRadius:20, padding:"6px 14px",
                 boxShadow:"0 1px 6px rgba(26,74,10,0.06)" }}>
-                <span style={{ fontSize:16 }}>🌿</span>
+                <span style={{ fontSize:16 }}><Ico n="🌿" size={22} /></span>
                 <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{username}</span>
               </div>
             )}
@@ -335,7 +335,7 @@ export default function GrassDraw() {
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, marginBottom:16,
               background:"rgba(255,255,255,0.85)", border:`1px solid ${V2.borderGreen}`,
               borderRadius:20, padding:"6px 16px", backdropFilter:"blur(8px)" }}>
-              <span style={{ fontSize:16 }}>🌿</span>
+              <span style={{ fontSize:16 }}><Ico n="🌿" size={22} /></span>
               <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em",
                 textTransform:"uppercase", color:V2.grassGreen }}>Monthly Draw</span>
             </div>
@@ -411,7 +411,7 @@ export default function GrassDraw() {
               boxShadow:"0 4px 24px rgba(26,74,10,0.10)", border:`1px solid ${V2.borderSoft}`,
               marginBottom:20 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20 }}>
-                <span style={{ fontSize:20 }}>🌿</span>
+                <span style={{ fontSize:20 }}><Ico n="🌿" size={22} /></span>
                 <span style={{ fontSize:16, fontWeight:800, color:V2.forestGreen }}>My Entries</span>
               </div>
 
@@ -648,7 +648,7 @@ export default function GrassDraw() {
             </div>
 
             <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-              <span style={{ fontSize:20 }}>🌿</span>
+              <span style={{ fontSize:20 }}><Ico n="🌿" size={22} /></span>
               <h2 style={{ fontFamily:V2.fontSans, fontSize:18, fontWeight:800, color:V2.forestGreen }}>
                 How It Works
               </h2>

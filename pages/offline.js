@@ -1,3 +1,4 @@
+import Ico from "../components/Ico";
 export default function OfflinePage() {
     return (
       <div style={{
@@ -7,7 +8,7 @@ export default function OfflinePage() {
         fontFamily:"'Nunito',sans-serif", color:"#f0efea",
         textAlign:"center", padding:24,
       }}>
-        <div style={{ fontSize:64, marginBottom:24 }}>🌿</div>
+        <div style={{ fontSize:64, marginBottom:24 }}><Ico n="🌿" size={22} /></div>
         <h1 style={{
           fontFamily:"'Georgia',serif", fontSize:28, fontWeight:700,
           color:"#f0efea", marginBottom:12,

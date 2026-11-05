@@ -520,7 +520,7 @@ export default function FieldGuide() {
             <Link href={`/u/${username}`} style={{ display:"flex", alignItems:"center", gap:8,
               background:"white", border:`1px solid ${V2.borderSoft}`, borderRadius:20,
               padding:"6px 14px", textDecoration:"none", flexShrink:0 }}>
-              <span style={{ fontSize:16 }}>🌿</span>
+              <span style={{ fontSize:16 }}><Ico n="🌿" size={22} /></span>
               <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{username}</span>
             </Link>
           )}
@@ -545,7 +545,7 @@ export default function FieldGuide() {
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, marginBottom:16,
               background:"rgba(255,255,255,0.85)", border:`1px solid ${V2.borderGreen}`,
               borderRadius:20, padding:"6px 16px" }}>
-              <span style={{ fontSize:14 }}>🌿</span>
+              <span style={{ fontSize:14 }}><Ico n="🌿" size={22} /></span>
               <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em",
                 textTransform:"uppercase", color:V2.grassGreen }}>Proof of Grass</span>
             </div>
@@ -690,7 +690,7 @@ export default function FieldGuide() {
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
               marginBottom:16 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ fontSize:18 }}>🌿</span>
+                <span style={{ fontSize:18 }}><Ico n="🌿" size={22} /></span>
                 <span style={{ fontSize:16, fontWeight:800, color:V2.forestGreen,
                   textTransform:"uppercase", letterSpacing:"0.08em", fontSize:13 }}>
                   Recent Finds
@@ -708,7 +708,7 @@ export default function FieldGuide() {
             ) : (
               <div style={{ background:"white", borderRadius:16, padding:"48px 24px",
                 textAlign:"center", border:`1px solid ${V2.borderSoft}` }}>
-                <div style={{ fontSize:32, marginBottom:12 }}>🌿</div>
+                <div style={{ fontSize:32, marginBottom:12 }}><Ico n="🌿" size={22} /></div>
                 <div style={{ fontSize:14, fontWeight:700, color:V2.forestGreen, marginBottom:6 }}>
                   No finds yet
                 </div>

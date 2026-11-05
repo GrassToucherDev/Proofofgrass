@@ -256,7 +256,7 @@ export default function SpotlightPage() {
           </section>
 
           <section className="sp-card" aria-labelledby="sp-how">
-            <h2 className="sp-h2" id="sp-how" style={{ marginBottom: 6 }}><span aria-hidden="true">🌿</span> How Winners Are Chosen</h2>
+            <h2 className="sp-h2" id="sp-how" style={{ marginBottom: 6 }}><span aria-hidden="true"><Ico n="🌿" size={22} /></span> How Winners Are Chosen</h2>
             <div>
               {CATEGORIES.map(cat => (
                 <div key={cat.key} className="sp-chosen-row">

@@ -860,7 +860,7 @@ function MapView({ session, linkedWallet, flyToCoords }) {
                   <button onClick={() => handleShare(claimResult)} style={{
                     flex: 1, background: T.olive, color: T.bg, border: "none",
                     borderRadius: 999, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                  }}>🌿 Share</button>
+                  }}><Ico inline n="🌿" size={18} />Share</button>
                 )}
                 <button onClick={() => { setClaimResult(null); setSelected(null); }} style={{
                   flex: 1, background: T.card, color: T.muted, border: `1px solid ${T.border}`,

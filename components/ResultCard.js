@@ -532,7 +532,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           {imageSrc
             ? <img src={imageSrc} alt="Your proof" style={{ width:"100%", objectFit:"cover", maxHeight:300 }} />
             : <div style={{ padding:40, textAlign:"center", color:V2G.midGray }}>
-                <div style={{ fontSize:40, marginBottom:8 }}>🌿</div>
+                <div style={{ fontSize:40, marginBottom:8 }}><Ico n="🌿" size={22} /></div>
                 <div style={{ fontSize:13 }}>Upload your outdoor photo</div>
               </div>
           }

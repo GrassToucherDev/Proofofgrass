@@ -56,11 +56,11 @@ export default function Yard() {
         <header className="yd-hero">
           <div className="yd-hero-art" role="img" aria-label="Illustration of The Yard, a sunny outdoor competition ground with WAGO the sunflower mascot" />
           <div className="yd-hero-copy">
-            <span className="yd-eyebrow"><span aria-hidden="true">🌿</span>CHALLENGE · COMPETE · GROW</span>
+            <span className="yd-eyebrow"><span aria-hidden="true"><Ico n="🌿" size={22} /></span>CHALLENGE · COMPETE · GROW</span>
             <h1 className="yd-h1">The Yard</h1>
             <p className="yd-lead">Challenge other users or take your Grove into friendly competition. Build your streak, earn rewards, and see where you stand.</p>
             <div className="yd-ctas">
-              <button type="button" className="yd-btn" onClick={open} style={{ ...V2Styles.btnPrimary, minHeight: 48 }}>⚔️ Create a Challenge</button>
+              <button type="button" className="yd-btn" onClick={open} style={{ ...V2Styles.btnPrimary, minHeight: 48 }}><Ico inline n="⚔️" size={18} />Create a Challenge</button>
               <Link href="/yard/leaderboards" className="yd-btn" style={{ ...V2Styles.btnSecondary, minHeight: 48, textDecoration: "none", display: "inline-flex", alignItems: "center", background: "#fff" }}><Ico inline n="👥" size={18} />View Leaderboards</Link>
             </div>
           </div>

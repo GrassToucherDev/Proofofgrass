@@ -340,7 +340,7 @@ function YourFlexPanel({ username, inventory }) {
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
         <div>
           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
-            <span style={{ fontSize:18 }}>🌿</span>
+            <span style={{ fontSize:18 }}><Ico n="🌿" size={22} /></span>
             <span style={{ fontSize:14, fontWeight:800, color:V2.forestGreen }}>Your Flex</span>
           </div>
           <div style={{ fontSize:12, color:V2.midGray }}>Your currently applied cosmetics &amp; proof style.</div>

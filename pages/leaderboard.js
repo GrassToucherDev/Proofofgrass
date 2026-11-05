@@ -354,7 +354,7 @@ export default function Leaderboard() {
             <Link href={`/u/${currentUser}`} style={{ display:"flex", alignItems:"center", gap:8,
               background:"white", border:`1px solid ${V2.borderSoft}`, borderRadius:20,
               padding:"6px 14px", textDecoration:"none", flexShrink:0 }}>
-              <span style={{ fontSize:16 }}>🌿</span>
+              <span style={{ fontSize:16 }}><Ico n="🌿" size={22} /></span>
               <span style={{ fontSize:13, fontWeight:600, color:V2.forestGreen }}>@{currentUser}</span>
             </Link>
           )}
@@ -380,7 +380,7 @@ export default function Leaderboard() {
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, marginBottom:16,
               background:"rgba(255,255,255,0.85)", border:`1px solid ${V2.borderGreen}`,
               borderRadius:20, padding:"6px 16px" }}>
-              <span style={{ fontSize:14 }}>🌿</span>
+              <span style={{ fontSize:14 }}><Ico n="🌿" size={22} /></span>
               <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em",
                 textTransform:"uppercase", color:V2.grassGreen }}>Community</span>
             </div>

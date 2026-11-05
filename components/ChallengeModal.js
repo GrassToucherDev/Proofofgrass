@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { yardError } from "../utils/yardErrors";
 
+import Ico from "./Ico";
 const T = {
   bg:"#0a0b08", bg2:"#111209", bg3:"#181a12",
   border:"rgba(255,255,255,0.06)", borderG:"rgba(147,168,90,0.18)",
@@ -74,7 +75,7 @@ export default function ChallengeModal({ targetUsername, viewerUsername, onClose
           /* SUCCESS STATE */
           <>
             <div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:36, marginBottom:12 }}>🌿</div>
+              <div style={{ fontSize:36, marginBottom:12 }}><Ico n="🌿" size={22} /></div>
               <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif",
                 fontSize:24, fontWeight:700, color:T.white, marginBottom:8 }}>
                 Challenge Sent

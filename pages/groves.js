@@ -334,7 +334,7 @@ export default function GrovesPage() {
                   <div className="gv-actions">
                     <button className="gv-primary" onClick={shareGrove} disabled={!cardUrl}>Share Grove</button>
                     {data.members.length < grove.slots && inviteUrl && <button className="gv-btn2 gv-wide" onClick={copy}>{copied ? "Link copied!" : "Invite friends"}</button>}
-                    {others.length > 0 && <button className="gv-link" onClick={() => scrollTo("gv-members")}>🛡️ Gift a shield</button>}
+                    {others.length > 0 && <button className="gv-link" onClick={() => scrollTo("gv-members")}><Ico inline n="🛡️" size={18} />Gift a shield</button>}
                   </div>
                 </div>
               </div>
