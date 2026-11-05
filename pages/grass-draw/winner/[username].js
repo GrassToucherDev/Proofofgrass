@@ -8,7 +8,8 @@ import V2Nav from "../../../components/V2Nav";
 import V2BottomNav from "../../../components/V2BottomNav";
 import { V2, V2GlobalCSS } from "../../../utils/v2Theme";
 import { loadImageSafe } from "../../../utils/spotlightImage";
-import { drawShareHeader } from "../../../utils/shareHeader";
+import { glossPill, TIER_PAL, rr as rrP } from "../../../utils/proofCardRender";
+import { drawFrame, drawFooter, loadFrameAssets, fitText, todayStr, INK as INK2, NUN } from "../../../utils/cardFrame";
 import { withShareTags } from "../../../utils/shareTags";
 
 const INK = "#0d2a05", GREEN = "#1f6b12", CREAM = "#fdf6e2", GOLD = "#f6b93b";
@@ -29,82 +30,61 @@ async function renderWinCard({ username, avatarUrl, win, totalWins }) {
   const W = 1080, H = 1350;
   const c = document.createElement("canvas"); c.width = W; c.height = H;
   const ctx = c.getContext("2d");
-  try { await Promise.all([document.fonts.load("700 40px 'Fredoka'"), document.fonts.load("800 30px 'Nunito'")]); } catch {}
-
-  ctx.fillStyle = "#eef6e2"; ctx.fillRect(0, 0, W, H);
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, "rgba(197,227,247,0.7)"); sky.addColorStop(0.4, "rgba(238,246,226,0)");
-  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-  try {
-    const land = await loadImageSafe("/hero-landscape.png");
-    const lh = W * land.height / land.width;
-    ctx.save(); ctx.globalAlpha = 0.5; ctx.drawImage(land, 0, H - lh, W, lh); ctx.restore();
-    const f = ctx.createLinearGradient(0, H - lh, 0, H - lh + 240);
-    f.addColorStop(0, "rgba(238,246,226,1)"); f.addColorStop(1, "rgba(238,246,226,0)");
-    ctx.fillStyle = f; ctx.fillRect(0, H - lh, W, 240);
-  } catch {}
-
-  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-  // Brand + ribbon
-  await drawShareHeader(ctx, W, "Proof of Grass", "Grass Draw");
-  const rw = 780, rh = 96, rx = (W - rw) / 2, ry = 196;
-  ctx.fillStyle = GOLD; rr(ctx, rx, ry, rw, rh, 48); ctx.fill();
-  ctx.lineWidth = 8; ctx.strokeStyle = GREEN; rr(ctx, rx, ry, rw, rh, 48); ctx.stroke();
-  ctx.fillStyle = INK; fit(ctx, "🎉 GRASS DRAW WINNER", rw - 70, 54, 32);
-  ctx.textBaseline = "middle"; ctx.fillText("🎉 GRASS DRAW WINNER", W/2, ry + rh/2 + 3); ctx.textBaseline = "alphabetic";
-  ctx.font = "800 28px 'Nunito',sans-serif"; ctx.fillStyle = "#2d5a1a"; ctx.letterSpacing = "0.06em";
-  ctx.fillText(String(win.cycle_name).toUpperCase(), W/2, 336); ctx.letterSpacing = "0px";
-
-  // Avatar
-  const AY = 520, AR = 130;
-  ctx.save(); ctx.beginPath(); ctx.arc(W/2, AY, AR, 0, Math.PI * 2); ctx.clip();
-  let drew = false;
-  if (avatarUrl) { try { const im = await loadImageSafe(avatarUrl); ctx.drawImage(im, W/2 - AR, AY - AR, AR * 2, AR * 2); drew = true; } catch {} }
-  if (!drew) { ctx.fillStyle = "#e3f3d4"; ctx.fillRect(W/2 - AR, AY - AR, AR * 2, AR * 2); try { const lg = await loadImageSafe("/touchgrass-transparent.png"); ctx.drawImage(lg, W/2 - 90, AY - 90, 180, 180); } catch {} }
-  ctx.restore();
-  ctx.lineWidth = 10; ctx.strokeStyle = GREEN; ctx.beginPath(); ctx.arc(W/2, AY, AR + 2, 0, Math.PI * 2); ctx.stroke();
-  ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; ctx.beginPath(); ctx.arc(W/2, AY, AR + 14, 0, Math.PI * 2); ctx.stroke();
-
-  // Name
-  ctx.fillStyle = INK; fit(ctx, `@${username}`, 940, 92, 52);
-  ctx.fillText(`@${username}`, W/2, 740);
-
-  // Prize panel
-  const px = 70, py = 790, pw = W - 140, ph = 250;
-  ctx.save(); ctx.shadowColor = "rgba(26,74,10,0.14)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6;
-  ctx.fillStyle = CREAM; rr(ctx, px, py, pw, ph, 40); ctx.fill(); ctx.restore();
-  ctx.lineWidth = 7; ctx.strokeStyle = GREEN; rr(ctx, px, py, pw, ph, 40); ctx.stroke();
+  try { await Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("800 20px Nunito")]); } catch {}
   const art = PRIZE_ART[win.prize_type];
-  let textCx = W/2;
-  if (art) {
-    try { const im = await loadImageSafe(art); const s = 180, k = Math.min(s / im.width, s / im.height);
-      ctx.drawImage(im, px + 40 + (s - im.width * k)/2, py + (ph - im.height * k)/2, im.width * k, im.height * k); textCx = px + 40 + s + (pw - 40 - s - 20)/2; } catch {}
-  }
-  ctx.textAlign = "center";
-  ctx.font = "800 26px 'Nunito',sans-serif"; ctx.fillStyle = "#b8741a"; ctx.letterSpacing = "0.2em";
-  ctx.fillText("WON", textCx, py + 78); ctx.letterSpacing = "0px";
-  ctx.fillStyle = INK; fit(ctx, win.prize, pw - 300, 66, 34);
-  ctx.fillText(win.prize, textCx, py + 154);
-  ctx.font = "700 24px 'Nunito',sans-serif"; ctx.fillStyle = "#2d5a1a";
-  ctx.fillText("Weighted random draw", textCx, py + 206);
+  const a = await loadFrameAssets("/card/bg.jpg", ["/touchgrass-transparent.png", ...(art ? [art] : [])]);
+  const g = drawFrame(ctx, W, H, a, "GRASS DRAW WINNER");
+  const { cx, PX, PW } = g;
 
-  // Stats
+  // cycle pill
+  const pal = TIER_PAL[4], cyc = String(win.cycle_name || "").toUpperCase(), pw0 = 600, py0 = 386;
+  glossPill(ctx, cx - pw0 / 2, py0, pw0, 66, pal);
+  ctx.save(); ctx.fillStyle = pal.tx; ctx.shadowColor = "rgba(255,255,255,.7)"; ctx.shadowOffsetY = 2; ctx.letterSpacing = "2px";
+  fitText(ctx, cyc, pw0 - 60, 36, 22); ctx.textAlign = "center"; ctx.fillText(cyc, cx + 1, py0 + 46); ctx.restore();
+
+  // avatar
+  const AY = 556, AR = 84;
+  ctx.save(); ctx.shadowColor = "rgba(246,185,59,.7)"; ctx.shadowBlur = 28; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(cx, AY, AR + 12, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, AY, AR, 0, Math.PI * 2); ctx.clip();
+  let drew = false;
+  if (avatarUrl) { try { const im = await loadImageSafe(avatarUrl); ctx.drawImage(im, cx - AR, AY - AR, AR * 2, AR * 2); drew = true; } catch {} }
+  if (!drew) { ctx.fillStyle = "#e3f3d4"; ctx.fillRect(cx - AR, AY - AR, AR * 2, AR * 2); const lg = a.extra[0]; if (lg) ctx.drawImage(lg, cx - 60, AY - 60, 120, 120); }
+  ctx.restore();
+  ctx.lineWidth = 8; ctx.strokeStyle = GOLD; ctx.beginPath(); ctx.arc(cx, AY, AR + 2, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = INK2; fitText(ctx, `@${username}`, 860, 62, 36); ctx.fillText(`@${username}`, cx, AY + AR + 68);
+
+  // prize capsule
+  const px = PX + 44, pw = PW - 88, py = 752, ph = 178;
+  ctx.save(); ctx.shadowColor = "rgba(26,74,10,.2)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+  const gr = ctx.createLinearGradient(0, py, 0, py + ph); gr.addColorStop(0, "#fffef6"); gr.addColorStop(1, "#f6edcf"); ctx.fillStyle = gr; rrP(ctx, px, py, pw, ph, 50); ctx.fill(); ctx.restore();
+  ctx.lineWidth = 5; ctx.strokeStyle = GOLD; rrP(ctx, px, py, pw, ph, 50); ctx.stroke();
+  ctx.lineWidth = 2; ctx.strokeStyle = "rgba(31,107,18,.35)"; rrP(ctx, px + 9, py + 9, pw - 18, ph - 18, 42); ctx.stroke();
+  let textCx = cx;
+  const im = art ? a.extra[1] : null;
+  if (im) { const s = 140, k = Math.min(s / im.width, s / im.height);
+    ctx.drawImage(im, px + 40 + (s - im.width * k) / 2, py + (ph - im.height * k) / 2, im.width * k, im.height * k); textCx = px + 40 + s + (pw - 40 - s - 20) / 2; }
+  ctx.textAlign = "center";
+  ctx.font = `800 22px ${NUN}`; ctx.fillStyle = "#b8741a"; ctx.letterSpacing = "8px"; ctx.fillText("WON", textCx + 4, py + 56); ctx.letterSpacing = "0px";
+  ctx.fillStyle = INK2; fitText(ctx, win.prize, pw - (im ? 290 : 120), 62, 30); ctx.fillText(win.prize, textCx, py + 118);
+  ctx.font = `700 22px ${NUN}`; ctx.fillStyle = "#2d5a1a"; ctx.fillText("Weighted random draw", textCx, py + 154);
+
+  // stats
   const stats = [];
-  if (win.entries) stats.push({ v: win.entries.toLocaleString(), l: "ENTRIES IN THE DRAW" });
+  if (win.entries) stats.push({ v: win.entries.toLocaleString(), l: "ENTRIES" });
   if (win.chance_pct != null) stats.push({ v: `${win.chance_pct}%`, l: "CHANCE OF WINNING" });
   if (totalWins > 1) stats.push({ v: String(totalWins), l: "DRAW WINS" });
   if (stats.length) {
-    const gap = 18, sw = (pw - gap * (stats.length - 1)) / stats.length, sy = 1072, sh = 150;
+    const gap = 18, sw = (pw - gap * (stats.length - 1)) / stats.length, sy = py + ph + 22, sh = 112;
     stats.forEach((st, i) => {
-      const x = px + i * (sw + gap), cx = x + sw/2;
-      ctx.fillStyle = CREAM; rr(ctx, x, sy, sw, sh, 28); ctx.fill();
-      ctx.lineWidth = 5; ctx.strokeStyle = GREEN; rr(ctx, x, sy, sw, sh, 28); ctx.stroke();
-      ctx.fillStyle = INK; fit(ctx, st.v, sw - 30, 68, 36); ctx.fillText(st.v, cx, sy + 84);
-      ctx.font = "800 18px 'Nunito',sans-serif"; ctx.fillStyle = "#2d5a1a"; ctx.letterSpacing = "0.06em"; ctx.fillText(st.l, cx, sy + 120); ctx.letterSpacing = "0px";
+      const x = px + i * (sw + gap), mx = x + sw / 2;
+      ctx.save(); ctx.shadowColor = "rgba(26,74,10,.16)"; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+      const sg = ctx.createLinearGradient(0, sy, 0, sy + sh); sg.addColorStop(0, "#fffef6"); sg.addColorStop(1, "#f6edcf"); ctx.fillStyle = sg; rrP(ctx, x, sy, sw, sh, 30); ctx.fill(); ctx.restore();
+      ctx.lineWidth = 4; ctx.strokeStyle = GREEN; rrP(ctx, x, sy, sw, sh, 30); ctx.stroke();
+      ctx.fillStyle = INK2; fitText(ctx, st.v, sw - 30, 52, 28); ctx.fillText(st.v, mx, sy + 58);
+      ctx.font = `800 17px ${NUN}`; ctx.fillStyle = GREEN; ctx.letterSpacing = "3px"; ctx.fillText(st.l, mx + 1, sy + 92); ctx.letterSpacing = "0px";
     });
   }
-  ctx.font = "800 24px 'Nunito',sans-serif"; ctx.fillStyle = GREEN; ctx.letterSpacing = "0.1em";
-  ctx.fillText("ProofOfGrass.app", W/2, H - 40);
+  drawFooter(ctx, W, H, a, g, { leftLabel: "CERTIFIED BY", leftText: "Touch Grass", rightText: todayStr() });
   return c.toDataURL("image/png");
 }
 
