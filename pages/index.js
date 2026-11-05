@@ -762,6 +762,8 @@ export default function Home() {
     @media (max-width: 768px) {
       .v2-hero { flex-direction: column; min-height: auto; padding: 32px 16px; gap: 32px; }
       .v2-hero-right { width: 100%; }
+      .v2-visitor-stats { display: none; }
+      .v2-bottom-grid > :nth-child(2) { order: -1; }
       .v2-feature-grid { grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; }
       .v2-bottom-grid { grid-template-columns: minmax(0,1fr); padding: 16px; }
     }
@@ -838,7 +840,7 @@ export default function Home() {
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <button onClick={scrollToUpload}
                 style={{ ...V2Styles.btnPrimary, fontSize: 15, padding: "14px 28px" }}>
-                🌿 Log Your Proof
+                {hasUser ? "🌿 Log Your Proof" : "🌿 Log Your First Proof"}
               </button>
               <Link href="/leaderboard"
                 style={{ ...V2Styles.btnSecondary, fontSize: 15, padding: "13px 28px", textDecoration: "none" }}>
@@ -848,7 +850,7 @@ export default function Home() {
           </div>
 
           {/* Right — stat cards */}
-          <div className="v2-hero-right" style={{ position: "relative", zIndex: 1 }}>
+          <div className={"v2-hero-right" + (hasUser ? "" : " v2-visitor-stats")} style={{ position: "relative", zIndex: 1 }}>
             <div className="v2-stat-grid">
               <StatCard
                 icon="🔥"
@@ -882,41 +884,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
-        <div className="v2-feature-grid">
-          <FeatureCard
-            icon="/icons/harvest.png"
-            title="Harvest"
-            desc="Lock your tokens, grow your rewards, and harvest your impact."
-            cta="View Harvest"
-            href="https://harvest.touchgrass.today"
-          />
-          <FeatureCard
-            icon="/icons/grass-draw.png"
-            title="Grass Draw"
-            desc="Earn Grass Draw entries through actions. Win epic monthly rewards."
-            cta="View Draw"
-            href="/grass-draw"
-          />
-          <FeatureCard
-            icon="/icons/shields.png"
-            title="Shields"
-            desc="Protect your streak with Shields. Stay locked in even when life happens."
-            cta="Manage Shields"
-            href="/marketplace"
-          />
-          <FeatureCard
-            icon="/icons/challenges.png"
-            title="The Yard"
-            desc="Challenge other users, compete and see where you stand."
-            cta="Enter The Yard"
-            href="/yard"
-          />
-        </div>
-
-        {/* ── TOKEN STRIP ──────────────────────────────────────────────────── */}
-        <TokenStrip />
 
         {/* ── PENDING CHALLENGES ───────────────────────────────────────────── */}
         {pendingChallenges.length > 0 && (
@@ -1061,6 +1028,46 @@ export default function Home() {
           {/* Column 3 — Marketplace preview */}
           <MarketplacePreview />
         </div>
+
+        {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
+        <div style={{ padding: "8px clamp(14px,4vw,40px) 0" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen }}>Explore</div>
+          <div style={{ fontSize: 13, color: V2.textMuted, marginTop: 2 }}>More to do once your streak is going.</div>
+        </div>
+        <div className="v2-feature-grid">
+          <FeatureCard
+            icon="/icons/harvest.png"
+            title="Harvest"
+            desc="Lock $TOUCHGRASS for 6 months and earn rewards when it unlocks."
+            cta="View Harvest"
+            href="https://harvest.touchgrass.today"
+          />
+          <FeatureCard
+            icon="/icons/grass-draw.png"
+            title="Grass Draw"
+            desc="Earn entries by logging proofs. Win monthly prizes."
+            cta="View Draw"
+            href="/grass-draw"
+          />
+          <FeatureCard
+            icon="/icons/shields.png"
+            title="Shields"
+            desc="Miss a day without losing your streak."
+            cta="Manage Shields"
+            href="/marketplace"
+          />
+          <FeatureCard
+            icon="/icons/challenges.png"
+            title="The Yard"
+            desc="Challenge a friend to a streak showdown."
+            cta="Enter The Yard"
+            href="/yard"
+          />
+        </div>
+
+        {/* ── TOKEN STRIP ──────────────────────────────────────────────────── */}
+        <TokenStrip />
+
 
         {/* ── FEATURED POSTS ───────────────────────────────────────────────── */}
         <div style={{ background: "rgba(255,255,255,0.4)", borderTop: `1px solid ${V2.borderSoft}` }}>
