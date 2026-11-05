@@ -225,7 +225,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
     // Fallback to localStorage if username prop is empty
     const effectiveUsername = username ||
       (typeof localStorage !== "undefined" ? localStorage.getItem("pog_username")?.replace(/@/g,"").toLowerCase().trim() : null);
-    if(!effectiveUsername) return false;
+    if(!effectiveUsername){setSubmitError("Add your username first: type it in the top bar, then tap Lock in again.");setSubmitStatus("error");return false;}
     if(submitStatus==="success") return true;
     setSubmitStatus("loading");setSubmitError("");
     // Nothing should be able to hang forever on a weak connection: every network step gets a time limit.
