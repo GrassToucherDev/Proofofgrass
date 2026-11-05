@@ -1,5 +1,6 @@
 import { drawProofCard } from "../utils/proofCardRender";
 import { drawPhotoCard, photoCardSize } from "../utils/proofPhotoRender";
+import { pickCaption as pickCaptionRaw } from "../utils/captions";
 import { compressProofPhoto } from "../utils/compressProofPhoto";
 import { useRef, useEffect, useState, useCallback } from "react";
 import InAppBrowserNote from "./InAppBrowserNote";
@@ -19,111 +20,6 @@ const THEMES = {
   sunset_glow:     { name:"Sunset Glow",     bgOverlay:"rgba(26,8,0,0.38)",     accent:"rgba(249,115,22,1.0)",  border:"rgba(249,115,22,0.50)", bracket:"rgba(249,115,22,0.80)", muted:"rgba(249,115,22,0.70)" },
 };
 
-const CAPTION_POOLS = {
-  beginner: [
-    "just touched grass. strong start. 🌿",
-    "day one. certified grass toucher.",
-    "left the screen. touched the ground. character arc initiated.",
-    "outside logged. vitamin d detected. streak: active.",
-    "not financial advice, but touch grass. this is my proof.",
-    "skill check passed. grass interaction: successful.",
-    "gm from outside. yes, outside. the big open-world map.",
-    "offline for 20 minutes. came back with grass on my shoes.",
-    "step one: go outside. step two: take photo. step three: this.",
-    "touched grass before checking price. personal record.",
-    "irl visit confirmed. grass: present. cope: absent.",
-    "proof of work. the work was touching grass.",
-    "walked outside. did not refresh x. felt fine.",
-    "logged off. went out. came back stronger.",
-    "fresh air acquired. timestamp verified. streak: initiated.",
-  ],
-  momentum: [
-    "still going. streak getting real. 🌿",
-    "the algorithm does not know where i am.",
-    "grass touched again. this might be a habit.",
-    "consistent. outside. undefeated.",
-    "real-world xp farming session complete. streak: locked.",
-    "the outdoor meta is holding. i am staying in.",
-    "disconnected from wi-fi. connected to chlorophyll. again.",
-    "dev update: shipped another walk. zero bugs.",
-    "day after day. grass after grass. no signs of stopping.",
-    "momentum is real. the outdoors keeps paying dividends.",
-  ],
-  strong: [
-    "consistency looking dangerous. 🌿",
-    "the grass knows my name now.",
-    "this is no longer a coincidence.",
-    "streak so strong it has its own lore.",
-    "this started as a joke. it is not a joke anymore.",
-    "certified long-term grass enjoyer. data-backed.",
-    "i have touched more grass than most nfts.",
-    "the streak is real. the grass is real. i am real.",
-    "the outdoors have accepted me.",
-    "daily grass interaction: active. cope: zero.",
-  ],
-  elite: [
-    "this isn't a phase anymore. it's identity. 🌿",
-    "i am the outdoor meta.",
-    "streak unlocked: outdoor main character.",
-    "the leaderboard feared this day.",
-    "some people have lore. i have a streak.",
-    "i do not go outside anymore. i simply return.",
-    "fully on-chain. fully outside. no contradictions.",
-    "elite grass toucher. verified. unstoppable.",
-    "the streak has a market cap now.",
-    "at this point the grass is just an extension of my wallet.",
-  ],
-  veteran: [
-    "thirty days of proof. the streak is a structure now. 🌿",
-    "a full month outside. no asterisks.",
-    "the streak has survived a calendar month. it is not stopping.",
-    "thirty days of daily discipline. the outdoors know me by now.",
-    "veteran status. earned one day at a time.",
-    "a month of proof on the books. this is the long game.",
-    "one month in and the streak still feels hungry.",
-    "the calendar turned. the streak did not.",
-    "thirty days confirmed. the habit is now load-bearing.",
-    "monthly outdoor certification. stamp of discipline.",
-  ],
-  legendary: [
-    "fifty days outside and still counting. 🌿",
-    "fifty-day streak. this is not a coincidence. this is a calling.",
-    "the leaderboard takes me seriously now.",
-    "fifty consecutive proofs. the chain is untouched.",
-    "half a century of daily outdoor proof. legendary tier confirmed.",
-    "fifty days certified. i did not come this far to stop.",
-    "the streak is old enough to have its own reputation.",
-    "fifty logs submitted. zero missed. the record is perfect.",
-    "at fifty days, the streak starts speaking for itself.",
-    "legendary status is not claimed. it is logged. every day.",
-  ],
-  mythic: [
-    "a hundred days of daily proof. the streak is mythology. 🌿",
-    "one hundred certified. no asterisks. no days off.",
-    "the leaderboard is a trophy case and i have a reserved spot.",
-    "one hundred consecutive outdoor logs. the chain is untouched.",
-    "triple digits. the streak does not acknowledge limits.",
-    "a hundred days outside. this is no longer a habit. it is identity.",
-    "one hundred proofs submitted. the record is flawless.",
-    "mythic status reached. the outdoors and i have an agreement.",
-    "a hundred day streak is not something you build. it is something you become.",
-    "the streak has a three-digit story now. every log matters.",
-  ],
-};
-
-function getPool(streak) {
-  if (streak >= 100) return CAPTION_POOLS.mythic;
-  if (streak >= 50)  return CAPTION_POOLS.legendary;
-  if (streak >= 30)  return CAPTION_POOLS.veteran;
-  if (streak >= 14)  return CAPTION_POOLS.elite;
-  if (streak >= 7)   return CAPTION_POOLS.strong;
-  if (streak >= 3)   return CAPTION_POOLS.momentum;
-  return CAPTION_POOLS.beginner;
-}
-function pickCaption(streak, exclude) {
-  const pool = getPool(streak).filter(c => c !== exclude);
-  return pool[Math.floor(Math.random() * pool.length)];
-}
 function getTopPercent(streak) {
   if (streak >= 30) return 1;
   if (streak >= 14) return 5;
@@ -193,6 +89,9 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
 
   const [rawDownloadUrl, setDownloadUrl]    = useState(null);
   const [cardStreak,     setCardStreak]     = useState(null);
+  const [captionTone,    setCaptionTone]    = useState(()=>{try{return localStorage.getItem("pog_caption_tone")||"mix";}catch{return "mix";}});
+  const captionModeRef = useRef("normal");   // "normal" | "shield" | "restart" — set after the streak is logged
+  const pickCaption = (streak,exclude)=>pickCaptionRaw(streak,exclude,{tone:captionTone,mode:captionModeRef.current});
   const [caption,        setCaption]        = useState(()=>pickCaption(initialStreak,null));
   const [copied,         setCopied]         = useState(false);
   const [currentStreak,  setCurrentStreak]  = useState(initialStreak);
@@ -267,12 +166,14 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
   const TAGS   = "$TOUCHGRASS #TouchGrass #ProofOfGrass";
 
   const buildShareText = useCallback(()=>{
-    return `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\n\n${TAGS}\n${HANDLE}`;
-  },[caption,currentStreak]);
+    const u=sunsetUser();
+    const link=u?`proofofgrass.app/?ref=${u}`:"proofofgrass.app";
+    return `${caption}\n\nDay ${currentStreak} · proof of grass 🌿\nJoin me: ${link}\n\n${TAGS}\n${HANDLE}`;
+  },[caption,currentStreak,username]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleNewCaption = useCallback(()=>{
     setCaption(prev=>pickCaption(currentStreak,prev));setCopied(false);
-  },[currentStreak]);
+  },[currentStreak,captionTone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCopy = useCallback(()=>{
     navigator.clipboard.writeText(buildShareText()).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
@@ -404,6 +305,12 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       }
       if(result?.status==="already_submitted"){setSubmitStatus("success");return true;}
       const newStreak=result?.current_streak??currentStreak;
+      try{
+        const last=parseInt(localStorage.getItem("pog_last_streak")||"0",10)||0;
+        captionModeRef.current=result?.used_shield?"shield":(newStreak<=1&&last>=3?"restart":"normal");
+        localStorage.setItem("pog_last_streak",String(newStreak));
+      }catch{}
+      setCaption(prev=>pickCaption(newStreak,prev));
       setCurrentStreak(newStreak);onStreakUpdate?.(newStreak);setSubmitStatus("success");
       if(result?.lucky_touch?.triggered) setLuckyTouch(result.lucky_touch);
       // Referral handling
@@ -964,12 +871,19 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             <div style={{border:"1.5px solid rgba(200,220,190,0.7)",borderRadius:14,background:"rgba(125,200,50,0.04)",marginBottom:14,overflow:"hidden"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",borderBottom:"1px solid rgba(200,220,190,0.5)"}}>
                 <span style={{fontSize:11,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:"#6b7d60"}}>Your post</span>
+                <span role="group" aria-label="Caption style" style={{display:"inline-flex",gap:4,marginLeft:"auto",marginRight:6}}>
+                  {[["mix","Mix"],["community","Community"],["plain","Plain"]].map(([id,lb])=>(
+                    <button key={id} aria-pressed={captionTone===id}
+                      onClick={()=>{setCaptionTone(id);try{localStorage.setItem("pog_caption_tone",id);}catch{}setCaption(pickCaptionRaw(currentStreak,caption,{tone:id,mode:captionModeRef.current}));setCopied(false);}}
+                      style={{border:`1.5px solid ${captionTone===id?"#5ba622":"rgba(200,220,190,0.9)"}`,background:captionTone===id?"rgba(125,200,50,0.14)":"white",color:"#3d7a12",borderRadius:999,fontSize:10.5,fontWeight:800,padding:"3px 8px",cursor:"pointer",fontFamily:"Nunito,sans-serif"}}>{lb}</button>
+                  ))}
+                </span>
                 <button onClick={handleNewCaption}
                   style={{background:"none",border:"none",color:"#3d7a12",fontSize:12,fontWeight:800,cursor:"pointer",padding:"4px 2px",fontFamily:"Nunito,sans-serif"}}>↻ New caption</button>
               </div>
               <div style={{padding:"10px 12px 12px",maxHeight:150,overflowY:"auto"}}>
                 <p style={{margin:0,fontSize:13.5,color:"#0d2a05",lineHeight:1.5,fontWeight:600,wordBreak:"break-word"}}>{caption}</p>
-                <p style={{margin:"6px 0 0",fontSize:12,color:"#6b7d60",fontWeight:600}}>Day {currentStreak} · proof of grass 🌿</p>
+                <p style={{margin:"6px 0 0",fontSize:12,color:"#6b7d60",fontWeight:600,wordBreak:"break-word"}}>Day {currentStreak} · proof of grass 🌿<br/>Join me: {(()=>{const u=sunsetUser();return u?`proofofgrass.app/?ref=${u}`:"proofofgrass.app";})()}</p>
                 <p style={{margin:"6px 0 0",fontSize:12.5,color:"#3d7a12",lineHeight:1.5,fontWeight:600,wordBreak:"break-word"}}>{TAGS}<br/>{HANDLE}</p>
               </div>
             </div>
