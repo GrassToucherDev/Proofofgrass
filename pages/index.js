@@ -344,7 +344,7 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
           border: `1px solid ${toneColor}40`,
           textAlign: "center", fontSize: 13, fontWeight: 600, color: toneColor,
         }}>
-          {streakTone === "success" ? "✓" : "⚡"} {streakStatus}
+          {streakTone === "success" ? "✓" : <Ico inline n="bolt" size={18} />}{streakStatus}
         </div>
       )}
 
