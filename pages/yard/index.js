@@ -61,7 +61,7 @@ export default function Yard() {
             <p className="yd-lead">Challenge other users or take your Grove into friendly competition. Build your streak, earn rewards, and see where you stand.</p>
             <div className="yd-ctas">
               <button type="button" className="yd-btn" onClick={open} style={{ ...V2Styles.btnPrimary, minHeight: 48 }}>⚔️ Create a Challenge</button>
-              <Link href="/yard/leaderboards" className="yd-btn" style={{ ...V2Styles.btnSecondary, minHeight: 48, textDecoration: "none", display: "inline-flex", alignItems: "center", background: "#fff" }}>👥 View Leaderboards</Link>
+              <Link href="/yard/leaderboards" className="yd-btn" style={{ ...V2Styles.btnSecondary, minHeight: 48, textDecoration: "none", display: "inline-flex", alignItems: "center", background: "#fff" }}><Ico inline n="👥" size={18} />View Leaderboards</Link>
             </div>
           </div>
         </header>

@@ -537,7 +537,7 @@ export default function FieldGuide() {
           <div style={{ position:"absolute", inset:0, pointerEvents:"none", opacity:0.15 }}>
             <div style={{ position:"absolute", fontSize:200, bottom:-20, right:80, lineHeight:1 }}>🌲</div>
             <div style={{ position:"absolute", fontSize:120, bottom:10, right:260, lineHeight:1 }}>🦋</div>
-            <div style={{ position:"absolute", fontSize:80, top:20, right:180, lineHeight:1 }}>🌸</div>
+            <div style={{ position:"absolute", fontSize:80, top:20, right:180, lineHeight:1 }}><Ico n="🌸" size={22} /></div>
           </div>
 
           {/* Left — headline */}

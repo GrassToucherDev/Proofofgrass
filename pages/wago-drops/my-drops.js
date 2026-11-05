@@ -13,6 +13,7 @@ import { rewardLogo, rewardSymbol, formatReward, formatAmount } from "../../util
 import CoverImage from "../../components/wago-drops/CoverImage";
 import ProofBonusFlow from "../../components/wago-drops/ProofBonusFlow";
 
+import Ico from "../../components/Ico";
 const rewardIconUrl = rewardLogo;
 
 // Status badge
@@ -272,7 +273,7 @@ export default function MyDrops() {
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 textDecoration: "none", color: T.white,
               }}>
-                <span style={{ fontSize: 14 }}>🔖 Saved Drops</span>
+                <span style={{ fontSize: 14 }}><Ico inline n="🔖" size={18} />Saved Drops</span>
                 <span style={{ fontSize: 13, color: T.muted }}>{saves.length} →</span>
               </Link>
             </>
