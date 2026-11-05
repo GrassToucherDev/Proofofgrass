@@ -86,6 +86,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
   const outdoorFileRef  = useRef(null);
   const plusFileRef     = useRef(null);
   const [plusUrl, setPlusUrl] = useState(null);
+  const [shieldSaved, setShieldSaved] = useState(false);
 
   const [rawDownloadUrl, setDownloadUrl]    = useState(null);
   const [cardStreak,     setCardStreak]     = useState(null);
@@ -307,6 +308,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
       const newStreak=result?.current_streak??currentStreak;
       try{
         const last=parseInt(localStorage.getItem("pog_last_streak")||"0",10)||0;
+        setShieldSaved(!!result?.used_shield);
         captionModeRef.current=result?.used_shield?"shield":(newStreak<=1&&last>=3?"restart":"normal");
         localStorage.setItem("pog_last_streak",String(newStreak));
       }catch{}
@@ -789,14 +791,13 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
         <div style={{ margin:"0 20px 20px", borderRadius:14, overflow:"hidden",
           border:"1px solid rgba(125,200,50,0.3)", background:"rgba(125,200,50,0.05)" }}>
           <div style={{ padding:"16px", display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:44, height:44, borderRadius:12, flexShrink:0,
-              background:"rgba(125,200,50,0.15)", border:"1.5px solid rgba(125,200,50,0.4)",
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>✓</div>
+            <img src={shieldSaved?"/mascot/wago-shield.webp":"/mascot/wago-celebrate.webp"} alt="" width={64} height={64}
+              style={{ width:64, height:64, objectFit:"contain", flexShrink:0 }} />
             <div style={{ flex:1 }}>
               <div style={{ fontSize:15, fontWeight:700, color:"#1a4a0a", marginBottom:2 }}>
                 Day {currentStreak} Locked In! 🎉
               </div>
-              <div style={{ fontSize:12, color:"#5ba622" }}>Your streak is saved for today.</div>
+              <div style={{ fontSize:12, color:"#5ba622" }}>{shieldSaved?"A shield covered your missed day. Your streak is safe.":"Your streak is saved for today."}</div>
             </div>
           </div>
           <div style={{ padding:"0 16px 16px", display:"flex", gap:8 }}>

@@ -38,15 +38,8 @@ export default function UploadBox({ onUpload }) {
         userSelect: "none",
       }}
     >
-      <div style={{
-        width: 52, height: 52, borderRadius: "50%", margin: "0 auto 14px",
-        background: "linear-gradient(135deg,#7dc832,#5ba622)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: "white", fontSize: 24, fontWeight: 800,
-        boxShadow: "0 4px 14px rgba(125,200,50,0.35)",
-      }}>
-        +
-      </div>
+      <img src="/mascot/wago-camera.webp" alt="" width={104} height={104}
+        style={{ width: 104, height: 104, objectFit: "contain", display: "block", margin: "0 auto 8px" }} />
 
       <div style={{ fontSize: 16, fontWeight: 800, color: "#1a4a0a", marginBottom: 4 }}>
         {dragging ? "Drop to add your photo" : touch ? "Tap to add your photo" : "Click to add your photo"}

@@ -49,13 +49,19 @@ function Skel({ w = "100%", h = 16, r = 8 }) {
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
+const ICO3D = new Set(["camera","lock","share","check","flame","shield","trophy","sprout","bolt"]);
+function Ico({ n, size = 24 }) {
+  if (!ICO3D.has(n)) return <span style={{ fontSize: size * 0.8, lineHeight: 1 }}>{n}</span>;
+  return <img src={`/icons3d/${n}.webp`} alt="" width={size} height={size} style={{ width: size, height: size, objectFit: "contain", display: "block", margin: "0 auto" }} />;
+}
+
 function StatCard({ icon, value, label, sub, accent, loading }) {
   return (
     <div style={{
       ...V2Styles.statCard,
       display: "flex", flexDirection: "column", gap: 6,
     }}>
-      <div style={{ fontSize: 28 }}>{icon}</div>
+      <div style={{ fontSize: 28, height: 34 }}><Ico n={icon} size={32} /></div>
       {loading
         ? <Skel h={32} r={6} />
         : <div style={{
@@ -242,8 +248,13 @@ function UsernameStep({ onPick }) {
   };
   return (
     <div style={{ marginBottom: 16, padding: "18px 16px", borderRadius: 16, background: "rgba(125,200,50,0.07)", border: "1.5px solid rgba(91,166,34,0.35)" }}>
-      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen, marginBottom: 6 }}>Step 1</div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: V2.forestGreen, marginBottom: 4 }}>Pick your username</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen, marginBottom: 6 }}>Step 1</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: V2.forestGreen }}>Pick your username</div>
+        </div>
+        <img src="/mascot/wago-wave.webp" alt="" width={84} height={84} style={{ width: 84, height: 84, objectFit: "contain", flexShrink: 0 }} />
+      </div>
       <div style={{ fontSize: 12.5, color: V2.textMuted, lineHeight: 1.45, marginBottom: 12 }}>This is the name on your streak and the leaderboard. You can use your X handle.</div>
       <div style={{ display: "flex", gap: 8 }}>
         <input value={val} onChange={e => { setVal(e.target.value.replace(/@/g, "").toLowerCase()); setErr(""); }}
@@ -268,6 +279,8 @@ function LockedInToday({ username, streak }) {
   };
   return (
     <div style={{ marginBottom: 16 }}>
+      <img src="/mascot/wago-sleep.webp" alt="" width={120} height={114}
+        style={{ width: 120, height: "auto", display: "block", margin: "0 auto 4px" }} />
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: 16, borderRadius: 18,
         background: "linear-gradient(160deg,#f2fbe8,#e3f4d2)", border: "1.5px solid rgba(91,166,34,.4)" }}>
         <div style={{ width: 76, height: 76, borderRadius: 22, flexShrink: 0, color: "#fff",
@@ -364,7 +377,7 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
             <button onClick={() => setSharingMilestone(true)}
               style={{ width: "100%", marginBottom: 12, border: "none", cursor: "pointer", borderRadius: 18, padding: "14px 16px", textAlign: "left",
                 background: "linear-gradient(135deg,#f9d06b,#f6b93b)", color: "#0d2a05", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(246,185,59,.35)" }}>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>🔥 {resolvedStreak}-day streak milestone!</div>
+              <div style={{ fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", gap: 6 }}><Ico n="flame" size={20} /> {resolvedStreak}-day streak milestone!</div>
               <div style={{ fontSize: 13, fontWeight: 700, opacity: .85, marginTop: 2 }}>Tap to share your milestone card →</div>
             </button>
           )}
@@ -393,13 +406,13 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
             Next Steps
           </div>
           {[
-            { icon: "📸", text: "Add a photo from outside" },
-            { icon: "🔒", text: "Lock in your streak" },
-            { icon: "𝕏", text: "Share it on X" },
+            { icon: "camera", text: "Add a photo from outside" },
+            { icon: "lock", text: "Lock in your streak" },
+            { icon: "share", text: "Share it on X" },
           ].map((s, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10,
               padding: "8px 0", borderBottom: i < 2 ? `1px solid ${V2.borderSoft}` : "none" }}>
-              <span style={{ fontSize: 16, width: 24, textAlign: "center" }}>{s.icon}</span>
+              <span style={{ width: 28, flexShrink: 0 }}><Ico n={s.icon} size={26} /></span>
               <span style={{ fontSize: 13, color: V2.textBody }}>{s.text}</span>
             </div>
           ))}
@@ -806,7 +819,7 @@ export default function Home() {
           <div className={"v2-hero-right" + (hasUser ? "" : " v2-visitor-stats")} style={{ position: "relative", zIndex: 1 }}>
             <div className="v2-stat-grid">
               <StatCard
-                icon="🔥"
+                icon="flame"
                 value={resolvedStreak ?? (topStreaker?.streak ?? "—")}
                 label={hasUser ? "Day Streak" : "Top Streak"}
                 sub={hasUser ? tier.name : "Best on the platform"}
@@ -814,21 +827,21 @@ export default function Home() {
                 loading={loadingUser}
               />
               <StatCard
-                icon="🌿"
+                icon="sprout"
                 value={totalProofs != null ? totalProofs.toLocaleString() : "—"}
                 label="Proofs Logged"
                 sub={dailyCount != null ? `+${dailyCount} today` : null}
                 loading={false}
               />
               <StatCard
-                icon="⚡"
+                icon="bolt"
                 value={userStats?.grass_score != null ? userStats.grass_score.toLocaleString() : "—"}
                 label="Grass Score"
                 sub={!hasUser ? "Starts with your first proof" : null}
                 loading={loadingUser}
               />
               <StatCard
-                icon="🏆"
+                icon="trophy"
                 value={userStats?.rank != null ? `#${userStats.rank}` : (hasUser ? "#1" : "—")}
                 label="Global Rank"
                 sub={userStats?.rank != null && userStats.rank <= 100 ? "Top 1%" : null}
@@ -901,14 +914,14 @@ export default function Home() {
                 </Link>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
                   {[
-                    { icon: "🔥", val: resolvedStreak, label: "Streak" },
-                    { icon: "🏆", val: userStats?.bestStreak ?? "—", label: "Best" },
-                    { icon: "🌿", val: userStats?.posts ?? "—", label: "Proofs" },
-                    { icon: "🛡️", val: userStats?.shields ?? 0, label: "Shields" },
+                    { icon: "flame", val: resolvedStreak, label: "Streak" },
+                    { icon: "trophy", val: userStats?.bestStreak ?? "—", label: "Best" },
+                    { icon: "sprout", val: userStats?.posts ?? "—", label: "Proofs" },
+                    { icon: "shield", val: userStats?.shields ?? 0, label: "Shields" },
                   ].map(s => (
                     <div key={s.label} style={{ textAlign: "center", padding: "10px 6px",
                       background: "rgba(125,200,50,0.06)", borderRadius: 10 }}>
-                      <div style={{ fontSize: 18 }}>{s.icon}</div>
+                      <div style={{ height: 28 }}><Ico n={s.icon} size={26} /></div>
                       <div style={{ fontFamily: V2.fontSerif, fontSize: 20, fontWeight: 700, color: V2.forestGreen }}>{s.val}</div>
                       <div style={{ fontSize: 10, color: V2.midGray, textTransform: "uppercase", letterSpacing: "0.08em" }}>{s.label}</div>
                     </div>
@@ -983,9 +996,12 @@ export default function Home() {
         </div>
 
         {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
-        <div style={{ padding: "8px clamp(14px,4vw,40px) 0" }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen }}>Explore</div>
-          <div style={{ fontSize: 13, color: V2.textMuted, marginTop: 2 }}>More to do once your streak is going.</div>
+        <div style={{ padding: "8px clamp(14px,4vw,40px) 0", display: "flex", alignItems: "center", gap: 12 }}>
+          <img src="/mascot/wago-point.webp" alt="" width={72} height={72} style={{ width: 72, height: 72, objectFit: "contain", flexShrink: 0 }} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: V2.grassGreen }}>Explore</div>
+            <div style={{ fontSize: 13, color: V2.textMuted, marginTop: 2 }}>More to do once your streak is going.</div>
+          </div>
         </div>
         <div className="v2-feature-grid">
           <FeatureCard
