@@ -1,4 +1,5 @@
 import { drawProofCard } from "../utils/proofCardRender";
+import { drawPhotoCard, photoCardSize } from "../utils/proofPhotoRender";
 import { compressProofPhoto } from "../utils/compressProofPhoto";
 import { useRef, useEffect, useState, useCallback } from "react";
 import InAppBrowserNote from "./InAppBrowserNote";
@@ -187,6 +188,8 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
   const canvasRef = useRef(null);
   const sharableFileRef = useRef(null);
   const outdoorFileRef  = useRef(null);
+  const plusFileRef     = useRef(null);
+  const [plusUrl, setPlusUrl] = useState(null);
 
   const [rawDownloadUrl, setDownloadUrl]    = useState(null);
   const [cardStreak,     setCardStreak]     = useState(null);
@@ -425,6 +428,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
   const isInAppBrowser = typeof navigator!=="undefined"&&(/Twitter/i.test(navigator.userAgent)||/Instagram/i.test(navigator.userAgent)||/FBAN|FBAV/i.test(navigator.userAgent)||/MicroMessenger/i.test(navigator.userAgent));
 
   const buildShareFile = useCallback(async(style)=>{
+    if(style==="photo_plus") return plusFileRef.current;
     if(style==="outdoor_photo"){
       if(proofFile instanceof File) return new File([proofFile],"proof-of-grass-outdoor."+((proofFile.type||"image/png").split("/")[1]||"png").replace("jpeg","jpg"),{type:proofFile.type||"image/png"});
       if(imageSrc&&imageSrc.startsWith("blob:")){
@@ -439,6 +443,34 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
     }
     return file;
   },[proofFile,imageSrc,downloadUrl]);
+
+  // ── Photo Plus card (photo + name plate), rendered on its own canvas ─────
+  useEffect(()=>{
+    plusFileRef.current=null;
+    if(!imageSrc){setPlusUrl(null);return;}
+    let cancelled=false;
+    const img=new Image();
+    img.onload=()=>{
+      if(cancelled) return;
+      try{
+        const {W,H}=photoCardSize(img);
+        const c=document.createElement("canvas");c.width=W;c.height=H;
+        const loc=locationMode==="manual"&&locationCity.trim()?[locationCity.trim(),locationRegion.trim()].filter(Boolean).join(", "):"";
+        Promise.resolve(drawPhotoCard(c.getContext("2d"),W,H,{photo:img,streak:currentStreak,dateStr,topPct:getTopPercent(currentStreak),location:loc,username:sunsetUser()})).then(()=>{
+          if(cancelled) return;
+          c.toBlob(blob=>{
+            if(cancelled||!blob) return;
+            plusFileRef.current=new File([blob],"proof-of-grass-photo-plus.png",{type:"image/png"});
+            setPlusUrl(URL.createObjectURL(blob));
+          },"image/png");
+        }).catch(e=>console.error("[photo-plus] render error:",e));
+      }catch(e){console.error("[photo-plus] render error:",e);}
+    };
+    img.onerror=()=>{};
+    img.src=imageSrc;
+    return ()=>{cancelled=true;};
+  },[imageSrc,currentStreak,dateStr,locationMode,locationCity,locationRegion]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(()=>()=>{if(plusUrl&&plusUrl.startsWith("blob:")) URL.revokeObjectURL(plusUrl);},[plusUrl]);
 
   // ── Canvas rendering ──────────────────────────────────────────────────────
   useEffect(()=>{
@@ -608,27 +640,28 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           {/* ── Step 2: Card Type ─────────────────────────────────────────── */}
           <div style={{ margin:"16px 0" }}>
             <StepHeader n={2} title="Card type" hint="What would you like to share?" />
-            <div role="radiogroup" aria-label="Card type" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            <div role="radiogroup" aria-label="Card type" style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
               {[
-                {id:"outdoor_photo",title:"Original photo",sub:"Just your photo, exactly as taken",src:imageSrc,fit:"contain"},
-                {id:"result_card",title:"Result card",sub:"Your streak, tier and stats",src:downloadUrl,fit:"cover"},
+                {id:"outdoor_photo",title:"Original",sub:"Just your photo",src:imageSrc,fit:"contain"},
+                {id:"photo_plus",title:"Photo + day",sub:"Name, day & date",src:plusUrl,fit:"contain"},
+                {id:"result_card",title:"Result card",sub:"Streak, tier & stats",src:downloadUrl,fit:"cover"},
               ].map(o=>{
                 const on=shareStyle===o.id;
                 return (
                   <button key={o.id} role="radio" aria-checked={on} onClick={()=>selectShareStyle(o.id)}
-                    style={{ position:"relative", minWidth:0, padding:8, borderRadius:14, cursor:"pointer", textAlign:"left",
+                    style={{ position:"relative", minWidth:0, padding:6, borderRadius:14, cursor:"pointer", textAlign:"left",
                       border:`2px solid ${on?V2G.green:V2G.border}`, background:on?"rgba(125,200,50,0.08)":"white",
                       boxShadow:on?"0 2px 12px rgba(125,200,50,0.25)":"none", display:"flex", flexDirection:"column", gap:8,
                       fontFamily:"Nunito,sans-serif" }}>
-                    <div style={{ position:"relative", width:"100%", aspectRatio:"4 / 3", borderRadius:10, overflow:"hidden", background:"rgba(200,220,190,0.25)" }}>
+                    <div style={{ position:"relative", width:"100%", aspectRatio:"1 / 1", borderRadius:10, overflow:"hidden", background:"rgba(200,220,190,0.25)" }}>
                       {o.src && <img src={o.src} alt="" style={{ width:"100%", height:"100%", objectFit:o.fit, display:"block" }} />}
                       <span aria-hidden="true" style={{ position:"absolute", right:6, top:6, width:22, height:22, borderRadius:"50%",
                         background:on?V2G.green:"rgba(255,255,255,0.9)", border:on?"none":"1.5px solid rgba(200,220,190,0.9)",
                         color:"white", fontSize:12, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{on?"✓":""}</span>
                     </div>
                     <div style={{ padding:"0 2px 2px" }}>
-                      <div style={{ fontSize:13.5, fontWeight:800, color:V2G.darkGreen }}>{o.title}</div>
-                      <div style={{ fontSize:11.5, color:V2G.midGray, marginTop:1 }}>{o.sub}</div>
+                      <div style={{ fontSize:12.5, fontWeight:800, color:V2G.darkGreen }}>{o.title}</div>
+                      <div style={{ fontSize:10.5, color:V2G.midGray, marginTop:1 }}>{o.sub}</div>
                     </div>
                   </button>
                 );
@@ -892,35 +925,36 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:14}}>
               <div style={{flex:1,minWidth:0}}>
                 <div id="share-sheet-title" style={{fontSize:19,fontWeight:800,color:"#0d2a05",lineHeight:1.2}}>Share your proof</div>
-                <div style={{fontSize:12.5,color:"#6b7d60",marginTop:3}}>Two ways to share. Either one is a great post.</div>
+                <div style={{fontSize:12.5,color:"#6b7d60",marginTop:3}}>Three ways to share. Any one is a great post.</div>
               </div>
               <button onClick={()=>setShowStylePicker(false)} aria-label="Close"
                 style={{width:34,height:34,borderRadius:"50%",border:"1px solid rgba(200,220,190,0.8)",background:"white",
                   color:"#1a4a0a",fontSize:18,lineHeight:1,cursor:"pointer",flexShrink:0}}>×</button>
             </div>
 
-            <div role="radiogroup" aria-label="Proof style" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+            <div role="radiogroup" aria-label="Proof style" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
               {[
-                {id:"outdoor_photo",title:"Original photo",sub:"Just your photo, exactly as taken",src:imageSrc,fit:"contain"},
-                {id:"result_card",title:"Result card",sub:"Your streak, tier and stats",src:downloadUrl,fit:"cover"},
+                {id:"outdoor_photo",title:"Original",sub:"Just your photo",src:imageSrc,fit:"contain"},
+                {id:"photo_plus",title:"Photo + day",sub:"Name, day & date",src:plusUrl,fit:"contain"},
+                {id:"result_card",title:"Result card",sub:"Streak, tier & stats",src:downloadUrl,fit:"cover"},
               ].map(o=>{
                 const on=shareStyle===o.id;
                 return (
                   <button key={o.id} role="radio" aria-checked={on} onClick={()=>selectShareStyle(o.id)}
-                    style={{position:"relative",minWidth:0,padding:8,borderRadius:16,cursor:"pointer",textAlign:"left",
+                    style={{position:"relative",minWidth:0,padding:6,borderRadius:16,cursor:"pointer",textAlign:"left",
                       border:`2px solid ${on?"#5ba622":"rgba(200,220,190,0.7)"}`,
                       background:on?"rgba(125,200,50,0.08)":"white",
                       boxShadow:on?"0 2px 12px rgba(125,200,50,0.25)":"none",
                       transition:"all .15s",fontFamily:"Nunito,sans-serif",display:"flex",flexDirection:"column",gap:8}}>
-                    <div style={{position:"relative",width:"100%",aspectRatio:"4 / 3",borderRadius:10,overflow:"hidden",background:"rgba(200,220,190,0.25)"}}>
+                    <div style={{position:"relative",width:"100%",aspectRatio:"1 / 1",borderRadius:10,overflow:"hidden",background:"rgba(200,220,190,0.25)"}}>
                       {o.src && <img src={o.src} alt="" style={{width:"100%",height:"100%",objectFit:o.fit||"cover",display:"block"}} />}
                       <span aria-hidden="true" style={{position:"absolute",right:6,top:6,width:22,height:22,borderRadius:"50%",
                         background:on?"#5ba622":"rgba(255,255,255,0.9)",border:on?"none":"1.5px solid rgba(200,220,190,0.9)",
                         color:"white",fontSize:12,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{on?"✓":""}</span>
                     </div>
                     <div style={{padding:"0 2px 2px"}}>
-                      <div style={{fontSize:13.5,fontWeight:800,color:"#0d2a05"}}>{o.title}</div>
-                      <div style={{fontSize:11.5,color:"#6b7d60",marginTop:1}}>{o.sub}</div>
+                      <div style={{fontSize:12.5,fontWeight:800,color:"#0d2a05"}}>{o.title}</div>
+                      <div style={{fontSize:10.5,color:"#6b7d60",marginTop:1}}>{o.sub}</div>
                     </div>
                   </button>
                 );
@@ -988,7 +1022,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                     };
 
                     // Get file — use cached ref first, rebuild if missing
-                    const cachedFile = shareStyle==="outdoor_photo" ? outdoorFileRef.current : sharableFileRef.current;
+                    const cachedFile = shareStyle==="outdoor_photo" ? outdoorFileRef.current : shareStyle==="photo_plus" ? plusFileRef.current : sharableFileRef.current;
                     if(cachedFile){
                       doShare(cachedFile);
                     } else if(shareStyle==="outdoor_photo" && imageSrc){
@@ -998,6 +1032,8 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
                         outdoorFileRef.current=f;
                         doShare(f);
                       }).catch(()=>doShare(null));
+                    } else if(shareStyle==="photo_plus"){
+                      doShare(null);
                     } else if(shareStyle==="result_card" && downloadUrl){
                       // Rebuild result card file from data URL
                       fetch(downloadUrl).then(r=>r.blob()).then(blob=>{
