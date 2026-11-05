@@ -54,22 +54,25 @@ export async function drawPhotoCard(ctx, W, H, opts) {
   if (logo) { const lw = 330, lh = lw * logo.height / logo.width; // no chip: the logo sits straight on the photo with a soft shadow
     ctx.save(); ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 4; ctx.drawImage(logo, W - M - lw, M - 6, lw, lh); ctx.restore(); }
 
-  // bottom glass name plate: slim, translucent. Day shown subtly on the left, then @username and date/location.
-  const BH = 136, BX = M, BW = W - M * 2, BY = H - M - BH;
+  // bottom glass name plate: slim, translucent, sized to its content and tucked in the bottom-left.
+  const BH = 136, BX = M, BY = H - M - BH;
+  const num = String(streak), hnd = handle ? `@${handle}` : "Touch Grass", sub = [dateStr, location].filter(Boolean).join("  ·  ");
+  ctx.textAlign = "left";
+  ctx.font = `700 34px ${FRED}`; const dayW = ctx.measureText("DAY ").width; ctx.font = `700 66px ${FRED}`; const numW = ctx.measureText(num).width;
+  const PADL = 52, PADR = 52, GAP = 36, maxText = W - M * 2 - PADL - dayW - numW - 40 - 3 - GAP - PADR;
+  let hs = 46; ctx.font = `800 ${hs}px ${NUN}`; while (ctx.measureText(hnd).width > maxText && hs > 26) { hs -= 2; ctx.font = `800 ${hs}px ${NUN}`; }
+  const hndW = ctx.measureText(hnd).width;
+  ctx.font = `700 26px ${NUN}`; let st = sub; while (ctx.measureText(st).width > maxText && st.length > 6) st = st.slice(0, -2); if (st !== sub) st += "…";
+  const subW = ctx.measureText(st).width, textW = Math.max(hndW, subW);
+  const BW = Math.min(W - M * 2, PADL + dayW + numW + 40 + 3 + GAP + textW + PADR);
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8; ctx.fillStyle = "rgba(255,255,255,.64)"; rr(ctx, BX, BY, BW, BH, 68); ctx.fill(); ctx.restore();
   ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.85)"; rr(ctx, BX, BY, BW, BH, 68); ctx.stroke();
-  const num = String(streak); ctx.textAlign = "left";
-  ctx.font = `700 34px ${FRED}`; const dayW = ctx.measureText("DAY ").width; ctx.font = `700 66px ${FRED}`; const numW = ctx.measureText(num).width;
-  const gx = BX + 52, gy = BY + BH / 2 + 22;
+  const gx = BX + PADL, gy = BY + BH / 2 + 22;
   ctx.font = `700 34px ${FRED}`; ctx.fillStyle = INK; ctx.fillText("DAY ", gx, gy);
   ctx.font = `700 66px ${FRED}`; ctx.fillStyle = LIME; ctx.fillText(num, gx + dayW, gy);
   const dx = gx + dayW + numW + 40; ctx.fillStyle = "rgba(31,107,18,.28)"; ctx.fillRect(dx, BY + 28, 3, BH - 56);
-  const rx = dx + 36, rw = BX + BW - 48 - rx;
-  ctx.fillStyle = INK; let hs = 46; ctx.font = `800 ${hs}px ${NUN}`; const hnd = handle ? `@${handle}` : "Touch Grass";
-  while (ctx.measureText(hnd).width > rw && hs > 26) { hs -= 2; ctx.font = `800 ${hs}px ${NUN}`; }
-  ctx.fillText(hnd, rx, BY + 66);
-  ctx.fillStyle = GREEN; ctx.font = `700 26px ${NUN}`;
-  const sub = [dateStr, location].filter(Boolean).join("  ·  ");
-  let st = sub; while (ctx.measureText(st).width > rw && st.length > 6) st = st.slice(0, -2); ctx.fillText(st === sub ? st : st + "…", rx, BY + 106);
+  const rx = dx + 3 + GAP;
+  ctx.fillStyle = INK; ctx.font = `800 ${hs}px ${NUN}`; ctx.fillText(hnd, rx, BY + 66);
+  ctx.fillStyle = GREEN; ctx.font = `700 26px ${NUN}`; ctx.fillText(st, rx, BY + 106);
   ctx.restore();
 }
