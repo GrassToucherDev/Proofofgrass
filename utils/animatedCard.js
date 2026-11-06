@@ -183,7 +183,8 @@ export async function renderAnimatedCard(staticCard, { format = "4:5", seconds =
 
 // Flex card: animated cover art behind the (static, transparent-background) foreground panel.
 // fgCanvas: drawFlexCard output on a transparent canvas (1080×1080). bgImage: the cover art (or null).
-export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", seconds = 4, fps = 30, fx, headline = "", onProgress } = {}) {
+// motion: { stagger, countUp, barFill }. countUp / barFill need the foreground drawn with p.skipNumber / p.skipFill and its returned geom + streak passed here.
+export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", seconds = 4, fps = 30, fx, headline = "", onProgress, motion = {}, geom = null, streak = 1 } = {}) {
   if (!pickRecorderMime()) return null;
   const W = 1080, H = format === "9:16" ? 1920 : format === "4:5" ? 1350 : 1080;
   const out = document.createElement("canvas"); out.width = W; out.height = H;
@@ -216,10 +217,45 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
     if (bgImage) { const tf = drawCoverBg(ctx, bgImage, W, H, t, seconds * 1000); fx?.bg?.(ctx, t, tf); }
     fx?.under?.(ctx, t);
     const k = clamp01(t / 700), a = easeOutCubic(clamp01(t / 450)), sc2 = 0.95 + 0.05 * easeOutBack(k), fl = Math.sin(s * 2) * 4 * clamp01((t - 600) / 400);
+    // dynamic bits drawn in foreground-canvas coordinates (current streak number, progress fill)
+    const dyn = (plate, bar) => {
+      if (plate && geom?.num && motion.countUp) {
+        const g = geom.num, v = Math.round(1 + (streak - 1) * easeOutCubic(clamp01((t - 700) / 1100))), q = clamp01((t - 1800) / 450), bump = 1 + 0.14 * Math.sin(Math.PI * q);
+        ctx.save(); ctx.font = `700 ${g.ns}px ${g.font}`; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#4fb21a";
+        const w = ctx.measureText(String(streak)).width, cx = g.x + w / 2, cy = g.y - g.ns * 0.35; ctx.translate(cx, cy); ctx.scale(bump, bump); ctx.translate(-cx, -cy); ctx.fillText(String(v), g.x, g.y); ctx.restore();
+        if (q > 0 && q < 1) { // burst when the number lands
+          ctx.save(); ctx.globalAlpha = 1 - q; ctx.fillStyle = "#ffe27a";
+          for (let n = 0; n < 8; n++) { const ang = (Math.PI / 4) * n + 0.4, r = 40 + 120 * easeOutCubic(q); star(ctx, cx + Math.cos(ang) * r, cy + Math.sin(ang) * r, 14 * (1 - q * 0.5), ang + q * 3); }
+          ctx.restore();
+        }
+      }
+      if (bar && geom?.bar && motion.barFill) {
+        const g = geom.bar, f = g.fp * easeOutCubic(clamp01((t - 1100) / 1100));
+        if (f > 0) { ctx.save(); const pg = ctx.createLinearGradient(g.x, 0, g.x + g.w, 0); pg.addColorStop(0, g.accent); pg.addColorStop(1, g.accent2); ctx.fillStyle = pg; rrPath(ctx, g.x, g.y, Math.max(22, g.w * f), 22, 11); ctx.fill(); ctx.restore(); }
+      }
+    };
+    // staggered pieces, in foreground coordinates: [x, y, w, h, delay ms, plate?, bar?]
+    const PIECES = [[20, 20, 682, 306, 0, 0, 0], [690, 20, 370, 306, 140, 1, 0], [20, 724, 340, 150, 280, 0, 0], [362, 724, 340, 150, 360, 0, 0], [704, 724, 340, 150, 440, 0, 0], [20, 866, 1040, 150, 580, 0, 1], [200, 1010, 680, 62, 720, 0, 0]];
     slices.forEach((sl, i) => {
-      const dh = sl.sh * (sl.w / fgCanvas.width), late = clamp01((t - i * 150) / 450);
+      const m = sl.w / fgCanvas.width, dh = sl.sh * m;
+      if (motion.stagger) {
+        const ox = sl.cx - sl.w / 2, oy = sl.dy - sl.sy * m;
+        PIECES.forEach(([px, py, pw, ph, dl, plate, bar]) => {
+          const y0 = Math.max(py, sl.sy), y1 = Math.min(py + ph, sl.sy + sl.sh);
+          if (y1 - y0 < ph * 0.5 || py + ph / 2 < sl.sy || py + ph / 2 > sl.sy + sl.sh) return;
+          const q = clamp01((t - dl) / 520), pop = 0.7 + 0.3 * easeOutBack(q), x = ox + px * m, y = oy + y0 * m, w = pw * m, h = (y1 - y0) * m;
+          if (q <= 0) return;
+          ctx.save(); ctx.globalAlpha = easeOutCubic(clamp01(q * 1.6)); ctx.translate(x + w / 2, y + h / 2 + (i ? -fl : fl)); ctx.scale(pop, pop); ctx.translate(-(x + w / 2), -(y + h / 2));
+          ctx.drawImage(fgCanvas, px, y0, pw, y1 - y0, x, y, w, h);
+          ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.translate(ox, oy); ctx.scale(m, m); dyn(plate, bar); ctx.restore();
+          ctx.restore();
+        });
+        return;
+      }
+      const late = clamp01((t - i * 150) / 450);
       ctx.save(); ctx.globalAlpha = i ? easeOutCubic(late) : a; ctx.translate(sl.cx, sl.dy + dh / 2 + (i ? -fl : fl)); ctx.scale(sc2, sc2);
       ctx.drawImage(fgCanvas, 0, sl.sy, fgCanvas.width, sl.sh, -sl.w / 2, -dh / 2, sl.w, dh);
+      ctx.save(); ctx.translate(-sl.w / 2, -dh / 2 - sl.sy * m); ctx.scale(m, m); dyn(sl.sy <= 36 && sl.sy + sl.sh > 36, sl.sy <= 940 && sl.sy + sl.sh > 940); ctx.restore();
       const sk = clamp01((t - 1200 - i * 250) / 900);
       if (sk > 0 && sk < 1) { // shine sweep
         ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.beginPath(); ctx.rect(-sl.w / 2, -dh / 2, sl.w, dh); ctx.clip();

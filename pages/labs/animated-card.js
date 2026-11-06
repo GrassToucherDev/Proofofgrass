@@ -17,6 +17,7 @@ export default function AnimatedCardDemo() {
   const [busy, setBusy] = useState(false);
   const [prog, setProg] = useState(0);
   const [res, setRes] = useState(null);
+  const [motion, setMotion] = useState({ stagger: true, countUp: true, barFill: true });
   const [err, setErr] = useState("");
   const [url, setUrl] = useState("");
   const fileRef = useRef(null);
@@ -36,8 +37,8 @@ export default function AnimatedCardDemo() {
       let r;
       if (kind === "flex") {
         const fg = document.createElement("canvas"); fg.width = 1080; fg.height = 1080; // transparent: cover art is animated behind it
-        await drawFlexCard(fg.getContext("2d"), 1080, 1080, { username: "grasstoucherdev", streak: Number(streak) || 1, grassScore: 4280, rank: 12, best: Number(streak) || 1, tierTitle: "ROOTED", avatarUrl: null, theme: coverDef || {} }, ld);
-        r = await renderAnimatedFlex(fg, { bgImage: bgImg, format: fmt, seconds: 4, fx, headline: `Day ${Number(streak) || 1} Streak`, onProgress: setProg });
+        const geom = await drawFlexCard(fg.getContext("2d"), 1080, 1080, { username: "grasstoucherdev", streak: Number(streak) || 1, grassScore: 4280, rank: 12, best: Number(streak) || 1, tierTitle: "ROOTED", avatarUrl: null, theme: coverDef || {}, skipNumber: motion.countUp, skipFill: motion.barFill }, ld);
+        r = await renderAnimatedFlex(fg, { bgImage: bgImg, format: fmt, seconds: 4, fx, headline: `Day ${Number(streak) || 1} Streak`, onProgress: setProg, motion, geom, streak: Number(streak) || 1 });
       } else {
         const photo = f ? await ld(URL.createObjectURL(f)) : await ld("/card/bg-sunset.jpg");
         const c = document.createElement("canvas"); c.width = 1600; c.height = 1200;
@@ -66,6 +67,8 @@ export default function AnimatedCardDemo() {
         <label>Theme <select value={cover} onChange={(e) => setCover(e.target.value)} style={{ padding: 8, marginLeft: 8 }}><option value="none">Default (free)</option>{Object.keys(Y2K_VARIANTS).map((s) => <option key={s} value={s}>Y2K · {s.replace("marketplace_", "").replace(/_/g, " ")}</option>)}</select></label>
         <label>Streak day <input type="number" min="1" value={streak} onChange={(e) => setStreak(e.target.value)} style={{ padding: 8, marginLeft: 8, width: 80 }} /></label>
         <label>Format <select value={format} onChange={(e) => setFormat(e.target.value)} style={{ padding: 8, marginLeft: 8 }}><option value="9:16">9:16 (TikTok, Reels, Stories)</option><option value="4:5">4:5 / square (X, Instagram feed)</option></select></label>
+        {kind === "flex" && <div style={{ display: "grid", gap: 6 }}><b>Motion (flex card)</b>
+          {[["stagger", "Pop-in, one piece at a time"], ["countUp", "Streak number counts up, with a burst"], ["barFill", "Next-badge bar fills"]].map(([k, l]) => <label key={k}><input type="checkbox" checked={!!motion[k]} onChange={(e) => setMotion({ ...motion, [k]: e.target.checked })} /> {l}</label>)}</div>}
         <label>Photo (optional) <input ref={fileRef} type="file" accept="image/*" /></label>
         <button style={{ ...btn, opacity: busy ? .6 : 1 }} disabled={busy} onClick={go}>{busy ? `Recording… ${Math.round(prog * 100)}%` : "Make animated card"}</button>
       </div>

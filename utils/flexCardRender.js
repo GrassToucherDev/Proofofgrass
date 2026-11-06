@@ -41,6 +41,7 @@ export async function drawFlexCard(ctx, W, H, p, loadAvatar) {
   const prv = [0, ...THS].reverse().find((t) => streak >= t) || 0;
   const [shield, nextShield, mascot] = await Promise.all([tIdx ? ld(`/card/tier-${tIdx}.png`) : null, ld(`/card/tier-${nIdx}.png`), ld("/card/mascot-side.png")]);
   ctx.textBaseline = "alphabetic"; ctx.letterSpacing = "0px";
+  const geom = {}; // positions of the number and progress fill, so an animated renderer can draw them itself (p.skipNumber / p.skipFill)
 
   // ── identity glass panel ──
   const AX = 36, AY = 36, AW = 650, AH = 270;
@@ -87,7 +88,8 @@ export async function drawFlexCard(ctx, W, H, p, loadAvatar) {
   ctx.font = `700 ${Math.round(ns * 0.5)}px ${FRED}`; const dw = ctx.measureText("DAY ").width; ctx.font = `700 ${ns}px ${FRED}`; const nw = ctx.measureText(nstr).width;
   const sx0 = scx - (dw + nw) / 2, by = SY + 200;
   ctx.textAlign = "left"; ctx.font = `700 ${Math.round(ns * 0.5)}px ${FRED}`; ctx.fillStyle = INK; ctx.fillText("DAY ", sx0, by);
-  ctx.font = `700 ${ns}px ${FRED}`; ctx.fillStyle = "#4fb21a"; ctx.fillText(nstr, sx0 + dw, by);
+  geom.num = { x: sx0 + dw, y: by, ns, font: FRED };
+  ctx.font = `700 ${ns}px ${FRED}`; ctx.fillStyle = "#4fb21a"; if (!p.skipNumber) ctx.fillText(nstr, sx0 + dw, by);
   ctx.textAlign = "center"; ctx.fillStyle = GREEN; ctx.font = `800 15px ${NUN}`; ctx.letterSpacing = "4px"; ctx.fillText("CURRENT STREAK", scx + 2, SY + 238); ctx.letterSpacing = "0px";
 
   // ── stat capsules ──
@@ -111,12 +113,14 @@ export async function drawFlexCard(ctx, W, H, p, loadAvatar) {
   ctx.fillStyle = INK; ctx.font = `700 34px ${FRED}`; ctx.textAlign = "right"; ctx.fillText(`${streak} / ${nxt}`, tx + tw2, my + 44); ctx.textAlign = "left";
   const fp = Math.min(1, (streak - prv) / Math.max(1, nxt - prv)), bw = tw2, by2 = my + 66;
   ctx.fillStyle = "rgba(31,107,18,.18)"; rr(ctx, tx, by2, bw, 22, 11); ctx.fill();
-  const pg = ctx.createLinearGradient(tx, 0, tx + bw, 0); pg.addColorStop(0, accent); pg.addColorStop(1, accent2);
-  ctx.fillStyle = pg; rr(ctx, tx, by2, Math.max(22, bw * fp), 22, 11); ctx.fill();
+  geom.bar = { x: tx, y: by2, w: bw, fp, accent, accent2 };
+  if (!p.skipFill) { const pg = ctx.createLinearGradient(tx, 0, tx + bw, 0); pg.addColorStop(0, accent); pg.addColorStop(1, accent2);
+    ctx.fillStyle = pg; rr(ctx, tx, by2, Math.max(22, bw * fp), 22, 11); ctx.fill(); }
 
   // ── footer pill ──
   ctx.textAlign = "center"; ctx.font = `800 20px ${NUN}`; ctx.letterSpacing = "3px";
   const ft = "PROOFOFGRASS.APP  ·  BUILT ON SOLANA", fw = ctx.measureText(ft).width + 44, fy = H - 62;
   ctx.fillStyle = "rgba(253,246,226,.92)"; rr(ctx, W / 2 - fw / 2, fy, fw, 40, 20); ctx.fill();
   ctx.fillStyle = GREEN; ctx.fillText(ft, W / 2 + 2, fy + 28); ctx.letterSpacing = "0px"; ctx.textAlign = "left";
+  return geom;
 }
