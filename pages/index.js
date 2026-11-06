@@ -9,6 +9,7 @@ import { renderStreakCard, streakCaption, isStreakMilestone, STREAK_MILESTONES }
 import Ico from "../components/Ico";
 import TodaysProofsStrip from "../components/TodaysProofsStrip";
 import NudgeBanner from "../components/NudgeBanner";
+import MyReactions from "../components/MyReactions";
 import V2Nav from "../components/V2Nav";
 import FrightBitsHeroBanner from "../components/frightbits/FrightBitsHeroBanner";
 import V2BottomNav from "../components/V2BottomNav";
@@ -1004,6 +1005,7 @@ export default function Home() {
         </div>
 
         <NudgeBanner username={username} hasPostedToday={hasPostedToday} />
+        <MyReactions username={username} />
         <TodaysProofsStrip />
 
         {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
