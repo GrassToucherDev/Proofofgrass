@@ -46,7 +46,7 @@ export default function PushReminders({ username }) {
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setErr(j.code === "unclaimed" ? "Secure your username with Google first." : j.error || "Could not turn reminders on."); setBusy(false); return; }
       setMode("on");
-      try { await reg.showNotification("Reminders are on", { body: "We'll nudge you before the day resets if your streak is at risk.", icon: "/icons/icon-192.png", tag: "pog-welcome" }); } catch {}
+      try { await reg.showNotification("Streak reminders are on", { body: "Don't forget to touch grass today! We'll remind you if your streak is at risk.", icon: "/icons/icon-192.png", tag: "pog-welcome" }); } catch {}
     } catch (e) { setErr("Could not turn reminders on on this device."); }
     setBusy(false);
   };

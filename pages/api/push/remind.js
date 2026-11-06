@@ -55,8 +55,8 @@ export default async function handler(req, res) {
     while (work.length) {
       const s = work.pop(), n = streaks[s.username]?.current_streak || 0;
       const payload = JSON.stringify({
-        title: n ? `Keep your ${n}-day streak alive` : "Time to touch grass",
-        body: "Log today's proof before the day resets.", url: "/#upload", tag: "pog-daily",
+        title: "Don't forget to touch grass today!",
+        body: n ? `Keep your ${n}-day streak alive. Log today's proof before the day resets.` : "Log today's proof before the day resets.", url: "/#upload", tag: "pog-daily",
       });
       try { await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 6 * 3600 }); sent++; }
       catch (e) { if (e?.statusCode === 404 || e?.statusCode === 410) { gone++; dead.push(s.id); } else { failed++; console.warn("[push/remind]", e?.statusCode, e?.body?.slice?.(0, 120)); } }
