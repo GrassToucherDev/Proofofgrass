@@ -36,6 +36,7 @@ export default function Gallery() {
   const [scope, setScope] = useState("all");
   const [items, setItems] = useState([]);
   const [next, setNext] = useState(null);
+  const [featured, setFeatured] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [noGrove, setNoGrove] = useState(false);
@@ -59,6 +60,7 @@ export default function Gallery() {
       setNoGrove(!!j.noGrove);
       setItems((prev) => before ? [...prev, ...j.items.filter((n) => !prev.some((p) => p.username === n.username && p.day === n.day))] : j.items);
       setNext(j.next);
+      if (!before) setFeatured(j.featured || null);
     } catch (e) { setErr(e.message || "Could not load the gallery."); }
     setLoading(false);
   }, [scope, username]);
@@ -85,7 +87,7 @@ export default function Gallery() {
     const was = !!it.mine?.[kind], key = (x) => x.username === it.username && x.day === it.day;
     const apply = (on) => {
       const patch = (x) => key(x) ? { ...x, mine: { ...x.mine, [kind]: on }, reactions: { ...x.reactions, [kind]: Math.max(0, (x.reactions[kind] || 0) + (on ? 1 : -1)) } } : x;
-      setItems((prev) => prev.map(patch)); setOpen((o) => (o && key(o) ? patch(o) : o));
+      setItems((prev) => prev.map(patch)); setFeatured((f) => (f && key(f) ? patch(f) : f)); setOpen((o) => (o && key(o) ? patch(o) : o));
     };
     apply(!was);
     try {
@@ -93,13 +95,16 @@ export default function Gallery() {
       if (!r.ok) { apply(was); const j = await r.json().catch(() => ({})); setReactErr(j.code === "unclaimed" ? "Secure your username with Google to react." : j.error || "Couldn't save your reaction. Try again."); } else { setReactErr(""); const j = await r.json(); if (j.counts) { const sync = (x) => key(x) ? { ...x, reactions: j.counts } : x; setItems((p) => p.map(sync)); setOpen((o) => (o && key(o) ? sync(o) : o)); } }
     } catch { apply(was); setReactErr("Couldn't save your reaction. Check your connection."); }
   };
-  const broken = (it) => setItems((prev) => prev.filter((p) => !(p.username === it.username && p.day === it.day)));
+  const broken = (it) => { setFeatured((f) => (f && f.username === it.username && f.day === it.day ? null : f)); setItems((prev) => prev.filter((p) => !(p.username === it.username && p.day === it.day))); };
   const close = () => { setOpen(null); setReportState(""); setReactErr(""); };
 
   const css = V2GlobalCSS + `
     .gal-wrap{max-width:1040px;margin:0 auto;padding:22px clamp(14px,4vw,32px) 60px}
     .gal-head h1{font-family:${V2.fontSans};font-size:clamp(26px,5vw,38px);font-weight:800;color:${V2.forestGreen};margin:0 0 4px}
     .gal-head p{margin:0;color:#4b6240;font-size:15px}
+    .gal-pod{position:relative;display:block;width:100%;max-width:420px;aspect-ratio:4/5;margin:18px 0 0;border:0;padding:0;border-radius:20px;overflow:hidden;cursor:pointer;background:#dfeccf;box-shadow:0 0 0 3px #f4c542,0 8px 24px rgba(26,74,10,.2)}
+    .gal-pod img{width:100%;height:100%;object-fit:cover;display:block}
+    .gal-podtag{position:absolute;top:10px;left:10px;background:#f4c542;color:#4a3500;font-weight:800;font-size:13px;padding:5px 11px;border-radius:999px;display:flex;align-items:center;gap:5px}
     .gal-tabs{display:flex;gap:8px;margin:18px 0;flex-wrap:wrap}
     .gal-tab{border:1.5px solid ${V2.borderSoft};background:#fff;border-radius:999px;padding:8px 16px;font-weight:700;font-size:14px;color:${V2.forestGreen};cursor:pointer}
     .gal-tab.on{background:linear-gradient(180deg,#7dd321,#4fb21a);color:#fff;border-color:#4fb21a}
@@ -145,6 +150,15 @@ export default function Gallery() {
             <h1>Today's Proofs</h1>
             <p>Fresh grass from the community, from the last 24 hours.</p>
           </div>
+
+          {featured && scope === "all" && (
+            <button className="gal-pod" onClick={() => setOpen(featured)} aria-label={`Open Proof of the Day by @${featured.username}`}>
+              <img src={featured.photo} alt="" onError={() => broken(featured)} />
+              <span className="gal-shade" />
+              <span className="gal-podtag"><Ico n="crown" size={18} inline /> Proof of the Day</span>
+              <span className="gal-meta"><b>@{featured.username}</b><small>Day {featured.streak} · {featured.reactions.leaf + featured.reactions.fire} reactions{featured.place ? ` · ${featured.place}` : ""}</small></span>
+            </button>
+          )}
 
           <div className="gal-tabs">
             <button className={"gal-tab" + (scope === "all" ? " on" : "")} onClick={() => setScope("all")}>Everyone</button>

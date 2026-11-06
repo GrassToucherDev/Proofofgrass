@@ -9,6 +9,41 @@ import { getV2Tier } from "../../../utils/v2Theme";
 
 const TEASER = 6, WINDOW_MS = 24 * 3600_000, REPORT_HIDE_AT = 3;
 
+// Proof of the Day: the most-reacted proof in the last 24 hours (3+ reactions needed; earliest wins a tie). Live, not stored.
+async function pickFeatured(db, since, session) {
+  const MIN = 3;
+  const rx = await db.from("gallery_reactions").select("username,day,kind,reactor").gte("day", since.slice(0, 10));
+  if (rx.error || !rx.data?.length) return null;
+  const tally = {};
+  rx.data.forEach((r) => { const k = r.username + "|" + String(r.day).slice(0, 10); (tally[k] ||= { u: r.username, day: String(r.day).slice(0, 10), leaf: 0, fire: 0, rs: [] })[r.kind]++; tally[k].rs.push([r.reactor, r.kind]); });
+  const cands = Object.values(tally).filter((c) => c.leaf + c.fire >= MIN).sort((a, b) => b.leaf + b.fire - (a.leaf + a.fire)).slice(0, 8);
+  let me = null;
+  const c = await db.from("username_claims").select("username").eq("google_id", session.user.google_id).maybeSingle();
+  if (c.data?.username) me = cleanUsername(c.data.username);
+  for (const c of cands) {
+    const u = cleanUsername(c.u);
+    const { data: subs } = await db.from("Submissions").select("username,created_at,photo_url,location_city,location_region").ilike("username", u).in("status", ["pending", "approved"]).gte("created_at", since).order("created_at", { ascending: true });
+    const s = (subs || []).find((x) => new Date(x.created_at).toISOString().slice(0, 10) === c.day);
+    if (!s) continue;
+    let prof = await db.from("Profiles").select("username,avatar_url,avatar_emoji,feed_hidden").eq("username", u).maybeSingle();
+    if (prof.error) prof = await db.from("Profiles").select("username,avatar_url,avatar_emoji").eq("username", u).maybeSingle();
+    if (prof.data?.feed_hidden) continue;
+    const rp = await db.from("gallery_reports").select("reporter").eq("username", u).eq("day", c.day);
+    if (!rp.error && new Set((rp.data || []).map((r) => r.reporter)).size >= REPORT_HIDE_AT) continue;
+    const st = await db.from("Streaks").select("current_streak").eq("username", u).maybeSingle();
+    const streak = st.data?.current_streak || 1, t = getV2Tier(streak), mine = {};
+    if (me) c.rs.forEach(([who, kind]) => { if (who === me) mine[kind] = true; });
+    return {
+      username: u, day: c.day, created_at: s.created_at, streak, tier: { name: t.name, color: t.color },
+      photo: s.photo_url || db.storage.from(BUCKET).getPublicUrl(`${u}/${c.day}.png`).data.publicUrl,
+      place: [s.location_city, s.location_region].filter(Boolean).join(", ") || null,
+      avatar_url: prof.data?.avatar_url || null, avatar_emoji: prof.data?.avatar_emoji || null,
+      reactions: { leaf: c.leaf, fire: c.fire }, mine,
+    };
+  }
+  return null;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
   const db = adminClient();
@@ -80,5 +115,7 @@ export default async function handler(req, res) {
   // The response depends on who is asking (teaser vs full feed, "mine" reactions), so it must never sit in a shared cache.
   res.setHeader("Cache-Control", "private, no-store, max-age=0");
   res.setHeader("Vary", "Cookie");
-  return res.status(200).json({ items, next: more && last ? last.created_at : null, signedIn });
+  let featured = null;
+  if (signedIn && !before && scope === "all") { try { featured = await pickFeatured(db, since, session); } catch (e) { console.warn("[gallery] featured skipped:", e?.message); } }
+  return res.status(200).json({ items, next: more && last ? last.created_at : null, signedIn, featured });
 }
