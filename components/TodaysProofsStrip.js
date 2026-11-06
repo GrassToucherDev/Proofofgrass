@@ -8,7 +8,7 @@ export default function TodaysProofsStrip() {
   const [items, setItems] = useState([]);
   useEffect(() => {
     let off = false;
-    fetch("/api/gallery?limit=10").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!off && j?.items) setItems(j.items); }).catch(() => {});
+    fetch("/api/gallery?limit=10", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (!off && j?.items) setItems(j.items); }).catch(() => {});
     return () => { off = true; };
   }, []);
   if (!items.length) return null;

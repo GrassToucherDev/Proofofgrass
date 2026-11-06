@@ -51,7 +51,7 @@ export default function Gallery() {
       const qs = new URLSearchParams({ scope, limit: "24" });
       if (scope === "grove") qs.set("username", username);
       if (before) qs.set("before", before);
-      const r = await fetch("/api/gallery?" + qs);
+      const r = await fetch("/api/gallery?" + qs, { cache: "no-store" });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Could not load the gallery.");
       setNoGrove(!!j.noGrove);

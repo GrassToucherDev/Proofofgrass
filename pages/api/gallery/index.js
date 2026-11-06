@@ -77,7 +77,8 @@ export default async function handler(req, res) {
   }
   const more = signedIn && items.length >= limit;
   const last = items[items.length - 1];
-  if (!signedIn || scope === "grove") res.setHeader("Cache-Control", "private, no-store");
-  else res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=60");
+  // The response depends on who is asking (teaser vs full feed, "mine" reactions), so it must never sit in a shared cache.
+  res.setHeader("Cache-Control", "private, no-store, max-age=0");
+  res.setHeader("Vary", "Cookie");
   return res.status(200).json({ items, next: more && last ? last.created_at : null, signedIn });
 }
