@@ -242,10 +242,12 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
       if (q > 0) {
         ctx.save(); ctx.globalAlpha = easeOutCubic(q); ctx.translate(cta.cx, cta.y + cta.h / 2); ctx.scale(pop * bob, pop * bob);
         const x = -cta.w / 2, y = -cta.h / 2; ctx.shadowColor = "rgba(20,70,10,.45)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
-        const g = ctx.createLinearGradient(0, y, 0, y + cta.h); g.addColorStop(0, "#b7f06a"); g.addColorStop(1, "#4fb21a"); ctx.fillStyle = g; rrPath(ctx, x, y, cta.w, cta.h, cta.h / 2); ctx.fill();
-        ctx.shadowColor = "transparent"; ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; rrPath(ctx, x, y, cta.w, cta.h, cta.h / 2); ctx.stroke();
-        ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#14400a"; ctx.font = "800 44px Fredoka,system-ui,sans-serif"; ctx.fillText("Start your streak", 0, -11);
-        ctx.font = "800 28px Nunito,system-ui,sans-serif"; ctx.letterSpacing = "2px"; ctx.fillText("proofofgrass.app", 0, 28); ctx.letterSpacing = "0px"; ctx.restore();
+        const g = ctx.createLinearGradient(0, y, 0, y + cta.h); g.addColorStop(0, "#fffef6"); g.addColorStop(1, "#f6edcf"); ctx.fillStyle = g; rrPath(ctx, x, y, cta.w, cta.h, cta.h / 2); ctx.fill();
+        ctx.shadowColor = "transparent"; ctx.lineWidth = 5; ctx.strokeStyle = "#4fb21a"; rrPath(ctx, x, y, cta.w, cta.h, cta.h / 2); ctx.stroke();
+        ctx.lineWidth = 2; ctx.strokeStyle = "rgba(246,185,59,.55)"; rrPath(ctx, x + 8, y + 8, cta.w - 16, cta.h - 16, cta.h / 2 - 8); ctx.stroke();
+        const sh = clamp01((t - 1900) / 800); if (sh > 0 && sh < 1) { ctx.save(); ctx.globalCompositeOperation = "lighter"; rrPath(ctx, x, y, cta.w, cta.h, cta.h / 2); ctx.clip(); const sx = x - 200 + (cta.w + 400) * easeOutCubic(sh), sg = ctx.createLinearGradient(sx - 90, 0, sx + 90, 0); sg.addColorStop(0, "rgba(255,255,255,0)"); sg.addColorStop(0.5, "rgba(120,220,60,.35)"); sg.addColorStop(1, "rgba(255,255,255,0)"); ctx.fillStyle = sg; ctx.fillRect(sx - 90, y, 180, cta.h); ctx.restore(); }
+        ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#2f7d10"; ctx.font = "800 44px Fredoka,system-ui,sans-serif"; ctx.fillText("Start your streak", 0, -11);
+        ctx.fillStyle = "#1f6b12"; ctx.font = "800 28px Nunito,system-ui,sans-serif"; ctx.letterSpacing = "2px"; ctx.fillText("proofofgrass.app", 0, 28); ctx.letterSpacing = "0px"; ctx.restore();
       }
     }
   };
