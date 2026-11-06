@@ -18,6 +18,7 @@ import { BANNER_PERMISSION_NOTE } from "../utils/groveBanners";
 
 import { withShareTags } from "../utils/shareTags";
 import Ico from "../components/Ico";
+import GroveToday from "../components/GroveToday";
 const ERRORS = {
   already_in_grove: "You're already in a grove. Leave it first to join another.",
   cooldown: "You recently left a grove. You can join or create another after the 48-hour cooldown.",
@@ -380,6 +381,8 @@ export default function GrovesPage() {
                   <button className="gv-btn2 gv-wide" onClick={downloadCard} disabled={!cardUrl}>Download image</button>
                 </div>
               </div>
+
+              {ident?.mine && <GroveToday username={username} refreshKey={data?.members?.map(m => m.locked_today ? 1 : 0).join("")} />}
 
               <div className="gv-card" id="gv-members">
                 <div className="gv-h" style={{ fontSize: 18 }}>Members</div>

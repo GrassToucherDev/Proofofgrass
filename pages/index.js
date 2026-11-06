@@ -8,6 +8,7 @@ import ShareCardSheet from "../components/ShareCardSheet";
 import { renderStreakCard, streakCaption, isStreakMilestone, STREAK_MILESTONES } from "../utils/streakShareCard";
 import Ico from "../components/Ico";
 import TodaysProofsStrip from "../components/TodaysProofsStrip";
+import NudgeBanner from "../components/NudgeBanner";
 import V2Nav from "../components/V2Nav";
 import FrightBitsHeroBanner from "../components/frightbits/FrightBitsHeroBanner";
 import V2BottomNav from "../components/V2BottomNav";
@@ -1002,6 +1003,7 @@ export default function Home() {
 
         </div>
 
+        <NudgeBanner username={username} hasPostedToday={hasPostedToday} />
         <TodaysProofsStrip />
 
         {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
