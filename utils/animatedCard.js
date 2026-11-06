@@ -192,14 +192,21 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
   // The foreground is a square layout: identity + streak at the top, stats + next badge + footer at the bottom, art showing between.
   // For tall formats we split it into those two groups and place each inside the platform safe areas (TikTok/Reels UI covers the top ~220px and bottom ~430px).
   const k0 = W / fgCanvas.width, FH = fgCanvas.height, TOP_H = Math.round(342 * (FH / 1080)), BOT_Y = Math.round(735 * (FH / 1080)), BOT_H = FH - BOT_Y - Math.round(10 * (FH / 1080));
-  let slices, hy;
-  if (format === "1:1") slices = [{ sy: 0, sh: FH, dy: 0 }];
-  else { // one compact block (headline, identity row, stats group) centred inside the platform safe area
-    const topPx = TOP_H * k0, botPx = BOT_H * k0, block = 110 + 40 + topPx + 60 + botPx;
-    const safeT = format === "9:16" ? 220 : 0, safeB = format === "9:16" ? 430 : 0;
-    const y0 = safeT + (H - safeT - safeB - block) / 2;
+  let slices, hy, cta = null;
+  if (format === "1:1") slices = [{ sy: 0, sh: FH, dy: 0, w: W, cx: W / 2 }];
+  else if (format === "9:16") {
+    // Tall (TikTok / Reels / Shorts): the right ~170px is covered by the button column from ~52% down, the bottom ~430px by caption + nav,
+    // the top ~220px by tabs. Identity row stays full width above the button column; the stats group is narrowed to sit left of it,
+    // and the footer is replaced by a bigger call-to-action strip that clears the buttons.
+    const SC = 0.8, CX = (W - 150) / 2, topPx = TOP_H * k0, botSh = Math.round(270 * (FH / 1080)), botPx = botSh * k0 * SC, block = 110 + 40 + topPx + 56 + botPx;
+    const y0 = 220 + (H - 220 - 430 - block) / 2;
+    hy = y0 + 55; const ty = y0 + 150, by = ty + topPx + 56;
+    slices = [{ sy: 0, sh: TOP_H, dy: ty, w: W, cx: W / 2 }, { sy: BOT_Y, sh: botSh, dy: by, w: W * SC, cx: CX }];
+    cta = { cx: CX, y: Math.max(by + botPx + 50, H - 560), w: 860, h: 104 };
+  } else { // 4:5
+    const topPx = TOP_H * k0, botPx = BOT_H * k0, block = 110 + 40 + topPx + 60 + botPx, y0 = (H - block) / 2;
     hy = y0 + 55; const ty = y0 + 150;
-    slices = [{ sy: 0, sh: TOP_H, dy: ty }, { sy: BOT_Y, sh: BOT_H, dy: ty + topPx + 60 }];
+    slices = [{ sy: 0, sh: TOP_H, dy: ty, w: W, cx: W / 2 }, { sy: BOT_Y, sh: BOT_H, dy: ty + topPx + 60, w: W, cx: W / 2 }];
   }
   const frame = (t) => {
     const s = t / 1000;
@@ -208,13 +215,13 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
     fx?.under?.(ctx, t);
     const k = clamp01(t / 700), a = easeOutCubic(clamp01(t / 450)), sc2 = 0.95 + 0.05 * easeOutBack(k), fl = Math.sin(s * 2) * 4 * clamp01((t - 600) / 400);
     slices.forEach((sl, i) => {
-      const dh = sl.sh * k0, late = clamp01((t - i * 150) / 450);
-      ctx.save(); ctx.globalAlpha = i ? easeOutCubic(late) : a; ctx.translate(W / 2, sl.dy + dh / 2 + (i ? -fl : fl)); ctx.scale(sc2, sc2);
-      ctx.drawImage(fgCanvas, 0, sl.sy, fgCanvas.width, sl.sh, -W / 2, -dh / 2, W, dh);
+      const dh = sl.sh * (sl.w / fgCanvas.width), late = clamp01((t - i * 150) / 450);
+      ctx.save(); ctx.globalAlpha = i ? easeOutCubic(late) : a; ctx.translate(sl.cx, sl.dy + dh / 2 + (i ? -fl : fl)); ctx.scale(sc2, sc2);
+      ctx.drawImage(fgCanvas, 0, sl.sy, fgCanvas.width, sl.sh, -sl.w / 2, -dh / 2, sl.w, dh);
       const sk = clamp01((t - 1200 - i * 250) / 900);
       if (sk > 0 && sk < 1) { // shine sweep
-        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.beginPath(); ctx.rect(-W / 2, -dh / 2, W, dh); ctx.clip();
-        const x = -W / 2 - 300 + (W + 600) * easeOutCubic(sk), g = ctx.createLinearGradient(x - 140, 0, x + 140, 0);
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.beginPath(); ctx.rect(-sl.w / 2, -dh / 2, sl.w, dh); ctx.clip();
+        const x = -sl.w / 2 - 300 + (sl.w + 600) * easeOutCubic(sk), g = ctx.createLinearGradient(x - 140, 0, x + 140, 0);
         g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(0.5, "rgba(255,255,255,.22)"); g.addColorStop(1, "rgba(255,255,255,0)");
         ctx.rotate(-0.35); ctx.fillStyle = g; ctx.fillRect(x - 140, -dh, 280, dh * 2); ctx.restore();
       }
@@ -227,6 +234,17 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
       while (ctx.measureText(headline).width > W * 0.88 && px > 48) { px -= 4; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`; }
       ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.globalAlpha = easeOutCubic(clamp01((t - 200) / 500));
       ctx.lineWidth = 22; ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.strokeText(headline, W / 2, hy); ctx.fillStyle = "#fff"; ctx.fillText(headline, W / 2, hy); ctx.restore();
+    }
+    if (cta) { // call-to-action strip (links aren't tappable in video, so say where to go)
+      const q = clamp01((t - 1300) / 500), pop = easeOutBack(q), bob = 1 + 0.015 * Math.sin(s * 3.2) * clamp01((t - 1900) / 300);
+      if (q > 0) {
+        ctx.save(); ctx.globalAlpha = easeOutCubic(q); ctx.translate(cta.cx, cta.y + cta.h / 2); ctx.scale(pop * bob, pop * bob);
+        const x = -cta.w / 2, y = -cta.h / 2; ctx.shadowColor = "rgba(20,70,10,.45)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
+        const g = ctx.createLinearGradient(0, y, 0, y + cta.h); g.addColorStop(0, "#b7f06a"); g.addColorStop(1, "#4fb21a"); ctx.fillStyle = g; rrPath(ctx, x, y, cta.w, cta.h, cta.h / 2); ctx.fill();
+        ctx.shadowColor = "transparent"; ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; rrPath(ctx, x, y, cta.w, cta.h, cta.h / 2); ctx.stroke();
+        ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#14400a"; ctx.font = "800 44px Fredoka,system-ui,sans-serif"; ctx.fillText("Start your streak", 0, -11);
+        ctx.font = "800 28px Nunito,system-ui,sans-serif"; ctx.letterSpacing = "2px"; ctx.fillText("proofofgrass.app", 0, 28); ctx.letterSpacing = "0px"; ctx.restore();
+      }
     }
   };
   return encodeCanvas(out, frame, { seconds, fps, onProgress });
