@@ -7,6 +7,7 @@ import V2Nav from "../components/V2Nav";
 import Ico from "../components/Ico";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 import { signInWithGoogle } from "../utils/googleSignIn";
+import SecureUsernameCard from "../components/SecureUsernameCard";
 
 function ago(iso) {
   const m = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -42,6 +43,7 @@ export default function Gallery() {
   const [hidden, setHidden] = useState(null); // null = unknown / not the owner
   const [reportState, setReportState] = useState("");
   const [reactErr, setReactErr] = useState("");
+  const [secured, setSecured] = useState(null); // null = checking, true = this Google account owns the username, false = not yet secured
 
   useEffect(() => { try { const u = localStorage.getItem("pog_username"); if (u) setUsername(u.replace(/@/g, "").toLowerCase().trim()); } catch {} }, []);
 
@@ -64,8 +66,8 @@ export default function Gallery() {
   useEffect(() => { if (authStatus === "loading") return; if (scope === "grove" && !username) return; load(null); }, [load, authStatus, scope, username]);
 
   useEffect(() => { // does the viewer own a username? then show their feed switch
-    if (!signedIn || !username) { setHidden(null); return; }
-    fetch("/api/gallery/visibility?username=" + encodeURIComponent(username)).then((r) => r.ok ? r.json() : null).then((j) => setHidden(j && !j.unavailable ? !!j.hidden : null)).catch(() => setHidden(null));
+    if (!signedIn || !username) { setHidden(null); setSecured(null); return; }
+    fetch("/api/gallery/visibility?username=" + encodeURIComponent(username)).then(async (r) => { setSecured(r.ok); return r.ok ? r.json() : null; }).then((j) => setHidden(j && !j.unavailable ? !!j.hidden : null)).catch(() => setHidden(null));
   }, [signedIn, username]);
 
   const toggleHidden = async () => {
@@ -88,7 +90,7 @@ export default function Gallery() {
     apply(!was);
     try {
       const r = await fetch("/api/gallery/react", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ as: username, username: it.username, day: it.day, kind, on: !was }) });
-      if (!r.ok) { apply(was); const j = await r.json().catch(() => ({})); setReactErr(j.error || "Couldn't save your reaction. Try again."); } else { setReactErr(""); const j = await r.json(); if (j.counts) { const sync = (x) => key(x) ? { ...x, reactions: j.counts } : x; setItems((p) => p.map(sync)); setOpen((o) => (o && key(o) ? sync(o) : o)); } }
+      if (!r.ok) { apply(was); const j = await r.json().catch(() => ({})); setReactErr(j.code === "unclaimed" ? "Secure your username with Google to react." : j.error || "Couldn't save your reaction. Try again."); } else { setReactErr(""); const j = await r.json(); if (j.counts) { const sync = (x) => key(x) ? { ...x, reactions: j.counts } : x; setItems((p) => p.map(sync)); setOpen((o) => (o && key(o) ? sync(o) : o)); } }
     } catch { apply(was); setReactErr("Couldn't save your reaction. Check your connection."); }
   };
   const broken = (it) => setItems((prev) => prev.filter((p) => !(p.username === it.username && p.day === it.day)));
@@ -175,7 +177,13 @@ export default function Gallery() {
                 <div><Link href={`/u/${open.username}`} className="gal-link">@{open.username}</Link><div style={{ fontSize: 13, color: "#4b6240" }}>Day {open.streak} · {open.tier.name} · {ago(open.created_at)}</div></div>
                 <button className="gal-tab" onClick={close}>Close</button>
               </div>
-              {signedIn && username && open.username !== username && (
+              {signedIn && username && open.username !== username && secured === false && (
+                <div style={{ padding: "4px 16px 12px" }}>
+                  <p style={{ margin: "0 0 8px", fontSize: 13.5, color: "#4b6240" }}>To react to or report a photo, secure your username with Google first.</p>
+                  <SecureUsernameCard username={username} onClaimed={() => setSecured(true)} />
+                </div>
+              )}
+              {signedIn && username && open.username !== username && secured !== false && (
                 <div className="gal-rx">
                   {[["leaf", "Grass"], ["fire", "Fire"]].map(([k, l]) => (
                     <button key={k} className={"gal-rxb" + (open.mine?.[k] ? " on" : "")} onClick={() => react(open, k)} aria-pressed={!!open.mine?.[k]}>
@@ -185,7 +193,7 @@ export default function Gallery() {
                 </div>
               )}
               {reactErr && <div style={{ padding: "0 16px 10px", fontSize: 13, color: "#8a3b2b" }}>{reactErr}</div>}
-              {signedIn && username && open.username !== username && (
+              {signedIn && username && open.username !== username && secured === true && (
                 <div className="row" style={{ paddingTop: 0 }}>
                   {reportState === "sent" ? <span style={{ fontSize: 13, color: "#4b6240" }}>Thanks, we'll take a look.</span>
                     : <button className="gal-report" disabled={reportState === "sending"} onClick={() => report(open)}>{reportState === "error" ? "Couldn't send, try again" : "Report this photo"}</button>}
