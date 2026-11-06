@@ -8,6 +8,8 @@ import Ico from "../components/Ico";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 import { signInWithGoogle } from "../utils/googleSignIn";
 import SecureUsernameCard from "../components/SecureUsernameCard";
+import ShareCardSheet from "../components/ShareCardSheet";
+import { renderPodCard, podCaption } from "../utils/podShareCard";
 
 function ago(iso) {
   const m = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -37,6 +39,7 @@ export default function Gallery() {
   const [items, setItems] = useState([]);
   const [next, setNext] = useState(null);
   const [featured, setFeatured] = useState(null);
+  const [sharingWin, setSharingWin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [noGrove, setNoGrove] = useState(false);
@@ -105,6 +108,7 @@ export default function Gallery() {
     .gal-pod{position:relative;display:block;width:100%;max-width:420px;aspect-ratio:4/5;margin:18px 0 0;border:0;padding:0;border-radius:20px;overflow:hidden;cursor:pointer;background:#dfeccf;box-shadow:0 0 0 3px #f4c542,0 8px 24px rgba(26,74,10,.2)}
     .gal-pod img{width:100%;height:100%;object-fit:cover;display:block}
     .gal-podtag{position:absolute;top:10px;left:10px;background:#f4c542;color:#4a3500;font-weight:800;font-size:13px;padding:5px 11px;border-radius:999px;display:flex;align-items:center;gap:5px}
+    .gal-podshare{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;max-width:420px;margin-top:10px;border:0;border-radius:999px;padding:12px 16px;background:linear-gradient(180deg,#f9d06b,#f4b52e);color:#3d2c00;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
     .gal-tabs{display:flex;gap:8px;margin:18px 0;flex-wrap:wrap}
     .gal-tab{border:1.5px solid ${V2.borderSoft};background:#fff;border-radius:999px;padding:8px 16px;font-weight:700;font-size:14px;color:${V2.forestGreen};cursor:pointer}
     .gal-tab.on{background:linear-gradient(180deg,#7dd321,#4fb21a);color:#fff;border-color:#4fb21a}
@@ -158,6 +162,16 @@ export default function Gallery() {
               <span className="gal-podtag"><Ico n="crown" size={18} inline /> Proof of the Day</span>
               <span className="gal-meta"><b>@{featured.username}</b><small>Day {featured.streak} · {featured.reactions.leaf + featured.reactions.fire} reactions{featured.place ? ` · ${featured.place}` : ""}</small></span>
             </button>
+          )}
+
+          {featured && scope === "all" && featured.username === username && (
+            <>
+              <button className="gal-podshare" onClick={() => setSharingWin(true)}><Ico n="share" size={18} inline /> You won Proof of the Day. Share your card</button>
+              {sharingWin && (
+                <ShareCardSheet title="Share your win" caption={podCaption(username)} filename={`proof-of-the-day-${username}.png`}
+                  render={() => renderPodCard({ username, photo: featured.photo, streak: featured.streak, reactions: featured.reactions })} onClose={() => setSharingWin(false)} />
+              )}
+            </>
           )}
 
           <div className="gal-tabs">
