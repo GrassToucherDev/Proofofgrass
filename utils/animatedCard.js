@@ -183,8 +183,28 @@ export async function renderAnimatedCard(staticCard, { format = "4:5", seconds =
 
 // Flex card: animated cover art behind the (static, transparent-background) foreground panel.
 // fgCanvas: drawFlexCard output on a transparent canvas (1080×1080). bgImage: the cover art (or null).
+// Per-pack entrance styles for the staggered card pieces. at(q) gives the transform at progress q (0..1); fx draws extras on the piece.
+const lerp = (a, b, k) => a + (b - a) * k;
+const ENTRANCE = {
+  pop: { dur: 520, df: 1, at: (q) => ({ dx: 0, dy: 0, sx: 0.7 + 0.3 * easeOutBack(q), sy: 0.7 + 0.3 * easeOutBack(q), a: easeOutCubic(clamp01(q * 1.6)) }) },
+  // Aqua: drops up from below with a squash-and-bounce, like a splash
+  splash: { dur: 600, df: 1, at: (q) => { const e = easeOutBack(q), sq = Math.sin(Math.PI * clamp01((q - 0.45) / 0.4)) * 0.07; return { dx: 0, dy: lerp(80, 0, e), sx: lerp(0.85, 1, e) + sq, sy: lerp(0.85, 1, e) - sq, a: easeOutCubic(clamp01(q * 2)) }; } },
+  // Bubble: rises and wobbles in, then a soft ring pops out as it lands
+  float: { dur: 800, df: 1.1, at: (q, i) => ({ dx: Math.sin(q * 7 + i) * 18 * (1 - q), dy: lerp(150, 0, easeOutCubic(q)), sx: lerp(0.88, 1, easeOutBack(q)), sy: lerp(0.88, 1, easeOutBack(q)), a: easeOutCubic(clamp01(q * 1.5)) }),
+    fx: (c, q, x, y, w, h) => { const r = clamp01((q - 0.7) / 0.3); if (r > 0 && r < 1) { c.save(); c.globalAlpha = 0.55 * (1 - r); c.lineWidth = 5; c.strokeStyle = "#fff"; rrPath(c, x - 10 * r * 3, y - 10 * r * 3, w + 60 * r, h + 60 * r, 40 + 20 * r); c.stroke(); c.restore(); } } },
+  // Dream: slow soft fade with a bright bloom that settles
+  bloom: { dur: 900, df: 1.3, at: (q) => ({ dx: 0, dy: lerp(14, 0, easeOutCubic(q)), sx: lerp(0.94, 1, easeOutCubic(q)), sy: lerp(0.94, 1, easeOutCubic(q)), a: easeOutCubic(q) }),
+    fx: (c, q, x, y, w, h, img, sx0, sy0, sw, sh) => { const b = 0.6 * (1 - q) * Math.sin(Math.PI * Math.min(1, q * 1.4)); if (b > 0.01) { c.save(); c.globalCompositeOperation = "lighter"; c.globalAlpha = b; c.shadowColor = "rgba(255,255,255,.9)"; c.shadowBlur = 40; c.drawImage(img, sx0, sy0, sw, sh, x, y, w, h); c.restore(); } } },
+  // Cyber: quick snap in from alternating sides, a flicker, and a scanline sweeping down the piece
+  snap: { dur: 320, df: 0.55, at: (q, i) => ({ dx: lerp(i % 2 ? 110 : -110, 0, easeOutCubic(q)), dy: 0, sx: 1, sy: 1, a: q < 0.7 ? (Math.floor(q * 24) % 2 ? 0.35 : 0.95) : 1 }),
+    fx: (c, q, x, y, w, h) => { if (q < 1) { c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip(); const ly = y + h * q; c.globalCompositeOperation = "lighter"; c.fillStyle = "rgba(110,255,220,.85)"; c.fillRect(x, ly - 3, w, 6); const g = c.createLinearGradient(0, ly - 40, 0, ly); g.addColorStop(0, "rgba(110,255,220,0)"); g.addColorStop(1, "rgba(110,255,220,.28)"); c.fillStyle = g; c.fillRect(x, ly - 40, w, 40); c.restore(); } } },
+  // Chrome: pop-in with a polished metal glint sweeping across each piece
+  glint: { dur: 560, df: 1, at: (q) => ({ dx: 0, dy: 0, sx: 0.78 + 0.22 * easeOutBack(q), sy: 0.78 + 0.22 * easeOutBack(q), a: easeOutCubic(clamp01(q * 1.6)) }),
+    fx: (c, q, x, y, w, h) => { const r = clamp01((q - 0.35) / 0.65); if (r > 0 && r < 1) { c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip(); c.globalCompositeOperation = "lighter"; const gx = x - 120 + (w + 240) * easeOutCubic(r), g = c.createLinearGradient(gx - 70, 0, gx + 70, 0); g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(0.5, "rgba(255,255,255,.7)"); g.addColorStop(1, "rgba(255,255,255,0)"); c.translate(gx, y + h / 2); c.rotate(-0.4); c.translate(-gx, -(y + h / 2)); c.fillStyle = g; c.fillRect(gx - 70, y - h, 140, h * 3); c.restore(); } } },
+};
+
 // motion: { stagger, countUp, barFill }. countUp / barFill need the foreground drawn with p.skipNumber / p.skipFill and its returned geom + streak passed here.
-export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", seconds = 4, fps = 30, fx, headline = "", onProgress, motion = {}, geom = null, streak = 1 } = {}) {
+export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", seconds = 4, fps = 30, fx, headline = "", onProgress, motion = {}, geom = null, streak = 1, entrance = "pop" } = {}) {
   if (!pickRecorderMime()) return null;
   const W = 1080, H = format === "9:16" ? 1920 : format === "4:5" ? 1350 : 1080;
   const out = document.createElement("canvas"); out.width = W; out.height = H;
@@ -240,14 +260,16 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
       const m = sl.w / fgCanvas.width, dh = sl.sh * m;
       if (motion.stagger) {
         const ox = sl.cx - sl.w / 2, oy = sl.dy - sl.sy * m;
-        PIECES.forEach(([px, py, pw, ph, dl, plate, bar]) => {
+        PIECES.forEach(([px, py, pw, ph, dl, plate, bar], pi) => {
           const y0 = Math.max(py, sl.sy), y1 = Math.min(py + ph, sl.sy + sl.sh);
           if (y1 - y0 < ph * 0.5 || py + ph / 2 < sl.sy || py + ph / 2 > sl.sy + sl.sh) return;
-          const q = clamp01((t - dl) / 520), pop = 0.7 + 0.3 * easeOutBack(q), x = ox + px * m, y = oy + y0 * m, w = pw * m, h = (y1 - y0) * m;
+          const E = ENTRANCE[entrance] || ENTRANCE.pop, q = clamp01((t - dl * E.df) / E.dur), x = ox + px * m, y = oy + y0 * m, w = pw * m, h = (y1 - y0) * m;
           if (q <= 0) return;
-          ctx.save(); ctx.globalAlpha = easeOutCubic(clamp01(q * 1.6)); ctx.translate(x + w / 2, y + h / 2 + (i ? -fl : fl)); ctx.scale(pop, pop); ctx.translate(-(x + w / 2), -(y + h / 2));
+          const T = E.at(q, pi, m); // { dx, dy, sx, sy, a }
+          ctx.save(); ctx.globalAlpha = T.a; ctx.translate(x + w / 2 + T.dx, y + h / 2 + T.dy + (i ? -fl : fl)); ctx.scale(T.sx, T.sy); ctx.translate(-(x + w / 2), -(y + h / 2));
           ctx.drawImage(fgCanvas, px, y0, pw, y1 - y0, x, y, w, h);
           ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.translate(ox, oy); ctx.scale(m, m); dyn(plate, bar); ctx.restore();
+          if (E.fx) E.fx(ctx, q, x, y, w, h, fgCanvas, px, y0, pw, y1 - y0);
           ctx.restore();
         });
         return;

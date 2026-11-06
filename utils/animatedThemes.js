@@ -71,3 +71,7 @@ export function y2kFx(variant, W, H) {
   };
 }
 export const fxForVariant = (variant, W, H) => (variant ? y2kFx(variant, W, H) : null);
+
+// Entrance style for each pack's card pieces (used by renderAnimatedFlex).
+export const ENTRANCE_BY_VARIANT = { aqua: "splash", bubble: "float", dream: "bloom", cyber: "snap", chrome: "glint" };
+export const entranceForVariant = (v) => ENTRANCE_BY_VARIANT[v] || "pop";
