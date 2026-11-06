@@ -192,17 +192,19 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
   // The foreground is a square layout: identity + streak at the top, stats + next badge + footer at the bottom, art showing between.
   // For tall formats we split it into those two groups and place each inside the platform safe areas (TikTok/Reels UI covers the top ~220px and bottom ~430px).
   const k0 = W / fgCanvas.width, FH = fgCanvas.height, TOP_H = Math.round(342 * (FH / 1080)), BOT_Y = Math.round(735 * (FH / 1080)), BOT_H = FH - BOT_Y - Math.round(10 * (FH / 1080));
-  let slices, hy, cta = null;
+  let slices, hy, cta = null, hmax = W * 0.88;
   if (format === "1:1") slices = [{ sy: 0, sh: FH, dy: 0, w: W, cx: W / 2 }];
   else if (format === "9:16") {
     // Tall (TikTok / Reels / Shorts): the right ~170px is covered by the button column from ~52% down, the bottom ~430px by caption + nav,
     // the top ~220px by tabs. Identity row stays full width above the button column; the stats group is narrowed to sit left of it,
     // and the footer is replaced by a bigger call-to-action strip that clears the buttons.
-    const SC = 0.8, CX = (W - 150) / 2, topPx = TOP_H * k0, botSh = Math.round(270 * (FH / 1080)), botPx = botSh * k0 * SC, block = 110 + 40 + topPx + 56 + botPx;
-    const y0 = 220 + (H - 220 - 430 - block) / 2;
+    // Measured on a real phone: the feed scales 9:16 to fill a taller screen and trims ~9% off each side, so everything stays ~110px in.
+    // The button column (x > ~865) begins ~875px down, so the stats group and button sit left of it.
+    const TS = 0.8, BS = 0.68, TCX = W / 2, BCX = (110 + 855) / 2, topPx = TOP_H * k0 * TS, botSh = Math.round(270 * (FH / 1080)), botPx = botSh * k0 * BS, ctaH = 104;
+    const block = 110 + 40 + topPx + 56 + botPx + 44 + ctaH, y0 = 220 + (H - 220 - 430 - block) / 2 - 40;
     hy = y0 + 55; const ty = y0 + 150, by = ty + topPx + 56;
-    slices = [{ sy: 0, sh: TOP_H, dy: ty, w: W, cx: W / 2 }, { sy: BOT_Y, sh: botSh, dy: by, w: W * SC, cx: CX }];
-    cta = { cx: CX, y: Math.max(by + botPx + 50, H - 560), w: 860, h: 104 };
+    slices = [{ sy: 0, sh: TOP_H, dy: ty, w: W * TS, cx: TCX }, { sy: BOT_Y, sh: botSh, dy: by, w: W * BS, cx: BCX }];
+    cta = { cx: BCX, y: by + botPx + 44, w: W * BS, h: ctaH }; hmax = W * 0.78;
   } else { // 4:5
     const topPx = TOP_H * k0, botPx = BOT_H * k0, block = 110 + 40 + topPx + 60 + botPx, y0 = (H - block) / 2;
     hy = y0 + 55; const ty = y0 + 150;
@@ -231,7 +233,7 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
     fx?.over?.(ctx, t);
     if (headline && format !== "1:1") {
       let px = 112; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`;
-      while (ctx.measureText(headline).width > W * 0.88 && px > 48) { px -= 4; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`; }
+      while (ctx.measureText(headline).width > hmax && px > 48) { px -= 4; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`; }
       ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.globalAlpha = easeOutCubic(clamp01((t - 200) / 500));
       ctx.lineWidth = 22; ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.strokeText(headline, W / 2, hy); ctx.fillStyle = "#fff"; ctx.fillText(headline, W / 2, hy); ctx.restore();
     }
