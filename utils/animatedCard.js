@@ -79,15 +79,17 @@ export const loadImg = ld;
 // Returns the image→canvas transform so theme effects can anchor to spots in the art (sun, flowers, waterfalls…).
 export function drawCoverBg(ctx, img, W, H, tMs, durMs) {
   const s = tMs / 1000, wide = img.width / img.height >= 1.8;
+  // The Y2K panoramas have a thin white seam baked in ~3.5% from the top and bottom edges; skip those bands for wide covers.
+  const cy = wide ? Math.round(img.height * 0.045) : 0, ih = img.height - cy * 2;
   let z = wide ? 1.0 : 1.1 + 0.03 * Math.sin(s * 0.9);
-  const sc = Math.max(W / img.width, H / img.height) * z;
+  const sc = Math.max(W / img.width, H / ih) * z;
   let ox, oy;
   if (wide) {
     const range = Math.max(0, img.width * sc - W), u = 0.5 - 0.5 * Math.cos(Math.PI * clamp01(tMs / durMs));
-    ox = -range * (0.12 + 0.76 * u); oy = (H - img.height * sc) / 2;
+    ox = -range * (0.12 + 0.76 * u); oy = (H - ih * sc) / 2;
   } else { ox = (W - img.width * sc) / 2 + Math.sin(s * 0.6) * 24; oy = (H - img.height * sc) / 2 + Math.cos(s * 0.5) * 18; }
-  ctx.drawImage(img, ox, oy, img.width * sc, img.height * sc);
-  return { ox, oy, sc, k: img.width / 2000 };
+  ctx.drawImage(img, 0, cy, img.width, ih, ox, oy, img.width * sc, ih * sc);
+  return { ox, oy: oy - cy * sc, sc, k: img.width / 2000 };
 }
 
 function star(ctx, x, y, r, rot) {
@@ -187,29 +189,39 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
   const out = document.createElement("canvas"); out.width = W; out.height = H;
   const ctx = out.getContext("2d");
   try { await Promise.all([document.fonts.load("800 80px Fredoka"), document.fonts.load("800 24px Nunito")]); } catch {}
-  const fgW = W, fgH = fgCanvas.height * (W / fgCanvas.width), fgY = (H - fgH) / 2 + (format === "9:16" ? 30 : 0);
+  // The foreground is a square layout: identity + streak at the top, stats + next badge + footer at the bottom, art showing between.
+  // For tall formats we split it into those two groups and place each inside the platform safe areas (TikTok/Reels UI covers the top ~220px and bottom ~430px).
+  const k0 = W / fgCanvas.width, FH = fgCanvas.height, TOP_H = Math.round(342 * (FH / 1080)), BOT_Y = Math.round(735 * (FH / 1080)), BOT_H = FH - BOT_Y - Math.round(10 * (FH / 1080));
+  let slices, hy;
+  if (format === "9:16") { slices = [{ sy: 0, sh: TOP_H, dy: 330 }, { sy: BOT_Y, sh: BOT_H, dy: H - 440 - BOT_H * k0 }]; hy = 250; }
+  else if (format === "4:5") { slices = [{ sy: 0, sh: TOP_H, dy: 170 }, { sy: BOT_Y, sh: BOT_H, dy: H - 30 - BOT_H * k0 }]; hy = 92; }
+  else slices = [{ sy: 0, sh: FH, dy: 0 }];
   const frame = (t) => {
     const s = t / 1000;
     ctx.fillStyle = "#0b0b12"; ctx.fillRect(0, 0, W, H);
     if (bgImage) { const tf = drawCoverBg(ctx, bgImage, W, H, t, seconds * 1000); fx?.bg?.(ctx, t, tf); }
     fx?.under?.(ctx, t);
     const k = clamp01(t / 700), a = easeOutCubic(clamp01(t / 450)), sc2 = 0.95 + 0.05 * easeOutBack(k), fl = Math.sin(s * 2) * 4 * clamp01((t - 600) / 400);
-    ctx.save(); ctx.globalAlpha = a; ctx.translate(W / 2, fgY + fgH / 2 + fl); ctx.scale(sc2, sc2);
-    ctx.drawImage(fgCanvas, -fgW / 2, -fgH / 2, fgW, fgH);
-    const sk = clamp01((t - 1200) / 900);
-    if (sk > 0 && sk < 1) { // shine sweep
-      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.beginPath(); ctx.rect(-fgW / 2, -fgH / 2, fgW, fgH); ctx.clip();
-      const x = -fgW / 2 - 300 + (fgW + 600) * easeOutCubic(sk), g = ctx.createLinearGradient(x - 140, 0, x + 140, 0);
-      g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(0.5, "rgba(255,255,255,.22)"); g.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.rotate(-0.35); ctx.fillStyle = g; ctx.fillRect(x - 140, -fgH, 280, fgH * 2); ctx.restore();
-    }
-    ctx.restore(); ctx.globalAlpha = 1;
+    slices.forEach((sl, i) => {
+      const dh = sl.sh * k0, late = clamp01((t - i * 150) / 450);
+      ctx.save(); ctx.globalAlpha = i ? easeOutCubic(late) : a; ctx.translate(W / 2, sl.dy + dh / 2 + (i ? -fl : fl)); ctx.scale(sc2, sc2);
+      ctx.drawImage(fgCanvas, 0, sl.sy, fgCanvas.width, sl.sh, -W / 2, -dh / 2, W, dh);
+      const sk = clamp01((t - 1200 - i * 250) / 900);
+      if (sk > 0 && sk < 1) { // shine sweep
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.beginPath(); ctx.rect(-W / 2, -dh / 2, W, dh); ctx.clip();
+        const x = -W / 2 - 300 + (W + 600) * easeOutCubic(sk), g = ctx.createLinearGradient(x - 140, 0, x + 140, 0);
+        g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(0.5, "rgba(255,255,255,.22)"); g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.rotate(-0.35); ctx.fillStyle = g; ctx.fillRect(x - 140, -dh, 280, dh * 2); ctx.restore();
+      }
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
     fx?.over?.(ctx, t);
     if (headline && format !== "1:1") {
-      let px = 104; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`;
-      while (ctx.measureText(headline).width > W * 0.9 && px > 48) { px -= 4; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`; }
+      let px = 112; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`;
+      while (ctx.measureText(headline).width > W * 0.88 && px > 48) { px -= 4; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`; }
       ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.globalAlpha = easeOutCubic(clamp01((t - 200) / 500));
-      const hy = fgY - 90; ctx.lineWidth = 20; ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.strokeText(headline, W / 2, hy); ctx.fillStyle = "#fff"; ctx.fillText(headline, W / 2, hy); ctx.restore();
+      ctx.lineWidth = 22; ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.strokeText(headline, W / 2, hy); ctx.fillStyle = "#fff"; ctx.fillText(headline, W / 2, hy); ctx.restore();
     }
   };
   return encodeCanvas(out, frame, { seconds, fps, onProgress });
