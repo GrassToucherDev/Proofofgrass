@@ -7,6 +7,7 @@ import ResultCard from "../components/ResultCard";
 import ShareCardSheet from "../components/ShareCardSheet";
 import { renderStreakCard, streakCaption, isStreakMilestone, STREAK_MILESTONES } from "../utils/streakShareCard";
 import Ico from "../components/Ico";
+import TodaysProofsStrip from "../components/TodaysProofsStrip";
 import V2Nav from "../components/V2Nav";
 import FrightBitsHeroBanner from "../components/frightbits/FrightBitsHeroBanner";
 import V2BottomNav from "../components/V2BottomNav";
@@ -1000,6 +1001,8 @@ export default function Home() {
           />
 
         </div>
+
+        <TodaysProofsStrip />
 
         {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
         <div style={{ padding: "28px clamp(14px,4vw,40px) 4px", display: "flex", alignItems: "center", gap: 12 }}>
