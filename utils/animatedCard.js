@@ -235,7 +235,9 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
       let px = 112; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`;
       while (ctx.measureText(headline).width > hmax && px > 48) { px -= 4; ctx.font = `800 ${px}px Fredoka,system-ui,sans-serif`; }
       ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.globalAlpha = easeOutCubic(clamp01((t - 200) / 500));
-      ctx.lineWidth = 22; ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.strokeText(headline, W / 2, hy); ctx.fillStyle = "#fff"; ctx.fillText(headline, W / 2, hy); ctx.restore();
+      ctx.letterSpacing = "3px"; ctx.miterLimit = 2;
+      ctx.shadowColor = "rgba(8,40,10,.45)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 8; ctx.lineWidth = 18; ctx.strokeStyle = "#14400a"; ctx.strokeText(headline, W / 2, hy);
+      ctx.shadowColor = "transparent"; ctx.fillStyle = "#fff"; ctx.fillText(headline, W / 2, hy); ctx.restore();
     }
     if (cta) { // call-to-action strip (links aren't tappable in video, so say where to go)
       const q = clamp01((t - 1300) / 500), pop = easeOutBack(q), bob = 1 + 0.015 * Math.sin(s * 3.2) * clamp01((t - 1900) / 300);
