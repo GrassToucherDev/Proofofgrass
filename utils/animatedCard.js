@@ -193,9 +193,14 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
   // For tall formats we split it into those two groups and place each inside the platform safe areas (TikTok/Reels UI covers the top ~220px and bottom ~430px).
   const k0 = W / fgCanvas.width, FH = fgCanvas.height, TOP_H = Math.round(342 * (FH / 1080)), BOT_Y = Math.round(735 * (FH / 1080)), BOT_H = FH - BOT_Y - Math.round(10 * (FH / 1080));
   let slices, hy;
-  if (format === "9:16") { slices = [{ sy: 0, sh: TOP_H, dy: 330 }, { sy: BOT_Y, sh: BOT_H, dy: H - 440 - BOT_H * k0 }]; hy = 250; }
-  else if (format === "4:5") { slices = [{ sy: 0, sh: TOP_H, dy: 170 }, { sy: BOT_Y, sh: BOT_H, dy: H - 30 - BOT_H * k0 }]; hy = 92; }
-  else slices = [{ sy: 0, sh: FH, dy: 0 }];
+  if (format === "1:1") slices = [{ sy: 0, sh: FH, dy: 0 }];
+  else { // one compact block (headline, identity row, stats group) centred inside the platform safe area
+    const topPx = TOP_H * k0, botPx = BOT_H * k0, block = 110 + 40 + topPx + 60 + botPx;
+    const safeT = format === "9:16" ? 220 : 0, safeB = format === "9:16" ? 430 : 0;
+    const y0 = safeT + (H - safeT - safeB - block) / 2;
+    hy = y0 + 55; const ty = y0 + 150;
+    slices = [{ sy: 0, sh: TOP_H, dy: ty }, { sy: BOT_Y, sh: BOT_H, dy: ty + topPx + 60 }];
+  }
   const frame = (t) => {
     const s = t / 1000;
     ctx.fillStyle = "#0b0b12"; ctx.fillRect(0, 0, W, H);
