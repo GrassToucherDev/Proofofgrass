@@ -19,7 +19,7 @@ export default function TodaysProofsStrip() {
         .tps-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 8px}
         .tps-title{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:${V2.grassGreen}}
         .tps-all{font-size:13px;font-weight:800;color:${V2.forestGreen};text-decoration:none;white-space:nowrap}
-        .tps-row{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+        .tps-row{display:flex;gap:10px;overflow-x:auto;margin:0 calc(-1 * clamp(14px,4vw,40px));padding:2px clamp(14px,4vw,40px) 8px;scroll-padding-left:clamp(14px,4vw,40px);scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none}
         .tps-row::-webkit-scrollbar{display:none}
         .tps-tile{position:relative;flex:0 0 auto;width:92px;height:116px;border-radius:14px;overflow:hidden;background:#dfeccf;box-shadow:0 3px 10px rgba(26,74,10,.14);scroll-snap-align:start;display:block}
         .tps-tile img{width:100%;height:100%;object-fit:cover;display:block}

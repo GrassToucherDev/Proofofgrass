@@ -19,6 +19,7 @@ function Tile({ it, onOpen, onBroken }) {
       <img src={it.photo} alt="" loading="lazy" onError={() => onBroken(it)} />
       <span className="gal-shade" />
       <span className="gal-streak" style={{ background: it.tier.color }}><Ico n="flame" size={14} inline /> Day {it.streak}</span>
+      {(it.reactions.leaf + it.reactions.fire) > 0 && <span className="gal-react"><Ico n="leaf" size={13} inline /> {it.reactions.leaf + it.reactions.fire}</span>}
       <span className="gal-meta">
         <b>@{it.username}</b>
         <small>{ago(it.created_at)}{it.place ? ` · ${it.place}` : ""}</small>
@@ -77,6 +78,18 @@ export default function Gallery() {
       setReportState(r.ok ? "sent" : "error");
     } catch { setReportState("error"); }
   };
+  const react = async (it, kind) => {
+    const was = !!it.mine?.[kind], key = (x) => x.username === it.username && x.day === it.day;
+    const apply = (on) => {
+      const patch = (x) => key(x) ? { ...x, mine: { ...x.mine, [kind]: on }, reactions: { ...x.reactions, [kind]: Math.max(0, (x.reactions[kind] || 0) + (on ? 1 : -1)) } } : x;
+      setItems((prev) => prev.map(patch)); setOpen((o) => (o && key(o) ? patch(o) : o));
+    };
+    apply(!was);
+    try {
+      const r = await fetch("/api/gallery/react", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ as: username, username: it.username, day: it.day, kind, on: !was }) });
+      if (!r.ok) apply(was); else { const j = await r.json(); if (j.counts) { const sync = (x) => key(x) ? { ...x, reactions: j.counts } : x; setItems((p) => p.map(sync)); setOpen((o) => (o && key(o) ? sync(o) : o)); } }
+    } catch { apply(was); }
+  };
   const broken = (it) => setItems((prev) => prev.filter((p) => !(p.username === it.username && p.day === it.day)));
   const close = () => { setOpen(null); setReportState(""); };
 
@@ -94,6 +107,10 @@ export default function Gallery() {
     .gal-tile img{width:100%;height:100%;object-fit:cover;display:block}
     .gal-shade{position:absolute;inset:auto 0 0 0;height:55%;background:linear-gradient(180deg,transparent,rgba(0,0,0,.62))}
     .gal-streak{position:absolute;top:8px;left:8px;color:#fff;font-weight:800;font-size:12px;padding:4px 9px;border-radius:999px;text-shadow:0 1px 2px rgba(0,0,0,.35);display:flex;align-items:center;gap:4px}
+    .gal-react{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.92);color:#2f6d12;font-weight:800;font-size:12px;padding:3px 8px;border-radius:999px;display:flex;align-items:center;gap:4px}
+    .gal-rx{display:flex;gap:10px;padding:2px 16px 14px}
+    .gal-rxb{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid ${V2.borderSoft};background:#fff;border-radius:999px;padding:10px 12px;font-weight:800;font-size:15px;color:${V2.forestGreen};cursor:pointer}
+    .gal-rxb.on{background:linear-gradient(180deg,#e9f9d2,#cdeeA0);border-color:#4fb21a}
     .gal-meta{position:absolute;left:10px;right:10px;bottom:9px;color:#fff;text-align:left;display:flex;flex-direction:column;gap:1px}
     .gal-meta b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .gal-meta small{font-size:11.5px;opacity:.9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -157,6 +174,15 @@ export default function Gallery() {
                 <div><Link href={`/u/${open.username}`} className="gal-link">@{open.username}</Link><div style={{ fontSize: 13, color: "#4b6240" }}>Day {open.streak} · {open.tier.name} · {ago(open.created_at)}</div></div>
                 <button className="gal-tab" onClick={close}>Close</button>
               </div>
+              {signedIn && username && open.username !== username && (
+                <div className="gal-rx">
+                  {[["leaf", "Grass"], ["fire", "Fire"]].map(([k, l]) => (
+                    <button key={k} className={"gal-rxb" + (open.mine?.[k] ? " on" : "")} onClick={() => react(open, k)} aria-pressed={!!open.mine?.[k]}>
+                      <Ico n={k === "leaf" ? "leaf" : "flame"} size={20} inline /> {open.reactions?.[k] || 0}<span style={{ fontWeight: 600, fontSize: 12.5 }}>{l}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               {signedIn && username && open.username !== username && (
                 <div className="row" style={{ paddingTop: 0 }}>
                   {reportState === "sent" ? <span style={{ fontSize: 13, color: "#4b6240" }}>Thanks, we'll take a look.</span>

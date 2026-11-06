@@ -16,6 +16,8 @@ const MILESTONE_LABELS = {
   lucky_touch_rare:   "got a Rare Lucky Touch ✨",
   lucky_touch_common: "got a Lucky Touch 🍀",
   lucky_touch_legendary: "got the Sun's Blessing ☀️",
+  proof_loved_5:  "got 5 reactions on today's proof 🍃",
+  proof_loved_10: "got 10 reactions on today's proof 🔥",
 };
 
 export default function V2Ticker() {

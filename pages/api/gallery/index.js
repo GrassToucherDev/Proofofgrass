@@ -39,7 +39,7 @@ export default async function handler(req, res) {
   if (error) { console.error("[gallery]", error.message); return res.status(500).json({ error: "Could not load the gallery." }); }
 
   const names = [...new Set((subs || []).map((s) => cleanUsername(s.username)))];
-  const meta = {}, streaks = {}, reports = {};
+  const meta = {}, streaks = {}, reports = {}, reacts = {}, mine = {};
   if (names.length) {
     let prof = await db.from("Profiles").select("username,avatar_url,avatar_emoji,feed_hidden").in("username", names);
     if (prof.error) prof = await db.from("Profiles").select("username,avatar_url,avatar_emoji").in("username", names); // column not added yet
@@ -47,6 +47,15 @@ export default async function handler(req, res) {
     const st = await db.from("Streaks").select("username,current_streak").in("username", names);
     (st.data || []).forEach((r) => { streaks[cleanUsername(r.username)] = r.current_streak || 1; });
     const rp = await db.from("gallery_reports").select("username,day,reporter").in("username", names).gte("day", since.slice(0, 10)); // table may not exist yet
+    // reactions: counts per proof + what the signed-in viewer has already given (table may not exist yet)
+    const rx = await db.from("gallery_reactions").select("username,day,kind,reactor").in("username", names).gte("day", since.slice(0, 10));
+    let me = null;
+    if (signedIn) { const c = await db.from("username_claims").select("username").eq("google_id", session.user.google_id).maybeSingle(); me = c.data?.username ? cleanUsername(c.data.username) : null; }
+    if (!rx.error) (rx.data || []).forEach((r) => {
+      const k = r.username + "|" + String(r.day).slice(0, 10);
+      (reacts[k] ||= { leaf: 0, fire: 0 })[r.kind]++;
+      if (me && r.reactor === me) (mine[k] ||= {})[r.kind] = true;
+    });
     if (!rp.error) (rp.data || []).forEach((r) => { const k = r.username + "|" + String(r.day).slice(0, 10); (reports[k] ||= new Set()).add(r.reporter); });
   }
 
@@ -62,6 +71,7 @@ export default async function handler(req, res) {
       photo: s.photo_url || db.storage.from(BUCKET).getPublicUrl(`${u}/${day}.png`).data.publicUrl,
       place: [s.location_city, s.location_region].filter(Boolean).join(", ") || null,
       avatar_url: meta[u]?.avatar_url || null, avatar_emoji: meta[u]?.avatar_emoji || null,
+      reactions: reacts[key] || { leaf: 0, fire: 0 }, mine: mine[key] || {},
     });
     if (items.length >= limit) break;
   }
