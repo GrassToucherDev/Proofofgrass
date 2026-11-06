@@ -1,0 +1,73 @@
+// GET /api/gallery?scope=all|grove&username=<for grove>&before=<iso>&limit=24
+// Proofs from the last 24 hours, newest first. Signed-out visitors get a small teaser (6 proofs, no paging).
+// People who turned the feed off (Profiles.feed_hidden) and proofs reported by 3+ different people are left out.
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]";
+import { adminClient, requireOwner, cleanUsername } from "../../../utils/requireOwner";
+import { BUCKET } from "../../../utils/proofAccess";
+import { getV2Tier } from "../../../utils/v2Theme";
+
+const TEASER = 6, WINDOW_MS = 24 * 3600_000, REPORT_HIDE_AT = 3;
+
+export default async function handler(req, res) {
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
+  const db = adminClient();
+  const session = await getServerSession(req, res, authOptions);
+  const signedIn = !!session?.user?.google_id;
+  const scope = req.query.scope === "grove" ? "grove" : "all";
+  let limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 24, 1), 36);
+  let before = typeof req.query.before === "string" ? req.query.before : null;
+  if (!signedIn) { limit = TEASER; before = null; }
+  if (before && Number.isNaN(Date.parse(before))) before = null;
+
+  let allowed = null; // grove member usernames
+  if (scope === "grove") {
+    const who = await requireOwner(req, res, req.query.username);
+    if (!who) return;
+    const { data: me } = await db.from("grove_members").select("grove_id").ilike("username", who.username).is("left_at", null).maybeSingle();
+    if (!me) return res.status(200).json({ items: [], next: null, signedIn, noGrove: true });
+    const { data: mates } = await db.from("grove_members").select("username").eq("grove_id", me.grove_id).is("left_at", null);
+    allowed = (mates || []).map((m) => cleanUsername(m.username));
+  }
+
+  const since = new Date(Date.now() - WINDOW_MS).toISOString();
+  let q = db.from("Submissions").select("username,created_at,photo_url,location_city,location_region,status")
+    .in("status", ["pending", "approved"]).gte("created_at", since).order("created_at", { ascending: false }).limit(limit * 3);
+  if (before) q = q.lt("created_at", before);
+  if (allowed) q = q.in("username", allowed);
+  const { data: subs, error } = await q;
+  if (error) { console.error("[gallery]", error.message); return res.status(500).json({ error: "Could not load the gallery." }); }
+
+  const names = [...new Set((subs || []).map((s) => cleanUsername(s.username)))];
+  const meta = {}, streaks = {}, reports = {};
+  if (names.length) {
+    let prof = await db.from("Profiles").select("username,avatar_url,avatar_emoji,feed_hidden").in("username", names);
+    if (prof.error) prof = await db.from("Profiles").select("username,avatar_url,avatar_emoji").in("username", names); // column not added yet
+    (prof.data || []).forEach((p) => { meta[cleanUsername(p.username)] = p; });
+    const st = await db.from("Streaks").select("username,current_streak").in("username", names);
+    (st.data || []).forEach((r) => { streaks[cleanUsername(r.username)] = r.current_streak || 1; });
+    const rp = await db.from("gallery_reports").select("username,day,reporter").in("username", names).gte("day", since.slice(0, 10)); // table may not exist yet
+    if (!rp.error) (rp.data || []).forEach((r) => { const k = r.username + "|" + String(r.day).slice(0, 10); (reports[k] ||= new Set()).add(r.reporter); });
+  }
+
+  const seen = new Set(), items = [];
+  for (const s of subs || []) {
+    const u = cleanUsername(s.username), day = new Date(s.created_at).toISOString().slice(0, 10), key = u + "|" + day;
+    if (seen.has(key) || meta[u]?.feed_hidden || (reports[key]?.size || 0) >= REPORT_HIDE_AT) continue;
+    seen.add(key);
+    const streak = streaks[u] || 1, t = getV2Tier(streak);
+    items.push({
+      username: u, day, created_at: s.created_at, streak,
+      tier: { name: t.name, color: t.color },
+      photo: s.photo_url || db.storage.from(BUCKET).getPublicUrl(`${u}/${day}.png`).data.publicUrl,
+      place: [s.location_city, s.location_region].filter(Boolean).join(", ") || null,
+      avatar_url: meta[u]?.avatar_url || null, avatar_emoji: meta[u]?.avatar_emoji || null,
+    });
+    if (items.length >= limit) break;
+  }
+  const more = signedIn && items.length >= limit;
+  const last = items[items.length - 1];
+  if (!signedIn || scope === "grove") res.setHeader("Cache-Control", "private, no-store");
+  else res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=60");
+  return res.status(200).json({ items, next: more && last ? last.created_at : null, signedIn });
+}
