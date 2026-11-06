@@ -1,5 +1,12 @@
 {
   "crons": [
-    { "path": "/api/yard/settle", "schedule": "15 4 * * *" }
+    {
+      "path": "/api/yard/settle",
+      "schedule": "15 4 * * *"
+    },
+    {
+      "path": "/api/push/remind",
+      "schedule": "0 22 * * *"
+    }
   ]
 }

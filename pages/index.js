@@ -10,6 +10,7 @@ import Ico from "../components/Ico";
 import TodaysProofsStrip from "../components/TodaysProofsStrip";
 import NudgeBanner from "../components/NudgeBanner";
 import MyReactions from "../components/MyReactions";
+import PushReminders from "../components/PushReminders";
 import V2Nav from "../components/V2Nav";
 import FrightBitsHeroBanner from "../components/frightbits/FrightBitsHeroBanner";
 import V2BottomNav from "../components/V2BottomNav";
@@ -1006,6 +1007,7 @@ export default function Home() {
 
         <NudgeBanner username={username} hasPostedToday={hasPostedToday} />
         <MyReactions username={username} />
+        <PushReminders username={username} />
         <TodaysProofsStrip />
 
         {/* ── FEATURE MODULES ─────────────────────────────────────────────── */}
