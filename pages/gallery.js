@@ -41,6 +41,7 @@ export default function Gallery() {
   const [open, setOpen] = useState(null);
   const [hidden, setHidden] = useState(null); // null = unknown / not the owner
   const [reportState, setReportState] = useState("");
+  const [reactErr, setReactErr] = useState("");
 
   useEffect(() => { try { const u = localStorage.getItem("pog_username"); if (u) setUsername(u.replace(/@/g, "").toLowerCase().trim()); } catch {} }, []);
 
@@ -50,7 +51,7 @@ export default function Gallery() {
       const qs = new URLSearchParams({ scope, limit: "24" });
       if (scope === "grove") qs.set("username", username);
       if (before) qs.set("before", before);
-      const r = await fetch("/api/gallery?" + qs);
+      const r = await fetch("/api/gallery?" + qs, { cache: "no-store" });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Could not load the gallery.");
       setNoGrove(!!j.noGrove);
@@ -87,11 +88,11 @@ export default function Gallery() {
     apply(!was);
     try {
       const r = await fetch("/api/gallery/react", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ as: username, username: it.username, day: it.day, kind, on: !was }) });
-      if (!r.ok) apply(was); else { const j = await r.json(); if (j.counts) { const sync = (x) => key(x) ? { ...x, reactions: j.counts } : x; setItems((p) => p.map(sync)); setOpen((o) => (o && key(o) ? sync(o) : o)); } }
-    } catch { apply(was); }
+      if (!r.ok) { apply(was); const j = await r.json().catch(() => ({})); setReactErr(j.error || "Couldn't save your reaction. Try again."); } else { setReactErr(""); const j = await r.json(); if (j.counts) { const sync = (x) => key(x) ? { ...x, reactions: j.counts } : x; setItems((p) => p.map(sync)); setOpen((o) => (o && key(o) ? sync(o) : o)); } }
+    } catch { apply(was); setReactErr("Couldn't save your reaction. Check your connection."); }
   };
   const broken = (it) => setItems((prev) => prev.filter((p) => !(p.username === it.username && p.day === it.day)));
-  const close = () => { setOpen(null); setReportState(""); };
+  const close = () => { setOpen(null); setReportState(""); setReactErr(""); };
 
   const css = V2GlobalCSS + `
     .gal-wrap{max-width:1040px;margin:0 auto;padding:22px clamp(14px,4vw,32px) 60px}
@@ -183,6 +184,7 @@ export default function Gallery() {
                   ))}
                 </div>
               )}
+              {reactErr && <div style={{ padding: "0 16px 10px", fontSize: 13, color: "#8a3b2b" }}>{reactErr}</div>}
               {signedIn && username && open.username !== username && (
                 <div className="row" style={{ paddingTop: 0 }}>
                   {reportState === "sent" ? <span style={{ fontSize: 13, color: "#4b6240" }}>Thanks, we'll take a look.</span>
