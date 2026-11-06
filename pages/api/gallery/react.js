@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     const { count } = await db.from("gallery_reactions").select("id", { count: "exact", head: true }).eq("reactor", who.username).gte("created_at", dayAgo);
     if ((count ?? 0) >= DAILY_LIMIT) return res.status(429).json({ error: "That's a lot of reactions for one day.", code: "rate_limited" });
     const { error } = await db.from("gallery_reactions").insert(row);
-    if (error && error.code !== "23505") { console.error("[gallery/react]", error.message); return res.status(500).json({ error: "Could not save that." }); }
+    if (error && error.code !== "23505") { console.error("[gallery/react]", error.message); return res.status(500).json({ error: /does not exist|schema cache/i.test(error.message) ? "Reactions aren't switched on yet (database setup pending)." : "Could not save that." }); }
   }
 
   const { data: all } = await db.from("gallery_reactions").select("kind").eq("username", username).eq("day", day);
