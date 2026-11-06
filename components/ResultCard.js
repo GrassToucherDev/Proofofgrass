@@ -259,7 +259,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
           // Third try: send a small copy through our own server (works when the phone can't reach storage directly).
           try{
             const tiny = await compressProofPhoto(photo, 1600, 0.8, true);
-            const b64 = await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result||"").split(",")[1]||"");fr.onerror=rej;fr.readAsDataURL(tiny);});
+            const b64 = await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result||"").split(",")[1]||"");fr.onerror=()=>rej(new Error("photo file unreadable"));fr.readAsDataURL(tiny);});
             const dr = await tf("/api/proof/upload-direct",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:effectiveUsername,image:b64})},30000);
             const dj = await dr.json().catch(()=>({}));
             if(dr.status===409&&dj.code==="already_logged"){setSubmitStatus("success");return true;}
@@ -267,7 +267,9 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             lastErr = null;
           }catch(e2){ console.warn("[proof upload] server fallback failed",e2); lastErr = {message:(lastErr?.message||"")+" / "+(e2?.message||"")}; }
         }
-        if(lastErr){const why=String(lastErr.message||"").slice(0,90);setSubmitError("Photo upload failed — check your connection and tap again."+(why?` (${why})`:""));setSubmitStatus("error");return false;}
+        if(lastErr){const why=String(lastErr.message||"").slice(0,90);
+          if(/unreadable/i.test(why)){setSubmitError("Your phone lost access to that photo. Tap Retake, choose it again, then lock in.");setSubmitStatus("error");return false;}
+          setSubmitError("Photo upload failed — check your connection and tap again."+(why?` (${why})`:""));setSubmitStatus("error");return false;}
       }catch(e){console.warn("[proof upload] threw",e);setSubmitError("Photo upload failed — check your connection and tap again.");setSubmitStatus("error");return false;}
     }
     const rpcWithRetry = async(retries=2)=>{

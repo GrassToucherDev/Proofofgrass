@@ -684,6 +684,16 @@ export default function Home() {
   // Image upload
   const handleImageUpload = useCallback(async (file) => {
     if (!file || !(file instanceof Blob)) return;
+    // Copy the photo's bytes into memory right away. On Android a file picked from the gallery/camera can become unreadable
+    // later (app switched, cloud copy, file moved), and every upload path then fails with "Failed to fetch".
+    try {
+      const buf = await file.arrayBuffer();
+      file = new File([buf], file.name || "proof.jpg", { type: file.type || "image/jpeg", lastModified: file.lastModified || Date.now() });
+    } catch (e) {
+      console.warn("[proof photo] could not read the picked file", e);
+      alert("We couldn't read that photo. Please pick it again (or take a new one).");
+      return;
+    }
     setProofFile(file);
     setImageSrc(URL.createObjectURL(file));
     setShowResult(false);
