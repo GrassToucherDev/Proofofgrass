@@ -8,7 +8,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import OgMeta, { SITE_URL } from "../../../components/OgMeta";
 import ShareCardSheet from "../../../components/ShareCardSheet";
-import { renderStreakCard, streakCaption } from "../../../utils/streakShareCard";
+import { renderStreakCard, streakCaption, STREAK_MILESTONES } from "../../../utils/streakShareCard";
 import { supabase } from "../../../utils/supabase";
 import { resolveActiveCover, COVER_DEFINITIONS, isCoverUrlReady } from "../../../utils/coverDefinitions";
 import { getSpotlightBadge } from "../../../utils/spotlightBadges";
@@ -129,7 +129,7 @@ function ProofCard({ proof }) {
 }
 
 // ── Milestone progress ────────────────────────────────────────────────────────
-function MilestoneCard({ current, loading }) {
+function MilestoneCard({ current, loading, reached = [], onShare }) {
   const tier  = getV2Tier(current);
   const thresholds = [7,14,30,50,100,180,365,500];
   const prev  = [...[0,...thresholds]].reverse().find(t=>current>=t)??0;
@@ -189,6 +189,20 @@ function MilestoneCard({ current, loading }) {
               </div>
               <div style={{ fontSize:12, fontWeight:700, color:nextTier.color }}>{nextTier.name}</div>
               <div style={{ fontSize:11, color:V2.midGray, marginTop:2 }}>{next-current} days away</div>
+            </div>
+          )}
+          {reached.length > 0 && onShare && (
+            <div style={{ marginTop:14 }}>
+              <div style={{ fontSize:11, color:V2.midGray, marginBottom:6 }}>Your milestones: tap to share</div>
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                {reached.map(m => (
+                  <button key={m} onClick={()=>onShare(m)} aria-label={`Share your ${m}-day milestone card`}
+                    style={{ border:`1px solid ${V2.borderGreen}`, background:"rgba(246,185,59,.18)", color:V2.forestGreen, fontWeight:800, fontSize:12,
+                      borderRadius:999, padding:"5px 11px", cursor:"pointer", fontFamily:"inherit" }}>
+                    {m} days
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {!next && (
@@ -388,6 +402,7 @@ export default function ProfilePage({ og }) {
   const [wheelBadge,      setWheelBadge]        = useState(null);
   const [badgeShelf,      setBadgeShelf]        = useState([]);
   const [sharingStreak,   setSharingStreak]     = useState(false);
+  const [sharingMs,       setSharingMs]         = useState(null); // a past streak milestone being shared
 
   useEffect(()=>{
     const saved = typeof window!=="undefined"?localStorage.getItem("pog_username"):null;
@@ -785,7 +800,7 @@ export default function ProfilePage({ og }) {
 
             {/* Milestone Progress */}
             <div className="pf-card">
-              <MilestoneCard current={current} loading={loading} />
+              <MilestoneCard current={current} loading={loading} reached={isOwner ? STREAK_MILESTONES.filter(m => m <= Math.max(current, best)) : []} onShare={setSharingMs} />
             </div>
 
             {/* Favorite Badges */}
@@ -823,6 +838,12 @@ export default function ProfilePage({ og }) {
             <ShareCardSheet title="Share your streak" caption={streakCaption(username, current)}
               filename={`streak-${current}-${username}.png`}
               render={() => renderStreakCard({ username, streak: current, best })} onClose={()=>setSharingStreak(false)} />
+          )}
+
+          {sharingMs && (
+            <ShareCardSheet title={`Share your ${sharingMs}-day milestone`} caption={streakCaption(username, sharingMs)}
+              filename={`streak-${sharingMs}-${username}.png`}
+              render={() => renderStreakCard({ username, streak: sharingMs })} onClose={()=>setSharingMs(null)} />
           )}
 
           <MyCollectibles username={username} />
