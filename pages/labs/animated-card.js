@@ -5,7 +5,7 @@ import { drawProofCard } from "../../utils/proofCardRender";
 import { renderAnimatedCard, renderAnimatedFlex, pickRecorderMime } from "../../utils/animatedCard";
 import { drawFlexCard } from "../../utils/flexCardRender";
 import { getCoverBySlug } from "../../utils/coverDefinitions";
-import { Y2K_VARIANTS, fxForVariant, entranceForVariant } from "../../utils/animatedThemes";
+import { Y2K_VARIANTS, fxForVariant, entranceForVariant, focusForVariant } from "../../utils/animatedThemes";
 
 const ld = (src) => new Promise((res) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 
@@ -38,12 +38,12 @@ export default function AnimatedCardDemo() {
       if (kind === "flex") {
         const fg = document.createElement("canvas"); fg.width = 1080; fg.height = 1080; // transparent: cover art is animated behind it
         const geom = await drawFlexCard(fg.getContext("2d"), 1080, 1080, { username: "grasstoucherdev", streak: Number(streak) || 1, grassScore: 4280, rank: 12, best: Number(streak) || 1, tierTitle: "ROOTED", avatarUrl: null, theme: coverDef || {}, skipNumber: motion.countUp, skipFill: motion.barFill }, ld);
-        r = await renderAnimatedFlex(fg, { bgImage: bgImg, format: fmt, seconds: 4, fx, headline: `Day ${Number(streak) || 1} Streak`, onProgress: setProg, motion, geom, streak: Number(streak) || 1, entrance: entranceForVariant(variant) });
+        r = await renderAnimatedFlex(fg, { bgImage: bgImg, format: fmt, seconds: 4, fx, headline: `Day ${Number(streak) || 1} Streak`, onProgress: setProg, motion, geom, streak: Number(streak) || 1, entrance: entranceForVariant(variant), focus: focusForVariant(variant) });
       } else {
         const photo = f ? await ld(URL.createObjectURL(f)) : await ld("/card/bg-sunset.jpg");
         const c = document.createElement("canvas"); c.width = 1600; c.height = 1200;
         await drawProofCard(c.getContext("2d"), 1600, 1200, { photo, streak: Number(streak) || 1, dateStr: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), topPct: 10, location: "", username: "grasstoucherdev" });
-        r = await renderAnimatedCard(c, { format: fmt, seconds: 4, headline: `Day ${Number(streak) || 1} Locked In`, bgImage: variant ? bgImg : undefined, fx, confetti: !variant, onProgress: setProg });
+        r = await renderAnimatedCard(c, { format: fmt, seconds: 4, headline: `Day ${Number(streak) || 1} Locked In`, bgImage: variant ? bgImg : undefined, fx, confetti: !variant, onProgress: setProg, focus: focusForVariant(variant) });
       }
       if (!r) throw new Error("Could not create the video.");
       if (url) URL.revokeObjectURL(url);

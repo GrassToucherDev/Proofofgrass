@@ -75,3 +75,6 @@ export const fxForVariant = (variant, W, H) => (variant ? y2kFx(variant, W, H) :
 // Entrance style for each pack's card pieces (used by renderAnimatedFlex).
 export const ENTRANCE_BY_VARIANT = { aqua: "splash", bubble: "float", dream: "bloom", cyber: "snap", chrome: "glint" };
 export const entranceForVariant = (v) => ENTRANCE_BY_VARIANT[v] || "pop";
+// Which column of each cover panorama (0..1) sits mid-frame: the best part of the art, clear of the frame rails baked into the edges.
+export const FOCUS_BY_VARIANT = { aqua: 0.72, chrome: 0.77, bubble: 0.2, dream: 0.64, cyber: 0.66 };
+export const focusForVariant = (v) => FOCUS_BY_VARIANT[v] ?? 0.5;

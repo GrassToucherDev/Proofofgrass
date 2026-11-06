@@ -77,17 +77,17 @@ export const loadImg = ld;
 
 // Draws cover art as the animated backdrop. Wide panoramas (≥1.8:1) slowly PAN across the whole scene; others breathe/drift.
 // Returns the image→canvas transform so theme effects can anchor to spots in the art (sun, flowers, waterfalls…).
-export function drawCoverBg(ctx, img, W, H, tMs, durMs) {
+export function drawCoverBg(ctx, img, W, H, tMs, durMs, focus = 0.5) {
   const s = tMs / 1000, wide = img.width / img.height >= 1.8;
   // The Y2K panoramas have a thin white seam baked in ~3.5% from the top and bottom edges; skip those bands for wide covers.
   const cy = wide ? Math.round(img.height * 0.045) : 0, ih = img.height - cy * 2;
-  let z = wide ? 1.0 : 1.1 + 0.03 * Math.sin(s * 0.9);
+  const u = clamp01(tMs / durMs), ue = 0.5 - 0.5 * Math.cos(Math.PI * u);
+  // Panoramas: hold the scene still (slow push-in plus a tiny drift) instead of sweeping across it, so only the card pieces appear to move.
+  let z = wide ? 1.0 + 0.07 * ue : 1.1 + 0.03 * Math.sin(s * 0.9);
   const sc = Math.max(W / img.width, H / ih) * z;
   let ox, oy;
-  if (wide) {
-    const range = Math.max(0, img.width * sc - W), u = 0.5 - 0.5 * Math.cos(Math.PI * clamp01(tMs / durMs));
-    ox = -range * (0.12 + 0.76 * u); oy = (H - ih * sc) / 2;
-  } else { ox = (W - img.width * sc) / 2 + Math.sin(s * 0.6) * 24; oy = (H - img.height * sc) / 2 + Math.cos(s * 0.5) * 18; }
+  if (wide) { ox = Math.min(0, Math.max(W - img.width * sc, W / 2 - focus * img.width * sc + (0.5 - ue) * 60)); oy = (H - ih * sc) / 2; } // focus: which column of the panorama sits mid-frame (0..1)
+  else { ox = (W - img.width * sc) / 2 + Math.sin(s * 0.6) * 24; oy = (H - ih * sc) / 2 + Math.cos(s * 0.5) * 18; }
   ctx.drawImage(img, 0, cy, img.width, ih, ox, oy, img.width * sc, ih * sc);
   return { ox, oy: oy - cy * sc, sc, k: img.width / 2000 };
 }
@@ -100,7 +100,7 @@ function star(ctx, x, y, r, rot) {
 function rrPath(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
 
 // staticCard: any share-card canvas (the result card is 1600×1200). format: "4:5" (X / Instagram feed) or "9:16" (TikTok / Reels / Stories).
-export async function renderAnimatedCard(staticCard, { format = "4:5", seconds = 4, fps = 30, headline = "", bgImage, fx, confetti = true, onProgress } = {}) {
+export async function renderAnimatedCard(staticCard, { format = "4:5", seconds = 4, fps = 30, headline = "", bgImage, fx, confetti = true, onProgress, focus = 0.5 } = {}) {
   if (!pickRecorderMime()) return null;
   const W = 1080, H = format === "9:16" ? 1920 : 1350, D = seconds * 1000;
   const out = document.createElement("canvas"); out.width = W; out.height = H;
@@ -119,7 +119,7 @@ export async function renderAnimatedCard(staticCard, { format = "4:5", seconds =
 
   const frame = (t) => {
     // background
-    if (bg && fx) { const tf = drawCoverBg(ctx, bg, W, H, t, D); fx.bg?.(ctx, t, tf); }
+    if (bg && fx) { const tf = drawCoverBg(ctx, bg, W, H, t, D, focus); fx.bg?.(ctx, t, tf); }
     else if (bg) { const sc = Math.max(W / bg.width, H / bg.height); ctx.drawImage(bg, (W - bg.width * sc) / 2, (H - bg.height * sc) / 2, bg.width * sc, bg.height * sc); }
     else { ctx.fillStyle = "#cfe8f7"; ctx.fillRect(0, 0, W, H); }
     fx?.under?.(ctx, t);
@@ -204,7 +204,7 @@ const ENTRANCE = {
 };
 
 // motion: { stagger, countUp, barFill }. countUp / barFill need the foreground drawn with p.skipNumber / p.skipFill and its returned geom + streak passed here.
-export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", seconds = 4, fps = 30, fx, headline = "", onProgress, motion = {}, geom = null, streak = 1, entrance = "pop" } = {}) {
+export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", seconds = 4, fps = 30, fx, headline = "", onProgress, motion = {}, geom = null, streak = 1, entrance = "pop", focus = 0.5 } = {}) {
   if (!pickRecorderMime()) return null;
   const W = 1080, H = format === "9:16" ? 1920 : format === "4:5" ? 1350 : 1080;
   const out = document.createElement("canvas"); out.width = W; out.height = H;
@@ -234,7 +234,7 @@ export async function renderAnimatedFlex(fgCanvas, { bgImage, format = "1:1", se
   const frame = (t) => {
     const s = t / 1000;
     ctx.fillStyle = "#0b0b12"; ctx.fillRect(0, 0, W, H);
-    if (bgImage) { const tf = drawCoverBg(ctx, bgImage, W, H, t, seconds * 1000); fx?.bg?.(ctx, t, tf); }
+    if (bgImage) { const tf = drawCoverBg(ctx, bgImage, W, H, t, seconds * 1000, focus); fx?.bg?.(ctx, t, tf); }
     fx?.under?.(ctx, t);
     const k = clamp01(t / 700), a = easeOutCubic(clamp01(t / 450)), sc2 = 0.95 + 0.05 * easeOutBack(k), fl = Math.sin(s * 2) * 4 * clamp01((t - 600) / 400);
     // dynamic bits drawn in foreground-canvas coordinates (current streak number, progress fill)
