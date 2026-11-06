@@ -8,6 +8,7 @@ import Ico from "../components/Ico";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 import { signInWithGoogle } from "../utils/googleSignIn";
 import SecureUsernameCard from "../components/SecureUsernameCard";
+import FollowButton from "../components/FollowButton";
 import ShareCardSheet from "../components/ShareCardSheet";
 import { renderPodCard, podCaption } from "../utils/podShareCard";
 
@@ -43,6 +44,7 @@ export default function Gallery() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [noGrove, setNoGrove] = useState(false);
+  const [noFollows, setNoFollows] = useState(false);
   const [open, setOpen] = useState(null);
   const [hidden, setHidden] = useState(null); // null = unknown / not the owner
   const [reportState, setReportState] = useState("");
@@ -55,12 +57,12 @@ export default function Gallery() {
     setLoading(true); setErr("");
     try {
       const qs = new URLSearchParams({ scope, limit: "24" });
-      if (scope === "grove") qs.set("username", username);
+      if (scope !== "all") qs.set("username", username);
       if (before) qs.set("before", before);
       const r = await fetch("/api/gallery?" + qs, { cache: "no-store" });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Could not load the gallery.");
-      setNoGrove(!!j.noGrove);
+      setNoGrove(!!j.noGrove); setNoFollows(!!j.noFollows);
       setItems((prev) => before ? [...prev, ...j.items.filter((n) => !prev.some((p) => p.username === n.username && p.day === n.day))] : j.items);
       setNext(j.next);
       if (!before) setFeatured(j.featured || null);
@@ -68,7 +70,7 @@ export default function Gallery() {
     setLoading(false);
   }, [scope, username]);
 
-  useEffect(() => { if (authStatus === "loading") return; if (scope === "grove" && !username) return; load(null); }, [load, authStatus, scope, username]);
+  useEffect(() => { if (authStatus === "loading") return; if (scope !== "all" && !username) return; load(null); }, [load, authStatus, scope, username]);
 
   useEffect(() => { // does the viewer own a username? then show their feed switch
     if (!signedIn || !username) { setHidden(null); setSecured(null); return; }
@@ -176,12 +178,15 @@ export default function Gallery() {
 
           <div className="gal-tabs">
             <button className={"gal-tab" + (scope === "all" ? " on" : "")} onClick={() => setScope("all")}>Everyone</button>
+            {signedIn && username && <button className={"gal-tab" + (scope === "following" ? " on" : "")} onClick={() => setScope("following")}>Following</button>}
             {signedIn && <button className={"gal-tab" + (scope === "grove" ? " on" : "")} onClick={() => setScope("grove")}><Ico n="group" size={16} inline /> My Grove</button>}
           </div>
 
           {err && <div className="gal-card"><p>{err}</p><button style={V2Styles.btnPrimary} onClick={() => load(null)}>Try again</button></div>}
           {!err && noGrove && scope === "grove" && <div className="gal-card"><p>You're not in a Grove yet. Join or start one to see your Grove's proofs here.</p><Link href="/groves" style={{ ...V2Styles.btnPrimary, textDecoration: "none", display: "inline-block" }}>Go to Groves</Link></div>}
-          {!err && !loading && !noGrove && items.length === 0 && <div className="gal-card"><p>No proofs in the last 24 hours yet. Be the first.</p><Link href="/#upload" style={{ ...V2Styles.btnPrimary, textDecoration: "none", display: "inline-block" }}>Log Proof</Link></div>}
+          {!err && noFollows && scope === "following" && <div className="gal-card"><p>You're not following anyone yet. Open any photo and tap Follow to see their proofs here.</p></div>}
+          {!err && !loading && !noGrove && !noFollows && items.length === 0 && scope === "following" && <div className="gal-card"><p>No one you follow has posted in the last 24 hours.</p></div>}
+          {!err && !loading && !noGrove && !noFollows && items.length === 0 && scope !== "following" && <div className="gal-card"><p>No proofs in the last 24 hours yet. Be the first.</p><Link href="/#upload" style={{ ...V2Styles.btnPrimary, textDecoration: "none", display: "inline-block" }}>Log Proof</Link></div>}
 
           <div className="gal-grid">{items.map((it) => <Tile key={it.username + it.day} it={it} onOpen={setOpen} onBroken={broken} />)}</div>
           {loading && <p style={{ textAlign: "center", color: "#4b6240", marginTop: 18 }}>Loading…</p>}
@@ -203,6 +208,7 @@ export default function Gallery() {
               <img src={open.photo} alt={`Proof from @${open.username}`} />
               <div className="row">
                 <div><Link href={`/u/${open.username}`} className="gal-link">@{open.username}</Link><div style={{ fontSize: 13, color: "#4b6240" }}>Day {open.streak} · {open.tier.name} · {ago(open.created_at)}</div></div>
+                {signedIn && username && secured !== false && <FollowButton viewer={username} username={open.username} />}
                 <button className="gal-tab" onClick={close}>Close</button>
               </div>
               {signedIn && username && open.username !== username && secured === false && (

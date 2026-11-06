@@ -7,6 +7,7 @@ import Link from "next/link";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import OgMeta, { SITE_URL } from "../../../components/OgMeta";
+import FollowButton from "../../../components/FollowButton";
 import ShareCardSheet from "../../../components/ShareCardSheet";
 import { renderStreakCard, streakCaption } from "../../../utils/streakShareCard";
 import { supabase } from "../../../utils/supabase";
@@ -682,6 +683,7 @@ export default function ProfilePage({ og }) {
                   <Link href={`/flex/${username}`} className="pf-action-btn">
                     <Ico inline n="✦" size={16} />Flex Card
                   </Link>
+                  {!isOwner&&username&&viewer&&<FollowButton viewer={viewer} username={username} className="pf-action-btn" style={{}} />}
                   {!isOwner&&username&&(
                     <button onClick={()=>setShowChallenge(true)} className="pf-action-btn">
                       <Ico inline n="⚡" size={16} />Challenge

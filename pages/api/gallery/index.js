@@ -49,7 +49,7 @@ export default async function handler(req, res) {
   const db = adminClient();
   const session = await getServerSession(req, res, authOptions);
   const signedIn = !!session?.user?.google_id;
-  const scope = req.query.scope === "grove" ? "grove" : "all";
+  const scope = req.query.scope === "grove" ? "grove" : req.query.scope === "following" ? "following" : "all";
   let limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 24, 1), 36);
   let before = typeof req.query.before === "string" ? req.query.before : null;
   if (!signedIn) { limit = TEASER; before = null; }
@@ -63,6 +63,14 @@ export default async function handler(req, res) {
     if (!me) return res.status(200).json({ items: [], next: null, signedIn, noGrove: true });
     const { data: mates } = await db.from("grove_members").select("username").eq("grove_id", me.grove_id).is("left_at", null);
     allowed = (mates || []).map((m) => cleanUsername(m.username));
+  }
+
+  if (scope === "following") {
+    const who = await requireOwner(req, res, req.query.username);
+    if (!who) return;
+    const f = await db.from("follows").select("following").eq("follower", who.username).limit(300);
+    allowed = (f.data || []).map((r) => cleanUsername(r.following));
+    if (!allowed.length) return res.status(200).json({ items: [], next: null, signedIn, noFollows: true });
   }
 
   const since = new Date(Date.now() - WINDOW_MS).toISOString();
