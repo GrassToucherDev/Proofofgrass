@@ -43,6 +43,9 @@ async function generatePFP({ imageSrc, overlay }) {
   const cx = W/2, cy = H/2;
   const ring = o.src ? await loadImg(o.src) : null;
   let r = 430;
+  // X and most apps crop avatars to a circle, which clips ring tips that reach the canvas edge: shrink ring art to 90%
+  ctx.save();
+  if (ring) { ctx.translate(cx, cy); ctx.scale(0.9, 0.9); ctx.translate(-cx, -cy); }
   if (ring) {
     // photo goes in the ring's opening: cover-fit to a circle on the opening's centre, then cut to the opening's own shape
     const [hx, hy, hr] = o.hole;
@@ -65,7 +68,9 @@ async function generatePFP({ imageSrc, overlay }) {
 
   if (ring) {
     ctx.drawImage(ring, 0, 0, W, H);
+    ctx.restore();
   } else {
+    ctx.restore();
     const trophyImg = await loadImg("/icons3d/trophy.webp");
     ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, Math.PI*2);
     ctx.strokeStyle = "#c8a84b"; ctx.lineWidth = 14; ctx.stroke();
