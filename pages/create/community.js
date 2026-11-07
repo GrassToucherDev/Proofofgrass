@@ -68,7 +68,7 @@ export default function CommunityCreations() {
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
   };
 
-  const pill = (on) => ({ background: on ? "rgba(147,168,90,0.14)" : "transparent", color: on ? T.olive : T.muted, border: `1px solid ${on ? T.borderG : T.border}`, borderRadius: 999, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "Nunito,sans-serif" });
+  const pill = (on) => ({ background: on ? "rgba(125,200,50,0.16)" : "transparent", color: on ? T.olive : T.muted, border: `1px solid ${on ? T.borderG : T.border}`, borderRadius: 999, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "Nunito,sans-serif" });
   const small = { background: "transparent", border: "none", color: T.dim, fontSize: 12, cursor: "pointer", fontFamily: "Nunito,sans-serif", padding: "6px 4px" };
 
   return (

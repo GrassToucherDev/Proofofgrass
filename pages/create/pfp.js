@@ -4,6 +4,8 @@ import CreateShell from "../../components/CreateShell";
 import { T, CARD_SHADOW } from "../../utils/createTheme";
 import PostToCommunity from "../../components/PostToCommunity";
 import { currentTheme } from "../../utils/createCommunity";
+import { V2_TIERS } from "../../utils/v2Theme";
+import { loadImg } from "../../utils/createCards";
 
 
 const OVERLAYS = [
@@ -14,6 +16,7 @@ const OVERLAYS = [
   { key:"spotlight", label:"Spotlight Winner Border", color:"#c8a84b", desc:"Gold championship ring" },
   { key:"ecosystem", label:"Ecosystem Holder Border", color:"#60a5fa", desc:"Verified holder ring" },
 ];
+OVERLAYS.push(...V2_TIERS.filter(t => t.min > 0).map(t => ({ key:`tier_${t.name.toLowerCase()}`, label:`${t.name} Ring`, color:t.color, desc:`Tier frame, Day ${t.min}+`, tier:true })));
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -30,7 +33,7 @@ async function generatePFP({ imageSrc, overlay }) {
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#080a06";
+  ctx.fillStyle = "#f3f9ee";
   ctx.fillRect(0, 0, W, H);
 
   const img = await new Promise((res, rej) => {
@@ -55,6 +58,8 @@ async function generatePFP({ imageSrc, overlay }) {
   ctx.restore();
 
   const o = OVERLAYS.find(x => x.key === overlay) ?? OVERLAYS[0];
+  const cloverImg = o.key === "lucky" ? await loadImg("/icons3d/clover.webp") : null;
+  const trophyImg = o.key === "spotlight" ? await loadImg("/icons3d/trophy.webp") : null;
 
   // Overlay-specific ring effects
   if (o.key === "sun_halo") {
@@ -92,22 +97,29 @@ async function generatePFP({ imageSrc, overlay }) {
       const angle = (i/8) * Math.PI*2 + rng(i)*0.3;
       const x = cx + Math.cos(angle) * (r + 5);
       const y = cy + Math.sin(angle) * (r + 5);
-      ctx.font = "28px serif";
-      ctx.textAlign = "center";
-      ctx.fillText("🍀", x, y + 10);
+      if (cloverImg) ctx.drawImage(cloverImg, x - 22, y - 22, 44, 44);
     }
   } else if (o.key === "spotlight") {
     ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, Math.PI*2);
     ctx.strokeStyle = "#c8a84b"; ctx.lineWidth = 14; ctx.stroke();
     ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, Math.PI*2);
     ctx.strokeStyle = "rgba(200,168,75,0.3)"; ctx.lineWidth = 22; ctx.stroke();
-    ctx.font = "64px serif"; ctx.textAlign = "center";
-    ctx.fillText("🏆", cx, cy - r - 30);
+    if (trophyImg) ctx.drawImage(trophyImg, cx - 42, cy - r - 80, 84, 84);
   } else if (o.key === "ecosystem") {
     ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI*2);
     ctx.strokeStyle = "#60a5fa"; ctx.lineWidth = 8; ctx.stroke();
-    ctx.font = "32px serif"; ctx.textAlign = "center";
-    ctx.fillText("◎", cx, cy + r + 50);
+    ctx.fillStyle = "#60a5fa";
+    ctx.beginPath(); ctx.arc(cx, cy + r + 40, 14, 0, Math.PI*2); ctx.fill();
+  } else if (o.tier) {
+    // tier ring: solid ring plus a crown of petals in the tier color
+    for (let i = 0; i < 24; i++) {
+      const a = (i/24) * Math.PI*2;
+      ctx.save(); ctx.translate(cx + Math.cos(a)*(r + 26), cy + Math.sin(a)*(r + 26)); ctx.rotate(a);
+      ctx.beginPath(); ctx.ellipse(0, 0, 26, 9, 0, 0, Math.PI*2);
+      ctx.fillStyle = o.color + "cc"; ctx.fill(); ctx.restore();
+    }
+    ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI*2);
+    ctx.strokeStyle = o.color; ctx.lineWidth = 12; ctx.stroke();
   } else {
     // grass — default clean ring
     ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI*2);
@@ -180,7 +192,7 @@ export default function PFPTool() {
     body{background:${T.bg};color:${T.white};font-family:'Nunito',sans-serif;}
     .ov-btn{ background:${T.bg3}; border:1px solid ${T.border}; padding:12px;
       border-radius:10px; cursor:pointer; text-align:left; transition:all 0.15s; width:100%; }
-    .ov-btn.active{ background:rgba(147,168,90,0.08); border-color:${T.borderG}; }
+    .ov-btn.active{ background:rgba(125,200,50,0.16); border-color:${T.borderG}; }
     .btn{ border:none; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700;
       font-size:13px; border-radius:10px; padding:13px 24px; }
     .drop-zone{ border:2px dashed ${T.border}; border-radius:14px; padding:40px 20px;
@@ -250,7 +262,7 @@ export default function PFPTool() {
           {imageSrc && (
             <button className="btn" onClick={generate} disabled={generating}
               style={{ width:"100%", background:T.olive, color:"#fff", marginBottom:20, opacity:generating?0.7:1 }}>
-              {generating ? "Generating…" : "✦ Apply Frame"}
+              {generating ? "Generating…" : "Apply Frame"}
             </button>
           )}
 
@@ -267,7 +279,7 @@ export default function PFPTool() {
                 </button>
                 <button className="btn" onClick={download}
                   style={{ flex:"1 1 140px", background:T.bg3, color:T.dim, border:`1px solid ${T.border}` }}>
-                  ↓ Save PFP
+                  Save PFP
                 </button>
               </div>
               <div style={{ marginTop:10 }}>

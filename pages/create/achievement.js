@@ -3,124 +3,57 @@ import Link from "next/link";
 import CreateShell from "../../components/CreateShell";
 import { T, CARD_SHADOW } from "../../utils/createTheme";
 import { supabase } from "../../utils/supabase";
+import { BRAND, ensureFonts, drawScene, drawPanel, drawImage, loadImg, drawFooter, MASCOT } from "../../utils/createCards";
+import Ico from "../../components/Ico";
 
 
 const TYPE_META = {
-  streak:      { emoji:"🔥", color:"#f97316" },
-  grass_score: { emoji:"⚡", color:"#93a85a" },
-  proof_count: { emoji:"🌿", color:"#4ade80" },
-  referral:    { emoji:"🤝", color:"#c8a84b" },
-  spotlight:   { emoji:"🏆", color:"#c8a84b" },
-  lucky_touch: { emoji:"🍀", color:"#93a85a" },
+  streak:      { icon:"flame",     color:"#e8742a" },
+  grass_score: { icon:"bolt",      color:"#3d7a12" },
+  proof_count: { icon:"leaf",      color:"#3d7a12" },
+  referral:    { icon:"handshake", color:"#b8760a" },
+  spotlight:   { icon:"spotlight", color:"#b8760a" },
+  lucky_touch: { icon:"clover",    color:"#2f9e5b" },
 };
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-  ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r);
-  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h);
-  ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r);
-  ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
-}
-
-function loadImage(src) {
-  return new Promise((res, rej) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => res(img);
-    img.onerror = () => {
-      fetch(src).then(r => r.blob()).then(blob => {
-        const url = URL.createObjectURL(blob);
-        const img2 = new Image();
-        img2.onload = () => { URL.revokeObjectURL(url); res(img2); };
-        img2.onerror = rej;
-        img2.src = url;
-      }).catch(rej);
-    };
-    img.src = src;
-  });
-}
 
 async function generateAchievementCard({ milestone, username, avatarUrl }) {
   const W = 1080, H = 1080;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
-
-  const meta = TYPE_META[milestone.milestone_type] ?? { emoji:"⭐", color:"#93a85a" };
-
-  const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, "#0e100b");
-  bg.addColorStop(1, "#050604");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-
-  const glow = ctx.createRadialGradient(W/2, H*0.4, 0, W/2, H*0.4, 480);
-  glow.addColorStop(0, meta.color + "22");
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.strokeStyle = "rgba(200,168,75,0.35)";
-  ctx.lineWidth = 2;
-  roundRect(ctx, 24, 24, W-48, H-48, 20);
-  ctx.stroke();
-
+  await ensureFonts();
+  const meta = TYPE_META[milestone.milestone_type] ?? { icon:"sparkle", color:"#3d7a12" };
+  drawScene(ctx, W, H, "day", 0.84);
+  drawPanel(ctx, 80, 70, W - 160, 830, 44);
   ctx.textAlign = "center";
-  ctx.font = "600 18px 'Nunito',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.45)";
-  ctx.letterSpacing = "0.2em";
-  ctx.fillText("PROOF OF GRASS", W/2, 110);
 
-  ctx.font = "700 14px 'Nunito',sans-serif";
-  ctx.fillStyle = T.gold;
-  ctx.letterSpacing = "0.24em";
-  ctx.fillText("ACHIEVEMENT UNLOCKED", W/2, 138);
+  ctx.font = "800 22px 'Nunito',sans-serif"; ctx.fillStyle = BRAND.dark; ctx.letterSpacing = "0.22em";
+  ctx.fillText("PROOF OF GRASS", W/2, 135);
+  ctx.font = "800 18px 'Nunito',sans-serif"; ctx.fillStyle = BRAND.gold; ctx.letterSpacing = "0.26em";
+  ctx.fillText("ACHIEVEMENT UNLOCKED", W/2, 168); ctx.letterSpacing = "0px";
 
-  // Big emoji
-  ctx.font = "180px serif";
-  ctx.letterSpacing = "0";
-  ctx.fillText(meta.emoji, W/2, 410);
+  await drawImage(ctx, `/icons3d/${meta.icon}.webp`, W/2, 440, 250);
 
-  // Avatar
   let hasAvatar = false;
   if (avatarUrl) {
-    try {
-      const img = await loadImage(avatarUrl);
-      const r = 56, cy = 490;
-      ctx.save();
-      ctx.beginPath(); ctx.arc(W/2, cy, r, 0, Math.PI*2); ctx.clip();
-      ctx.drawImage(img, W/2 - r, cy - r, r*2, r*2);
-      ctx.restore();
-      ctx.beginPath(); ctx.arc(W/2, cy, r+2, 0, Math.PI*2);
-      ctx.strokeStyle = meta.color; ctx.lineWidth = 2; ctx.stroke();
+    const img = await loadImg(avatarUrl);
+    if (img) {
+      const r = 54, cy = 520;
+      ctx.save(); ctx.beginPath(); ctx.arc(W/2, cy, r, 0, Math.PI*2); ctx.clip();
+      ctx.drawImage(img, W/2 - r, cy - r, r*2, r*2); ctx.restore();
+      ctx.beginPath(); ctx.arc(W/2, cy, r + 3, 0, Math.PI*2); ctx.strokeStyle = meta.color; ctx.lineWidth = 5; ctx.stroke();
       hasAvatar = true;
-    } catch { /* skip */ }
+    }
   }
-
-  const labelY = hasAvatar ? 620 : 560;
-
-  // Milestone label
-  let fontSize = 64;
+  const labelY = hasAvatar ? 650 : 590;
+  let fontSize = 72;
   ctx.font = `700 ${fontSize}px 'Fredoka',system-ui,sans-serif`;
-  while (ctx.measureText(milestone.milestone_label).width > 900 && fontSize > 36) {
-    fontSize -= 4;
-    ctx.font = `700 ${fontSize}px 'Fredoka',system-ui,sans-serif`;
-  }
-  ctx.fillStyle = "#f0efea";
-  ctx.letterSpacing = "-0.01em";
-  ctx.fillText(milestone.milestone_label, W/2, labelY);
+  while (ctx.measureText(milestone.milestone_label).width > 780 && fontSize > 36) { fontSize -= 4; ctx.font = `700 ${fontSize}px 'Fredoka',system-ui,sans-serif`; }
+  ctx.fillStyle = BRAND.forest; ctx.fillText(milestone.milestone_label, W/2, labelY);
+  ctx.font = "800 30px 'Nunito',sans-serif"; ctx.fillStyle = meta.color; ctx.fillText(`@${username}`, W/2, labelY + 56);
 
-  ctx.font = "600 22px 'Nunito',sans-serif";
-  ctx.fillStyle = meta.color;
-  ctx.letterSpacing = "0.04em";
-  ctx.fillText(`@${username}`, W/2, labelY + 50);
-
-  ctx.font = "500 18px 'Nunito',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.28)";
-  ctx.letterSpacing = "0.1em";
-  ctx.fillText("ProofOfGrass.app", W/2, H - 60);
-
+  await drawImage(ctx, MASCOT("celebrate"), W - 190, H - 120, 270);
+  drawFooter(ctx, W, H, "rgba(255,255,255,0.95)", H - 36);
   return canvas.toDataURL("image/png");
 }
 
@@ -176,7 +109,7 @@ export default function AchievementTool() {
     .ms-btn{ background:${T.bg3}; border:1px solid ${T.border}; padding:12px 14px;
       border-radius:10px; cursor:pointer; text-align:left; transition:all 0.15s; width:100%;
       display:flex; align-items:center; gap:10px; }
-    .ms-btn.active{ background:rgba(147,168,90,0.08); border-color:${T.borderG}; }
+    .ms-btn.active{ background:rgba(125,200,50,0.16); border-color:${T.borderG}; }
     .btn{ border:none; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700;
       font-size:13px; border-radius:10px; padding:13px 24px; }
   `;
@@ -230,7 +163,7 @@ export default function AchievementTool() {
 
               <button className="btn" onClick={generate} disabled={generating || !selected}
                 style={{ width:"100%", background:T.olive, color:"#fff", marginBottom:20, opacity:generating?0.7:1 }}>
-                {generating ? "Generating…" : "✦ Generate Card"}
+                {generating ? "Generating…" : "Generate Card"}
               </button>
 
               {preview && (
@@ -241,7 +174,7 @@ export default function AchievementTool() {
                   </div>
                   <button className="btn" onClick={download}
                     style={{ width:"100%", background:T.white, color:T.bg }}>
-                    ↓ Save Card
+                    Save Card
                   </button>
                 </div>
               )}

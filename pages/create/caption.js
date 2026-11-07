@@ -1,5 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
+import Ico from "../../components/Ico";
+import { getV2Tier } from "../../utils/v2Theme";
 import CreateShell from "../../components/CreateShell";
 import { T, CARD_SHADOW } from "../../utils/createTheme";
 
@@ -8,7 +10,7 @@ const FOOTER = "\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nhttps://proofofgrass.
 
 const OCCASIONS = {
   daily_proof: {
-    label: "Daily Proof", emoji: "🌿",
+    label: "Daily Proof", emoji: "leaf",
     templates: [
       (s) => `Day ${s.streak || "N"} of touching grass. Still going.${FOOTER}`,
       (s) => `Proof submitted. Streak intact. ${s.streak ? `Day ${s.streak}.` : ""}${FOOTER}`,
@@ -17,7 +19,7 @@ const OCCASIONS = {
     ],
   },
   streak_milestone: {
-    label: "Streak Milestone", emoji: "🔥",
+    label: "Streak Milestone", emoji: "flame",
     templates: [
       (s) => `Day ${s.streak || "N"}. The streak speaks for itself.${FOOTER}`,
       (s) => `Hit ${s.streak || "a new"} days outside. Consistency compounds.${FOOTER}`,
@@ -26,7 +28,7 @@ const OCCASIONS = {
     ],
   },
   meme: {
-    label: "Meme", emoji: "😂",
+    label: "Meme", emoji: "sparkle",
     templates: [
       () => `screen toucher vs grass toucher. choose wisely.${FOOTER}`,
       () => `me explaining to my phone why I'm going outside for 10 minutes${FOOTER}`,
@@ -35,7 +37,7 @@ const OCCASIONS = {
     ],
   },
   spotlight_win: {
-    label: "Spotlight Win", emoji: "🏆",
+    label: "Spotlight Win", emoji: "spotlight",
     templates: [
       (s) => `Won ${s.category || "Community Spotlight"} this week. Honored.${FOOTER}`,
       (s) => `Community Spotlight: ${s.category || "Winner"}. The grass community shows up.${FOOTER}`,
@@ -43,14 +45,14 @@ const OCCASIONS = {
     ],
   },
   badge_unlock: {
-    label: "Badge Unlock", emoji: "🎖️",
+    label: "Badge Unlock", emoji: "medal1",
     templates: [
       (s) => `New badge unlocked: ${s.badge || "another one"}. Collecting them all.${FOOTER}`,
       (s) => `Badge earned. ${s.badge || ""} Proof of consistency.${FOOTER}`,
     ],
   },
   lucky_touch: {
-    label: "Lucky Touch", emoji: "🍀",
+    label: "Lucky Touch", emoji: "clover",
     templates: [
       () => `Just got Lucky Touched. The grass blessed me today.${FOOTER}`,
       () => `Random reward, real grass. Lucky Touch hit different.${FOOTER}`,
@@ -58,14 +60,44 @@ const OCCASIONS = {
     ],
   },
   referral: {
-    label: "Referral", emoji: "🤝",
+    label: "Referral", emoji: "handshake",
     templates: [
       (s) => `Brought someone new into the grass-touching club. ${s.count ? `${s.count} referrals and counting.` : ""}${FOOTER}`,
       () => `Touching grass is better with friends. Bring someone outside today.${FOOTER}`,
     ],
   },
+  tier_up: {
+    label: "Tier Up", emoji: "mountain",
+    templates: [
+      (s) => `Just hit ${s.streak ? getV2Tier(parseInt(s.streak, 10) || 0).name : "a new tier"} on Proof of Grass${s.streak ? `, Day ${s.streak}` : ""}. Climbing.${FOOTER}`,
+      (s) => `New tier unlocked${s.streak ? `: ${getV2Tier(parseInt(s.streak, 10) || 0).name}` : ""}. The grass is getting greener.${FOOTER}`,
+      (s) => `${s.streak ? `Day ${s.streak}.` : "New tier."} Same habit, bigger badge.${FOOTER}`,
+    ],
+  },
+  proof_of_day: {
+    label: "Proof of the Day", emoji: "crown",
+    templates: [
+      () => `Proof of the Day. The gallery has spoken.${FOOTER}`,
+      () => `Made Proof of the Day on Proof of Grass. Outside photo, real reactions.${FOOTER}`,
+    ],
+  },
+  grass_draw: {
+    label: "Grass Draw", emoji: "ticket",
+    templates: [
+      (s) => `Every proof is an entry in the monthly Grass Draw. ${s.streak ? `Day ${s.streak} and counting.` : "Go outside, get entered."}${FOOTER}`,
+      () => `The Grass Draw is live. Real streaks, real prizes.${FOOTER}`,
+      () => `Won in the Grass Draw. Touching grass pays off.${FOOTER}`,
+    ],
+  },
+  grove: {
+    label: "My Grove", emoji: "tree",
+    templates: [
+      () => `My Grove is touching grass together. Come join a Grove.${FOOTER}`,
+      () => `Streaks are easier with a Grove. Find your people at proofofgrass.app.${FOOTER}`,
+    ],
+  },
   prestige_cover: {
-    label: "Prestige Cover", emoji: "🌄",
+    label: "Prestige Cover", emoji: "golden",
     templates: [
       (s) => `Unlocked the ${s.cover || "next"} cover. The streak keeps paying off.${FOOTER}`,
       (s) => `New profile cover unlocked: ${s.cover || ""}. Earned, not given.${FOOTER}`,
@@ -107,7 +139,7 @@ export default function CaptionGenerator() {
     .occ-btn{ background:${T.bg3}; border:1px solid ${T.border}; color:${T.dim};
       padding:10px 14px; border-radius:10px; cursor:pointer; font-size:12px; font-weight:600;
       display:flex; align-items:center; gap:7px; transition:all 0.15s; }
-    .occ-btn.active{ background:rgba(147,168,90,0.12); border-color:${T.borderG}; color:${T.olive}; }
+    .occ-btn.active{ background:rgba(125,200,50,0.16); border-color:${T.borderG}; color:${T.olive}; }
     .inp{ width:100%; background:${T.bg3}; border:1px solid ${T.border}; color:${T.white};
       padding:10px 12px; border-radius:8px; font-size:13px; outline:none; }
     .inp:focus{ border-color:${T.olive}; }
@@ -138,7 +170,7 @@ export default function CaptionGenerator() {
               {Object.entries(OCCASIONS).map(([key, o]) => (
                 <button key={key} className={`occ-btn ${occasion===key?"active":""}`}
                   onClick={() => { setOccasion(key); setResults([]); }}>
-                  <span>{o.emoji}</span> {o.label}
+                  <Ico n={o.emoji} size={20} inline /> {o.label}
                 </button>
               ))}
             </div>
@@ -150,8 +182,8 @@ export default function CaptionGenerator() {
               Details (optional — fills in the blanks)
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              {occasion === "daily_proof" || occasion === "streak_milestone" ? (
-                <input className="inp" placeholder="Streak day number (e.g. 42)" value={streak}
+              {["daily_proof","streak_milestone","tier_up","grass_draw"].includes(occasion) ? (
+                <input className="inp" inputMode="numeric" placeholder="Streak day number (e.g. 42)" value={streak}
                   onChange={e => setStreak(e.target.value)} />
               ) : null}
               {occasion === "spotlight_win" && (
@@ -170,7 +202,7 @@ export default function CaptionGenerator() {
                 <input className="inp" placeholder="Referral count (optional)" value={count}
                   onChange={e => setCount(e.target.value)} />
               )}
-              {!["daily_proof","streak_milestone","spotlight_win","badge_unlock","prestige_cover","referral"].includes(occasion) && (
+              {!["daily_proof","streak_milestone","tier_up","grass_draw","spotlight_win","badge_unlock","prestige_cover","referral"].includes(occasion) && (
                 <div style={{ fontSize:12, color:T.dim, fontStyle:"italic" }}>No extra details needed for this occasion.</div>
               )}
             </div>
@@ -178,7 +210,7 @@ export default function CaptionGenerator() {
 
           <button className="btn" onClick={generate}
             style={{ width:"100%", background:T.olive, color:"#fff", marginBottom:20 }}>
-            ✦ Generate Captions
+            Generate Captions
           </button>
 
           {/* Results */}
@@ -190,11 +222,11 @@ export default function CaptionGenerator() {
                     {text}
                   </div>
                   <button className="btn" onClick={() => copy(text, i)}
-                    style={{ background: copiedIdx===i ? "rgba(147,168,90,0.15)" : T.bg3,
+                    style={{ background: copiedIdx===i ? "rgba(125,200,50,0.16)" : T.bg3,
                       color: copiedIdx===i ? T.olive : T.dim,
                       border:`1px solid ${copiedIdx===i ? T.borderG : T.border}`,
                       fontSize:11, padding:"7px 14px" }}>
-                    {copiedIdx===i ? "✓ Copied" : "📋 Copy"}
+                    {copiedIdx===i ? "Copied" : "Copy"}
                   </button>
                 </div>
               ))}

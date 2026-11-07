@@ -51,7 +51,7 @@ export default function PostToCommunity({ dataUrl, kind, tool, theme }) {
   if (!unlocked) return null;
   if (state === "done") {
     return (
-      <div style={{ padding:"12px 14px", borderRadius:10, background:"rgba(147,168,90,0.08)", border:`1px solid ${T.borderG}`, fontSize:13, color:T.white, fontWeight:700 }}>
+      <div style={{ padding:"12px 14px", borderRadius:10, background:"rgba(125,200,50,0.16)", border:`1px solid ${T.borderG}`, fontSize:13, color:T.white, fontWeight:700 }}>
         Posted to Community Creations.{" "}
         <Link href="/create/community" style={{ color:T.olive }}>See it in the gallery</Link>
       </div>
