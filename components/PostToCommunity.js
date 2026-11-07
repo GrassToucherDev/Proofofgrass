@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { POST_MIN_STREAK, communityUnlocked } from "../utils/createCommunity";
 
-const T = { bg3:"#141710", border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)", olive:"#93a85a", gold:"#c8a84b", white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)", red:"#e05252" };
+import { T } from "../utils/createTheme";
 
 function getUsername() {
   try { const s = localStorage.getItem("pog_username"); return s ? s.replace(/@/g, "").toLowerCase().trim() : null; } catch { return null; }
@@ -71,11 +71,11 @@ export default function PostToCommunity({ dataUrl, kind, tool, theme }) {
         Posts are public. Players with a {POST_MIN_STREAK}-day streak can post, up to 5 a day.{theme ? ` This week's theme: ${theme}.` : ""}
       </div>
       <input value={caption} onChange={(e) => setCaption(e.target.value)} maxLength={140} placeholder="Add a caption (optional)"
-        style={{ background:"#0e100b", border:`1px solid ${T.border}`, borderRadius:10, padding:"11px 12px", color:T.white, fontSize:16, fontFamily:"Nunito,sans-serif", width:"100%", boxSizing:"border-box" }} />
+        style={{ background:"#fff", border:`1px solid ${T.border}`, borderRadius:10, padding:"11px 12px", color:T.white, fontSize:16, fontFamily:"Nunito,sans-serif", width:"100%", boxSizing:"border-box" }} />
       {state === "error" && <div style={{ fontSize:12, color:T.red, lineHeight:1.5 }}>{err}</div>}
       <div style={{ display:"flex", gap:8 }}>
         <button className="btn" onClick={post} disabled={state === "posting"}
-          style={{ flex:1, background:T.olive, color:"#0a0c06", opacity: state === "posting" ? 0.6 : 1 }}>
+          style={{ flex:1, background:T.olive, color:"#fff", opacity: state === "posting" ? 0.6 : 1 }}>
           {state === "posting" ? "Posting…" : "Post"}
         </button>
         <button className="btn" onClick={() => { setOpen(false); setState("idle"); setErr(""); }}

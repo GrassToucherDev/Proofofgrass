@@ -1,15 +1,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import CreateShell from "../../components/CreateShell";
+import { T, CARD_SHADOW } from "../../utils/createTheme";
 import { supabase } from "../../utils/supabase";
 import Ico from "../../components/Ico";
 import { currentTheme, COMMUNITY_LISTED } from "../../utils/createCommunity";
 
-const T = {
-  bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
-  border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)", borderGold:"rgba(200,168,75,0.35)",
-  olive:"#93a85a", gold:"#c8a84b",
-  white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
-};
 
 function getUsername() {
   if (typeof window === "undefined") return null;
@@ -98,7 +94,7 @@ export default function CreateHub() {
     ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
     .tool-card{
       background:${T.bg2}; border:1px solid ${T.border}; border-radius:16px;
-      padding:24px; text-decoration:none; display:flex; flex-direction:column;
+      padding:24px; text-decoration:none; display:flex; flex-direction:column; box-shadow:${CARD_SHADOW};
       gap:12px; transition:border-color 0.18s, transform 0.18s;
       position:relative; overflow:hidden;
     }
@@ -111,34 +107,24 @@ export default function CreateHub() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div style={{ minHeight:"100vh", background:T.bg }}>
-
-        {/* NAV */}
-        <nav style={{ position:"sticky", top:0, zIndex:100, display:"flex",
-          alignItems:"center", justifyContent:"space-between",
-          padding:"0 clamp(14px,4vw,48px)", height:56,
-          background:`${T.bg}ec`, backdropFilter:"blur(18px)",
-          borderBottom:`1px solid ${T.border}` }}>
-          <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width:26,height:26,objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:17, fontWeight:700, color:T.white }}>touch grass</span>
-          </Link>
-          <Link href="/" style={{ fontSize:11, color:T.olive, textDecoration:"none", letterSpacing:"0.06em" }}>← Dashboard</Link>
-        </nav>
+      <CreateShell title="Creator Hub" back={false}>
 
         {/* HERO */}
-        <div style={{ padding:"48px clamp(14px,5vw,64px) 32px", borderBottom:`1px solid ${T.border}` }}>
-          <div style={{ fontSize:10, letterSpacing:"0.22em", color:T.gold, textTransform:"uppercase", marginBottom:12, fontWeight:600 }}>
-            Touch Grass
+        <div style={{ padding:"28px clamp(14px,5vw,64px) 28px", display:"flex", alignItems:"center", gap:16, justifyContent:"space-between" }}>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:10, letterSpacing:"0.22em", color:T.gold, textTransform:"uppercase", marginBottom:10, fontWeight:800 }}>
+              Touch Grass
+            </div>
+            <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:"clamp(34px,6vw,60px)",
+              fontWeight:700, color:T.white, lineHeight:1, letterSpacing:"-0.02em", marginBottom:12 }}>
+              Creator Hub
+            </h1>
+            <p style={{ fontSize:14, color:T.muted, fontWeight:600, maxWidth:520, lineHeight:1.6 }}>
+              Memes, frames, flex cards, and captions for the Touch Grass community, built from your real Proof of Grass data, never faked.
+            </p>
           </div>
-          <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:"clamp(36px,6vw,64px)",
-            fontWeight:700, color:T.white, lineHeight:1, letterSpacing:"-0.02em", marginBottom:14 }}>
-            Creator Hub
-          </h1>
-          <p style={{ fontSize:14, color:T.dim, fontWeight:300, maxWidth:520, lineHeight:1.7 }}>
-            Memes, frames, flex cards, and captions for the Touch Grass community —
-            built from your real Proof of Grass data, never faked.
-          </p>
+          <img src="/mascot/wago-celebrate.webp" alt="" width={120} height={120}
+            style={{ width:"clamp(84px,22vw,140px)", height:"auto", objectFit:"contain", flexShrink:0 }} />
         </div>
 
         {/* WEEKLY THEME */}
@@ -215,7 +201,7 @@ export default function CreateHub() {
             })}
           </div>
         </div>
-      </div>
+      </CreateShell>
     </>
   );
 }

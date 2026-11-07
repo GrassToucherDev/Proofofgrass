@@ -1,14 +1,10 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import CreateShell from "../../components/CreateShell";
+import { T, CARD_SHADOW } from "../../utils/createTheme";
 import PostToCommunity from "../../components/PostToCommunity";
 import { currentTheme } from "../../utils/createCommunity";
 
-const T = {
-  bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
-  border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)", borderGold:"rgba(200,168,75,0.35)",
-  olive:"#93a85a", gold:"#c8a84b",
-  white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
-};
 
 // ─── Meme templates — text-only, no external images needed ───────────────────
 const TEMPLATES = [
@@ -194,21 +190,11 @@ export default function MemeTool() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div style={{ minHeight:"100vh", background:T.bg }}>
-        <nav style={{ position:"sticky", top:0, zIndex:100, display:"flex",
-          alignItems:"center", justifyContent:"space-between",
-          padding:"0 clamp(14px,4vw,48px)", height:56,
-          background:`${T.bg}ec`, backdropFilter:"blur(18px)", borderBottom:`1px solid ${T.border}` }}>
-          <Link href="/create" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width:24,height:24,objectFit:"contain" }} />
-            <span style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:16, fontWeight:700, color:T.white }}>Creator Hub</span>
-          </Link>
-          <Link href="/create" style={{ fontSize:11, color:T.olive, textDecoration:"none" }}>← All Tools</Link>
-        </nav>
+      <CreateShell title="Meme Tool">
 
         <div style={{ maxWidth:1000, margin:"0 auto", padding:"32px clamp(14px,5vw,32px) 64px" }}>
           <div style={{ textAlign:"center", marginBottom:28 }}>
-            <div style={{ fontSize:36, marginBottom:10 }}>😂</div>
+            <img src="/mascot/wago-celebrate.webp" alt="" width={88} height={88} style={{ width:88, height:88, objectFit:"contain", marginBottom:6 }} />
             <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:"clamp(26px,5vw,38px)",
               fontWeight:700, color:T.white, marginBottom:6 }}>Meme Tool</h1>
             <p style={{ fontSize:12.5, color:T.dim }}>Pick a template, edit the text, share it.</p>
@@ -243,7 +229,7 @@ export default function MemeTool() {
                     <input className="inp" value={bottomText} onChange={e => setBottomText(e.target.value)} />
                   </div>
                   <button className="btn" onClick={generate} disabled={generating}
-                    style={{ background:T.olive, color:"#0e1108", opacity:generating?0.7:1 }}>
+                    style={{ background:T.olive, color:"#fff", opacity:generating?0.7:1 }}>
                     {generating ? "Generating…" : "✦ Generate Meme"}
                   </button>
                 </div>
@@ -277,7 +263,7 @@ export default function MemeTool() {
             </div>
           </div>
         </div>
-      </div>
+      </CreateShell>
     </>
   );
 }
