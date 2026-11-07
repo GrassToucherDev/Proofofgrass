@@ -7,6 +7,8 @@ create table if not exists account_pauses (
   paused_at    timestamptz not null default now(),
   paused_until timestamptz,                 -- empty = paused until you resume
   resumed_at   timestamptz,                 -- set when you resume; keeps a record
-  paused_by    text
+  paused_by    text,
+  frozen       boolean not null default false   -- true = their streak was alive when paused, so it is kept alive while paused
 );
+alter table account_pauses add column if not exists frozen boolean not null default false;
 alter table account_pauses enable row level security;   -- only the server (service role) touches it

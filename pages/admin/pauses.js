@@ -34,7 +34,7 @@ export default function AdminPauses() {
     if (!usernames.length) return;
     if (!window.confirm(`Pause ${usernames.length} account(s)?\n\n${usernames.join(", ")}\n\n${days ? `For ${days} day(s).` : "Until you resume them."}`)) return;
     setBusy(true); setNote("");
-    try { const j = await call("/api/admin/pauses", { method: "POST", body: JSON.stringify({ action: "pause", usernames, reason, message: msg, days }) }); setNote(`Paused: ${j.paused.join(", ")}`); setNames(""); await load(); }
+    try { const j = await call("/api/admin/pauses", { method: "POST", body: JSON.stringify({ action: "pause", usernames, reason, message: msg, days }) }); setNote(`Paused: ${j.paused.join(", ")}.` + (j.frozen?.length ? ` Streak frozen for: ${j.frozen.join(", ")}.` : "") + (j.notFrozen?.length ? ` Streak already broken (nothing to freeze): ${j.notFrozen.join(", ")}.` : "")); setNames(""); await load(); }
     catch (e) { setNote(e.message); } setBusy(false);
   };
   const resume = async (u) => {
@@ -59,7 +59,7 @@ export default function AdminPauses() {
       <div style={{ maxWidth: 680, margin: "0 auto" }}>
         <Link href="/admin/wheel" style={{ fontSize: 13, color: V2.grassDark, textDecoration: "none" }}>← Admin</Link>
         <h1 style={{ fontSize: 26, margin: "8px 0 6px", color: V2.forestGreen }}>Pause accounts</h1>
-        <p style={{ fontSize: 13.5, margin: "0 0 12px" }}>A paused account can't upload or log a proof, and its proofs disappear from the community gallery and Grove feeds. Their streak is not protected: missed days still break it.</p>
+        <p style={{ fontSize: 13.5, margin: "0 0 12px" }}>A paused account can't upload or log a proof, its proofs disappear from the community gallery and Grove feeds, it gets no streak reminders, and it is left out of every Grass Draw for any month the pause touches. If their streak was alive when you paused them, it stays alive until you resume them.</p>
         <input type="password" placeholder="Admin secret" value={secret} onChange={(e) => setSecret(e.target.value)} style={{ ...inp, marginBottom: 12 }} />
         {note && <div style={{ ...box, fontSize: 13.5, background: "#fffbe6" }}>{note}</div>}
 
@@ -121,6 +121,7 @@ export default function AdminPauses() {
                 </span>
               </div>
               <div style={{ opacity: 0.8 }}>{r.active ? (r.paused_until ? `Paused until ${when(r.paused_until)}` : "Paused until resumed") : r.resumed_at ? `Resumed ${when(r.resumed_at)}` : "Pause ended"} · since {when(r.paused_at)}</div>
+              {r.frozen && r.active && <div style={{ opacity: 0.8 }}>Streak frozen</div>}
               {r.reason && <div style={{ opacity: 0.8 }}>Note: {r.reason}</div>}
             </div>
           ))}

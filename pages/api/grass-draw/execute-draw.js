@@ -4,6 +4,7 @@
 
 import crypto from "crypto";
 import { isAdminRequest } from "../../../utils/adminApi";
+import { getPausedDuring } from "../../../utils/pauses";
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -94,6 +95,15 @@ export default async function handler(req, res) {
 
     // ── 5. Apply exclusions ───────────────────────────────────────────────────
     const excluded = [];
+
+    // Anyone whose account was paused at any time during this cycle's month is left out of its draws.
+    try {
+      const pausedInCycle = await getPausedDuring(supabase, cycle.starts_at, cycle.ends_at);
+      if (pausedInCycle.size) pool = pool.filter(t => {
+        if (pausedInCycle.has(t.username.toLowerCase())) { excluded.push({ username: t.username, reason: 'Account paused during this cycle' }); return false; }
+        return true;
+      });
+    } catch (e) { console.warn('[execute-draw] pause exclusion skipped:', e?.message); }
 
     // Exclude major reward winners from shield/pack/nft
     if (['shield', 'profile_pack', 'nft'].includes(draw_type)) {
