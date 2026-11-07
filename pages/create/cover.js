@@ -4,95 +4,41 @@ import CreateShell from "../../components/CreateShell";
 import { T, CARD_SHADOW } from "../../utils/createTheme";
 import { supabase } from "../../utils/supabase";
 import { COVER_DEFINITIONS, isCoverUrlReady } from "../../utils/coverDefinitions";
+import { BRAND, ensureFonts, roundRect, drawScene, drawPanel, drawImage, loadImg, drawFooter, MASCOT } from "../../utils/createCards";
 
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-  ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r);
-  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h);
-  ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r);
-  ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
-}
-
-function loadImage(src) {
-  return new Promise((res, rej) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => res(img);
-    img.onerror = () => {
-      fetch(src).then(r => r.blob()).then(blob => {
-        const url = URL.createObjectURL(blob);
-        const img2 = new Image();
-        img2.onload = () => { URL.revokeObjectURL(url); res(img2); };
-        img2.onerror = rej;
-        img2.src = url;
-      }).catch(rej);
-    };
-    img.src = src;
-  });
-}
 
 async function generateCoverCard({ cover, username }) {
   const W = 1080, H = 1350;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
+  await ensureFonts();
+  drawScene(ctx, W, H, "day", 0.9);
+  drawPanel(ctx, 60, 60, W - 120, H - 190, 44);
 
-  ctx.fillStyle = "#080a06";
-  ctx.fillRect(0, 0, W, H);
-
-  // Cover image fills top 60%
-  try {
-    const img = await loadImage(cover.imageUrl);
-    const ch = H * 0.62;
-    const scale = Math.max(W/img.width, ch/img.height);
-    const iw = img.width * scale, ih = img.height * scale;
-    ctx.drawImage(img, W/2 - iw/2, 0, iw, ih);
-
-    // Fade to black at bottom of image
-    const fade = ctx.createLinearGradient(0, ch*0.5, 0, ch);
-    fade.addColorStop(0, "transparent");
-    fade.addColorStop(1, "#080a06");
-    ctx.fillStyle = fade;
-    ctx.fillRect(0, 0, W, ch);
-  } catch { /* skip if image fails */ }
-
-  ctx.strokeStyle = "rgba(200,168,75,0.35)";
-  ctx.lineWidth = 2;
-  roundRect(ctx, 24, 24, W-48, H-48, 20);
-  ctx.stroke();
+  // Cover image in a rounded frame
+  const ix = 100, iy = 100, iw = W - 200, ih = 640;
+  const img = await loadImg(cover.imageUrl);
+  ctx.save(); roundRect(ctx, ix, iy, iw, ih, 30); ctx.clip();
+  if (img) {
+    const sc = Math.max(iw / img.width, ih / img.height);
+    ctx.drawImage(img, ix + iw/2 - img.width*sc/2, iy + ih/2 - img.height*sc/2, img.width*sc, img.height*sc);
+  } else { ctx.fillStyle = "#cfe6bd"; ctx.fillRect(ix, iy, iw, ih); }
+  ctx.restore();
+  roundRect(ctx, ix, iy, iw, ih, 30); ctx.strokeStyle = "rgba(125,200,50,0.6)"; ctx.lineWidth = 4; ctx.stroke();
 
   ctx.textAlign = "center";
-  ctx.font = "600 18px 'Nunito',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.5)";
-  ctx.letterSpacing = "0.2em";
-  ctx.fillText("PROOF OF GRASS", W/2, 856);
+  ctx.font = "800 20px 'Nunito',sans-serif"; ctx.fillStyle = BRAND.gold; ctx.letterSpacing = "0.24em";
+  ctx.fillText("COVER UNLOCKED", W/2, 800); ctx.letterSpacing = "0px";
+  ctx.font = "700 72px 'Fredoka',system-ui,sans-serif"; ctx.fillStyle = BRAND.forest;
+  ctx.fillText(cover.name, W/2, 886);
+  ctx.font = "700 26px 'Nunito',sans-serif"; ctx.fillStyle = "#4a7a30";
+  ctx.fillText(cover.unlockDay ? `Unlocked at Day ${cover.unlockDay}` : (cover.description || ""), W/2, 934);
+  ctx.font = "800 32px 'Nunito',sans-serif"; ctx.fillStyle = BRAND.dark;
+  ctx.fillText(`@${username}`, W/2, 996);
 
-  ctx.font = "700 13px 'Nunito',sans-serif";
-  ctx.fillStyle = T.gold;
-  ctx.letterSpacing = "0.24em";
-  ctx.fillText("PRESTIGE COVER UNLOCKED", W/2, 882);
-
-  ctx.font = "700 56px 'Fredoka',system-ui,sans-serif";
-  ctx.fillStyle = "#f0efea";
-  ctx.letterSpacing = "-0.01em";
-  ctx.fillText(cover.name, W/2, 970);
-
-  ctx.font = "500 18px 'Nunito',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.5)";
-  ctx.letterSpacing = "0.04em";
-  ctx.fillText(`Unlocked at Day ${cover.unlockDay}`, W/2, 1010);
-
-  ctx.font = "600 22px 'Nunito',sans-serif";
-  ctx.fillStyle = T.olive;
-  ctx.fillText(`@${username}`, W/2, 1070);
-
-  ctx.font = "500 18px 'Nunito',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.25)";
-  ctx.letterSpacing = "0.1em";
-  ctx.fillText("ProofOfGrass.app", W/2, H - 60);
-
+  await drawImage(ctx, MASCOT("wave"), W - 170, H - 110, 250);
+  drawFooter(ctx, W, H, "rgba(255,255,255,0.95)", H - 38);
   return canvas.toDataURL("image/png");
 }
 
@@ -161,7 +107,7 @@ export default function CoverTool() {
             <img src="/mascot/wago-wave.webp" alt="" width={88} height={88} style={{ width:88, height:88, objectFit:"contain", marginBottom:6 }} />
             <h1 style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:"clamp(26px,5vw,38px)",
               fontWeight:700, color:T.white, marginBottom:6 }}>Cover Showcase Card</h1>
-            <p style={{ fontSize:12.5, color:T.dim }}>Show off a Prestige Cover you've unlocked.</p>
+            <p style={{ fontSize:12.5, color:T.dim }}>Show off a profile cover you've unlocked.</p>
           </div>
 
           {loading ? (
@@ -211,7 +157,7 @@ export default function CoverTool() {
 
               <button className="btn" onClick={generate} disabled={generating || !selected}
                 style={{ width:"100%", background:T.olive, color:"#fff", marginBottom:20, opacity:generating?0.7:1 }}>
-                {generating ? "Generating…" : "✦ Generate Card"}
+                {generating ? "Generating…" : "Generate Card"}
               </button>
 
               {preview && (
@@ -222,7 +168,7 @@ export default function CoverTool() {
                   </div>
                   <button className="btn" onClick={download}
                     style={{ width:"100%", background:T.white, color:T.bg }}>
-                    ↓ Save Card
+                    Save Card
                   </button>
                 </div>
               )}

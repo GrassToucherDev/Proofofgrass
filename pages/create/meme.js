@@ -4,107 +4,54 @@ import CreateShell from "../../components/CreateShell";
 import { T, CARD_SHADOW } from "../../utils/createTheme";
 import PostToCommunity from "../../components/PostToCommunity";
 import { currentTheme } from "../../utils/createCommunity";
+import { BRAND, ensureFonts, wrapText, drawScene, drawImage, drawFooter, MASCOT } from "../../utils/createCards";
 
 
-// ─── Meme templates — text-only, no external images needed ───────────────────
+// ─── Meme templates: each has a scene (sky and hill colors) and a WAGO pose ───
 const TEMPLATES = [
-  { key:"utc_reset", label:"UTC Reset Panic", top:"11:58 PM", bottom:"ME SPRINTING OUTSIDE TO SAVE MY STREAK", bg:"#1a0e00", accent:"#f97316" },
-  { key:"day1_100",  label:"Day 1 vs Day 100", top:"DAY 1", bottom:"DAY 100", bg:"#0e1008", accent:"#93a85a" },
-  { key:"screen_grass", label:"Screen Toucher vs Grass Toucher", top:"SCREEN TOUCHER", bottom:"GRASS TOUCHER", bg:"#0a0a14", accent:"#60a5fa" },
-  { key:"lucky_touch", label:"Lucky Touch Activated", top:"🍀 LUCKY TOUCH", bottom:"ACTIVATED", bg:"#0e0d00", accent:"#c8a84b" },
-  { key:"shield_save", label:"Streak Shield Save", top:"STREAK ABOUT TO BREAK", bottom:"SHIELD ACTIVATED", bg:"#04140e", accent:"#4ade80" },
-  { key:"outside_dlc", label:"Outside DLC", top:"NEW DLC UNLOCKED:", bottom:"OUTSIDE", bg:"#0e0800", accent:"#f97316" },
-  { key:"spotlight", label:"Community Spotlight", top:"THIS WEEK'S WINNER:", bottom:"YOU (HOPEFULLY)", bg:"#0e0d00", accent:"#c8a84b" },
-  { key:"three_steps", label:"Three Steps", top:"GO OUTSIDE. TAKE PHOTO. PROVE IT.", bottom:"THAT'S THE WHOLE APP", bg:"#080a06", accent:"#93a85a" },
-  { key:"daily_choice", label:"Daily Choice", top:"DOOMSCROLL", bottom:"OR TOUCH GRASS", bg:"#0a0a0a", accent:"#f0efea" },
-  { key:"future_you", label:"Future You", top:"FUTURE YOU:", bottom:'"THANKS FOR NOT BREAKING THE STREAK"', bg:"#04140e", accent:"#4ade80" },
+  { key:"utc_reset",    label:"UTC Reset Panic",           top:"11:58 PM UTC", bottom:"ME SPRINTING OUTSIDE TO SAVE MY STREAK", scene:"sunrise", mascot:"celebrate" },
+  { key:"day1_100",     label:"Day 1 vs Day 100",          top:"DAY 1", bottom:"DAY 100", scene:"day", mascot:"wave" },
+  { key:"screen_grass", label:"Screen Toucher vs Grass Toucher", top:"SCREEN TOUCHER", bottom:"GRASS TOUCHER", scene:"blue", mascot:"point" },
+  { key:"lucky_touch",  label:"Lucky Touch Activated",     top:"LUCKY TOUCH", bottom:"ACTIVATED", scene:"gold", mascot:"celebrate" },
+  { key:"shield_save",  label:"Streak Shield Save",        top:"STREAK ABOUT TO BREAK", bottom:"SHIELD ACTIVATED", scene:"mint", mascot:"shield" },
+  { key:"outside_dlc",  label:"Outside DLC",               top:"NEW DLC UNLOCKED:", bottom:"OUTSIDE", scene:"day", mascot:"point" },
+  { key:"proof_of_day", label:"Proof of the Day",          top:"THE GALLERY IS WATCHING", bottom:"MAKE IT PROOF OF THE DAY", scene:"gold", mascot:"camera" },
+  { key:"grass_draw",   label:"Grass Draw Entry",          top:"ONE MORE PROOF", bottom:"ONE MORE GRASS DRAW ENTRY", scene:"mint", mascot:"celebrate" },
+  { key:"grove",        label:"My Grove",                  top:"MY GROVE:", bottom:"ALL OF US TOUCHING GRASS", scene:"day", mascot:"wave" },
+  { key:"spotlight",    label:"Community Spotlight",       top:"THIS WEEK'S WINNER:", bottom:"YOU (HOPEFULLY)", scene:"gold", mascot:"trophy" },
+  { key:"three_steps",  label:"Three Steps",               top:"GO OUTSIDE. TAKE PHOTO. PROVE IT.", bottom:"THAT'S THE WHOLE APP", scene:"day", mascot:"camera" },
+  { key:"daily_choice", label:"Daily Choice",              top:"DOOMSCROLL", bottom:"OR TOUCH GRASS", scene:"dusk", mascot:"point" },
+  { key:"future_you",   label:"Future You",                top:"FUTURE YOU:", bottom:'"THANKS FOR NOT BREAKING THE STREAK"', scene:"sunrise", mascot:"wave" },
+  { key:"wago_sleeps",  label:"WAGO Is Sleeping",          top:"NO PROOF TODAY?", bottom:"WAGO IS DISAPPOINTED", scene:"dusk", mascot:"sleep" },
 ];
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-  ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r);
-  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h);
-  ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r);
-  ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
-}
-
-function wrapText(ctx, text, maxWidth) {
-  const words = text.split(" ");
-  const lines = [];
-  let line = "";
-  for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = test;
-    }
-  }
-  if (line) lines.push(line);
-  return lines;
-}
 
 async function generateMeme({ template, topText, bottomText }) {
   const W = 1080, H = 1080;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
+  await ensureFonts();
+  const sc = drawScene(ctx, W, H, template.scene, 0.80);
+  ctx.textAlign = "center"; ctx.lineJoin = "round";
 
-  // Background
-  const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, template.bg);
-  bg.addColorStop(1, "#050604");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
+  // Top text (dark green on the sky)
+  ctx.font = "700 70px 'Fredoka',system-ui,sans-serif";
+  const topLines = wrapText(ctx, topText.toUpperCase(), W - 150);
+  let ty = 120; ctx.fillStyle = BRAND.forest;
+  topLines.forEach((l) => { ctx.fillText(l, W / 2, ty); ty += 78; });
 
-  // Ambient glow
-  const glow = ctx.createRadialGradient(W/2, H*0.4, 0, W/2, H*0.4, 500);
-  glow.addColorStop(0, template.accent + "20");
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
+  // WAGO, standing on the hills
+  await drawImage(ctx, MASCOT(template.mascot), W / 2, 800, 440);
 
-  // Border
-  ctx.strokeStyle = "rgba(200,168,75,0.3)";
-  ctx.lineWidth = 2;
-  roundRect(ctx, 24, 24, W-48, H-48, 20);
-  ctx.stroke();
-
-  // Top branding
-  ctx.textAlign = "center";
-  ctx.font = "600 16px 'Nunito',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.4)";
-  ctx.letterSpacing = "0.2em";
-  ctx.fillText("TOUCH GRASS", W/2, 70);
-
-  // Top text
-  ctx.font = "800 64px 'Nunito',sans-serif";
-  ctx.fillStyle = "#f0efea";
-  ctx.letterSpacing = "0";
-  const topLines = wrapText(ctx, topText.toUpperCase(), W - 140);
-  let ty = H * 0.32 - (topLines.length - 1) * 38;
-  topLines.forEach(line => { ctx.fillText(line, W/2, ty); ty += 76; });
-
-  // Divider
-  ctx.font = "40px serif";
-  ctx.fillStyle = template.accent;
-  ctx.fillText("✦", W/2, H/2 + 14);
-
-  // Bottom text
-  ctx.font = "800 64px 'Nunito',sans-serif";
-  ctx.fillStyle = template.accent;
-  const bottomLines = wrapText(ctx, bottomText.toUpperCase(), W - 140);
-  let by = H * 0.68 - (bottomLines.length - 1) * 38;
-  bottomLines.forEach(line => { ctx.fillText(line, W/2, by); by += 76; });
-
-  // Bottom branding
-  ctx.font = "500 16px 'Nunito',sans-serif";
-  ctx.fillStyle = "rgba(240,239,234,0.25)";
-  ctx.letterSpacing = "0.1em";
-  ctx.fillText("ProofOfGrass.app", W/2, H - 56);
-
+  // Bottom text (white with a dark outline so it reads on the grass)
+  ctx.font = "700 66px 'Fredoka',system-ui,sans-serif";
+  const bottomLines = wrapText(ctx, bottomText.toUpperCase(), W - 150);
+  let by = 892 - (bottomLines.length - 1) * 30;
+  bottomLines.forEach((l) => {
+    ctx.lineWidth = 14; ctx.strokeStyle = sc.accent; ctx.strokeText(l, W / 2, by);
+    ctx.fillStyle = "#fff"; ctx.fillText(l, W / 2, by); by += 72;
+  });
+  drawFooter(ctx, W, H, "rgba(255,255,255,0.95)", H - 34);
   return canvas.toDataURL("image/png");
 }
 
@@ -177,7 +124,7 @@ export default function MemeTool() {
     .tpl-btn{ background:${T.bg3}; border:1px solid ${T.border}; color:${T.dim};
       padding:10px 12px; border-radius:9px; cursor:pointer; font-size:11px; font-weight:600;
       text-align:left; transition:all 0.15s; width:100%; }
-    .tpl-btn.active{ background:rgba(147,168,90,0.1); border-color:${T.borderG}; color:${T.olive}; }
+    .tpl-btn.active{ background:rgba(125,200,50,0.16); border-color:${T.borderG}; color:${T.olive}; }
     .inp{ width:100%; background:${T.bg3}; border:1px solid ${T.border}; color:${T.white};
       padding:10px 12px; border-radius:8px; font-size:13px; outline:none; }
     .inp:focus{ border-color:${T.olive}; }
@@ -230,7 +177,7 @@ export default function MemeTool() {
                   </div>
                   <button className="btn" onClick={generate} disabled={generating}
                     style={{ background:T.olive, color:"#fff", opacity:generating?0.7:1 }}>
-                    {generating ? "Generating…" : "✦ Generate Meme"}
+                    {generating ? "Generating…" : "Generate Meme"}
                   </button>
                 </div>
               </div>
@@ -248,11 +195,11 @@ export default function MemeTool() {
                     </button>
                     <button className="btn" onClick={download}
                       style={{ background:T.bg3, color:T.dim, border:`1px solid ${T.border}`, flex:"1 1 140px" }}>
-                      ↓ Save
+                      Save
                     </button>
                     <button className="btn" onClick={copyCaption}
-                      style={{ background:"rgba(147,168,90,0.1)", color:T.olive, border:`1px solid ${T.borderG}`, flex:"1 1 140px" }}>
-                      {copied ? "✓ Copied" : "📋 Copy Caption"}
+                      style={{ background:"rgba(125,200,50,0.16)", color:T.olive, border:`1px solid ${T.borderG}`, flex:"1 1 140px" }}>
+                      {copied ? "Copied" : "Copy Caption"}
                     </button>
                   </div>
                   <div style={{ marginTop:10 }}>
