@@ -28,6 +28,11 @@ const TOOLS = [
     href: "/create/meme", locked: false, badge: null,
   },
   {
+    key: "comic", icon: "megaphone", title: "Comic Maker",
+    desc: "Build multi-panel comics with WAGO, speech bubbles and captions.",
+    href: "/create/comic", locked: false, badge: "New",
+  },
+  {
     key: "pfp", icon: "camera", title: "PFP Tool",
     desc: "Upload your photo and add Touch Grass frames & overlays.",
     href: "/create/pfp", locked: false, badge: null,
