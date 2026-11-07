@@ -307,7 +307,7 @@ export default function ResultCard({ imageSrc, proofFile=null, username, initial
             setSubmitStatus("success");return true;
           }
         }catch{}
-        setSubmitError(rpcError.code==="not_signed_in"?"This username is secured — sign in with Google to log your proof.":rpcError.code==="not_owner"?"This username belongs to another account.":(rpcError.code==="paused"||rpcError.code==="photo_required"||rpcError.code==="photo_invalid"||rpcError.code==="photo_reused")?rpcError.message:(rpcError.code==="rate_limited"||rpcError.code==="too_many_accounts"||rpcError.code==="timeout")?rpcError.message:"Streak log failed — tap again.");setSubmitStatus("error");return false;
+        setSubmitError(rpcError.code==="not_signed_in"?"This username is secured — sign in with Google to log your proof.":rpcError.code==="not_owner"?"This username belongs to another account.":(rpcError.code==="paused"||rpcError.code==="photo_not_outdoor"||rpcError.code==="photo_required"||rpcError.code==="photo_invalid"||rpcError.code==="photo_reused")?rpcError.message:(rpcError.code==="rate_limited"||rpcError.code==="too_many_accounts"||rpcError.code==="timeout")?rpcError.message:"Streak log failed — tap again.");setSubmitStatus("error");return false;
       }
       if(result?.status==="already_submitted"){setSubmitStatus("success");return true;}
       const newStreak=result?.current_streak??currentStreak;

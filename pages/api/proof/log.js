@@ -7,6 +7,7 @@
 import { adminClient, cleanUsername } from "../../../utils/requireOwner";
 import { authorizeProofActor, BUCKET, proofPath, looksLikeImage, isSafeProofUsername } from "../../../utils/proofAccess";
 import crypto from "crypto";
+import { checkProofPhoto, BLOCK_MESSAGE } from "../../../utils/photoCheck";
 
 // Give the route room to finish on Vercel (the database function does real work at long streaks).
 export const config = { maxDuration: 30 };
@@ -18,6 +19,7 @@ const num = (v, lo, hi) => { const n = Number(v); return Number.isFinite(n) && n
 const str = (v, n) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
 
 async function logProof(req, res) {
+  const t0req = Date.now();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const username = cleanUsername(req.body?.username);
   if (!isSafeProofUsername(username)) return res.status(400).json({ error: "Invalid username.", code: "bad_username" });
@@ -48,10 +50,18 @@ async function logProof(req, res) {
       }
       if (!seen) await db.from("proof_photo_hashes").insert([{ hash, username, day }]);
     } else console.warn("[proof/log] photo hash check skipped:", hErr.message);
+    // Automatic photo check: clear screenshots / receipts are bounced (and their photo deleted); other doubtful photos are
+    // let through and put on the admin "Needs review" list. Fails open (see utils/photoCheck.js).
+    const chk = await checkProofPhoto(db, buf, username);
+    if (chk.verdict === "blocked") {
+      try { await db.storage.from(BUCKET).remove([path]); } catch {}
+      return res.status(422).json({ error: BLOCK_MESSAGE, code: "photo_not_outdoor" });
+    }
   } catch (e) {
     console.error("[proof/log] photo check failed:", e?.message);
     return res.status(400).json({ error: "We couldn't read your photo. Please retake it and try again.", code: "photo_invalid" });
   }
+
 
   // Whitelisted, sanitised parameters only.
   const b = req.body || {};
@@ -67,7 +77,7 @@ async function logProof(req, res) {
 
   // Stop waiting a little before the platform would kill us, so the player gets a real answer and we keep a record.
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 24000);
+  const timer = setTimeout(() => ctrl.abort(), Math.max(8000, 26500 - (Date.now() - t0req)));
   const t0 = Date.now();
   let data, error;
   try {

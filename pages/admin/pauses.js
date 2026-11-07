@@ -21,6 +21,7 @@ export default function AdminPauses() {
   const [seen, setSeen] = useState(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [rev, setRev] = useState(null);
 
   const call = async (url, opts) => {
     const r = await fetch(url, { ...opts, headers: { "x-admin-secret": secret, "Content-Type": "application/json" } });
@@ -51,6 +52,19 @@ export default function AdminPauses() {
     setBusy(true);
     try { await call("/api/admin/pauses", { method: "POST", body: JSON.stringify({ action: "delete_photo", username: seen.username, day }) }); await lookup(seen.username); setNote("Photo deleted."); } catch (e) { setNote(e.message); } setBusy(false);
   };
+  const loadRev = async () => { setBusy(true); setNote(""); try { const j = await call("/api/admin/photo-reviews"); setRev(j); if (j.needsSql) setNote("The photo_checks SQL hasn't been run yet."); } catch (e) { setNote(e.message); } setBusy(false); };
+  const dismiss = async (id) => { setBusy(true); try { await call("/api/admin/photo-reviews", { method: "POST", body: JSON.stringify({ action: "dismiss", id }) }); setRev((r) => ({ ...r, open: r.open.filter((x) => x.id !== id) })); } catch (e) { setNote(e.message); } setBusy(false); };
+  const pauseFromReview = async (r) => {
+    if (!window.confirm(`Pause @${r.username}?`)) return;
+    setBusy(true);
+    try { await call("/api/admin/pauses", { method: "POST", body: JSON.stringify({ action: "pause", usernames: [r.username], reason: `Photo check: ${r.category} - ${r.reason || ""}`, message: msg, days }) }); await call("/api/admin/photo-reviews", { method: "POST", body: JSON.stringify({ action: "dismiss", id: r.id }) }); setRev((x) => ({ ...x, open: x.open.filter((y) => y.id !== r.id) })); setNote(`Paused @${r.username}.`); await load(); } catch (e) { setNote(e.message); } setBusy(false);
+  };
+  const delFromReview = async (r) => {
+    const day = String(r.day).slice(0, 10);
+    if (!window.confirm(`Permanently delete @${r.username}'s photo from ${day}?`)) return;
+    setBusy(true);
+    try { await call("/api/admin/pauses", { method: "POST", body: JSON.stringify({ action: "delete_photo", username: r.username, day }) }); await dismiss(r.id); setNote("Photo deleted."); } catch (e) { setNote(e.message); } setBusy(false);
+  };
   const when = (t) => (t ? new Date(t).toLocaleString() : "");
 
   return (
@@ -62,6 +76,33 @@ export default function AdminPauses() {
         <p style={{ fontSize: 13.5, margin: "0 0 12px" }}>A paused account can't upload or log a proof, its proofs disappear from the community gallery and Grove feeds, it gets no streak reminders, and it is left out of every Grass Draw for any month the pause touches. If their streak was alive when you paused them, it stays alive until you resume them.</p>
         <input type="password" placeholder="Admin secret" value={secret} onChange={(e) => setSecret(e.target.value)} style={{ ...inp, marginBottom: 12 }} />
         {note && <div style={{ ...box, fontSize: 13.5, background: "#fffbe6" }}>{note}</div>}
+
+        <div style={box}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <b>Needs review</b>
+            <button style={btn} disabled={busy || !secret} onClick={loadRev}>{rev ? "Refresh" : "Load"}</button>
+          </div>
+          <p style={{ fontSize: 13, margin: "6px 0 0" }}>Photos the automatic check let through but doubted: indoor, a photo of a screen, looks AI-made, or a screenshot it wasn't sure about. Clear screenshots and receipts are blocked before they post and aren't kept.</p>
+          {rev?.today && <div style={{ fontSize: 12.5, marginTop: 6, opacity: 0.8 }}>Today: {rev.today.checked} checked, {rev.today.flagged} flagged, {rev.today.blocked} blocked.</div>}
+          {rev && rev.open.length === 0 && <div style={{ fontSize: 13, marginTop: 8 }}>Nothing to review.</div>}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10, marginTop: 10 }}>
+            {(rev?.open || []).map((r) => (
+              <div key={r.id} style={{ border: `1px solid ${V2.borderSoft}`, borderRadius: 10, overflow: "hidden", background: "#f4f4ee" }}>
+                {r.url && <a href={r.url} target="_blank" rel="noreferrer"><img src={r.url} alt={r.username} loading="lazy" style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", display: "block" }} /></a>}
+                <div style={{ padding: "6px 8px", fontSize: 12 }}>
+                  <b style={{ wordBreak: "break-all" }}>@{r.username}</b> · {String(r.day).slice(0, 10)}
+                  <div style={{ opacity: 0.85 }}>{String(r.category).replace(/_/g, " ")} ({Math.round(Number(r.confidence) * 100)}%)</div>
+                  {r.reason && <div style={{ opacity: 0.75, marginTop: 2 }}>{r.reason}</div>}
+                  <div style={{ display: "grid", gap: 5, marginTop: 6 }}>
+                    <button style={{ ...btn, padding: "6px 8px", fontSize: 12 }} disabled={busy} onClick={() => dismiss(r.id)}>Looks fine</button>
+                    <button style={{ ...btn, padding: "6px 8px", fontSize: 12, background: V2.grassGreen, color: "#fff" }} disabled={busy} onClick={() => pauseFromReview(r)}>Pause account</button>
+                    <button style={{ ...btn, padding: "6px 8px", fontSize: 12, color: "#a32020" }} disabled={busy} onClick={() => delFromReview(r)}>Delete photo</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div style={box}>
           <b>Pause accounts</b>
