@@ -10,6 +10,7 @@ import { useRouter } from "next/router";
 import { V2 } from "../utils/v2Theme";
 import AccountChip from "./AccountChip";
 import Ico from "./Ico";
+import { COMMUNITY_LISTED } from "../utils/createCommunity";
 
 const HARVEST = "https://harvest.touchgrass.today";
 
@@ -27,6 +28,7 @@ export const MENU_GROUPS = [
     items: [
       { href: "/field-guide", label: "Field Guide", icon: "📖" },
       { href: "/map",         label: "World Map",   icon: "🗺️" },
+      ...(COMMUNITY_LISTED ? [{ href: "/create", label: "Create", icon: "🎨" }] : []),
     ],
   },
   {

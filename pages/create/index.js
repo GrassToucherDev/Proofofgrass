@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../utils/supabase";
+import Ico from "../../components/Ico";
+import { currentTheme, COMMUNITY_LISTED } from "../../utils/createCommunity";
 
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
@@ -19,6 +21,11 @@ function getUsername() {
 
 // ─── Tool card config ──────────────────────────────────────────────────────────
 const TOOLS = [
+  {
+    key: "community", icon: "group", title: "Community Creations",
+    desc: "See what players are making, like your favorites, and post your own.",
+    href: "/create/community", locked: false, badge: "New",
+  },
   {
     key: "meme", icon: "😂", title: "Meme Tool",
     desc: "Create Touch Grass memes from editable templates.",
@@ -134,10 +141,26 @@ export default function CreateHub() {
           </p>
         </div>
 
+        {/* WEEKLY THEME */}
+        {COMMUNITY_LISTED && (() => { const th = currentTheme(); return (
+          <div style={{ margin:"28px clamp(14px,5vw,64px) 0", padding:"16px 18px", borderRadius:14,
+            background:"rgba(200,168,75,0.07)", border:`1px solid ${T.borderGold}`,
+            display:"flex", gap:14, alignItems:"center", flexWrap:"wrap" }}>
+            <Ico n="sparkle" size={30} style={{ margin:0 }} />
+            <div style={{ flex:"1 1 220px", minWidth:0 }}>
+              <div style={{ fontSize:10, letterSpacing:"0.16em", color:T.gold, textTransform:"uppercase", fontWeight:800 }}>This week's theme</div>
+              <div style={{ fontFamily:"'Fredoka',system-ui,sans-serif", fontSize:21, fontWeight:700, color:T.white, margin:"2px 0" }}>{th.title}</div>
+              <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.5 }}>{th.hint}</div>
+            </div>
+            <Link href="/create/community" style={{ fontSize:13, fontWeight:700, color:T.olive, textDecoration:"none",
+              border:`1px solid ${T.borderG}`, borderRadius:999, padding:"8px 14px" }}>See what's posted →</Link>
+          </div>); })()}
+
         {/* TOOLS GRID */}
         <div style={{ padding:"36px clamp(14px,5vw,64px) 64px" }}>
           <div className="tools-grid">
             {TOOLS.map(tool => {
+              if (tool.key === "community" && !COMMUNITY_LISTED) return null;
               const isSpotlightLocked = tool.key === "spotlight" && !hasSpotlight && !loading;
               const href = tool.dynamic === "flex" ? (username ? `/flex/${username}` : "/")
                 : tool.dynamic === "spotlight" ? (hasSpotlight && username ? `/spotlight-card/${username}` : null)
@@ -148,7 +171,7 @@ export default function CreateHub() {
               const inner = (
                 <>
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                    <span style={{ fontSize:32 }}>{tool.icon}</span>
+                    <Ico n={tool.icon} size={36} style={{ margin:0 }} />
                     {tool.badge && (
                       <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em",
                         textTransform:"uppercase", padding:"3px 9px", borderRadius:5,

@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import PostToCommunity from "../../components/PostToCommunity";
+import { currentTheme } from "../../utils/createCommunity";
 
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
@@ -266,6 +268,9 @@ export default function MemeTool() {
                       style={{ background:"rgba(147,168,90,0.1)", color:T.olive, border:`1px solid ${T.borderG}`, flex:"1 1 140px" }}>
                       {copied ? "✓ Copied" : "📋 Copy Caption"}
                     </button>
+                  </div>
+                  <div style={{ marginTop:10 }}>
+                    <PostToCommunity dataUrl={preview} kind="meme" tool={selected.key} theme={currentTheme().title} />
                   </div>
                 </div>
               )}
