@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import CreateShell from "../../components/CreateShell";
 import { T, CARD_SHADOW } from "../../utils/createTheme";
@@ -8,15 +8,11 @@ import { V2_TIERS } from "../../utils/v2Theme";
 import { loadImg } from "../../utils/createCards";
 
 
-const OVERLAYS = [
-  { key:"sun_halo",  label:"Touch Grass Sun Halo", color:"#f97316", desc:"Golden ring with sun rays" },
-  { key:"grass",     label:"Grass Border",         color:"#93a85a", desc:"Clean olive ring" },
-  { key:"legendary", label:"Legendary Border",     color:"#a78bfa", desc:"Rotating gradient ring" },
-  { key:"lucky",     label:"Lucky Touch Border",   color:"#4ade80", desc:"Clover-flecked emerald ring" },
-  { key:"spotlight", label:"Spotlight Winner Border", color:"#c8a84b", desc:"Gold championship ring" },
-  { key:"ecosystem", label:"Ecosystem Holder Border", color:"#60a5fa", desc:"Verified holder ring" },
-];
-OVERLAYS.push(...V2_TIERS.filter(t => t.min > 0).map(t => ({ key:`tier_${t.name.toLowerCase()}`, label:`${t.name} Ring`, color:t.color, desc:`Tier frame, Day ${t.min}+`, tier:true })));
+const HOLES = {"seedling": [0.4918, 0.4978, 0.3967], "sprout": [0.4973, 0.4853, 0.3975], "rooted": [0.4939, 0.4956, 0.3826], "grounded": [0.4995, 0.4941, 0.4098], "trailhead": [0.489, 0.4973, 0.4019], "summit": [0.4984, 0.5186, 0.3817], "legend": [0.4983, 0.5204, 0.3789], "immortal": [0.4993, 0.5009, 0.3641]}; // per ring: [centre x, centre y, outer radius of the opening] as fractions of the image
+const RING_TIERS = V2_TIERS.map(t => ({ key:`tier_${t.name.toLowerCase()}`, name:t.name, min:t.min, color:t.color, hole:HOLES[t.name.toLowerCase()],
+  src:`/frames/ring-${t.name.toLowerCase()}.webp`, mask:`/frames/mask-${t.name.toLowerCase()}.png` }));
+const SPOTLIGHT = { key:"spotlight", name:"Spotlight Winner", color:"#c8a84b" };
+const FRAMES = [...RING_TIERS, SPOTLIGHT];
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -43,87 +39,39 @@ async function generatePFP({ imageSrc, overlay }) {
     i.src = imageSrc;
   });
 
-  // Draw image cover-fit into circle
-  const r = 430;
+  const o = FRAMES.find(x => x.key === overlay) ?? FRAMES[0];
   const cx = W/2, cy = H/2;
+  const ring = o.src ? await loadImg(o.src) : null;
+  let r = 430;
+  if (ring) {
+    // photo goes in the ring's opening: cover-fit to a circle on the opening's centre, then cut to the opening's own shape
+    const [hx, hy, hr] = o.hole;
+    const mask = await loadImg(o.mask);
+    const layer = document.createElement("canvas"); layer.width = W; layer.height = H;
+    const lc = layer.getContext("2d");
+    const rr = hr * W + 6, px = hx * W, py = hy * H;
+    const sc = Math.max((rr*2)/img.width, (rr*2)/img.height);
+    lc.drawImage(img, px - img.width*sc/2, py - img.height*sc/2, img.width*sc, img.height*sc);
+    lc.globalCompositeOperation = "destination-in";
+    lc.drawImage(mask, 0, 0, W, H);
+    ctx.drawImage(layer, 0, 0);
+  } else {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+    const scale = Math.max((r*2)/img.width, (r*2)/img.height);
+    ctx.drawImage(img, cx - img.width*scale/2, cy - img.height*scale/2, img.width*scale, img.height*scale);
+    ctx.restore();
+  }
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.clip();
-
-  const scale = Math.max(W/img.width, H/img.height) * 1.05;
-  const iw = img.width * scale, ih = img.height * scale;
-  ctx.drawImage(img, cx - iw/2, cy - ih/2, iw, ih);
-  ctx.restore();
-
-  const o = OVERLAYS.find(x => x.key === overlay) ?? OVERLAYS[0];
-  const cloverImg = o.key === "lucky" ? await loadImg("/icons3d/clover.webp") : null;
-  const trophyImg = o.key === "spotlight" ? await loadImg("/icons3d/trophy.webp") : null;
-
-  // Overlay-specific ring effects
-  if (o.key === "sun_halo") {
-    for (let i = 0; i < 16; i++) {
-      const angle = (i / 16) * Math.PI * 2;
-      const x1 = cx + Math.cos(angle) * (r + 6);
-      const y1 = cy + Math.sin(angle) * (r + 6);
-      const x2 = cx + Math.cos(angle) * (r + 50);
-      const y2 = cy + Math.sin(angle) * (r + 50);
-      const ray = ctx.createLinearGradient(x1, y1, x2, y2);
-      ray.addColorStop(0, "rgba(249,115,22,0.55)");
-      ray.addColorStop(1, "transparent");
-      ctx.strokeStyle = ray;
-      ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-    }
-    ctx.beginPath(); ctx.arc(cx, cy, r + 4, 0, Math.PI*2);
-    ctx.strokeStyle = "#f97316"; ctx.lineWidth = 8; ctx.stroke();
-  } else if (o.key === "legendary") {
-    const grad = ctx.createConicGradient ? ctx.createConicGradient(0, cx, cy) : null;
-    if (grad) {
-      grad.addColorStop(0, "#a78bfa"); grad.addColorStop(0.33, "#c8a84b");
-      grad.addColorStop(0.66, "#4ade80"); grad.addColorStop(1, "#a78bfa");
-      ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI*2);
-      ctx.strokeStyle = grad; ctx.lineWidth = 12; ctx.stroke();
-    } else {
-      ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI*2);
-      ctx.strokeStyle = "#a78bfa"; ctx.lineWidth = 12; ctx.stroke();
-    }
-  } else if (o.key === "lucky") {
-    ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI*2);
-    ctx.strokeStyle = "#4ade80"; ctx.lineWidth = 10; ctx.stroke();
-    const rng = n => Math.abs(Math.sin(n*127.1)*43758.5)%1;
-    for (let i = 0; i < 8; i++) {
-      const angle = (i/8) * Math.PI*2 + rng(i)*0.3;
-      const x = cx + Math.cos(angle) * (r + 5);
-      const y = cy + Math.sin(angle) * (r + 5);
-      if (cloverImg) ctx.drawImage(cloverImg, x - 22, y - 22, 44, 44);
-    }
-  } else if (o.key === "spotlight") {
+  if (ring) {
+    ctx.drawImage(ring, 0, 0, W, H);
+  } else {
+    const trophyImg = await loadImg("/icons3d/trophy.webp");
     ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, Math.PI*2);
     ctx.strokeStyle = "#c8a84b"; ctx.lineWidth = 14; ctx.stroke();
     ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, Math.PI*2);
     ctx.strokeStyle = "rgba(200,168,75,0.3)"; ctx.lineWidth = 22; ctx.stroke();
     if (trophyImg) ctx.drawImage(trophyImg, cx - 42, cy - r - 80, 84, 84);
-  } else if (o.key === "ecosystem") {
-    ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI*2);
-    ctx.strokeStyle = "#60a5fa"; ctx.lineWidth = 8; ctx.stroke();
-    ctx.fillStyle = "#60a5fa";
-    ctx.beginPath(); ctx.arc(cx, cy + r + 40, 14, 0, Math.PI*2); ctx.fill();
-  } else if (o.tier) {
-    // tier ring: solid ring plus a crown of petals in the tier color
-    for (let i = 0; i < 24; i++) {
-      const a = (i/24) * Math.PI*2;
-      ctx.save(); ctx.translate(cx + Math.cos(a)*(r + 26), cy + Math.sin(a)*(r + 26)); ctx.rotate(a);
-      ctx.beginPath(); ctx.ellipse(0, 0, 26, 9, 0, 0, Math.PI*2);
-      ctx.fillStyle = o.color + "cc"; ctx.fill(); ctx.restore();
-    }
-    ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI*2);
-    ctx.strokeStyle = o.color; ctx.lineWidth = 12; ctx.stroke();
-  } else {
-    // grass — default clean ring
-    ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI*2);
-    ctx.strokeStyle = "#93a85a"; ctx.lineWidth = 10; ctx.stroke();
   }
 
   return canvas.toDataURL("image/png");
@@ -132,7 +80,19 @@ async function generatePFP({ imageSrc, overlay }) {
 export default function PFPTool() {
   const fileRef = useRef(null);
   const [imageSrc, setImageSrc] = useState(null);
-  const [overlay, setOverlay] = useState("grass");
+  const [overlay, setOverlay] = useState("tier_seedling");
+  const [access, setAccess] = useState({ best:0, spotlight:false, user:"", loaded:false });
+  useEffect(() => {
+    let u = ""; try { u = (localStorage.getItem("pog_username") || "").replace(/@/g, "").toLowerCase().trim(); } catch {}
+    if (!u) { setAccess(a => ({ ...a, loaded:true })); return; }
+    fetch(`/api/create/frames?username=${encodeURIComponent(u)}`).then(r => r.json()).then(d => {
+      const best = d?.best || 0;
+      setAccess({ best, spotlight:!!d?.spotlight, user:u, loaded:true });
+      const top = [...RING_TIERS].reverse().find(t => best >= t.min);
+      if (top) setOverlay(top.key);
+    }).catch(() => setAccess(a => ({ ...a, loaded:true })));
+  }, []);
+  const unlocked = (f) => f.key === "spotlight" ? access.spotlight : access.best >= f.min;
   const [preview, setPreview] = useState(null);
   const [generating, setGenerating] = useState(false);
 
@@ -236,25 +196,36 @@ export default function PFPTool() {
             </div>
           )}
 
-          {/* Overlay selector */}
+          {/* Frame picker */}
           {imageSrc && (
             <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:14, padding:18, marginBottom:18 }}>
-              <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.16em", textTransform:"uppercase", color:T.dim, marginBottom:12 }}>
+              <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.16em", textTransform:"uppercase", color:T.dim, marginBottom:6 }}>
                 Choose Frame
               </div>
-              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {OVERLAYS.map(o => (
-                  <button key={o.key} className={`ov-btn ${overlay===o.key?"active":""}`}
-                    onClick={() => { setOverlay(o.key); setPreview(null); }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                      <div style={{ width:14, height:14, borderRadius:"50%", background:o.color, flexShrink:0 }} />
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:600, color: overlay===o.key ? T.white : T.muted }}>{o.label}</div>
-                        <div style={{ fontSize:10.5, color:T.dim, marginTop:1 }}>{o.desc}</div>
+              <p style={{ fontSize:11.5, color:T.dim, marginBottom:12, lineHeight:1.5 }}>
+                {access.user
+                  ? `Rings unlock at the highest streak tier you have ever reached. Your best is Day ${access.best}.`
+                  : "Rings unlock at the highest streak tier you have ever reached. Sign in on the home page to unlock yours."}
+              </p>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(112px,1fr))", gap:10 }}>
+                {FRAMES.map(f => {
+                  const ok = unlocked(f);
+                  return (
+                    <button key={f.key} className={`ov-btn ${overlay===f.key?"active":""}`} disabled={!ok}
+                      onClick={() => { if (ok) { setOverlay(f.key); setPreview(null); } }}
+                      style={{ textAlign:"center", padding:10, opacity: ok ? 1 : 0.55, cursor: ok ? "pointer" : "not-allowed" }}>
+                      <div style={{ width:"100%", aspectRatio:"1", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:6 }}>
+                        {f.src
+                          ? <img src={f.src} alt="" style={{ width:"100%", height:"100%", objectFit:"contain", filter: ok ? "none" : "grayscale(1) brightness(0.9)" }} />
+                          : <img src="/icons3d/trophy.webp" alt="" style={{ width:"70%", height:"70%", objectFit:"contain", filter: ok ? "none" : "grayscale(1)" }} />}
                       </div>
-                    </div>
-                  </button>
-                ))}
+                      <div style={{ fontSize:12, fontWeight:800, color: overlay===f.key ? T.white : T.muted }}>{f.name}</div>
+                      <div style={{ fontSize:10.5, color:T.dim, marginTop:1 }}>
+                        {ok ? (f.min != null ? `Day ${f.min}+` : "Spotlight") : (f.min != null ? `Reach Day ${f.min}` : "Win a Spotlight")}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
