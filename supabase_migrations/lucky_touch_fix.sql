@@ -36,16 +36,16 @@ exception when others then
 end $$;
 
 -- 2. Patch the live lock_in_streak (every overload) without retyping it.
-do $fix$
-declare r record; d text; n int := 0;
+do $body$
+declare r record; d text; q text := chr(39); n int := 0;
 begin
   for r in select p.oid from pg_proc p where p.proname = 'lock_in_streak' and p.pronamespace = 'public'::regnamespace loop
     d := pg_get_functiondef(r.oid);
     d := regexp_replace(d, 'INSERT INTO "LuckyTouchEvents"\s*\(username,\s*tier,\s*reward_type,\s*points\)',
                            'INSERT INTO "LuckyTouchEvents" (username, reward_tier, reward_type, points_awarded)', 'gi');
-    d := regexp_replace(d, '(''legendary'',\s*)''shield''(,\s*0\))',  '\1''suns_blessing''\2', 'g');
-    d := regexp_replace(d, '(''rare'',\s*)''points''(,\s*50\))',      '\1''grass_score''\2',   'g');
-    d := regexp_replace(d, '(''common'',\s*)''points''(,\s*15\))',    '\1''grass_score''\2',   'g');
+    d := regexp_replace(d, q||'legendary'||q||',\s*'||q||'shield'||q||',\s*0\)', q||'legendary'||q||', '||q||'suns_blessing'||q||', 0)', 'g');
+    d := regexp_replace(d, q||'rare'||q||',\s*'||q||'points'||q||',\s*50\)', q||'rare'||q||', '||q||'grass_score'||q||', 50)', 'g');
+    d := regexp_replace(d, q||'common'||q||',\s*'||q||'points'||q||',\s*15\)', q||'common'||q||', '||q||'grass_score'||q||', 15)', 'g');
     if d ~* 'INSERT INTO "LuckyTouchEvents"\s*\(username,\s*tier' then
       raise exception 'lock_in_streak: could not patch the Lucky Touch insert (unexpected text)';
     end if;
@@ -53,7 +53,7 @@ begin
     n := n + 1;
   end loop;
   if n = 0 then raise exception 'lock_in_streak not found in schema public'; end if;
-end $fix$;
+end $body$;
 
 -- 3. Check (read-only): every row should say fixed = true, still_broken = false.
 select p.oid::regprocedure as function_name,
