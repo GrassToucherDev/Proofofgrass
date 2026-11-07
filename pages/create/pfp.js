@@ -29,7 +29,7 @@ async function generatePFP({ imageSrc, overlay }) {
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#f3f9ee";
+  ctx.fillStyle = "#f07020"; // brand orange
   ctx.fillRect(0, 0, W, H);
 
   const img = await new Promise((res, rej) => {
