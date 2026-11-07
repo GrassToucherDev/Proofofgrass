@@ -27,6 +27,7 @@ export const MENU_GROUPS = [
     items: [
       { href: "/field-guide", label: "Field Guide", icon: "📖" },
       { href: "/map",         label: "World Map",   icon: "🗺️" },
+      { href: "/create",      label: "Create",      icon: "🎨" },
     ],
   },
   {

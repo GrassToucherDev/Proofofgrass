@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
+import PostToCommunity from "../../components/PostToCommunity";
+import { currentTheme } from "../../utils/createCommunity";
 
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
@@ -161,6 +163,20 @@ export default function PFPTool() {
     a.click();
   };
 
+  const PFP_TEXT = `New profile pic from the Touch Grass PFP tool.\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nhttps://proofofgrass.app/create/pfp`;
+  const shareToX = async () => {
+    if (!preview) return;
+    const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
+    if (isMob && navigator.share && navigator.canShare) {
+      try {
+        const blob = await (await fetch(preview)).blob();
+        const file = new File([blob], "touch-grass-pfp.png", { type:"image/png" });
+        if (navigator.canShare({ files:[file] })) { await navigator.share({ files:[file], title:"Touch Grass PFP", text:PFP_TEXT }); return; }
+      } catch(e) { if (e?.name === "AbortError") return; }
+    }
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(PFP_TEXT)}`, "_blank");
+  };
+
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -258,10 +274,19 @@ export default function PFPTool() {
                 border:`1px solid ${T.borderGold}`, boxShadow:"0 0 30px rgba(200,168,75,0.15)" }}>
                 <img src={preview} alt="PFP preview" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
               </div>
-              <button className="btn" onClick={download}
-                style={{ width:"100%", background:T.white, color:T.bg }}>
-                ↓ Save PFP
-              </button>
+              <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                <button className="btn" onClick={shareToX}
+                  style={{ flex:"1 1 140px", background:T.white, color:T.bg }}>
+                  Post to X
+                </button>
+                <button className="btn" onClick={download}
+                  style={{ flex:"1 1 140px", background:T.bg3, color:T.dim, border:`1px solid ${T.border}` }}>
+                  ↓ Save PFP
+                </button>
+              </div>
+              <div style={{ marginTop:10 }}>
+                <PostToCommunity dataUrl={preview} kind="pfp" tool={overlay} theme={currentTheme().title} />
+              </div>
             </div>
           )}
         </div>
