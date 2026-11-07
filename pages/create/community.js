@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import Ico from "../../components/Ico";
+import { unlockCommunity } from "../../utils/createCommunity";
 
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
@@ -26,7 +27,7 @@ export default function CommunityCreations() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { setMe(getUsername()); }, []);
+  useEffect(() => { setMe(getUsername()); unlockCommunity(); }, []);
 
   const load = useCallback(async (before) => {
     setBusy(true);
@@ -77,7 +78,7 @@ export default function CommunityCreations() {
 
   return (
     <>
-      <Head><title>Community Creations | Touch Grass</title></Head>
+      <Head><title>Community Creations | Touch Grass</title><meta name="robots" content="noindex,nofollow" /></Head>
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}

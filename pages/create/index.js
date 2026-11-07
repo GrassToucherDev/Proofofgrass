@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../utils/supabase";
 import Ico from "../../components/Ico";
-import { currentTheme } from "../../utils/createCommunity";
+import { currentTheme, COMMUNITY_LISTED } from "../../utils/createCommunity";
 
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
@@ -142,7 +142,7 @@ export default function CreateHub() {
         </div>
 
         {/* WEEKLY THEME */}
-        {(() => { const th = currentTheme(); return (
+        {COMMUNITY_LISTED && (() => { const th = currentTheme(); return (
           <div style={{ margin:"28px clamp(14px,5vw,64px) 0", padding:"16px 18px", borderRadius:14,
             background:"rgba(200,168,75,0.07)", border:`1px solid ${T.borderGold}`,
             display:"flex", gap:14, alignItems:"center", flexWrap:"wrap" }}>
@@ -160,6 +160,7 @@ export default function CreateHub() {
         <div style={{ padding:"36px clamp(14px,5vw,64px) 64px" }}>
           <div className="tools-grid">
             {TOOLS.map(tool => {
+              if (tool.key === "community" && !COMMUNITY_LISTED) return null;
               const isSpotlightLocked = tool.key === "spotlight" && !hasSpotlight && !loading;
               const href = tool.dynamic === "flex" ? (username ? `/flex/${username}` : "/")
                 : tool.dynamic === "spotlight" ? (hasSpotlight && username ? `/spotlight-card/${username}` : null)

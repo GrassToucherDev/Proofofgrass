@@ -1,7 +1,7 @@
 // "Post to Community" button for the /create tools. Sends the finished image to /api/create/post.
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { POST_MIN_STREAK } from "../utils/createCommunity";
+import { POST_MIN_STREAK, communityUnlocked } from "../utils/createCommunity";
 
 const T = { bg3:"#141710", border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)", olive:"#93a85a", gold:"#c8a84b", white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)", red:"#e05252" };
 
@@ -32,6 +32,8 @@ export default function PostToCommunity({ dataUrl, kind, tool, theme }) {
   const [caption, setCaption] = useState("");
   const [state, setState] = useState("idle"); // idle | posting | done | error
   const [err, setErr] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
+  useEffect(() => { setUnlocked(communityUnlocked()); }, []);
 
   const post = async () => {
     const as = getUsername();
@@ -46,6 +48,7 @@ export default function PostToCommunity({ dataUrl, kind, tool, theme }) {
     } catch { setState("error"); setErr("Could not post that. Check your connection and try again."); }
   };
 
+  if (!unlocked) return null;
   if (state === "done") {
     return (
       <div style={{ padding:"12px 14px", borderRadius:10, background:"rgba(147,168,90,0.08)", border:`1px solid ${T.borderG}`, fontSize:13, color:T.white, fontWeight:700 }}>

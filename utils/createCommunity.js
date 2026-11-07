@@ -6,6 +6,21 @@ export const CREATIONS_BUCKET = "creations";
 export const MAX_IMAGE_BYTES = 3_000_000;  // decoded upload cap
 export const KINDS = ["meme", "pfp"];
 
+// Unlisted mode: the gallery is live at /create/community but nothing links to it (hub card, theme banner, menu entry).
+// People who open the link get "Post to Community" turned on in the tools (remembered in their browser).
+// Flip to true when it's polished and ready to announce.
+export const COMMUNITY_LISTED = false;
+const FLAG = "pog_community";
+export function communityUnlocked() {
+  if (COMMUNITY_LISTED) return true;
+  try {
+    if (typeof window === "undefined") return false;
+    if (new URLSearchParams(window.location.search).get("community") === "1") localStorage.setItem(FLAG, "1");
+    return localStorage.getItem(FLAG) === "1";
+  } catch { return false; }
+}
+export function unlockCommunity() { try { localStorage.setItem(FLAG, "1"); } catch {} }
+
 // One theme per ISO week, no database needed. Add or reorder freely; the list loops.
 export const WEEKLY_THEMES = [
   { title: "Touch grass at work", hint: "Lunch breaks, walking meetings, the one tree outside the office." },
