@@ -1,16 +1,11 @@
 // /create/community — gallery of finished memes and PFPs posted by players.
 import { useState, useEffect, useCallback } from "react";
-import Head from "next/head";
 import Link from "next/link";
+import CreateShell from "../../components/CreateShell";
+import { T, CARD_SHADOW } from "../../utils/createTheme";
 import Ico from "../../components/Ico";
 import { unlockCommunity } from "../../utils/createCommunity";
 
-const T = {
-  bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
-  border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)", borderGold:"rgba(200,168,75,0.35)",
-  olive:"#93a85a", gold:"#c8a84b", red:"#e05252",
-  white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.3)",
-};
 const getUsername = () => { try { const s = localStorage.getItem("pog_username"); return s ? s.replace(/@/g, "").toLowerCase().trim() : ""; } catch { return ""; } };
 const ago = (iso) => { const m = Math.max(1, Math.round((Date.now() - new Date(iso)) / 60000)); return m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`; };
 
@@ -78,7 +73,6 @@ export default function CommunityCreations() {
 
   return (
     <>
-      <Head><title>Community Creations | Touch Grass</title><meta name="robots" content="noindex,nofollow" /></Head>
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -86,23 +80,19 @@ export default function CommunityCreations() {
         .cc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;}
         @media(max-width:560px){.cc-grid{grid-template-columns:1fr;}}
       ` }} />
-      <div style={{ minHeight: "100vh", background: T.bg }}>
-        <nav style={{ position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 clamp(14px,4vw,48px)", height: 56, background: `${T.bg}ec`, backdropFilter: "blur(18px)", borderBottom: `1px solid ${T.border}` }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
-            <img src="/touchgrass-transparent.png" alt="" style={{ width: 26, height: 26, objectFit: "contain" }} />
-            <span style={{ fontFamily: "Fredoka,system-ui,sans-serif", fontSize: 17, fontWeight: 700, color: T.white }}>touch grass</span>
-          </Link>
-          <Link href="/create" style={{ fontSize: 11, color: T.olive, textDecoration: "none", letterSpacing: "0.06em" }}>← Creator Hub</Link>
-        </nav>
+      <CreateShell title="Community Creations" noindex>
 
-        <div style={{ padding: "36px clamp(14px,5vw,64px) 20px" }}>
+        <div style={{ padding: "24px clamp(14px,5vw,64px) 20px", display: "flex", alignItems: "center", gap: 16, justifyContent: "space-between" }}>
+          <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 10, letterSpacing: "0.22em", color: T.gold, textTransform: "uppercase", marginBottom: 10, fontWeight: 700 }}>Community</div>
           <h1 style={{ fontFamily: "Fredoka,system-ui,sans-serif", fontSize: "clamp(32px,6vw,52px)", fontWeight: 700, lineHeight: 1, marginBottom: 12 }}>Community Creations</h1>
           <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.6, maxWidth: 520 }}>Memes and profile pics made by Touch Grass players. Like your favorites, make your own, and post once you hit a {minStreak}-day streak.</p>
+          </div>
+          <img src="/mascot/wago-point.webp" alt="" width={110} height={110} style={{ width: "clamp(80px,20vw,130px)", height: "auto", objectFit: "contain", flexShrink: 0 }} />
         </div>
 
         {theme && (
-          <div style={{ margin: "0 clamp(14px,5vw,64px) 20px", padding: "16px 18px", borderRadius: 14, background: "rgba(200,168,75,0.07)", border: `1px solid ${T.borderGold}`, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ margin: "0 clamp(14px,5vw,64px) 20px", padding: "16px 18px", borderRadius: 14, background: "rgba(232,160,32,0.10)", border: `1px solid ${T.borderGold}`, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
             <Ico n="sparkle" size={30} />
             <div style={{ flex: "1 1 220px", minWidth: 0 }}>
               <div style={{ fontSize: 10, letterSpacing: "0.16em", color: T.gold, textTransform: "uppercase", fontWeight: 800 }}>This week's theme</div>
@@ -139,7 +129,7 @@ export default function CommunityCreations() {
           )}
           <div className="cc-grid">
             {(items || []).map((it) => (
-              <div key={it.id} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, overflow: "hidden", minWidth: 0 }}>
+              <div key={it.id} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 14, overflow: "hidden", minWidth: 0, boxShadow: CARD_SHADOW }}>
                 <img src={it.url} alt={it.caption || `${it.kind} by ${it.username}`} loading="lazy" style={{ width: "100%", display: "block", aspectRatio: it.kind === "pfp" ? "1 / 1" : "auto", objectFit: "cover", background: "#000" }} />
                 <div style={{ padding: "10px 12px 8px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12.5 }}>
@@ -161,7 +151,7 @@ export default function CommunityCreations() {
           </div>
           {next && <div style={{ textAlign: "center", marginTop: 20 }}><button style={pill(false)} disabled={busy} onClick={() => load(next)}>{busy ? "Loading…" : "Load more"}</button></div>}
         </div>
-      </div>
+      </CreateShell>
     </>
   );
 }
