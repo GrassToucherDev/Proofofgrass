@@ -2,6 +2,7 @@
 //   ?preview=1   counts who WOULD be reminded; sends nothing
 //   ?test=<name> sends the real reminder to that one username's devices
 // Reminds people with reminders on whose last post was yesterday (UTC day) and who haven't posted today.
+import { getPausedSet } from "../../../utils/pauses";
 import { timingSafeEqual } from "crypto";
 import webpush from "web-push";
 import { isAdminRequest } from "../../../utils/adminApi";
@@ -44,6 +45,7 @@ export default async function handler(req, res) {
     const posted = new Set((done.data || []).map((r) => String(r.username).toLowerCase()));
     candidates = candidates.filter((u) => !posted.has(u));
   }
+  if (candidates.length) { const paused = await getPausedSet(db, candidates); candidates = candidates.filter((u) => !paused.has(u)); }   // paused players are not reminded
   const want = new Set(candidates);
   const targets = (subs || []).filter((s) => want.has(s.username));
   if (preview) return res.status(200).json({ preview: true, users: candidates.length, devices: targets.length, subscribedUsers: names.length });

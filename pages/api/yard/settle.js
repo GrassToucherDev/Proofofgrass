@@ -6,6 +6,7 @@
 import { timingSafeEqual } from "crypto";
 import { isAdminRequest } from "../../../utils/adminApi";
 import { adminClient } from "../../../utils/requireOwner";
+import { tickFrozenPauses } from "../../../utils/pauses";
 
 function isCron(req) {
   const secret = process.env.CRON_SECRET;
@@ -32,5 +33,8 @@ export default async function handler(req, res) {
   // Grove vs Grove runs in the same pass. A failure here must not hide the 1v1 result.
   const g = await db.rpc("yard_grove_settle_due", args);
   if (g.error) console.error("[yard/settle] groves", g.error);
-  return res.status(200).json({ ok: true, ...data, ...(g.data || {}), ...(g.error ? { grove_error: true } : {}) });
+  // Same daily pass keeps paused players' streaks frozen (and closes pauses whose days ran out).
+  let pauses = null;
+  try { pauses = await tickFrozenPauses(db); } catch (e) { console.error("[yard/settle] pauses", e?.message); }
+  return res.status(200).json({ ok: true, ...data, ...(g.data || {}), ...(g.error ? { grove_error: true } : {}), ...(pauses ? { pauses } : {}) });
 }
