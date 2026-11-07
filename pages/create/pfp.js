@@ -23,7 +23,34 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
 }
 
-async function generatePFP({ imageSrc, overlay }) {
+// Turns the white backdrop of a photo transparent (only white that connects to the photo's edge, so whites inside the subject stay).
+function knockOutWhite(img) {
+  const MAX = 1024, sc = Math.min(1, MAX / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * sc)), h = Math.max(1, Math.round(img.height * sc));
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const x = c.getContext("2d", { willReadFrequently:true }); x.drawImage(img, 0, 0, w, h);
+  const id = x.getImageData(0, 0, w, h), d = id.data;
+  const isWhite = (i) => d[i+3] > 0 && d[i] > 228 && d[i+1] > 228 && d[i+2] > 228 && Math.max(d[i],d[i+1],d[i+2]) - Math.min(d[i],d[i+1],d[i+2]) < 22;
+  const seen = new Uint8Array(w*h), stack = [];
+  const push = (px, py) => { if (px<0||py<0||px>=w||py>=h) return; const k = py*w+px; if (seen[k] || !isWhite(k*4)) return; seen[k] = 1; stack.push(k); };
+  for (let i = 0; i < w; i++) { push(i, 0); push(i, h-1); }
+  for (let j = 0; j < h; j++) { push(0, j); push(w-1, j); }
+  while (stack.length) { const k = stack.pop(), px = k % w, py = (k - px) / w; push(px+1,py); push(px-1,py); push(px,py+1); push(px,py-1); }
+  let cleared = 0;
+  for (let k = 0; k < w*h; k++) if (seen[k]) { d[k*4+3] = 0; cleared++; }
+  // soften the edge: pixels next to cleared ones that are still pale get half alpha so no white halo is left
+  for (let k = 0; k < w*h; k++) {
+    if (seen[k] || d[k*4+3] === 0) continue;
+    const px = k % w, py = (k - px) / w;
+    const near = (px>0&&seen[k-1]) || (px<w-1&&seen[k+1]) || (py>0&&seen[k-w]) || (py<h-1&&seen[k+w]);
+    if (near && d[k*4] > 200 && d[k*4+1] > 200 && d[k*4+2] > 200) d[k*4+3] = 90;
+  }
+  if (cleared < w*h*0.02) return img; // nothing meaningful to remove
+  x.putImageData(id, 0, 0);
+  return c;
+}
+
+async function generatePFP({ imageSrc, overlay, orangeBg }) {
   const W = 1080, H = 1080;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
@@ -32,12 +59,13 @@ async function generatePFP({ imageSrc, overlay }) {
   ctx.fillStyle = "#f07020"; // brand orange
   ctx.fillRect(0, 0, W, H);
 
-  const img = await new Promise((res, rej) => {
+  let img = await new Promise((res, rej) => {
     const i = new Image();
     i.onload = () => res(i);
     i.onerror = rej;
     i.src = imageSrc;
   });
+  if (orangeBg) { try { img = knockOutWhite(img); } catch {} }
 
   const o = FRAMES.find(x => x.key === overlay) ?? FRAMES[0];
   const cx = W/2, cy = H/2;
@@ -100,6 +128,7 @@ export default function PFPTool() {
   const unlocked = (f) => f.key === "spotlight" ? access.spotlight : access.best >= f.min;
   const [preview, setPreview] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [orangeBg, setOrangeBg] = useState(true);
 
   const onFile = (e) => {
     const file = e.target.files?.[0];
@@ -122,11 +151,11 @@ export default function PFPTool() {
     if (!imageSrc) return;
     setGenerating(true);
     try {
-      const dataUrl = await generatePFP({ imageSrc, overlay });
+      const dataUrl = await generatePFP({ imageSrc, overlay, orangeBg });
       setPreview(dataUrl);
     } catch(e) { console.error("pfp generation error", e); }
     setGenerating(false);
-  }, [imageSrc, overlay]);
+  }, [imageSrc, overlay, orangeBg]);
 
   const download = () => {
     if (!preview) return;
@@ -233,6 +262,13 @@ export default function PFPTool() {
                 })}
               </div>
             </div>
+          )}
+
+          {imageSrc && (
+            <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:12.5, color:T.muted, fontWeight:700, marginBottom:14, cursor:"pointer" }}>
+              <input type="checkbox" checked={orangeBg} onChange={e => { setOrangeBg(e.target.checked); setPreview(null); }} />
+              Turn a white photo background orange
+            </label>
           )}
 
           {imageSrc && (
