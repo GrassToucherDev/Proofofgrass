@@ -1,6 +1,7 @@
 // GET /api/gallery?scope=all|grove&username=<for grove>&before=<iso>&limit=24
 // Proofs from the last 24 hours, newest first. Signed-out visitors get a small teaser (6 proofs, no paging).
 // People who turned the feed off (Profiles.feed_hidden) and proofs reported by 3+ different people are left out.
+import { getPausedSet, getActivePause } from "../../../utils/pauses";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { adminClient, requireOwner, cleanUsername } from "../../../utils/requireOwner";
@@ -28,6 +29,7 @@ async function pickFeatured(db, since, session) {
     let prof = await db.from("Profiles").select("username,avatar_url,avatar_emoji,feed_hidden").eq("username", u).maybeSingle();
     if (prof.error) prof = await db.from("Profiles").select("username,avatar_url,avatar_emoji").eq("username", u).maybeSingle();
     if (prof.data?.feed_hidden) continue;
+    if (await getActivePause(db, u)) continue;
     const rp = await db.from("gallery_reports").select("reporter").eq("username", u).eq("day", c.day);
     if (!rp.error && new Set((rp.data || []).map((r) => r.reporter)).size >= REPORT_HIDE_AT) continue;
     const st = await db.from("Streaks").select("current_streak").eq("username", u).maybeSingle();
@@ -82,6 +84,7 @@ export default async function handler(req, res) {
   if (error) { console.error("[gallery]", error.message); return res.status(500).json({ error: "Could not load the gallery." }); }
 
   const names = [...new Set((subs || []).map((s) => cleanUsername(s.username)))];
+  const pausedSet = await getPausedSet(db, names);
   const meta = {}, streaks = {}, reports = {}, reacts = {}, mine = {};
   if (names.length) {
     let prof = await db.from("Profiles").select("username,avatar_url,avatar_emoji,feed_hidden").in("username", names);
@@ -105,7 +108,7 @@ export default async function handler(req, res) {
   const seen = new Set(), items = [];
   for (const s of subs || []) {
     const u = cleanUsername(s.username), day = new Date(s.created_at).toISOString().slice(0, 10), key = u + "|" + day;
-    if (seen.has(key) || meta[u]?.feed_hidden || (reports[key]?.size || 0) >= REPORT_HIDE_AT) continue;
+    if (seen.has(key) || meta[u]?.feed_hidden || pausedSet.has(u) || (reports[key]?.size || 0) >= REPORT_HIDE_AT) continue;
     seen.add(key);
     const streak = streaks[u] || 1, t = getV2Tier(streak);
     items.push({

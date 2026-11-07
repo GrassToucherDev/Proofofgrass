@@ -2,6 +2,7 @@
 //   * a SECURED username can only be acted on by the Google account that owns it
 //   * everyone is throttled per network (hashed IP); unsecured usernames also get a daily cap on distinct names
 import crypto from "crypto";
+import { getActivePause, DEFAULT_PAUSE_MESSAGE } from "./pauses";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../pages/api/auth/[...nextauth]";
 
@@ -22,6 +23,8 @@ export function ipHash(req) {
 
 // Returns { claim, ih } when the caller may act for `username`; otherwise sends the response itself and returns null.
 export async function authorizeProofActor(req, res, db, username) {
+  const pause = await getActivePause(db, username);   // paused accounts can't upload or log (checked first so it covers every proof route)
+  if (pause) { res.status(403).json({ error: pause.message || DEFAULT_PAUSE_MESSAGE, code: "paused" }); return null; }
   const { data: claim } = await db.from("username_claims").select("google_id").eq("username", username).maybeSingle();
   if (claim) {
     const session = await getServerSession(req, res, authOptions);

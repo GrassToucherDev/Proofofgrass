@@ -1,6 +1,7 @@
 // GET ?username= — "Today in your Grove": each member's proof (if posted today), streak, and nudge state.
 // Same "today" as the Grove page (UTC day, from grove_get's locked_today). Members who turned the public feed off show as "posted" without a photo.
 import { requireOwner, adminClient, cleanUsername } from "../../../utils/requireOwner";
+import { getPausedSet } from "../../../utils/pauses";
 import { BUCKET } from "../../../utils/proofAccess";
 
 export default async function handler(req, res) {
@@ -22,6 +23,7 @@ export default async function handler(req, res) {
   (st.data || []).forEach((r) => { streaks[cleanUsername(r.username)] = r.current_streak || 1; });
   const pr = await db.from("Profiles").select("username,feed_hidden").in("username", names);
   if (!pr.error) (pr.data || []).forEach((p) => { if (p.feed_hidden) hiddenSet.add(cleanUsername(p.username)); });
+  (await getPausedSet(db, names)).forEach((u) => hiddenSet.add(u));   // paused accounts show as "posted" without a photo
   const nd = await db.from("grove_nudges").select("from_user,to_user").eq("day", today).or(`from_user.eq.${who.username},to_user.eq.${who.username}`); // table may not exist yet
   if (!nd.error) (nd.data || []).forEach((n) => { if (n.from_user === who.username) nudgedByMe.add(n.to_user); else nudgedMe.push(n.from_user); });
 
