@@ -5,14 +5,13 @@ import { supabase } from "../utils/supabase";
 import { V2 } from "../utils/v2Theme";
 
 const MILESTONE_LABELS = {
-  milestone_10:  "hit Day 10 🔥",
-  milestone_20:  "hit Day 20 🌱",
-  milestone_30:  "hit Day 30 🌿",
+  milestone_7:   "hit Day 7 🌱",
+  milestone_14:  "hit Day 14 🌿",
+  milestone_30:  "hit Day 30 🔥",
   milestone_50:  "hit Day 50 ⭐",
   milestone_100: "hit Day 100 🏆",
   milestone_180: "hit Day 180 ⚡",
   milestone_365: "hit Day 365 👑",
-  milestone_500: "hit Day 500 🌌",
   lucky_touch_rare:   "got a Rare Lucky Touch ✨",
   lucky_touch_common: "got a Lucky Touch 🍀",
   lucky_touch_legendary: "got the Sun's Blessing ☀️",
