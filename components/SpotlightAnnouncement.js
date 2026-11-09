@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "../utils/supabase";
 import {
-  renderWinnersImage, buildAnnouncementText, weekRangeLabel, xLength, TONES, SPOTLIGHT_CATEGORIES,
+  renderWinnersCard, buildAnnouncementText, weekRangeLabel, xLength, TONES, SPOTLIGHT_CATEGORIES,
 } from "../utils/spotlightImage";
 
 const T = {
@@ -57,7 +57,7 @@ export default function SpotlightAnnouncement({ spotlights }) {
         }
         if (run !== runRef.current) return;
         setWinnersState(winners);
-        const url = await renderWinnersImage({ weekLabel: label, winners });
+        const url = await renderWinnersCard({ weekLabel: label, winners });
         if (run !== runRef.current) return;
         setImg(url);
       } catch (e) {
@@ -132,7 +132,7 @@ export default function SpotlightAnnouncement({ spotlights }) {
 
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))", gap:18 }}>
             <div>
-              <div style={{ position:"relative", borderRadius:10, overflow:"hidden", background:T.bg3, aspectRatio:"1672 / 941" }}>
+              <div style={{ position:"relative", borderRadius:10, overflow:"hidden", background:T.bg3, aspectRatio:"1080 / 1350" }}>
                 {img && <img src={img} alt="Community Spotlight winners" style={{ width:"100%", display:"block", opacity: busy ? 0.5 : 1 }} />}
                 {busy && <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", color:T.muted, fontSize:13 }}>Building image…</div>}
               </div>

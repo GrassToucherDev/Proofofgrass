@@ -169,3 +169,52 @@ export function buildAnnouncementText({ weekLabel, winners, tone = "hype", url =
 export function xLength(text) {
   return Array.from(text.replace(/\b(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?/gi, "x".repeat(23))).length;
 }
+
+// ── Announcement card in the shared "new style" (1080×1350, same frame as the streak/rank/badge cards) ──
+const CAT_COLOR = { community_mvp: "#e8590c", meme_lord: "#b7791f", biggest_shiller: "#2f8a14", space_warrior: "#7c4dcc" };
+
+export async function renderWinnersCard({ weekLabel, winners }) {
+  const { drawFrame, drawFooter, loadFrameAssets, fitText: fitPx, ellipsize, INK, GREEN, NUN, FRED } = await import("./cardFrame");
+  const { rr } = await import("./proofCardRender");
+  const W = 1080, H = 1350;
+  try { await Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("800 20px Nunito")]); } catch {}
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+  const a = await loadFrameAssets();
+  const g = drawFrame(ctx, W, H, a, "COMMUNITY SPOTLIGHT");
+
+  const x0 = g.PX + 44, rw = g.PW - 88, rh = 148, gap = 20, y0 = g.PY + 330;
+  const logo = await loadImageSafe("/touchgrass-transparent.png").catch(() => null);
+  for (let i = 0; i < SPOTLIGHT_CATEGORIES.length; i++) {
+    const cat = SPOTLIGHT_CATEGORIES[i], w = winners?.[cat.key], y = y0 + i * (rh + gap), cy = y + rh / 2;
+    ctx.save(); ctx.shadowColor = "rgba(26,74,10,.22)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 6;
+    const gr = ctx.createLinearGradient(0, y, 0, y + rh); gr.addColorStop(0, "#fffef6"); gr.addColorStop(1, "#f6edcf");
+    ctx.fillStyle = gr; rr(ctx, x0, y, rw, rh, 46); ctx.fill(); ctx.restore();
+    ctx.lineWidth = 4; ctx.strokeStyle = GREEN; rr(ctx, x0, y, rw, rh, 46); ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = "rgba(246,185,59,.7)"; rr(ctx, x0 + 7, y + 7, rw - 14, rh - 14, 39); ctx.stroke();
+
+    // avatar
+    const ax = x0 + 28 + 56, R = 56;
+    ctx.save(); ctx.beginPath(); ctx.arc(ax, cy, R, 0, Math.PI * 2); ctx.clip();
+    let drawn = false;
+    if (w?.avatarUrl) { try { coverDraw(ctx, await loadImageSafe(w.avatarUrl), ax, cy, R); drawn = true; } catch {} }
+    if (!drawn) {
+      ctx.fillStyle = w ? "#d9efbf" : "#e6eadf"; ctx.fillRect(ax - R, cy - R, R * 2, R * 2);
+      if (w && logo) ctx.drawImage(logo, ax - R * 0.7, cy - R * 0.7, R * 1.4, R * 1.4);
+    }
+    ctx.restore();
+    ctx.lineWidth = 6; ctx.strokeStyle = GREEN; ctx.beginPath(); ctx.arc(ax, cy, R, 0, Math.PI * 2); ctx.stroke();
+
+    // text
+    const tx = ax + R + 28, maxW = x0 + rw - 36 - tx;
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = CAT_COLOR[cat.key] || GREEN; ctx.font = `800 22px ${NUN}`; ctx.letterSpacing = "4px";
+    ctx.fillText(cat.name.toUpperCase(), tx, cy - 16); ctx.letterSpacing = "0px";
+    const txt = w ? "@" + w.handle : "No winner yet";
+    fitPx(ctx, txt, maxW, 54, 28);
+    ctx.fillStyle = w ? INK : "#6b7d60"; ctx.fillText(ellipsize(ctx, txt, maxW), tx, cy + 38);
+  }
+
+  drawFooter(ctx, W, H, a, g, { leftLabel: "THIS WEEK'S", leftText: "Spotlight Winners", rightLabel: "WEEK", rightText: weekLabel });
+  return c.toDataURL("image/png");
+}
