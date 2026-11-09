@@ -1,7 +1,7 @@
-// POST { username, image }  image = data URL (jpeg/png/webp, <= ~1.5 MB) already cropped square by the browser.
+// POST { username, image }  image = JPEG data URL (<= ~1.5 MB) already cropped square by the browser.
 // POST { username, remove: true } clears the picture.
 // Only the signed-in owner of the username can change it, and only when their profile is flagged as a
-// Grass Toucher or Screen Toucher NFT holder. Stored in the public "avatars" bucket, one file per user.
+// Grass Toucher or Screen Toucher NFT holder. Stored in the existing public "avatars" bucket as <username>.jpg.
 import { requireOwner, adminClient } from "../../../utils/requireOwner";
 
 export const config = { api: { bodyParser: { sizeLimit: "2mb" } } };
@@ -24,25 +24,18 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, avatar_url: null });
   }
 
-  const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(req.body?.image || ""));
+  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(String(req.body?.image || ""));
   if (!m) return res.status(400).json({ error: "Please choose a JPG, PNG or WebP image." });
-  const buf = Buffer.from(m[2], "base64");
+  const buf = Buffer.from(m[1], "base64");
   if (buf.length < 500 || buf.length > 1_500_000) return res.status(400).json({ error: "That image is too large. Try a smaller one." });
 
-  const ext = m[1] === "image/png" ? "png" : m[1] === "image/webp" ? "webp" : "jpg";
-  const path = `${who.username}/${Date.now()}.${ext}`;
-  const up = await db.storage.from(BUCKET).upload(path, buf, { contentType: m[1], upsert: false, cacheControl: "31536000" });
+  // Same layout as the existing avatars: one <username>.jpg at the bucket root, replaced on change.
+  const path = `${who.username}.jpg`;
+  const up = await db.storage.from(BUCKET).upload(path, buf, { contentType: "image/jpeg", upsert: true, cacheControl: "300" });
   if (up.error) return res.status(500).json({ error: "Could not upload. Please try again." });
-  const url = db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  const url = `${db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl}?v=${Date.now()}`;
 
   const { error } = await db.from("Profiles").update({ avatar_url: url }).ilike("username", who.username);
   if (error) return res.status(500).json({ error: "Could not save." });
-
-  // keep only the newest few files for this user
-  try {
-    const { data: files } = await db.storage.from(BUCKET).list(who.username, { limit: 100, sortBy: { column: "name", order: "desc" } });
-    const old = (files || []).slice(3).map((f) => `${who.username}/${f.name}`);
-    if (old.length) await db.storage.from(BUCKET).remove(old);
-  } catch {}
   return res.status(200).json({ ok: true, avatar_url: url });
 }
