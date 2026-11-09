@@ -1,7 +1,7 @@
-// Every caption we hand to X / the share sheet carries the same three tags, and every proofofgrass.app link in it
+// Every caption we hand to X / the share sheet carries the same tags and the @XTouchGrass handle, and every proofofgrass.app link in it
 // carries the sender's ?ref= so a signup from a shared post is credited to them.
 // withShareTags() is idempotent: tags and ?ref= already in the text are not repeated.
-export const SHARE_TAGS = ["$TOUCHGRASS", "#TouchGrass", "#ProofOfGrass"];
+export const SHARE_TAGS = ["$TOUCHGRASS", "#TouchGrass", "#ProofOfGrass", "@XTouchGrass"];
 
 function myName() {
   try { return (typeof localStorage !== "undefined" ? localStorage.getItem("pog_username") || "" : "").toLowerCase().replace(/@/g, "").trim(); }
