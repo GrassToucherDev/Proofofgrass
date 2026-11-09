@@ -152,6 +152,24 @@ export default function AdminSpotlight() {
             notes:          `Spotlight winner — ${payload.category} — week of ${payload.week_start}`,
           }),
         }).catch(() => {});
+
+        // 5 free WAGO Wheel spins (one grant per person per week; expire a week after the spotlight week ends)
+        const exp = new Date(`${payload.week_end || payload.week_start}T23:59:59-05:00`);
+        exp.setDate(exp.getDate() + 7);
+        adminFetch("/api/wheel/admin/free-spins", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            usernames:  payload.username,
+            count:      5,
+            expires_at: exp.toISOString(),
+            batch:      `spotlight-${payload.week_start}`,
+            reason:     `Community Spotlight win, week of ${payload.week_start}`,
+          }),
+        }).then(r => r.json()).then(d => {
+          const res = d?.results?.[0]?.result;
+          if (res === "unknown_username") setError(`Saved, but no free spins: @${payload.username} has no linked Google account.`);
+        }).catch(() => {});
       }
     }
     setSaving(false);
