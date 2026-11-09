@@ -321,6 +321,30 @@ function LockedInToday({ username, streak }) {
   );
 }
 
+// ─── Next steps checklist ─────────────────────────────────────────────────────
+function NextSteps({ side = false, className }) {
+  const steps = [
+    { icon: "camera", text: "Add a photo from outside" },
+    { icon: "lock", text: "Lock in your streak" },
+    { icon: "share", text: "Share it on X" },
+  ];
+  return (
+    <div className={className} style={side ? { ...V2Styles.glassCard, padding: "20px" } : { marginTop: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
+        textTransform: "uppercase", color: V2.midGray, marginBottom: 10 }}>
+        Next Steps
+      </div>
+      {steps.map((s, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10,
+          padding: "8px 0", borderBottom: i < steps.length - 1 ? `1px solid ${V2.borderSoft}` : "none" }}>
+          <span style={{ width: 28, flexShrink: 0 }}><Ico n={s.icon} size={26} /></span>
+          <span style={{ fontSize: 13, color: V2.textBody }}>{s.text}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, hasPostedToday,
   onUpload, onRetake, onPickUsername, streakStatus, streakTone, resolvedStreak, loadingUser }) {
   const [sharingMilestone, setSharingMilestone] = useState(false);
@@ -397,26 +421,8 @@ function LogProofSection({ username, hasUser, imageSrc, proofFile, showResult, h
         </div>
       )}
 
-      {/* Next steps */}
-      {!showResult && !lockedIn && (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
-            textTransform: "uppercase", color: V2.midGray, marginBottom: 10 }}>
-            Next Steps
-          </div>
-          {[
-            { icon: "camera", text: "Add a photo from outside" },
-            { icon: "lock", text: "Lock in your streak" },
-            { icon: "share", text: "Share it on X" },
-          ].map((s, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10,
-              padding: "8px 0", borderBottom: i < 2 ? `1px solid ${V2.borderSoft}` : "none" }}>
-              <span style={{ width: 28, flexShrink: 0 }}><Ico n={s.icon} size={26} /></span>
-              <span style={{ fontSize: 13, color: V2.textBody }}>{s.text}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Next steps (desktop shows these under the profile card instead, to avoid an empty gap there) */}
+      {!showResult && !lockedIn && <NextSteps className="v2-nextsteps-inline" />}
     </div>
   );
 }
@@ -731,6 +737,8 @@ export default function Home() {
     .v2-more-row { display: grid; grid-template-columns: repeat(6,1fr); gap: 10px; padding: 8px clamp(14px,4vw,40px) 20px; }
     .v2-feature-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; padding: 24px clamp(14px,4vw,40px); }
     .v2-bottom-grid > :nth-child(2) { order: -1; }
+    .v2-bottom-grid.has-profile .v2-nextsteps-inline { display: none; }
+    @media (max-width: 768px) { .v2-bottom-grid.has-profile .v2-nextsteps-inline { display: block; } .v2-nextsteps-side { display: none; } }
     .v2-bottom-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; padding: 24px clamp(14px,4vw,40px); align-items: start; }
     @media (max-width: 1024px) {
       .v2-feature-grid { grid-template-columns: repeat(2,1fr); }
@@ -905,7 +913,7 @@ export default function Home() {
         </div>
 
         {/* ── MAIN 3-COLUMN GRID ───────────────────────────────────────────── */}
-        <div className="v2-bottom-grid" ref={uploadSectionRef} id="upload">
+        <div className={"v2-bottom-grid" + (hasUser && resolvedStreak != null ? " has-profile" : "")} ref={uploadSectionRef} id="upload">
 
           {/* Column 1 — Profile preview / Leaderboard */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -983,6 +991,9 @@ export default function Home() {
                   View Full Leaderboard →
                 </Link>
               </div>
+            )}
+            {hasUser && resolvedStreak != null && !showResult && !(hasPostedToday === true) && (
+              <NextSteps side className="v2-nextsteps-side" />
             )}
           </div>
 
