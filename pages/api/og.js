@@ -112,21 +112,17 @@ export default async function handler(req) {
         <img src={`${origin}/card/grass-l.png`} width={250} height={250} style={{ position: "absolute", left: -30, bottom: -50 }} />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`${origin}/card/grass-r.png`} width={250} height={250} style={{ position: "absolute", right: -30, bottom: -50 }} />
-        <div style={{ position: "absolute", left: 60, top: 36, width: 1080, height: 548, display: "flex", flexDirection: "column", alignItems: "center",
+        <div style={{ position: "absolute", left: 60, top: 36, width: 1080, height: 548, display: "flex", alignItems: "center",
           background: "rgba(255,255,255,.9)", border: "4px solid rgba(255,255,255,.95)", borderRadius: 56, boxShadow: "0 14px 40px rgba(26,74,10,.25)" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`${origin}/touchgrass-logo-card.png`} width={438} height={200} style={{ marginTop: 14 }} />
-          <div style={{ display: "flex", alignItems: "center", marginTop: 6 }}>
+          <img src={`${origin}/brand/wago-wave.png`} width={437} height={446} style={{ marginLeft: 36, marginTop: 40 }} />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, marginLeft: 8, marginRight: 20 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`${origin}/card/laurel.png`} width={52} height={90} style={{ marginRight: 26 }} />
-            <div style={{ display: "flex", fontFamily: FRED, fontSize: 92, fontWeight: 700, color: INK }}>PROOF OF GRASS</div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`${origin}/card/laurel.png`} width={52} height={90} style={{ marginLeft: 26, transform: "scaleX(-1)" }} />
-          </div>
-          <div style={{ display: "flex", fontFamily: NUN, fontSize: 30, fontWeight: 800, color: GREEN, letterSpacing: 10, marginTop: 8 }}>TOUCH. PROVE. WIN.</div>
-          <div style={{ display: "flex", marginTop: 22, alignItems: "center" }}>
-            <div style={{ display: "flex", background: "linear-gradient(180deg,#fffef6,#f6edcf)", border: `5px solid ${GREEN}`, borderRadius: 60, padding: "12px 30px", fontFamily: FRED, fontSize: 32, fontWeight: 700, color: INK, marginRight: 16 }}>Go outside. Post proof. Build your streak.</div>
-            <div style={{ display: "flex", background: GOLD, border: `5px solid ${GREEN}`, borderRadius: 60, padding: "12px 28px", fontFamily: FRED, fontSize: 32, fontWeight: 700, color: INK }}>$TOUCHGRASS</div>
+            <img src={`${origin}/brand/touchgrass-wordmark.png`} width={171} height={140} />
+            <div style={{ display: "flex", fontFamily: FRED, fontSize: 68, fontWeight: 700, color: INK, marginTop: 4 }}>PROOF OF GRASS</div>
+            <div style={{ display: "flex", fontFamily: NUN, fontSize: 26, fontWeight: 800, color: GREEN, letterSpacing: 9, marginTop: 2 }}>TOUCH. PROVE. WIN.</div>
+            <div style={{ display: "flex", background: "linear-gradient(180deg,#fffef6,#f6edcf)", border: `5px solid ${GREEN}`, borderRadius: 60, padding: "10px 26px", fontFamily: FRED, fontSize: 25, whiteSpace: "nowrap", fontWeight: 700, color: INK, marginTop: 22 }}>Go outside. Post proof. Build your streak.</div>
+            <div style={{ display: "flex", background: GOLD, border: `5px solid ${GREEN}`, borderRadius: 60, padding: "8px 28px", fontFamily: FRED, fontSize: 29, fontWeight: 700, color: INK, marginTop: 14 }}>$TOUCHGRASS</div>
           </div>
         </div>
         <div style={{ position: "absolute", bottom: 8, left: 0, width: 1200, display: "flex", justifyContent: "center" }}>
