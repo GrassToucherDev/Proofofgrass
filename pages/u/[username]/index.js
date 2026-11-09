@@ -311,6 +311,59 @@ function StatsOverview({ username, subCount, grassScore }) {
 }
 
 // ── Skin / Theme panel ────────────────────────────────────────────────────────
+// Holder-only picture change: pick a photo, crop it square in the browser, upload through /api/profile/avatar.
+function AvatarPicker({ username, current, onClose, onSaved }) {
+  const [preview,setPreview]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+  const pick=(file)=>{
+    setErr("");
+    if(!file) return;
+    if(!/^image\/(jpeg|png|webp)$/.test(file.type)){ setErr("Please choose a JPG, PNG or WebP image."); return; }
+    const img=new Image(); const u=URL.createObjectURL(file);
+    img.onload=()=>{
+      const S=512, c=document.createElement("canvas"); c.width=S; c.height=S;
+      const sc=Math.max(S/img.width,S/img.height), w=img.width*sc, h=img.height*sc;
+      const cx=c.getContext("2d"); cx.fillStyle="#ffffff"; cx.fillRect(0,0,S,S); cx.drawImage(img,(S-w)/2,(S-h)/2,w,h);
+      URL.revokeObjectURL(u);
+      setPreview(c.toDataURL("image/jpeg",0.88));
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(u); setErr("Couldn't read that image."); };
+    img.src=u;
+  };
+  const send=async(body)=>{
+    setBusy(true); setErr("");
+    try{
+      const r=await fetch("/api/profile/avatar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,...body})});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok){ setErr(j.error||"Could not save."); setBusy(false); return; }
+      onSaved(j.avatar_url||null);
+    }catch{ setErr("Could not save. Please try again."); setBusy(false); }
+  };
+  return (
+    <div role="dialog" aria-modal="true" onClick={onClose}
+      style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(13,42,5,0.55)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius:20, padding:22, width:"100%", maxWidth:360, textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ fontWeight:800, fontSize:18, color:V2.forestGreen, marginBottom:4 }}>Change your picture</div>
+        <div style={{ fontSize:12.5, color:"#4a5a40", marginBottom:14 }}>Holder perk. Your photo is cropped to a circle.</div>
+        <div style={{ width:140, height:140, borderRadius:"50%", margin:"0 auto 14px", overflow:"hidden", border:"3px solid #5ba622", background:"#eef6e2", display:"flex", alignItems:"center", justifyContent:"center", fontSize:48 }}>
+          {(preview||current) ? <img src={preview||current} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : (username?.[0]||"?").toUpperCase()}
+        </div>
+        <label style={{ display:"inline-block", cursor:"pointer", padding:"10px 18px", borderRadius:12, background:"#eef6e2", border:"1px solid rgba(26,74,10,0.2)", fontWeight:700, fontSize:13.5, color:V2.forestGreen }}>
+          Choose photo
+          <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display:"none" }} onChange={e=>pick(e.target.files?.[0])} />
+        </label>
+        {err && <div style={{ color:"#c0392b", fontSize:12.5, marginTop:10 }}>{err}</div>}
+        <div style={{ display:"flex", gap:8, justifyContent:"center", marginTop:16, flexWrap:"wrap" }}>
+          <button onClick={()=>send({image:preview})} disabled={!preview||busy} className="pf-action-btn" style={{ opacity:(!preview||busy)?0.5:1 }}>{busy?"Saving...":"Save"}</button>
+          {current && <button onClick={()=>send({remove:true})} disabled={busy} className="pf-action-btn">Remove</button>}
+          <button onClick={onClose} disabled={busy} className="pf-action-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SkinPanel({ activeCover, unlockedCovers, profileRow, isOwner, onEquip }) {
   const owned = COVER_DEFINITIONS.filter(c=>unlockedCovers.includes(c.slug));
   const packName = activeCover?.pack
@@ -367,6 +420,7 @@ export default function ProfilePage({ og }) {
 
   const [streakRow,       setStreakRow]        = useState(null);
   const [profileRow,      setProfileRow]       = useState(null);
+  const canPfp = !!(isOwner && (profileRow?.has_grass_toucher || profileRow?.has_screen_toucher));
   const [subCount,        setSubCount]         = useState(null);
   const [rank,            setRank]             = useState(null);
   const [totalUsers,      setTotalUsers]       = useState(null);
@@ -644,13 +698,13 @@ export default function ProfilePage({ og }) {
                     boxShadow:`0 4px 16px rgba(26,74,10,0.2), 0 0 0 3px ${accent}30`,
                     display:"flex", alignItems:"center", justifyContent:"center",
                     fontSize:36, overflow:"hidden", position:"relative",
-                    cursor:editMode?"pointer":"default" }}
-                    onClick={()=>{ if(editMode)setShowAvatarPicker(true); }}>
+                    cursor:(editMode&&canPfp)?"pointer":"default" }}
+                    onClick={()=>{ if(editMode&&canPfp)setShowAvatarPicker(true); }}>
                     {profileRow?.avatar_url
                       ? <img src={profileRow.avatar_url} alt="" style={{ width:"100%", height:"100%", borderRadius:"50%", objectFit:"cover" }} />
                       : loading?username?.[0]?.toUpperCase()??"?":(profileRow?.avatar_emoji||"🌿")
                     }
-                    {editMode&&<div style={{ position:"absolute", inset:0, borderRadius:"50%", background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}><Ico n="✏️" size={22} /></div>}
+                    {editMode&&canPfp&&<div style={{ position:"absolute", inset:0, borderRadius:"50%", background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}><Ico n="✏️" size={22} /></div>}
                   </div>
 
                   <div>
@@ -679,6 +733,11 @@ export default function ProfilePage({ og }) {
                       placeholder="Add a bio..."
                       style={{ ...V2Styles.input, fontSize:13, maxWidth:400 }} />
                   </div>
+                )}
+                {showAvatarPicker && canPfp && (
+                  <AvatarPicker username={username} current={profileRow?.avatar_url}
+                    onClose={()=>setShowAvatarPicker(false)}
+                    onSaved={(url)=>{ setProfileRow(prev=>({...prev,avatar_url:url})); setShowAvatarPicker(false); }} />
                 )}
 
                 {/* Action buttons */}
