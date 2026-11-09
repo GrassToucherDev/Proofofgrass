@@ -27,10 +27,10 @@ export default function WalletVerify({ username, currentWallet, currentVerified,
   const [showGuide,  setShowGuide]  = useState(false);
 
   const T = {
-    bg2:"#0e100b", bg3:"#141710",
-    border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)",
-    olive:"#93a85a", gold:"#c8a84b",
-    white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
+    bg2:"#f4faee", bg3:"rgba(125,200,50,0.07)",
+    border:"rgba(200,220,190,0.8)", borderG:"rgba(125,200,50,0.35)",
+    olive:"#2f6b12", gold:"#9a6b00",
+    white:"#1a4a0a", muted:"#4a5a40", dim:"#5c6e4d",
   };
 
   useEffect(() => {
@@ -143,7 +143,7 @@ export default function WalletVerify({ username, currentWallet, currentVerified,
           background:"transparent",
           border:"1px solid rgba(248,113,113,0.25)",
           borderRadius:8,padding:"8px 16px",fontSize:11,
-          color:"rgba(248,113,113,0.6)",cursor:"pointer",
+          color:"#c0392b",cursor:"pointer",
           fontFamily:"'Nunito',sans-serif",fontWeight:600,
         }}>Disconnect Wallet</button>
       </div>
@@ -229,7 +229,7 @@ export default function WalletVerify({ username, currentWallet, currentVerified,
 
       {error && (
         <div style={{
-          fontSize:12,color:"#f87171",padding:"10px 12px",
+          fontSize:12,color:"#c0392b",padding:"10px 12px",
           background:"rgba(248,113,113,0.06)",
           border:"1px solid rgba(248,113,113,0.2)",borderRadius:8,
         }}>{error}</div>
@@ -238,9 +238,9 @@ export default function WalletVerify({ username, currentWallet, currentVerified,
       <button onClick={handleConnect} disabled={isLoading} style={{
         display:"flex",alignItems:"center",justifyContent:"center",gap:10,
         padding:"13px 20px",borderRadius:9,cursor:isLoading?"default":"pointer",
-        background: isLoading ? T.bg3 : T.olive,
-        border:`1px solid ${isLoading ? T.border : T.olive}`,
-        color: isLoading ? T.dim : "#080a06",
+        background: isLoading ? T.bg3 : "linear-gradient(135deg,#7dc832,#5ba622)",
+        border:`1px solid ${isLoading ? T.border : "#5ba622"}`,
+        color: isLoading ? T.dim : "white",
         fontSize:13,fontWeight:700,fontFamily:"'Nunito',sans-serif",
         letterSpacing:"0.04em",opacity:isLoading?0.7:1,
         transition:"all 0.2s",

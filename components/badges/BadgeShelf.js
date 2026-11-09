@@ -11,13 +11,14 @@ export default function BadgeShelf({ badges = [], accent = "#2f7d22", shareFor =
   return (
     <div>
       <div style={{ fontSize: 12, fontWeight: 700, color: "#6b7a63", marginBottom: 10 }}>{earned} of {badges.length} badge lines started</div>
+      <div style={{ columnWidth: 330, columnGap: 28 }}>
       {EXPERIENCES.map(exp => {
         const list = badges.filter(b => b.exp === exp.id);
         if (!list.length) return null;
         return (
-          <div key={exp.id} style={{ marginBottom: 18 }}>
+          <div key={exp.id} style={{ marginBottom: 18, breakInside: "avoid", pageBreakInside: "avoid" }}>
             <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: "#6b7a63", marginBottom: 8 }}>{exp.name}</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(104px,1fr))", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(96px,1fr))", gap: 12 }}>
               {list.map(b => (
                 <div key={b.id} title={b.blurb} role={shareFor && b.tier > 0 ? "button" : undefined} tabIndex={shareFor && b.tier > 0 ? 0 : undefined}
                   onClick={shareFor && b.tier > 0 ? () => setSharing(b) : undefined}
@@ -38,6 +39,7 @@ export default function BadgeShelf({ badges = [], accent = "#2f7d22", shareFor =
           </div>
         );
       })}
+      </div>
       {sharing && <BadgeShareSheet badge={sharing} username={shareFor} onClose={() => setSharing(null)} />}
     </div>
   );

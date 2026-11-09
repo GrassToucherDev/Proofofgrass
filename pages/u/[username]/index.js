@@ -212,6 +212,7 @@ function MilestoneCard({ current, loading }) {
 function StatsOverview({ username, subCount, grassScore }) {
   const [tab, setTab] = useState("30D");
   const [points, setPoints] = useState([]);
+  const [period, setPeriod] = useState({ proofs:0, activeDays:0, days:30 });
   const [loading, setLoading] = useState(true);
 
   useEffect(()=>{
@@ -225,20 +226,24 @@ function StatsOverview({ username, subCount, grassScore }) {
         .in("status",["pending","approved"])
         .gte("created_at",since)
         .order("created_at",{ascending:true});
-      // Bucket by week
-      const buckets = {};
+      // Bucket by real 7-day weeks (oldest first), keeping empty weeks so the line is honest
+      const weeks = Math.ceil(days/7);
+      const counts = Array(weeks).fill(0);
+      const dayKeys = new Set();
       (data||[]).forEach(s=>{
-        const d = new Date(s.created_at);
-        const week = `${d.getFullYear()}-W${Math.floor(d.getDate()/7)}`;
-        buckets[week]=(buckets[week]||0)+1;
+        const ago = Math.floor((Date.now()-new Date(s.created_at).getTime())/86400000);
+        const w = weeks-1-Math.min(weeks-1, Math.floor(ago/7));
+        counts[w] += 1;
+        dayKeys.add(new Date(s.created_at).toDateString());
       });
-      setPoints(Object.values(buckets));
+      setPoints(counts);
+      setPeriod({ proofs:(data||[]).length, activeDays:dayKeys.size, days });
       setLoading(false);
     })();
   },[username,tab]);
 
   const max = Math.max(...points,1);
-  const H = 80;
+  const H = 110;
 
   return (
     <div>
@@ -285,20 +290,19 @@ function StatsOverview({ username, subCount, grassScore }) {
         )}
       </div>
 
-      {/* Summary stats */}
+      {/* Summary stats for the selected period */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
         {[
-          { label:"Proofs", value:subCount??0, chip:"+12%" },
-          { label:"Grass Score", value:(grassScore||0).toLocaleString(), chip:"+18%" },
-          { label:"Consistency", value:"—", chip:null },
+          { label:"Proofs", value:period.proofs },
+          { label:"Active days", value:period.activeDays },
+          { label:"Consistency", value:`${Math.round((period.activeDays/period.days)*100)}%` },
         ].map(s=>(
           <div key={s.label} style={{ padding:"10px 8px", borderRadius:10,
             background:"rgba(125,200,50,0.06)", border:`1px solid ${V2.borderSoft}`, textAlign:"center" }}>
             <div style={{ fontFamily:V2.fontSerif, fontSize:18, fontWeight:700,
-              color:V2.forestGreen, lineHeight:1, marginBottom:4 }}>{s.value}</div>
-            <div style={{ fontSize:9, color:LABEL, textTransform:"uppercase",
-              letterSpacing:"0.08em", marginBottom:s.chip?4:0 }}>{s.label}</div>
-            {s.chip && <div style={{ fontSize:9, color:V2.grassGreen, fontWeight:700 }}>{s.chip}</div>}
+              color:V2.forestGreen, lineHeight:1, marginBottom:4 }}>{loading?"…":s.value}</div>
+            <div style={{ fontSize:10, fontWeight:600, color:LABEL, textTransform:"uppercase",
+              letterSpacing:"0.08em" }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -545,7 +549,7 @@ export default function ProfilePage({ og }) {
       display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px;
     }
     .pf-two-one-col {
-      display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.4fr) minmax(0,1fr); gap: 16px;
+      display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.4fr) minmax(0,1fr); gap: 16px; align-items: start;
     }
     .pf-three-col > *, .pf-two-one-col > * { min-width: 0; }
     .skel { background: rgba(200,220,190,0.3); border-radius:6px; animation:v2Shimmer 1.4s ease-in-out infinite; }
@@ -844,21 +848,17 @@ export default function ProfilePage({ og }) {
             </div>
           )}
 
-          {/* Row 2: About Me | Stats Overview | Skin/Theme + Account */}
+          {/* Row 2: Community | Stats Overview | Skin/Theme + Account */}
           <div className="pf-two-one-col">
 
-            {/* About Me */}
+            {/* Community (bio already shows in the banner) */}
             <div className="pf-card">
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL, marginBottom:14 }}>About Me</div>
-              {profileRow?.bio
-                ? <p style={{ fontSize:13, color:V2.textBody, lineHeight:1.65, marginBottom:16 }}>{profileRow.bio}</p>
-                : <p style={{ fontSize:13, color:LABEL, marginBottom:16 }}>No bio yet.</p>
-              }
-              <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:16 }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL, marginBottom:14 }}>Community</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
                   padding:"10px 14px", borderRadius:10, background:"rgba(125,200,50,0.06)" }}>
                   <span style={{ fontSize:13, color:V2.textBody }}>Community Rank</span>
-                  <span style={{ fontSize:13, fontWeight:700, color:V2.grassGreen }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:"#2f6b12" }}>
                     {pct!=="—"?`Top ${pct}%`:"—"}
                   </span>
                 </div>
@@ -867,19 +867,19 @@ export default function ProfilePage({ og }) {
                   <span style={{ fontSize:13, color:V2.textBody }}>Referrals</span>
                   <span style={{ fontSize:13, fontWeight:700, color:V2.forestGreen }}>{refSuccessful}</span>
                 </div>
+                {isOwner && (
+                  <button onClick={()=>{
+                    const link=typeof window!=="undefined"?`${window.location.origin}/?ref=${username}`:`https://proofofgrass.app/?ref=${username}`;
+                    navigator.clipboard.writeText(link).catch(()=>{});
+                    setRefLinkCopied(true); setTimeout(()=>setRefLinkCopied(false),2000);
+                  }} style={{ width:"100%", padding:"11px", borderRadius:12,
+                    background:"white", border:`1.5px solid ${V2.borderSoft}`,
+                    color:V2.forestGreen, fontSize:12, fontWeight:700, cursor:"pointer",
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                    🔗 {refLinkCopied?"Copied!":"My Referral Link"}
+                  </button>
+                )}
               </div>
-              {isOwner && (
-                <button onClick={()=>{
-                  const link=typeof window!=="undefined"?`${window.location.origin}/?ref=${username}`:`https://proofofgrass.app/?ref=${username}`;
-                  navigator.clipboard.writeText(link).catch(()=>{});
-                  setRefLinkCopied(true); setTimeout(()=>setRefLinkCopied(false),2000);
-                }} style={{ width:"100%", padding:"11px", borderRadius:12,
-                  background:"white", border:`1.5px solid ${V2.borderSoft}`,
-                  color:V2.forestGreen, fontSize:12, fontWeight:700, cursor:"pointer",
-                  display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
-                  🔗 {refLinkCopied?"Copied!":"My Referral Link"}
-                </button>
-              )}
             </div>
 
             {/* Stats Overview */}
@@ -903,12 +903,10 @@ export default function ProfilePage({ og }) {
                 <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL, marginBottom:14 }}>Account</div>
                 {[
                   { icon:"👤", label:"Edit Profile", action:()=>setEditMode(v=>!v) },
-                  { icon:"⚙️", label:"Settings", action:()=>{} },
                 ].map((item,i)=>(
                   <button key={i} onClick={item.action}
                     style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
-                      padding:"12px 0", borderBottom:i===0?`1px solid ${V2.borderSoft}`:"none",
-                      background:"transparent", border:"none", borderBottom:i===0?`1px solid ${V2.borderSoft}`:"none",
+                      padding:"12px 0", background:"transparent", border:"none",
                       cursor:"pointer", textAlign:"left" }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                       <span style={{ width:20 }}><Ico n={item.icon} size={20} /></span>
