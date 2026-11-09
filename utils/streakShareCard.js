@@ -141,8 +141,8 @@ export async function renderStreakCard({ username, streak, best }) {
   if (grassL) { const gh = 170, gw = gh * grassL.width / grassL.height; ctx.drawImage(grassL, PX - 50, H - gh + 16, gw, gh); }
   if (grassR) { const gh = 170, gw = gh * grassR.width / grassR.height; ctx.drawImage(grassR, W - PX + 50 - gw, H - gh + 16, gw, gh); }
   ctx.textAlign = "center"; ctx.font = `800 20px ${NUN}`; ctx.letterSpacing = "3px";
-  const uw = ctx.measureText("PROOFOFGRASS.APP").width + 40; ctx.fillStyle = "rgba(253,246,226,.92)"; rrP(ctx, cx - uw / 2, H - 56, uw, 38, 19); ctx.fill();
-  ctx.fillStyle = GREEN; ctx.fillText("PROOFOFGRASS.APP", cx + 2, H - 29); ctx.letterSpacing = "0px";
+  const uw = ctx.measureText("START YOUR STREAK  ·  PROOFOFGRASS.APP").width + 40; ctx.fillStyle = "rgba(253,246,226,.92)"; rrP(ctx, cx - uw / 2, H - 56, uw, 38, 19); ctx.fill();
+  ctx.fillStyle = GREEN; ctx.fillText("START YOUR STREAK  ·  PROOFOFGRASS.APP", cx + 2, H - 29); ctx.letterSpacing = "0px";
   return c.toDataURL("image/png");
 }
 const cyyy = (cy) => cy + 34;

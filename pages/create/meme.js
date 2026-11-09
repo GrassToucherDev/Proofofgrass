@@ -4,6 +4,7 @@ import CreateShell from "../../components/CreateShell";
 import { T, CARD_SHADOW } from "../../utils/createTheme";
 import PostToCommunity from "../../components/PostToCommunity";
 import { currentTheme } from "../../utils/createCommunity";
+import { withShareTags } from "../../utils/shareTags";
 import { BRAND, ensureFonts, wrapText, drawScene, drawImage, drawFooter, MASCOT } from "../../utils/createCards";
 
 
@@ -113,7 +114,7 @@ export default function MemeTool() {
     } catch { /* unavailable */ }
   };
 
-  const FOOTER_TEXT = `🌿 ${selected.label}\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nhttps://proofofgrass.app`;
+  const FOOTER_TEXT = withShareTags(`🌿 ${selected.label}\n\nhttps://proofofgrass.app`);
 
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap');

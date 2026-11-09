@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Head from "next/head";
+import OgMeta, { SITE_URL } from "../components/OgMeta";
 import { supabase } from "../utils/supabase";
 import ShareCardSheet from "../components/ShareCardSheet";
 import { renderRankCard, rankCaption } from "../utils/rankShareCard";
@@ -331,6 +332,7 @@ export default function Leaderboard() {
         <title>Outdoor Leaderboard | Proof of Grass</title>
         <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
       </Head>
+      <OgMeta title="Outdoor Leaderboard | Proof of Grass" description="See who is touching grass the most. Live rankings by streak and Grass Score. Post your outdoor proof and climb." url={`${SITE_URL}/leaderboard`} />
       <style dangerouslySetInnerHTML={{ __html:css }} />
 
       <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>

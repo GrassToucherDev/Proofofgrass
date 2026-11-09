@@ -7,6 +7,7 @@ import {
 } from "../../utils/burnThemes";
 
 import Ico from "../../components/Ico";
+import { withShareTags } from "../../utils/shareTags";
 const T = {
   bg:"#080a06", bg2:"#0e100b", bg3:"#141710",
   border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)", borderGold:"rgba(200,168,75,0.4)",
@@ -713,7 +714,7 @@ export default function BurnerCollectionPage() {
   const shareToX = useCallback(async () => {
     if (generating || !userData || !username || !selectedTierKey) return;
     const theme = getRarityTierByKey(selectedTierKey);
-    const text = `🔥 ${theme.label} — Double Burner Collection\n\n"${quote}"\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/burns`;
+    const text = withShareTags(`🔥 ${theme.label} — Double Burner Collection\n\n"${quote}"\n\nproofofgrass.app/burns`);
     const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
     const canNativeShare = isMob && !!(navigator.share && navigator.canShare);
 

@@ -1,6 +1,7 @@
 // pages/wheel.js — the WAGO Wheel on its own page (it used to sit on top of the Marketplace).
 import { useState, useEffect } from "react";
 import Head from "next/head";
+import OgMeta, { SITE_URL } from "../components/OgMeta";
 import Link from "next/link";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 import V2Nav from "../components/V2Nav";
@@ -47,6 +48,7 @@ export default function WheelPage() {
   return (
     <>
       <Head><title>WAGO Wheel | Proof of Grass</title></Head>
+      <OgMeta title="WAGO Wheel | Proof of Grass" description="Spin the WAGO Wheel for $TOUCHGRASS prizes, NFTs and more. Free spins for streak keepers." url={`${SITE_URL}/wheel`} />
       <style dangerouslySetInnerHTML={{ __html: V2GlobalCSS }} />
       <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>
         <V2Nav username={username} onUsernameChange={setUsername} showUpload={() => { window.location.href = "/#upload"; }} />
