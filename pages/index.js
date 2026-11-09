@@ -58,11 +58,11 @@ function StatCard({ icon, value, label, sub, accent, loading }) {
   return (
     <div style={{
       ...V2Styles.statCard,
-      display: "flex", flexDirection: "column", gap: 6,
+      display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 6,
     }}>
       <div style={{ fontSize: 28, height: 34 }}><Ico n={icon} size={32} /></div>
       {loading
-        ? <Skel h={32} r={6} />
+        ? <div style={{ width: "60%" }}><Skel h={32} r={6} /></div>
         : <div style={{
             fontFamily: V2.fontSerif,
             fontSize: "clamp(26px,4vw,36px)",
@@ -75,7 +75,7 @@ function StatCard({ icon, value, label, sub, accent, loading }) {
       {sub && <div style={{
         fontSize: 11, color: V2.grassGreen, fontWeight: 600,
         background: "rgba(125,200,50,0.1)", borderRadius: 20,
-        padding: "2px 10px", display: "inline-block", alignSelf: "flex-start",
+        padding: "2px 10px", display: "inline-block", alignSelf: "center",
       }}>{sub}</div>}
     </div>
   );
