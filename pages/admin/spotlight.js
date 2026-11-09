@@ -6,12 +6,12 @@ import SpotlightAnnouncement from "../../components/SpotlightAnnouncement";
 
 import { adminLoginOk } from "../../utils/adminLogin";
 const T = {
-  bg:"#080a06", bg2:"#0e100b", bg3:"#141710", bg4:"#1a1e13",
-  border:"rgba(255,255,255,0.055)", borderG:"rgba(147,168,90,0.2)",
-  borderGold:"rgba(200,168,75,0.35)",
-  olive:"#93a85a", gold:"#c8a84b",
-  white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)",
-  red:"#f87171",
+  bg:"#f1f8ec", bg2:"#ffffff", bg3:"#f4faee", bg4:"#e8f2df",
+  border:"rgba(26,74,10,0.12)", borderG:"rgba(91,166,34,0.35)",
+  borderGold:"rgba(154,107,0,0.4)",
+  olive:"#2f6b12", gold:"#9a6b00",
+  white:"#1a2a12", muted:"#4a5a40", dim:"#5c6e4d",
+  red:"#c0392b",
 };
 
 
@@ -193,7 +193,7 @@ export default function AdminSpotlight() {
       border-bottom:1px solid ${T.border};}
     td{padding:11px 14px;border-bottom:1px solid ${T.border};font-size:12px;vertical-align:middle;}
     tr:last-child td{border-bottom:none;}
-    tr:hover td{background:rgba(255,255,255,0.015);}
+    tr:hover td{background:rgba(91,166,34,0.06);}
     ::-webkit-scrollbar{width:4px;height:4px;}
     ::-webkit-scrollbar-track{background:${T.bg};}
     ::-webkit-scrollbar-thumb{background:${T.olive}40;border-radius:2px;}
@@ -216,7 +216,7 @@ export default function AdminSpotlight() {
             style={{ marginBottom:12 }} />
           {pwError && <div style={{ fontSize:11, color:T.red, marginBottom:10 }}>{pwError}</div>}
           <button onClick={checkPw} className="btn"
-            style={{ width:"100%", background:T.olive, color:"#0e1108", fontSize:13 }}>
+            style={{ width:"100%", background:T.olive, color:"#ffffff", fontSize:13 }}>
             Enter
           </button>
         </div>
@@ -341,7 +341,7 @@ export default function AdminSpotlight() {
 
             <div style={{ display:"flex", gap:10, marginTop:20 }}>
               <button className="btn" onClick={save} disabled={saving}
-                style={{ background:T.gold, color:"#0e1108" }}>
+                style={{ background:T.gold, color:"#ffffff" }}>
                 {saving ? "Saving…" : editId ? "Update Winner" : "Save Winner"}
               </button>
               {editId && (
@@ -422,7 +422,7 @@ export default function AdminSpotlight() {
                           <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em",
                             textTransform:"uppercase", padding:"2px 8px", borderRadius:4,
                             background: s.status==="active"
-                              ? "rgba(147,168,90,0.12)" : "rgba(240,239,234,0.05)",
+                              ? "rgba(91,166,34,0.14)" : "rgba(26,74,10,0.05)",
                             color: s.status==="active" ? T.olive : T.dim,
                             border: `1px solid ${s.status==="active" ? T.borderG : T.border}` }}>
                             {s.status}
@@ -439,14 +439,14 @@ export default function AdminSpotlight() {
                             {s.status === "active" ? (
                               <button className="btn"
                                 onClick={() => archive(s.id)}
-                                style={{ padding:"5px 12px", background:"rgba(240,239,234,0.05)",
+                                style={{ padding:"5px 12px", background:"rgba(26,74,10,0.05)",
                                   color:T.dim, border:`1px solid ${T.border}` }}>
                                 Archive
                               </button>
                             ) : (
                               <button className="btn"
                                 onClick={() => restore(s.id)}
-                                style={{ padding:"5px 12px", background:"rgba(147,168,90,0.1)",
+                                style={{ padding:"5px 12px", background:"rgba(91,166,34,0.1)",
                                   color:T.olive, border:`1px solid ${T.borderG}` }}>
                                 Restore
                               </button>

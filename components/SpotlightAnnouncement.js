@@ -5,8 +5,8 @@ import {
 } from "../utils/spotlightImage";
 
 const T = {
-  bg2:"#0e100b", bg3:"#141710", border:"rgba(255,255,255,0.055)", gold:"#c8a84b", olive:"#93a85a",
-  white:"#f0efea", muted:"rgba(240,239,234,0.52)", dim:"rgba(240,239,234,0.24)", red:"#f87171",
+  bg2:"#ffffff", bg3:"#f4faee", border:"rgba(26,74,10,0.12)", gold:"#9a6b00", olive:"#2f6b12",
+  white:"#1a2a12", muted:"#4a5a40", dim:"#5c6e4d", red:"#c0392b",
 };
 
 // Weekly winners announcement: image (template frame + pictures + names) and a post for the main X account.
@@ -25,7 +25,13 @@ export default function SpotlightAnnouncement({ spotlights }) {
   const [note, setNote] = useState("");
   const runRef = useRef(0);
 
-  useEffect(() => { if (!week || !weeks.includes(week)) setWeek(weeks[0] || ""); }, [weeks, week]);
+  // Follow the newest week: when winners for a newer week are saved, switch to it (the picker stays free to go back).
+  const latestRef = useRef("");
+  useEffect(() => {
+    const latest = weeks[0] || "";
+    if (latest !== latestRef.current) { latestRef.current = latest; setWeek(latest); setEdited(false); return; }
+    if (!week || !weeks.includes(week)) setWeek(latest);
+  }, [weeks, week]);
 
   const rows = useMemo(() => (spotlights || []).filter(s => s.week_start === week && (s.status ?? "active") === "active"), [spotlights, week]);
   const weekEnd = rows[0]?.week_end;
@@ -110,7 +116,7 @@ export default function SpotlightAnnouncement({ spotlights }) {
             <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
               {TONES.map(t => (
                 <button key={t.id} onClick={() => { setTone(t.id); setEdited(false); }}
-                  style={{ ...btn(tone === t.id ? T.gold : T.bg3, tone === t.id ? "#0e1108" : T.muted, `1px solid ${T.border}`), padding:"7px 12px" }}>
+                  style={{ ...btn(tone === t.id ? T.gold : T.bg3, tone === t.id ? "#ffffff" : T.muted, `1px solid ${T.border}`), padding:"7px 12px" }}>
                   {t.label}
                 </button>
               ))}
@@ -131,7 +137,7 @@ export default function SpotlightAnnouncement({ spotlights }) {
                 {busy && <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", color:T.muted, fontSize:13 }}>Building image…</div>}
               </div>
               <div style={{ display:"flex", gap:8, marginTop:10, flexWrap:"wrap" }}>
-                <button onClick={download} disabled={!img} style={btn(T.gold, "#0e1108")}>Download image</button>
+                <button onClick={download} disabled={!img} style={btn(T.gold, "#ffffff")}>Download image</button>
                 <button onClick={share} disabled={!img} style={btn(T.bg3, T.white, `1px solid ${T.border}`)}>Share…</button>
               </div>
             </div>
