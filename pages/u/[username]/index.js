@@ -60,6 +60,9 @@ function Skel({ w="100%", h=16, r=8 }) {
     backgroundSize:"200% 100%", animation:"v2Shimmer 1.4s ease-in-out infinite" }} />;
 }
 
+// Readable label gray for this page (V2.midGray #a0b090 is too faint on white and cover art).
+const LABEL = "#5c6e4d";
+
 // ── Stat item ─────────────────────────────────────────────────────────────────
 function StatItem({ icon, label, value, sub, chip, loading }) {
   return (
@@ -68,15 +71,15 @@ function StatItem({ icon, label, value, sub, chip, loading }) {
       boxShadow:"0 1px 8px rgba(26,74,10,0.06)", border:`1px solid ${V2.borderSoft}`,
       minWidth:0, flex:1 }}>
       <div style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
-        color:V2.midGray, marginBottom:6, display:"flex", alignItems:"center", gap:4 }}>
+        color:LABEL, marginBottom:6, display:"flex", alignItems:"center", gap:4 }}>
         <span><Ico n={icon} size={20} /></span><span>{label}</span>
       </div>
       {loading ? <Skel h={32} r={4} w="60%" /> : (
         <div style={{ fontFamily:V2.fontSerif, fontSize:"clamp(24px,3.5vw,36px)", fontWeight:700,
           color:V2.forestGreen, lineHeight:1, marginBottom:4 }}>{value}</div>
       )}
-      {sub && <div style={{ fontSize:10, color:V2.midGray }}>{sub}</div>}
-      {chip && <div style={{ marginTop:6, fontSize:9, fontWeight:700, color:V2.grassGreen,
+      {sub && <div style={{ fontSize:11, fontWeight:600, color:LABEL }}>{sub}</div>}
+      {chip && <div style={{ marginTop:6, fontSize:10, fontWeight:800, color:"#2f6b12",
         background:"rgba(125,200,50,0.1)", border:`1px solid ${V2.borderGreen}`,
         borderRadius:20, padding:"2px 10px" }}>{chip}</div>}
     </div>
@@ -99,7 +102,7 @@ function BadgeItem({ b }) {
         onMouseLeave={e=>e.currentTarget.style.transform=""}>
         <Ico n={b.emoji} size={28} />
       </div>
-      <div style={{ fontSize:9, fontWeight:600, color:b.earned?V2.forestGreen:V2.midGray,
+      <div style={{ fontSize:9, fontWeight:600, color:b.earned?V2.forestGreen:LABEL,
         textAlign:"center", lineHeight:1.3, maxWidth:64 }}>{b.name}</div>
     </div>
   );
@@ -123,7 +126,7 @@ function ProofCard({ proof }) {
           <span style={{ fontSize:9, fontWeight:700, color:V2.grassGreen,
             background:"rgba(125,200,50,0.1)", borderRadius:20, padding:"1px 7px" }}>✓ Verified</span>
         </div>
-        <div style={{ fontSize:10, color:V2.midGray }}>{proof.when}</div>
+        <div style={{ fontSize:10, color:LABEL }}>{proof.when}</div>
       </div>
     </div>
   );
@@ -141,7 +144,7 @@ function MilestoneCard({ current, loading }) {
   return (
     <div style={{ height:"100%", display:"flex", flexDirection:"column" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-        <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray }}>
+        <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL }}>
           Milestone Progress
         </div>
         <Link href="/leaderboard" style={{ fontSize:11, color:V2.grassGreen, textDecoration:"none",
@@ -171,7 +174,7 @@ function MilestoneCard({ current, loading }) {
           {/* Progress bar */}
           <div style={{ marginBottom:14 }}>
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-              <span style={{ fontSize:11, color:V2.midGray }}>{prev} days</span>
+              <span style={{ fontSize:11, color:LABEL }}>{prev} days</span>
               <span style={{ fontSize:11, fontWeight:700, color:V2.grassGreen }}>{current} / {next??current} days</span>
             </div>
             <div style={{ height:10, background:"rgba(200,220,190,0.4)", borderRadius:5, overflow:"hidden" }}>
@@ -184,12 +187,12 @@ function MilestoneCard({ current, loading }) {
           {next && nextTier && (
             <div style={{ padding:"12px 14px", borderRadius:12,
               background:"rgba(200,220,190,0.15)", border:`1px solid ${V2.borderSoft}` }}>
-              <div style={{ fontSize:11, color:V2.midGray, marginBottom:4 }}>Next milestone</div>
+              <div style={{ fontSize:11, color:LABEL, marginBottom:4 }}>Next milestone</div>
               <div style={{ fontFamily:V2.fontSerif, fontSize:16, fontWeight:700, color:V2.forestGreen }}>
                 {next} Day Streak
               </div>
               <div style={{ fontSize:12, fontWeight:700, color:nextTier.color }}>{nextTier.name}</div>
-              <div style={{ fontSize:11, color:V2.midGray, marginTop:2 }}>{next-current} days away</div>
+              <div style={{ fontSize:11, color:LABEL, marginTop:2 }}>{next-current} days away</div>
             </div>
           )}
           {!next && (
@@ -240,7 +243,7 @@ function StatsOverview({ username, subCount, grassScore }) {
   return (
     <div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-        <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray }}>
+        <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL }}>
           Stats Overview
         </div>
         <div style={{ display:"flex", gap:4 }}>
@@ -248,7 +251,7 @@ function StatsOverview({ username, subCount, grassScore }) {
             <button key={t} onClick={()=>setTab(t)}
               style={{ padding:"4px 10px", borderRadius:20, border:"none", cursor:"pointer", fontSize:11,
                 fontWeight:700, background:tab===t?V2.grassGreen:"rgba(200,220,190,0.3)",
-                color:tab===t?"white":V2.midGray, transition:"all 0.15s" }}>
+                color:tab===t?"white":LABEL, transition:"all 0.15s" }}>
               {t}
             </button>
           ))}
@@ -278,7 +281,7 @@ function StatsOverview({ username, subCount, grassScore }) {
           </svg>
         ) : (
           <div style={{ height:H, display:"flex", alignItems:"center", justifyContent:"center",
-            color:V2.midGray, fontSize:12 }}>No data for this period</div>
+            color:LABEL, fontSize:12 }}>No data for this period</div>
         )}
       </div>
 
@@ -293,7 +296,7 @@ function StatsOverview({ username, subCount, grassScore }) {
             background:"rgba(125,200,50,0.06)", border:`1px solid ${V2.borderSoft}`, textAlign:"center" }}>
             <div style={{ fontFamily:V2.fontSerif, fontSize:18, fontWeight:700,
               color:V2.forestGreen, lineHeight:1, marginBottom:4 }}>{s.value}</div>
-            <div style={{ fontSize:9, color:V2.midGray, textTransform:"uppercase",
+            <div style={{ fontSize:9, color:LABEL, textTransform:"uppercase",
               letterSpacing:"0.08em", marginBottom:s.chip?4:0 }}>{s.label}</div>
             {s.chip && <div style={{ fontSize:9, color:V2.grassGreen, fontWeight:700 }}>{s.chip}</div>}
           </div>
@@ -313,7 +316,7 @@ function SkinPanel({ activeCover, unlockedCovers, profileRow, isOwner, onEquip }
   return (
     <div>
       <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em",
-        textTransform:"uppercase", color:V2.midGray, marginBottom:14 }}>Skin / Theme</div>
+        textTransform:"uppercase", color:LABEL, marginBottom:14 }}>Skin / Theme</div>
 
       {/* Current skin */}
       <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px",
@@ -327,7 +330,7 @@ function SkinPanel({ activeCover, unlockedCovers, profileRow, isOwner, onEquip }
         </div>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:13, fontWeight:700, color:V2.forestGreen, marginBottom:2 }}>{packName}</div>
-          {activeCover?.name && <div style={{ fontSize:11, color:V2.midGray }}>{activeCover.name}</div>}
+          {activeCover?.name && <div style={{ fontSize:11, color:LABEL }}>{activeCover.name}</div>}
         </div>
         <div style={{ fontSize:11, fontWeight:700, color:V2.grassGreen, flexShrink:0 }}>Applied ✓</div>
       </div>
@@ -341,7 +344,7 @@ function SkinPanel({ activeCover, unlockedCovers, profileRow, isOwner, onEquip }
 
       {/* Owned count */}
       {owned.length>0 && (
-        <div style={{ marginTop:10, fontSize:11, color:V2.midGray, textAlign:"center" }}>
+        <div style={{ marginTop:10, fontSize:11, color:LABEL, textAlign:"center" }}>
           {owned.length} cover{owned.length!==1?"s":""} owned
         </div>
       )}
@@ -724,8 +727,8 @@ export default function ProfilePage({ og }) {
                   border:`1px solid rgba(255,255,255,0.7)`,
                   boxShadow:"0 8px 32px rgba(26,74,10,0.12)" }}>
                   <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.16em",
-                    textTransform:"uppercase", color:V2.midGray, marginBottom:6 }}>Current Streak</div>
-                  <div style={{ fontSize:12, fontWeight:600, color:V2.midGray, marginBottom:4 }}>DAY</div>
+                    textTransform:"uppercase", color:LABEL, marginBottom:6 }}>Current Streak</div>
+                  <div style={{ fontSize:12, fontWeight:600, color:LABEL, marginBottom:4 }}>DAY</div>
                   {loading ? <Skel h={72} r={6} /> : (
                     <div style={{ fontFamily:V2.fontSerif, fontSize:72, fontWeight:700,
                       color:V2.forestGreen, lineHeight:1, letterSpacing:"-0.03em" }}>{current}</div>
@@ -743,7 +746,7 @@ export default function ProfilePage({ og }) {
         {/* Streak card — mobile only */}
         <div style={{ padding:"16px clamp(14px,4vw,48px) 0", display:"none" }} className="pf-streak-card-mobile">
           <div className="pf-card" style={{ textAlign:"center" }}>
-            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.16em", textTransform:"uppercase", color:V2.midGray, marginBottom:4 }}>Current Streak</div>
+            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.16em", textTransform:"uppercase", color:LABEL, marginBottom:4 }}>Current Streak</div>
             <div style={{ fontFamily:V2.fontSerif, fontSize:56, fontWeight:700, color:V2.forestGreen, lineHeight:1 }}>{current}</div>
             <div style={{ fontSize:13, fontWeight:700, color:accent }}><Ico inline n={tier.emoji} size={18} />{tier.name}</div>
           </div>
@@ -759,7 +762,7 @@ export default function ProfilePage({ og }) {
             <StatItem icon="🍀" label="Lucky Touches"  value={loading?"…":(profileRow?.lucky_touch_count??0)}    chip="Keep going!"              loading={loading} />
             <StatItem icon="🛡" label="Shields"        value={loading?"…":shields}                               chip={shields===0?"Add shield":null} loading={loading} />
           </div>
-          <div style={{ textAlign:"center", marginTop:12, fontSize:11, color:V2.midGray }}>
+          <div style={{ textAlign:"center", marginTop:12, fontSize:11, color:LABEL }}>
             Grass Score is lifetime progress. Streaks can reset. Progress stays.
           </div>
         </div>
@@ -773,7 +776,7 @@ export default function ProfilePage({ og }) {
             {/* Recent Proofs */}
             <div className="pf-card">
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray }}>Recent Proofs</div>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL }}>Recent Proofs</div>
                 <Link href={`/u/${username}`} style={{ fontSize:11, color:V2.grassGreen, textDecoration:"none",
                   background:"rgba(125,200,50,0.1)", border:`1px solid ${V2.borderGreen}`, borderRadius:20, padding:"3px 10px" }}>
                   View All
@@ -784,7 +787,7 @@ export default function ProfilePage({ og }) {
                   ? [1,2,3].map(i=><div key={i} className="skel" style={{ width:110, height:140, borderRadius:12, flexShrink:0 }} />)
                   : recentProofs.length>0
                     ? recentProofs.slice(0,4).map((p,i)=><ProofCard key={i} proof={p} />)
-                    : <div style={{ color:V2.midGray, fontSize:12, padding:"20px 0" }}>No proofs yet.</div>
+                    : <div style={{ color:LABEL, fontSize:12, padding:"20px 0" }}>No proofs yet.</div>
                 }
               </div>
             </div>
@@ -797,7 +800,7 @@ export default function ProfilePage({ og }) {
             {/* Favorite Badges */}
             <div className="pf-card">
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray }}>Favorite Badges</div>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL }}>Favorite Badges</div>
                 <button onClick={()=>{try{document.getElementById("badge-shelf")?.scrollIntoView({behavior:"smooth",block:"start"});}catch{}}} style={{ fontSize:11, color:V2.grassGreen, background:"rgba(125,200,50,0.1)",
                   border:`1px solid ${V2.borderGreen}`, borderRadius:20, padding:"3px 10px", cursor:"pointer" }}>
                   View All
@@ -811,7 +814,7 @@ export default function ProfilePage({ og }) {
                       <div style={{ fontSize:12, fontWeight:700, color:V2.textBody, lineHeight:1.2 }}>{b.label}</div>
                     </div>
                   ))}
-                  {badgeShelf.every(b=>b.tier===0) && <div style={{ gridColumn:"1 / -1", fontSize:13, color:V2.midGray }}>No badges earned yet.</div>}
+                  {badgeShelf.every(b=>b.tier===0) && <div style={{ gridColumn:"1 / -1", fontSize:13, color:LABEL }}>No badges earned yet.</div>}
                 </div>
               ) : (
               <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
@@ -836,7 +839,7 @@ export default function ProfilePage({ og }) {
           {/* Badge shelf: all experiences */}
           {badgeShelf.length>0 && (
             <div id="badge-shelf" className="pf-card" style={{ marginBottom:16 }}>
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray, marginBottom:14 }}>Badges</div>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL, marginBottom:14 }}>Badges</div>
               <BadgeShelf badges={badgeShelf} shareFor={isOwner ? username : ""} />
             </div>
           )}
@@ -846,10 +849,10 @@ export default function ProfilePage({ og }) {
 
             {/* About Me */}
             <div className="pf-card">
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray, marginBottom:14 }}>About Me</div>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL, marginBottom:14 }}>About Me</div>
               {profileRow?.bio
                 ? <p style={{ fontSize:13, color:V2.textBody, lineHeight:1.65, marginBottom:16 }}>{profileRow.bio}</p>
-                : <p style={{ fontSize:13, color:V2.midGray, marginBottom:16 }}>No bio yet.</p>
+                : <p style={{ fontSize:13, color:LABEL, marginBottom:16 }}>No bio yet.</p>
               }
               <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:16 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
@@ -897,7 +900,7 @@ export default function ProfilePage({ og }) {
               </div>
 
               <div className="pf-card">
-                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray, marginBottom:14 }}>Account</div>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL, marginBottom:14 }}>Account</div>
                 {[
                   { icon:"👤", label:"Edit Profile", action:()=>setEditMode(v=>!v) },
                   { icon:"⚙️", label:"Settings", action:()=>{} },
@@ -911,7 +914,7 @@ export default function ProfilePage({ og }) {
                       <span style={{ width:20 }}><Ico n={item.icon} size={20} /></span>
                       <span style={{ fontSize:13, fontWeight:500, color:V2.forestGreen }}>{item.label}</span>
                     </div>
-                    <span style={{ color:V2.midGray, fontSize:16 }}>›</span>
+                    <span style={{ color:LABEL, fontSize:16 }}>›</span>
                   </button>
                 ))}
                 {isOwner && walletVerified && walletAddr && (
@@ -920,12 +923,12 @@ export default function ProfilePage({ og }) {
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:2 }}>
                       <div style={{ fontSize:11, fontWeight:600, color:V2.grassGreen }}>◎ Wallet Connected</div>
                       <button onClick={()=>setDisconnectConfirm(true)}
-                        style={{ fontSize:10, color:V2.midGray, background:"none", border:"none",
+                        style={{ fontSize:10, color:LABEL, background:"none", border:"none",
                           cursor:"pointer", textDecoration:"underline", fontFamily:V2.fontSans }}>
                         Change
                       </button>
                     </div>
-                    <div style={{ fontSize:11, color:V2.midGray, fontFamily:"monospace", marginBottom:disconnectConfirm?10:0 }}>
+                    <div style={{ fontSize:11, color:LABEL, fontFamily:"monospace", marginBottom:disconnectConfirm?10:0 }}>
                       {walletAddr.slice(0,6)}...{walletAddr.slice(-4)}
                     </div>
                     {disconnectConfirm && (
@@ -961,7 +964,7 @@ export default function ProfilePage({ og }) {
           {/* Wallet section — show connect UI when not verified */}
           {isOwner && !walletVerified && (
             <div className="pf-card" id="wallet-section">
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray, marginBottom:16 }}>Solana Wallet</div>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL, marginBottom:16 }}>Solana Wallet</div>
               <WalletVerify username={username} currentWallet={walletAddr} currentVerified={walletVerified}
                 onVerified={(addr)=>{ setWalletAddr(addr); setWalletVerified(!!addr); }} />
             </div>
@@ -971,10 +974,10 @@ export default function ProfilePage({ og }) {
           {unlockedCovers.length > 0 && (
             <div className="pf-card">
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:V2.midGray }}>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:LABEL }}>
                   My Covers
                 </div>
-                <div style={{ fontSize:11, color:V2.midGray }}>{unlockedCovers.length} owned</div>
+                <div style={{ fontSize:11, color:LABEL }}>{unlockedCovers.length} owned</div>
               </div>
               <div style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:6, scrollbarWidth:"none" }}>
                 {COVER_DEFINITIONS.filter(c=>unlockedCovers.includes(c.slug)).map(cov=>{
@@ -1052,7 +1055,7 @@ export default function ProfilePage({ og }) {
         ].map((tab,i)=>(
           <Link key={i} href={tab.href} style={{ flex:1, display:"flex", flexDirection:"column",
             alignItems:"center", justifyContent:"center", gap:3, textDecoration:"none",
-            color:tab.active?V2.grassGreen:V2.midGray, fontSize:10, fontWeight:tab.active?700:500,
+            color:tab.active?V2.grassGreen:LABEL, fontSize:10, fontWeight:tab.active?700:500,
             fontFamily:V2.fontSans }}>
             <span style={{ width:24 }}><Ico n={tab.icon} size={24} /></span>
             <span>{tab.label}</span>
