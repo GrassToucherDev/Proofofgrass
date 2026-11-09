@@ -5,7 +5,7 @@ export const SITE_URL = "https://proofofgrass.app";
 export const DEFAULT_OG = {
   title: "Touch Grass | Proof of Grass",
   description: "Official Touch Grass application for outdoor verification, streak tracking, wallet integration, and ecosystem rewards.",
-  image: `${SITE_URL}/api/og?type=site`,
+  image: `${SITE_URL}/api/og?type=site&v=2`,
 };
 
 export default function OgMeta({ title, description, image, url }) {
