@@ -118,7 +118,7 @@ export default async function handler(req) {
           <img src={`${origin}/brand/wago-wave.png`} width={437} height={446} style={{ marginLeft: 36, marginTop: 40 }} />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, marginLeft: 8, marginRight: 20 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`${origin}/brand/touchgrass-wordmark.png`} width={171} height={131} />
+            <img src={`${origin}/touchgrass-logo-card.png`} width={420} height={192} />
             <div style={{ display: "flex", fontFamily: FRED, fontSize: 68, fontWeight: 700, color: INK, marginTop: 4 }}>PROOF OF GRASS</div>
             <div style={{ display: "flex", fontFamily: NUN, fontSize: 26, fontWeight: 800, color: GREEN, letterSpacing: 9, marginTop: 2 }}>TOUCH. PROVE. WIN.</div>
             <div style={{ display: "flex", background: "linear-gradient(180deg,#fffef6,#f6edcf)", border: `5px solid ${GREEN}`, borderRadius: 60, padding: "10px 26px", fontFamily: FRED, fontSize: 25, whiteSpace: "nowrap", fontWeight: 700, color: INK, marginTop: 22 }}>Go outside. Post proof. Build your streak.</div>
