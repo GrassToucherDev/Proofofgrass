@@ -621,10 +621,11 @@ export default function ProfilePage({ og }) {
               <div style={{ flex:1, minWidth:0 }}>
                 {/* Verified badge */}
                 <div style={{ display:"inline-flex", alignItems:"center", gap:6, marginBottom:10,
-                  background:"rgba(125,200,50,0.18)", border:`1px solid ${V2.borderGreen}`,
+                  background:"rgba(255,255,255,0.9)", border:`1px solid ${V2.borderGreen}`,
+                  boxShadow:"0 1px 6px rgba(26,74,10,0.12)",
                   borderRadius:20, padding:"4px 12px" }}>
                   <span style={{ width:6, height:6, borderRadius:"50%", background:V2.grassGreen, display:"inline-block" }} />
-                  <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:V2.grassGreen }}>Verified Outdoors</span>
+                  <span style={{ fontSize:9, fontWeight:800, letterSpacing:"0.18em", textTransform:"uppercase", color:"#2f6b12" }}>Verified Outdoors</span>
                 </div>
 
                 {/* Avatar + username row */}
@@ -649,16 +650,19 @@ export default function ProfilePage({ og }) {
                     <h1 style={{ fontFamily:V2.fontSans, fontWeight:800,
                       fontSize:"clamp(22px,4vw,42px)", color:V2.forestGreen,
                       lineHeight:1, marginBottom:6 }}>@{username||"—"}</h1>
-                    <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                      <span style={{ fontSize:12, fontWeight:700, color:accent }}><Ico inline n={tier.emoji} size={18} />{tier.name}</span>
-                      {joinDate && <span style={{ fontSize:12, color:V2.midGray }}>📅 Joined {joinDate}</span>}
+                    <div style={{ display:"inline-flex", alignItems:"center", gap:10, flexWrap:"wrap",
+                      background:"rgba(255,255,255,0.88)", borderRadius:20, padding:"4px 12px",
+                      boxShadow:"0 1px 6px rgba(26,74,10,0.12)" }}>
+                      <span style={{ fontSize:12, fontWeight:800, color:accent }}><Ico inline n={tier.emoji} size={18} /><span style={{ filter:"brightness(0.7)" }}>{tier.name}</span></span>
+                      {joinDate && <span style={{ fontSize:12, fontWeight:600, color:"#4a5a40" }}><Ico inline n="📅" size={16} />Joined {joinDate}</span>}
                     </div>
                   </div>
                 </div>
 
                 {/* Bio */}
                 {profileRow?.bio && (
-                  <p style={{ fontSize:13, color:V2.textBody, lineHeight:1.6, marginBottom:12, maxWidth:400 }}>
+                  <p style={{ fontSize:13, fontWeight:600, color:"#2a3a22", lineHeight:1.6, marginBottom:12, maxWidth:400,
+                    textShadow:"0 0 6px rgba(255,255,255,0.95), 0 1px 2px rgba(255,255,255,0.9)" }}>
                     {profileRow.bio}
                   </p>
                 )}
