@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-  const { action, id, label, address, kind, purpose, notes, expected, locked, unlock_date } = req.body || {};
+  const { action, id, label, address, kind, purpose, notes, expected, locked, unlock_date, lock_url } = req.body || {};
   if (action === "delete") {
     if (!id) return res.status(400).json({ error: "Missing id." });
     const { error } = await db.from("team_wallets").delete().eq("id", id);
@@ -35,9 +35,11 @@ export default async function handler(req, res) {
   const addr = String(address || "").trim();
   if (!String(label || "").trim()) return res.status(400).json({ error: "Give the wallet a label." });
   if (!ADDR.test(addr)) return res.status(400).json({ error: "That doesn't look like a Solana address." });
+  const lu = String(lock_url || "").trim();
+  if (lu) { let ok = false; try { const u = new URL(lu); ok = u.protocol === "https:" || u.protocol === "http:"; } catch {} if (!ok || lu.length > 500) return res.status(400).json({ error: "The lock link must be a full web address starting with https://" }); }
   const ud = String(unlock_date || "").trim();
   if (ud && !(/^\d{4}-\d{2}-\d{2}$/.test(ud) && !Number.isNaN(Date.parse(ud + "T00:00:00Z")))) return res.status(400).json({ error: "Unlock date must be a real date." });
-  const row = { label: String(label).trim().slice(0, 80), address: addr, kind: KINDS.includes(kind) ? kind : "team", locked: locked === true, unlock_date: locked === true && ud ? ud : null, purpose: String(purpose || "").trim().slice(0, 200) || null,
+  const row = { label: String(label).trim().slice(0, 80), address: addr, kind: KINDS.includes(kind) ? kind : "team", locked: locked === true, unlock_date: locked === true && ud ? ud : null, lock_url: locked === true && lu ? lu : null, purpose: String(purpose || "").trim().slice(0, 200) || null,
     notes: String(notes || "").trim().slice(0, 2000) || null, expected: cleanExpected(expected), updated_at: new Date().toISOString() };
   const q = action === "add" ? db.from("team_wallets").insert(row) : db.from("team_wallets").update(row).eq("id", id);
   const { error } = await q;
