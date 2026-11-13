@@ -11,7 +11,7 @@ const primary = { ...btn, background: V2.grassGreen, color: "#fff", border: "non
 const short = (a) => (a && a.length > 12 ? `${a.slice(0, 5)}…${a.slice(-5)}` : a);
 const fmt = (n) => Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: n >= 1000 ? 0 : 4 });
 const usd = (n) => (n == null ? "—" : `$${Number(n).toLocaleString("en-US", { maximumFractionDigits: n >= 100 ? 0 : 2 })}`);
-const blank = { id: null, label: "", address: "", kind: "holder", locked: false, unlock_date: "", purpose: "", notes: "", expectedText: "" };
+const blank = { id: null, label: "", address: "", kind: "holder", locked: false, unlock_date: "", lock_url: "", purpose: "", notes: "", expectedText: "" };
 const KIND = { team: "Team", holder: "Large holder", other: "Other" };
 const TG = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 
@@ -169,7 +169,7 @@ export default function AdminTeamTokens() {
   const load = useCallback(async () => { const j = await call("GET"); if (j) { setD(j); loadHist(days); } }, [call, loadHist, days]);
   const pickDays = (n) => { setDays(n); if (d) loadHist(n); };
   const save = async () => {
-    const body = { action: form.id ? "update" : "add", id: form.id, label: form.label, address: form.address, kind: form.kind, locked: !!form.locked, unlock_date: form.locked ? form.unlock_date : "", purpose: form.purpose, notes: form.notes, expected: parseExpected(form.expectedText) };
+    const body = { action: form.id ? "update" : "add", id: form.id, label: form.label, address: form.address, kind: form.kind, locked: !!form.locked, unlock_date: form.locked ? form.unlock_date : "", lock_url: form.locked ? form.lock_url : "", purpose: form.purpose, notes: form.notes, expected: parseExpected(form.expectedText) };
     if (await call("POST", body)) { setForm(null); load(); }
   };
   const remove = async (w) => { if (!confirm(`Stop tracking "${w.label}"? This only removes it from this list, not from the blockchain.`)) return; if (await call("POST", { action: "delete", id: w.id })) load(); };
@@ -226,6 +226,8 @@ export default function AdminTeamTokens() {
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, margin: "0 0 4px" }}>Unlock date</div>
                   <input type="date" style={inp} value={form.unlock_date} onChange={set("unlock_date")} />
+                  <div style={{ fontSize: 12, fontWeight: 700, margin: "10px 0 4px" }}>Link to the lock (optional)</div>
+                  <input style={inp} placeholder="https://… (Streamflow, Jupiter Lock, explorer page)" value={form.lock_url} onChange={set("lock_url")} inputMode="url" autoCapitalize="none" />
                 </div>
               )}
               <input style={inp} placeholder="Purpose (optional)" value={form.purpose} onChange={set("purpose")} />
@@ -255,6 +257,7 @@ export default function AdminTeamTokens() {
                 <div style={{ fontSize: 18, fontWeight: 800, color: V2.forestGreen }}>{w.label} <span style={{ fontSize: 11, fontWeight: 700, color: V2.textMuted, border: `1px solid ${V2.borderSoft}`, borderRadius: 99, padding: "2px 8px", marginLeft: 4, verticalAlign: "middle" }}>{KIND[w.kind || "team"]}</span></div>
                 {w.purpose && <div style={{ fontSize: 13, color: V2.textMuted }}>{w.purpose}</div>}
                 {lockInfo(w) && <div style={{ display: "inline-block", marginTop: 6, fontSize: 12, fontWeight: 800, color: lockInfo(w).c, border: `1.5px solid ${lockInfo(w).c}`, borderRadius: 99, padding: "2px 10px" }}>{lockInfo(w).t}</div>}
+                {w.locked && /^https?:\/\//i.test(w.lock_url || "") && <a href={w.lock_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 6, marginLeft: 8, fontSize: 12.5, fontWeight: 700, color: V2.grassDark }}>View lock ↗</a>}
                 <div style={{ fontSize: 12.5, marginTop: 4, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                   <code>{short(w.address)}</code>
                   <button style={{ ...btn, padding: "3px 8px", fontSize: 12 }} onClick={() => copy(w.address)}>Copy</button>
@@ -264,7 +267,7 @@ export default function AdminTeamTokens() {
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: V2.forestGreen }}>{usd(w.usd)}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
-                  <button style={btn} onClick={() => setForm({ id: w.id, label: w.label, address: w.address, kind: w.kind || "team", locked: !!w.locked, unlock_date: w.unlock_date || "", purpose: w.purpose || "", notes: w.notes || "", expectedText: toText(w.expected) })}>Edit</button>
+                  <button style={btn} onClick={() => setForm({ id: w.id, label: w.label, address: w.address, kind: w.kind || "team", locked: !!w.locked, unlock_date: w.unlock_date || "", lock_url: w.lock_url || "", purpose: w.purpose || "", notes: w.notes || "", expectedText: toText(w.expected) })}>Edit</button>
                   <button style={btn} onClick={() => remove(w)}>Remove</button>
                 </div>
               </div>
