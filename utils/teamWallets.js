@@ -92,10 +92,12 @@ export async function loadWallets(db) {
     });
     let supply = null;
     try { const r = await cached("supply", () => rpc("getTokenSupply", [TG_MINT])); supply = Number(r?.value?.uiAmount) || null; } catch {}
-    const by_kind = {};
-    for (const w of wallets) { const k = w.kind || "team"; by_kind[k] = by_kind[k] || { usd: 0, count: 0, tg: 0 };
-      by_kind[k].usd += w.usd || 0; by_kind[k].count += 1; by_kind[k].tg += (w.holdings || []).find((h) => h.mint === TG_MINT)?.amount || 0; }
-  return { wallets, total_usd: total, by_kind, tg_supply: supply, complete: wallets.every((w) => !w.error), as_of: new Date().toISOString() };
+    const by_kind = {}; let locked_tg = 0;
+    for (const w of wallets) { const k = w.kind || "team"; by_kind[k] = by_kind[k] || { usd: 0, count: 0, tg: 0, locked_tg: 0 };
+      const tg = (w.holdings || []).find((h) => h.mint === TG_MINT)?.amount || 0;
+      by_kind[k].usd += w.usd || 0; by_kind[k].count += 1; by_kind[k].tg += tg;
+      if (w.locked) { by_kind[k].locked_tg += tg; locked_tg += tg; } }
+  return { wallets, total_usd: total, by_kind, locked_tg, tg_supply: supply, complete: wallets.every((w) => !w.error), as_of: new Date().toISOString() };
 }
 
 // ---- history: one snapshot batch = one timestamp across every wallet. Only written when every wallet was read OK, so totals never dip falsely. ----
