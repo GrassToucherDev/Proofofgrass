@@ -3,6 +3,7 @@
 import { isAdminRequest } from "../../../utils/adminApi";
 import { adminClient } from "../../../utils/wheel";
 
+export const config = { maxDuration: 30 };
 const RPC = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 const ADDR = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const KINDS = ["team", "holder", "other"];
@@ -11,18 +12,39 @@ const TG_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const KNOWN = { [TG_MINT]: "TOUCHGRASS", [SOL_MINT]: "SOL" };
 const PROGRAMS = ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"];
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// The free public RPC rate-limits hard (HTTP 429), so: retry with backoff, and read the response as text before parsing.
 async function rpc(method, params) {
-  const r = await fetch(RPC, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
-  const j = await r.json();
-  if (j.error) throw new Error(j.error.message || "rpc error");
-  return j.result;
+  let lastErr = "rpc error";
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const r = await fetch(RPC, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+      const txt = await r.text();
+      if (r.status === 429 || /too many requests/i.test(txt.slice(0, 80))) { lastErr = "The Solana RPC is rate-limiting us (too many requests)"; await sleep(700 * 2 ** attempt); continue; }
+      let j; try { j = JSON.parse(txt); } catch { throw new Error(`RPC returned a non-JSON response (HTTP ${r.status})`); }
+      if (j.error) { if (/rate|limit|too many/i.test(j.error.message || "")) { lastErr = "The Solana RPC is rate-limiting us"; await sleep(700 * 2 ** attempt); continue; } throw new Error(j.error.message || "rpc error"); }
+      return j.result;
+    } catch (e) { lastErr = e.message || lastErr; if (attempt === 3) break; await sleep(400 * 2 ** attempt); }
+  }
+  throw new Error(lastErr);
+}
+
+// Small in-memory cache (per server instance) so Refresh doesn't re-hit the RPC for every wallet.
+const CACHE = new Map(); const TTL = 45_000;
+async function cached(key, fn) {
+  const hit = CACHE.get(key); if (hit && Date.now() - hit.t < TTL) return hit.v;
+  const v = await fn(); CACHE.set(key, { t: Date.now(), v }); return v;
+}
+async function mapLimit(items, n, fn) {
+  const out = new Array(items.length); let i = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const k = i++; out[k] = await fn(items[k], k); } }));
+  return out;
 }
 
 async function liveBalances(address) {
-  const [sol, ...tok] = await Promise.all([
-    rpc("getBalance", [address]),
-    ...PROGRAMS.map((p) => rpc("getTokenAccountsByOwner", [address, { programId: p }, { encoding: "jsonParsed" }])),
-  ]);
+  const sol = await rpc("getBalance", [address]);
+  const tok = [];
+  for (const p of PROGRAMS) tok.push(await rpc("getTokenAccountsByOwner", [address, { programId: p }, { encoding: "jsonParsed" }]));
   const byMint = {};
   for (const t of tok) for (const a of t?.value || []) {
     const info = a.account?.data?.parsed?.info; if (!info) continue;
@@ -60,7 +82,7 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     const { data: rows, error } = await db.from("team_wallets").select("*").order("sort").order("created_at");
     if (error) return res.status(500).json({ error: /does not exist/.test(error.message) ? "Run team_wallets.sql in Supabase first." : error.message });
-    const live = await Promise.all((rows || []).map((w) => liveBalances(w.address).then((b) => ({ ok: true, ...b })).catch((e) => ({ ok: false, error: e.message }))));
+    const live = await mapLimit(rows || [], 2, (w) => cached("bal:" + w.address, () => liveBalances(w.address)).then((b) => ({ ok: true, ...b })).catch((e) => ({ ok: false, error: e.message })));
     const mints = new Set([SOL_MINT, TG_MINT]);
     live.forEach((l) => l.ok && Object.keys(l.tokens).forEach((m) => mints.add(m)));
     (rows || []).forEach((w) => (w.expected || []).forEach((e) => e.mint !== SOL && mints.add(e.mint)));
@@ -83,7 +105,7 @@ export default async function handler(req, res) {
       return { ...w, holdings, usd };
     });
     let supply = null;
-    try { const r = await rpc("getTokenSupply", [TG_MINT]); supply = Number(r?.value?.uiAmount) || null; } catch {}
+    try { const r = await cached("supply", () => rpc("getTokenSupply", [TG_MINT])); supply = Number(r?.value?.uiAmount) || null; } catch {}
     const by_kind = {};
     for (const w of wallets) { const k = w.kind || "team"; by_kind[k] = by_kind[k] || { usd: 0, count: 0, tg: 0 };
       by_kind[k].usd += w.usd || 0; by_kind[k].count += 1; by_kind[k].tg += (w.holdings || []).find((h) => h.mint === TG_MINT)?.amount || 0; }
