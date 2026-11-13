@@ -1,5 +1,5 @@
 // /admin/team-tokens — team wallets, what each should hold, and the live on-chain balance. Admin secret only; talks to /api/admin/team-wallets.
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { V2 } from "../../utils/v2Theme";
@@ -136,6 +136,7 @@ function SupplyShare({ d }) {
   );
 }
 
+const ago = (iso) => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
 function aggregateClient(wallets) {
   const by_kind = {}; let locked_tg = 0, total_usd = 0;
   for (const w of wallets) { const k = w.kind || "team"; by_kind[k] = by_kind[k] || { usd: 0, count: 0, tg: 0, locked_tg: 0 };
@@ -186,36 +187,47 @@ export default function AdminTeamTokens() {
     if (!r.ok) throw new Error(j.error || (r.status === 401 ? "Wrong admin secret." : `Failed (${r.status})`));
     return j;
   }, [secret]);
-  // The list loads instantly (no Solana calls). Balances then load one wallet at a time, so nothing can time out and rows fill in as they arrive.
-  const load = useCallback(async () => {
+  // Opening the page shows the saved balances instantly. Only wallets not refreshed in the last hour (or just added or edited) are re-read from Solana.
+  const FRESH_MS = 60 * 60 * 1000;
+  const load = useCallback(async (force = false) => {
     const me = ++run.current; setBusy(true); setMsg("");
     try {
       const { wallets: rows } = await get("list=1");
       if (me !== run.current) return;
-      setWallets(rows.map((w) => ({ ...w, loading: true, holdings: [], usd: null }))); setAsOf(null); setProg({ done: 0, total: rows.length });
+      const age = (w) => (w.refreshed_at ? Date.now() - new Date(w.refreshed_at).getTime() : Infinity);
+      const stale = rows.filter((w) => force === true || age(w) > FRESH_MS);
+      const staleIds = new Set(stale.map((w) => w.id));
+      setWallets(rows.map((w) => ({ ...w, holdings: w.holdings || [], usd: w.usd ?? null, error: w.read_error && !w.refreshed_at ? w.read_error : null, loading: staleIds.has(w.id) && !w.refreshed_at })));
+      setAsOf(rows.reduce((o, w) => (w.refreshed_at && (!o || w.refreshed_at < o) ? w.refreshed_at : o, null)) ?? null);
       get("supply=1").then((j) => me === run.current && setSupply(j.tg_supply)).catch(() => {});
-      const got = new Array(rows.length); let next = 0, done = 0;
+      setProg(stale.length ? { done: 0, total: stale.length } : null);
+      const got = new Map(rows.filter((w) => !staleIds.has(w.id)).map((w) => [w.id, { holdings: w.holdings || [], usd: w.usd, refreshed_at: w.refreshed_at }]));
+      let next = 0, done = 0;
       const worker = async () => {
-        while (next < rows.length && me === run.current) {
-          const i = next++; let v;
-          try { v = await get(`id=${rows[i].id}`); } catch (e) { v = { error: e.message }; }
+        while (next < stale.length && me === run.current) {
+          const w = stale[next++]; let v;
+          try { v = await get(`id=${w.id}${force === true ? "&fresh=1" : ""}`); } catch (e) { v = { error: e.message, holdings: w.holdings || [], usd: w.usd ?? null, refreshed_at: w.refreshed_at || null }; }
           if (me !== run.current) return;
-          got[i] = v; done++;
-          setWallets((cur) => cur && cur.map((w) => (w.id === rows[i].id ? { ...w, loading: false, ...(v.error ? { error: v.error, holdings: [], usd: null } : { error: null, holdings: v.holdings, usd: v.usd }) } : w)));
-          setProg({ done, total: rows.length });
+          got.set(w.id, v); done++;
+          setWallets((cur) => cur && cur.map((x) => (x.id === w.id ? { ...x, loading: false, holdings: v.holdings || [], usd: v.usd ?? null, refreshed_at: v.refreshed_at || null, error: v.error || null } : x)));
+          setProg({ done, total: stale.length });
         }
       };
       await Promise.all([worker(), worker()]);
       if (me !== run.current) return;
-      setAsOf(new Date().toISOString()); setProg(null);
-      if (rows.length && got.every((v) => v && !v.error)) {          // save a history point only when every wallet read cleanly
-        const snap = rows.map((w, i) => ({ address: w.address, tg_amount: got[i].holdings.find((h) => h.mint === TG)?.amount || 0, sol_amount: got[i].holdings.find((h) => h.mint === "SOL")?.amount || 0, usd: got[i].usd || 0 }));
-        await call("POST", { action: "snapshot", rows: snap });
+      setProg(null);
+      setAsOf([...got.values()].reduce((o, v) => (v.refreshed_at && (!o || v.refreshed_at < o) ? v.refreshed_at : o), null));
+      const all = rows.map((w) => got.get(w.id));
+      if (rows.length && all.every((v) => v && !v.error && v.refreshed_at && Date.now() - new Date(v.refreshed_at).getTime() < FRESH_MS + 300000)) {
+        const snap = rows.map((w, i) => ({ address: w.address, tg_amount: all[i].holdings.find((h) => h.mint === TG)?.amount || 0, sol_amount: all[i].holdings.find((h) => h.mint === "SOL")?.amount || 0, usd: all[i].usd || 0 }));
+        await call("POST", { action: "snapshot", rows: snap });    // the server keeps at most one history point per 6 hours
       }
       loadHist(days);
     } catch (e) { if (me === run.current) { setMsg(e.message); setProg(null); } }
     finally { if (me === run.current) setBusy(false); }
   }, [get, call, loadHist, days]);
+  const loadRef = useRef(load); loadRef.current = load;
+  useEffect(() => { if (!wallets) return undefined; const t = setInterval(() => loadRef.current(false), 10 * 60 * 1000); return () => clearInterval(t); }, [!!wallets]);   // while the page stays open, re-check every 10 min; only stale wallets are read
   const pickDays = (n) => { setDays(n); if (wallets) loadHist(n); };
   const save = async () => {
     const body = { action: form.id ? "update" : "add", id: form.id, label: form.label, address: form.address, kind: form.kind, locked: !!form.locked, unlock_date: form.locked ? form.unlock_date : "", lock_url: form.locked ? form.lock_url : "", purpose: form.purpose, notes: form.notes, expected: parseExpected(form.expectedText) };
@@ -234,7 +246,7 @@ export default function AdminTeamTokens() {
         <p style={{ fontSize: 13, color: V2.textMuted, margin: "0 0 14px" }}>Balances are read live from Solana. Your list and notes are saved here.</p>
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           <input type="password" placeholder="Admin secret" value={secret} onChange={(e) => setSecret(e.target.value)} style={{ ...inp, flex: 1 }} />
-          <button style={primary} onClick={load} disabled={busy}>{busy ? "Loading…" : d ? "Refresh" : "Load"}</button>
+          <button style={primary} onClick={() => load(false)} disabled={busy}>{busy ? "Loading…" : d ? "Refresh" : "Load"}</button>
         </div>
         {msg && <div style={{ color: V2.danger, fontSize: 13, marginBottom: 10 }}>{msg}</div>}
 
@@ -243,9 +255,12 @@ export default function AdminTeamTokens() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", color: V2.grassGreen }}>Total value (priced tokens)</div>
               <div style={{ fontSize: 28, fontWeight: 800, color: V2.forestGreen }}>{usd(d.total_usd)}</div>
-              <div style={{ fontSize: 12, color: V2.textMuted }}>{d.wallets.length} {d.wallets.length === 1 ? "wallet" : "wallets"} · {prog ? `loading balances ${prog.done}/${prog.total}…` : d.as_of ? `as of ${new Date(d.as_of).toLocaleTimeString()}` : ""}</div>
+              <div style={{ fontSize: 12, color: V2.textMuted }}>{d.wallets.length} {d.wallets.length === 1 ? "wallet" : "wallets"} · {prog ? `reading ${prog.done}/${prog.total} from Solana…` : d.as_of ? `updated ${ago(d.as_of)}` : ""}</div>
             </div>
-            <button style={primary} onClick={() => setForm({ ...blank })}>Add wallet</button>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button style={btn} onClick={() => load(true)} disabled={busy}>Refresh all now</button>
+              <button style={primary} onClick={() => setForm({ ...blank })}>Add wallet</button>
+            </div>
           </div>
         )}
 
@@ -321,7 +336,7 @@ export default function AdminTeamTokens() {
                 </div>
               </div>
             </div>
-            {w.loading ? <div style={{ color: V2.textMuted, fontSize: 13, marginTop: 10 }}>Loading balances…</div> : w.error ? <div style={{ color: V2.danger, fontSize: 13, marginTop: 10 }}>Couldn't read this wallet: {w.error} <button style={{ ...btn, padding: "3px 8px", fontSize: 12, marginLeft: 6 }} onClick={load}>Retry all</button></div> : (
+            {w.loading ? <div style={{ color: V2.textMuted, fontSize: 13, marginTop: 10 }}>Loading balances…</div> : w.error ? <div style={{ color: V2.danger, fontSize: 13, marginTop: 10 }}>Couldn't read this wallet: {w.error} <button style={{ ...btn, padding: "3px 8px", fontSize: 12, marginLeft: 6 }} onClick={() => load(true)}>Retry all</button></div> : (
               <div style={{ marginTop: 12, overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
                   <thead><tr style={{ textAlign: "left", color: V2.textMuted, fontSize: 11.5 }}>
@@ -339,6 +354,7 @@ export default function AdminTeamTokens() {
                 </table>
               </div>
             )}
+            {!w.loading && w.refreshed_at && <div style={{ fontSize: 11.5, color: w.read_error ? V2.warning : V2.textMuted, marginTop: 8 }}>Updated {ago(w.refreshed_at)}{w.read_error ? ` · last refresh failed (${w.read_error}), showing earlier numbers` : ""}</div>}
             {w.notes && <div style={{ fontSize: 13, marginTop: 10, padding: "8px 10px", background: "#f6f9f1", borderRadius: 8, whiteSpace: "pre-wrap" }}>{w.notes}</div>}
           </div>
         ))}

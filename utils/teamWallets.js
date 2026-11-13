@@ -80,7 +80,8 @@ function buildView(w, l, px) {
 }
 
 // Used by the page, one wallet per request, so a long list can never run into the server time limit.
-export async function walletView(w) {
+export async function walletView(w, fresh = false) {
+  if (fresh) CACHE.delete("bal:" + w.address);
   const l = await cached("bal:" + w.address, () => liveBalances(w.address));
   const mints = [...new Set([SOL_MINT, TG_MINT, ...Object.keys(l.tokens), ...(w.expected || []).map((e) => e.mint).filter((m) => m !== SOL)])].sort();
   const px = await cached("px:" + mints.join(","), () => prices(mints));
@@ -91,13 +92,27 @@ export async function tokenSupply() {
   return Number(r?.value?.uiAmount) || null;
 }
 
-// Everything at once (the nightly snapshot job). Fine with a dedicated RPC; the page itself loads wallet by wallet.
+// Read one wallet live and save the result on its row, so the page can show it instantly next time. A failed read keeps the earlier numbers.
+export async function refreshWallet(db, w, fresh = false) {
+  try {
+    const v = await walletView(w, fresh);
+    const at = new Date().toISOString();
+    await db.from("team_wallets").update({ holdings: v.holdings, usd: v.usd, refreshed_at: at, read_error: null }).eq("id", w.id);
+    return { ...v, refreshed_at: at };
+  } catch (e) {
+    const msg = String(e?.message || e).slice(0, 200);
+    await db.from("team_wallets").update({ read_error: msg }).eq("id", w.id);
+    return { error: msg, holdings: w.holdings || [], usd: w.usd ?? null, refreshed_at: w.refreshed_at || null };
+  }
+}
+
+// Everything at once (the nightly job). Fine with a dedicated RPC; the page itself refreshes only what is stale.
 export async function loadWallets(db) {
   const { data: rows, error } = await db.from("team_wallets").select("*").order("sort").order("created_at");
   if (error) return { error: /does not exist/.test(error.message) ? "Run team_wallets.sql in Supabase first." : error.message };
   const conc = process.env.SOLANA_RPC_URL ? 6 : 2;
-  const views = await mapLimit(rows || [], conc, (w) => walletView(w).then((v) => ({ ok: true, ...v })).catch((e) => ({ ok: false, error: e.message })));
-  const wallets = (rows || []).map((w, i) => (views[i].ok ? { ...w, holdings: views[i].holdings, usd: views[i].usd } : { ...w, error: views[i].error, holdings: [], usd: null }));
+  const views = await mapLimit(rows || [], conc, (w) => refreshWallet(db, w, true));
+  const wallets = (rows || []).map((w, i) => ({ ...w, holdings: views[i].holdings || [], usd: views[i].usd, error: views[i].error || null, refreshed_at: views[i].refreshed_at }));
   let supply = null; try { supply = await tokenSupply(); } catch {}
   const agg = aggregate(wallets);
   return { wallets, ...agg, tg_supply: supply, complete: wallets.every((w) => !w.error), as_of: new Date().toISOString() };
