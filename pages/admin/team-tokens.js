@@ -12,7 +12,7 @@ const short = (a) => (a && a.length > 12 ? `${a.slice(0, 5)}…${a.slice(-5)}` :
 const fmt = (n) => Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: n >= 1000 ? 0 : 4 });
 const usd = (n) => (n == null ? "—" : `$${Number(n).toLocaleString("en-US", { maximumFractionDigits: n >= 100 ? 0 : 2 })}`);
 const blank = { id: null, label: "", address: "", kind: "holder", locked: false, unlock_date: "", lock_url: "", purpose: "", notes: "", expectedText: "" };
-const KIND = { team: "Team", holder: "Large holder", other: "Other" };
+const KIND = { team: "Team", holder: "Large holder", friends: "Friends & Family", other: "Other" };
 const TG = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 
 // "SYMBOL mint [amount]" per line; the mint SOL means native SOL.
@@ -22,7 +22,7 @@ const parseExpected = (t) => String(t || "").split("\n").map((l) => l.trim()).fi
 });
 const toText = (arr) => (arr || []).map((e) => [e.symbol || "", e.mint, e.amount ?? ""].join(" ").trim()).join("\n");
 
-const KCOL = { team: "#5ba622", holder: "#e8a020", other: "#7a8aa0" };
+const KCOL = { team: "#5ba622", holder: "#e8a020", friends: "#4a9fd0", other: "#7a8aa0" };
 const abbr = (n) => (n >= 1e9 ? (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : String(Math.round(n * 100) / 100));
 
 // Stacked area of cumulative totals over time, split by wallet type. Hand-drawn SVG so it stays light and phone friendly.
