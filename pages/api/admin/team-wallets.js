@@ -2,7 +2,7 @@
 // Needs x-admin-secret. GET = wallets with live balances; GET ?history=1&days=N = totals over time; POST { action: add | update | delete }.
 import { isAdminRequest } from "../../../utils/adminApi";
 import { adminClient } from "../../../utils/wheel";
-import { loadWallets, snapshotIfDue, history, walletView, tokenSupply, saveSnapshotRows, KINDS, ADDR, SOL } from "../../../utils/teamWallets";
+import { loadWallets, snapshotIfDue, history, refreshWallet, tokenSupply, saveSnapshotRows, KINDS, ADDR, SOL } from "../../../utils/teamWallets";
 
 export const config = { maxDuration: 30 };
 
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     if (req.query.id) {              // one wallet's live balances
       const { data: w } = await db.from("team_wallets").select("*").eq("id", String(req.query.id)).maybeSingle();
       if (!w) return res.status(404).json({ error: "Wallet not found." });
-      try { return res.status(200).json(await walletView(w)); } catch (e) { return res.status(200).json({ error: e.message || "Couldn't read this wallet" }); }
+      return res.status(200).json(await refreshWallet(db, w, req.query.fresh === "1"));
     }
     if (req.query.supply) { try { return res.status(200).json({ tg_supply: await tokenSupply() }); } catch { return res.status(200).json({ tg_supply: null }); } }
     if (req.query.history) return res.status(200).json(await history(db, Math.min(Math.max(parseInt(req.query.days) || 30, 1), 365)));
@@ -53,8 +53,16 @@ export default async function handler(req, res) {
   if (ud && !(/^\d{4}-\d{2}-\d{2}$/.test(ud) && !Number.isNaN(Date.parse(ud + "T00:00:00Z")))) return res.status(400).json({ error: "Unlock date must be a real date." });
   const row = { label: String(label).trim().slice(0, 80), address: addr, kind: KINDS.includes(kind) ? kind : "team", locked: locked === true, unlock_date: locked === true && ud ? ud : null, lock_url: locked === true && lu ? lu : null, purpose: String(purpose || "").trim().slice(0, 200) || null,
     notes: String(notes || "").trim().slice(0, 2000) || null, expected: cleanExpected(expected), updated_at: new Date().toISOString() };
-  const q = action === "add" ? db.from("team_wallets").insert(row) : db.from("team_wallets").update(row).eq("id", id);
-  const { error } = await q;
+  if (action === "update") {        // only a changed address or expected-holdings list needs a fresh read; notes, labels and locks do not
+    const { data: cur } = await db.from("team_wallets").select("address, expected").eq("id", id).maybeSingle();
+    if (!cur || cur.address !== addr || JSON.stringify(cur.expected || []) !== JSON.stringify(row.expected)) Object.assign(row, { holdings: null, usd: null, refreshed_at: null, read_error: null });
+  }
+  const q = action === "add" ? db.from("team_wallets").insert(row).select("id").single() : db.from("team_wallets").update(row).eq("id", id).select("id").single();
+  let { data: saved, error } = await q;
+  if (error && /holdings|refreshed_at|read_error/.test(error.message)) {      // cache columns not added yet: save without them
+    for (const k of ["holdings", "usd", "refreshed_at", "read_error"]) delete row[k];
+    ({ data: saved, error } = await (action === "add" ? db.from("team_wallets").insert(row).select("id").single() : db.from("team_wallets").update(row).eq("id", id).select("id").single()));
+  }
   if (error) return res.status(400).json({ error: /duplicate/.test(error.message) ? "That wallet is already tracked." : error.message });
-  return res.status(200).json({ ok: true });
+  return res.status(200).json({ ok: true, id: saved?.id });
 }
