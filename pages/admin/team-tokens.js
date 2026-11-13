@@ -146,6 +146,40 @@ function aggregateClient(wallets) {
   return { by_kind, locked_tg, total_usd };
 }
 
+// Feed of TOUCHGRASS balance changes found when a wallet was refreshed. "NEW" = since you last had this page open (kept in this browser only).
+function ChangeFeed({ ev, seenAt, supply, wallets }) {
+  const [all, setAll] = useState(false);
+  const list = ev?.events || [];
+  const shown = all ? list : list.slice(0, 6);
+  const label = (e) => wallets?.find((w) => w.id === e.wallet_id)?.label || e.label || short(e.address);
+  return (
+    <div style={box}>
+      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", color: V2.grassGreen, marginBottom: 8 }}>TOUCHGRASS balance changes</div>
+      {ev?.error ? <div style={{ fontSize: 13, color: V2.warning }}>{ev.error}</div> : list.length === 0 ? (
+        <div style={{ fontSize: 13, color: V2.textMuted, lineHeight: 1.5 }}>No changes yet. When a wallet's TOUCHGRASS balance differs from its last reading, it shows up here. Wallets are checked about once an hour.</div>
+      ) : (<>
+        {shown.map((e) => {
+          const up = e.delta > 0, isNew = seenAt && new Date(e.detected_at).getTime() > seenAt;
+          return (
+            <div key={e.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: `1px solid ${V2.borderSoft}` }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: V2.forestGreen }}>{up ? "▲" : "▼"} {label(e)}{isNew && <span style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 800, color: "#fff", background: V2.grassGreen, borderRadius: 99, padding: "2px 7px", verticalAlign: "middle" }}>NEW</span>}</div>
+                <div style={{ fontSize: 12, color: V2.textMuted }}>{fmt(e.prev_amount)} → {fmt(e.new_amount)}{supply ? ` · ${pctTxt(pct(Math.abs(e.delta), supply))} of supply` : ""}</div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: up ? V2.success : V2.danger }}>{up ? "+" : "-"}{fmt(Math.abs(e.delta))}</div>
+                <div style={{ fontSize: 11.5, color: V2.textMuted }}>{ago(e.detected_at)}</div>
+              </div>
+            </div>
+          );
+        })}
+        {list.length > 6 && <button style={{ ...btn, marginTop: 8, fontSize: 12 }} onClick={() => setAll(!all)}>{all ? "Show fewer" : `Show all ${list.length}`}</button>}
+        <div style={{ fontSize: 11, color: V2.textMuted, marginTop: 8 }}>Changes are found by comparing balances between checks, so several moves in one hour show as one net change.</div>
+      </>)}
+    </div>
+  );
+}
+
 function status(h) {
   if (h.expected == null) return null;
   const diff = h.amount - h.expected, tol = Math.max(h.expected * 0.005, 0.000001);
@@ -168,6 +202,8 @@ export default function AdminTeamTokens() {
   const [hist, setHist] = useState(null);
   const [metric, setMetric] = useState("tg");
   const [days, setDays] = useState(30);
+  const [ev, setEv] = useState(null);
+  const [seenAt, setSeenAt] = useState(0);
 
   const call = useCallback(async (method, body) => {
     setBusy(true);
@@ -187,6 +223,14 @@ export default function AdminTeamTokens() {
     if (!r.ok) throw new Error(j.error || (r.status === 401 ? "Wrong admin secret." : `Failed (${r.status})`));
     return j;
   }, [secret]);
+  const loadEvents = useCallback(async () => {
+    try {
+      const j = await get("events=1&limit=100"); setEv(j);
+      let prev = 0; try { prev = Number(localStorage.getItem("tt_seen") || 0); } catch {}
+      setSeenAt((cur) => cur || prev);
+      try { localStorage.setItem("tt_seen", String(Date.now())); } catch {}
+    } catch {}
+  }, [get]);
   // Opening the page shows the saved balances instantly. Only wallets not refreshed in the last hour (or just added or edited) are re-read from Solana.
   const FRESH_MS = 60 * 60 * 1000;
   const load = useCallback(async (force = false) => {
@@ -222,10 +266,10 @@ export default function AdminTeamTokens() {
         const snap = rows.map((w, i) => ({ address: w.address, tg_amount: all[i].holdings.find((h) => h.mint === TG)?.amount || 0, sol_amount: all[i].holdings.find((h) => h.mint === "SOL")?.amount || 0, usd: all[i].usd || 0 }));
         await call("POST", { action: "snapshot", rows: snap });    // the server keeps at most one history point per 6 hours
       }
-      loadHist(days);
+      loadHist(days); loadEvents();
     } catch (e) { if (me === run.current) { setMsg(e.message); setProg(null); } }
     finally { if (me === run.current) setBusy(false); }
-  }, [get, call, loadHist, days]);
+  }, [get, call, loadHist, loadEvents, days]);
   const loadRef = useRef(load); loadRef.current = load;
   useEffect(() => { if (!wallets) return undefined; const t = setInterval(() => loadRef.current(false), 10 * 60 * 1000); return () => clearInterval(t); }, [!!wallets]);   // while the page stays open, re-check every 10 min; only stale wallets are read
   const pickDays = (n) => { setDays(n); if (wallets) loadHist(n); };
@@ -265,6 +309,8 @@ export default function AdminTeamTokens() {
         )}
 
         {d && d.wallets.length > 0 && <SupplyShare d={d} />}
+
+        {d && d.wallets.length > 0 && <ChangeFeed ev={ev} seenAt={seenAt} supply={supply} wallets={wallets} />}
 
         {d && d.wallets.length > 0 && <HistoryChart hist={hist} metric={metric} setMetric={setMetric} days={days} setDays={pickDays} />}
 
@@ -320,6 +366,7 @@ export default function AdminTeamTokens() {
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: V2.forestGreen }}>{w.label} <span style={{ fontSize: 11, fontWeight: 700, color: V2.textMuted, border: `1px solid ${V2.borderSoft}`, borderRadius: 99, padding: "2px 8px", marginLeft: 4, verticalAlign: "middle" }}>{KIND[w.kind || "team"]}</span></div>
                 {w.purpose && <div style={{ fontSize: 13, color: V2.textMuted }}>{w.purpose}</div>}
+                {(() => { const e = (ev?.events || []).find((x) => x.wallet_id === w.id && Date.now() - new Date(x.detected_at).getTime() < 7 * 86400000); return e ? <div style={{ display: "inline-block", marginTop: 6, marginRight: 8, fontSize: 12, fontWeight: 800, color: e.delta > 0 ? V2.success : V2.danger, border: `1.5px solid ${e.delta > 0 ? V2.success : V2.danger}`, borderRadius: 99, padding: "2px 10px" }}>{e.delta > 0 ? "+" : "-"}{fmt(Math.abs(e.delta))} TOUCHGRASS · {ago(e.detected_at)}</div> : null; })()}
                 {lockInfo(w) && <div style={{ display: "inline-block", marginTop: 6, fontSize: 12, fontWeight: 800, color: lockInfo(w).c, border: `1.5px solid ${lockInfo(w).c}`, borderRadius: 99, padding: "2px 10px" }}>{lockInfo(w).t}</div>}
                 {w.locked && /^https?:\/\//i.test(w.lock_url || "") && <a href={w.lock_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 6, marginLeft: 8, fontSize: 12.5, fontWeight: 700, color: V2.grassDark }}>View lock ↗</a>}
                 <div style={{ fontSize: 12.5, marginTop: 4, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>

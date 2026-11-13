@@ -98,6 +98,12 @@ export async function refreshWallet(db, w, fresh = false) {
     const v = await walletView(w, fresh);
     const at = new Date().toISOString();
     await db.from("team_wallets").update({ holdings: v.holdings, usd: v.usd, refreshed_at: at, read_error: null }).eq("id", w.id);
+    // A TOUCHGRASS balance that differs from the last saved reading is recorded as a change. The first reading is only a baseline.
+    if (w.refreshed_at && Array.isArray(w.holdings)) {
+      const tgOf = (hs) => Math.round(((hs || []).find((h) => h.mint === TG_MINT)?.amount || 0) * 1e6) / 1e6;
+      const prev = tgOf(w.holdings), now = tgOf(v.holdings);
+      if (prev !== now) { try { await db.from("team_wallet_events").insert({ wallet_id: w.id, address: w.address, label: w.label, prev_amount: prev, new_amount: now, delta: Math.round((now - prev) * 1e6) / 1e6 }); } catch {} }
+    }
     return { ...v, refreshed_at: at };
   } catch (e) {
     const msg = String(e?.message || e).slice(0, 200);
@@ -173,4 +179,10 @@ export async function saveSnapshotRows(db, rows, minGapMs) {
   const at = new Date().toISOString();
   const { error } = await db.from("team_wallet_snapshots").insert(clean.map((r) => ({ ...r, taken_at: at })));
   return !error;
+}
+
+export async function recentEvents(db, limit = 50) {
+  const { data, error } = await db.from("team_wallet_events").select("id, wallet_id, address, label, prev_amount, new_amount, delta, detected_at").order("detected_at", { ascending: false }).limit(limit);
+  if (error) return { events: [], error: /does not exist/.test(error.message) ? "Run team_wallet_events.sql in Supabase to turn on balance-change tracking." : error.message };
+  return { events: data || [] };
 }
