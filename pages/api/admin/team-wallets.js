@@ -2,7 +2,7 @@
 // Needs x-admin-secret. GET = wallets with live balances; GET ?history=1&days=N = totals over time; POST { action: add | update | delete }.
 import { isAdminRequest } from "../../../utils/adminApi";
 import { adminClient } from "../../../utils/wheel";
-import { loadWallets, snapshotIfDue, history, KINDS, ADDR, SOL } from "../../../utils/teamWallets";
+import { loadWallets, snapshotIfDue, history, walletView, tokenSupply, saveSnapshotRows, KINDS, ADDR, SOL } from "../../../utils/teamWallets";
 
 export const config = { maxDuration: 30 };
 
@@ -17,6 +17,17 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
   if (req.method === "GET") {
+    if (req.query.list) {            // wallets and notes only, no Solana calls: instant
+      const { data: rows, error } = await db.from("team_wallets").select("*").order("sort").order("created_at");
+      if (error) return res.status(500).json({ error: /does not exist/.test(error.message) ? "Run team_wallets.sql in Supabase first." : error.message });
+      return res.status(200).json({ wallets: rows || [] });
+    }
+    if (req.query.id) {              // one wallet's live balances
+      const { data: w } = await db.from("team_wallets").select("*").eq("id", String(req.query.id)).maybeSingle();
+      if (!w) return res.status(404).json({ error: "Wallet not found." });
+      try { return res.status(200).json(await walletView(w)); } catch (e) { return res.status(200).json({ error: e.message || "Couldn't read this wallet" }); }
+    }
+    if (req.query.supply) { try { return res.status(200).json({ tg_supply: await tokenSupply() }); } catch { return res.status(200).json({ tg_supply: null }); } }
     if (req.query.history) return res.status(200).json(await history(db, Math.min(Math.max(parseInt(req.query.days) || 30, 1), 365)));
     const r = await loadWallets(db);
     if (r.error) return res.status(500).json({ error: r.error });
@@ -25,6 +36,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if ((req.body || {}).action === "snapshot") return res.status(200).json({ saved: await saveSnapshotRows(db, req.body.rows, 6 * 3600 * 1000) });
   const { action, id, label, address, kind, purpose, notes, expected, locked, unlock_date, lock_url } = req.body || {};
   if (action === "delete") {
     if (!id) return res.status(400).json({ error: "Missing id." });

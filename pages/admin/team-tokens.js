@@ -1,5 +1,5 @@
 // /admin/team-tokens — team wallets, what each should hold, and the live on-chain balance. Admin secret only; talks to /api/admin/team-wallets.
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { V2 } from "../../utils/v2Theme";
@@ -136,6 +136,15 @@ function SupplyShare({ d }) {
   );
 }
 
+function aggregateClient(wallets) {
+  const by_kind = {}; let locked_tg = 0, total_usd = 0;
+  for (const w of wallets) { const k = w.kind || "team"; by_kind[k] = by_kind[k] || { usd: 0, count: 0, tg: 0, locked_tg: 0 };
+    const tg = (w.holdings || []).find((h) => h.mint === TG)?.amount || 0;
+    by_kind[k].usd += w.usd || 0; by_kind[k].count += 1; by_kind[k].tg += tg; total_usd += w.usd || 0;
+    if (w.locked) { by_kind[k].locked_tg += tg; locked_tg += tg; } }
+  return { by_kind, locked_tg, total_usd };
+}
+
 function status(h) {
   if (h.expected == null) return null;
   const diff = h.amount - h.expected, tol = Math.max(h.expected * 0.005, 0.000001);
@@ -145,7 +154,12 @@ function status(h) {
 
 export default function AdminTeamTokens() {
   const [secret, setSecret] = useState("");
-  const [d, setD] = useState(null);
+  const [wallets, setWallets] = useState(null);
+  const [supply, setSupply] = useState(null);
+  const [asOf, setAsOf] = useState(null);
+  const [prog, setProg] = useState(null);
+  const run = useRef(0);
+  const d = useMemo(() => (wallets ? { wallets, ...aggregateClient(wallets), tg_supply: supply, as_of: asOf } : null), [wallets, supply, asOf]);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState(null);
@@ -166,8 +180,43 @@ export default function AdminTeamTokens() {
   const loadHist = useCallback(async (n) => {
     try { const r = await fetch(`/api/admin/team-wallets?history=1&days=${n}`, { headers: { "x-admin-secret": secret } }); const j = await r.json().catch(() => ({})); if (r.ok) setHist(j); } catch {}
   }, [secret]);
-  const load = useCallback(async () => { const j = await call("GET"); if (j) { setD(j); loadHist(days); } }, [call, loadHist, days]);
-  const pickDays = (n) => { setDays(n); if (d) loadHist(n); };
+  const get = useCallback(async (qs) => {
+    const r = await fetch(`/api/admin/team-wallets?${qs}`, { headers: { "x-admin-secret": secret } });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || (r.status === 401 ? "Wrong admin secret." : `Failed (${r.status})`));
+    return j;
+  }, [secret]);
+  // The list loads instantly (no Solana calls). Balances then load one wallet at a time, so nothing can time out and rows fill in as they arrive.
+  const load = useCallback(async () => {
+    const me = ++run.current; setBusy(true); setMsg("");
+    try {
+      const { wallets: rows } = await get("list=1");
+      if (me !== run.current) return;
+      setWallets(rows.map((w) => ({ ...w, loading: true, holdings: [], usd: null }))); setAsOf(null); setProg({ done: 0, total: rows.length });
+      get("supply=1").then((j) => me === run.current && setSupply(j.tg_supply)).catch(() => {});
+      const got = new Array(rows.length); let next = 0, done = 0;
+      const worker = async () => {
+        while (next < rows.length && me === run.current) {
+          const i = next++; let v;
+          try { v = await get(`id=${rows[i].id}`); } catch (e) { v = { error: e.message }; }
+          if (me !== run.current) return;
+          got[i] = v; done++;
+          setWallets((cur) => cur && cur.map((w) => (w.id === rows[i].id ? { ...w, loading: false, ...(v.error ? { error: v.error, holdings: [], usd: null } : { error: null, holdings: v.holdings, usd: v.usd }) } : w)));
+          setProg({ done, total: rows.length });
+        }
+      };
+      await Promise.all([worker(), worker()]);
+      if (me !== run.current) return;
+      setAsOf(new Date().toISOString()); setProg(null);
+      if (rows.length && got.every((v) => v && !v.error)) {          // save a history point only when every wallet read cleanly
+        const snap = rows.map((w, i) => ({ address: w.address, tg_amount: got[i].holdings.find((h) => h.mint === TG)?.amount || 0, sol_amount: got[i].holdings.find((h) => h.mint === "SOL")?.amount || 0, usd: got[i].usd || 0 }));
+        await call("POST", { action: "snapshot", rows: snap });
+      }
+      loadHist(days);
+    } catch (e) { if (me === run.current) { setMsg(e.message); setProg(null); } }
+    finally { if (me === run.current) setBusy(false); }
+  }, [get, call, loadHist, days]);
+  const pickDays = (n) => { setDays(n); if (wallets) loadHist(n); };
   const save = async () => {
     const body = { action: form.id ? "update" : "add", id: form.id, label: form.label, address: form.address, kind: form.kind, locked: !!form.locked, unlock_date: form.locked ? form.unlock_date : "", lock_url: form.locked ? form.lock_url : "", purpose: form.purpose, notes: form.notes, expected: parseExpected(form.expectedText) };
     if (await call("POST", body)) { setForm(null); load(); }
@@ -194,7 +243,7 @@ export default function AdminTeamTokens() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", color: V2.grassGreen }}>Total value (priced tokens)</div>
               <div style={{ fontSize: 28, fontWeight: 800, color: V2.forestGreen }}>{usd(d.total_usd)}</div>
-              <div style={{ fontSize: 12, color: V2.textMuted }}>{d.wallets.length} {d.wallets.length === 1 ? "wallet" : "wallets"} · as of {new Date(d.as_of).toLocaleTimeString()}</div>
+              <div style={{ fontSize: 12, color: V2.textMuted }}>{d.wallets.length} {d.wallets.length === 1 ? "wallet" : "wallets"} · {prog ? `loading balances ${prog.done}/${prog.total}…` : d.as_of ? `as of ${new Date(d.as_of).toLocaleTimeString()}` : ""}</div>
             </div>
             <button style={primary} onClick={() => setForm({ ...blank })}>Add wallet</button>
           </div>
@@ -272,7 +321,7 @@ export default function AdminTeamTokens() {
                 </div>
               </div>
             </div>
-            {w.error ? <div style={{ color: V2.danger, fontSize: 13, marginTop: 10 }}>Couldn't read this wallet: {w.error}</div> : (
+            {w.loading ? <div style={{ color: V2.textMuted, fontSize: 13, marginTop: 10 }}>Loading balances…</div> : w.error ? <div style={{ color: V2.danger, fontSize: 13, marginTop: 10 }}>Couldn't read this wallet: {w.error} <button style={{ ...btn, padding: "3px 8px", fontSize: 12, marginLeft: 6 }} onClick={load}>Retry all</button></div> : (
               <div style={{ marginTop: 12, overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
                   <thead><tr style={{ textAlign: "left", color: V2.textMuted, fontSize: 11.5 }}>

@@ -65,39 +65,51 @@ async function prices(mints) {
 }
 
 
-export async function loadWallets(db) {
-    const { data: rows, error } = await db.from("team_wallets").select("*").order("sort").order("created_at");
-    if (error) return { error: /does not exist/.test(error.message) ? "Run team_wallets.sql in Supabase first." : error.message };
-    const live = await mapLimit(rows || [], 2, (w) => cached("bal:" + w.address, () => liveBalances(w.address)).then((b) => ({ ok: true, ...b })).catch((e) => ({ ok: false, error: e.message })));
-    const mints = new Set([SOL_MINT, TG_MINT]);
-    live.forEach((l) => l.ok && Object.keys(l.tokens).forEach((m) => mints.add(m)));
-    (rows || []).forEach((w) => (w.expected || []).forEach((e) => e.mint !== SOL && mints.add(e.mint)));
-    const px = await prices([...mints]);
-    const usdOf = (mint, amt) => { const p = px[mint === SOL ? SOL_MINT : mint]; return p ? amt * p.usd : null; };
+// One wallet's live view (holdings, USD) built from its balances and prices.
+function buildView(w, l, px) {
+  const usdOf = (mint, amt) => { const p = px[mint === SOL ? SOL_MINT : mint]; return p ? amt * p.usd : null; };
+  const held = [{ mint: SOL, symbol: "SOL", amount: l.sol }, ...Object.entries(l.tokens).filter(([, a]) => a > 0).map(([m, a]) => ({ mint: m, amount: a }))];
+  const exp = Object.fromEntries((w.expected || []).map((e) => [e.mint, e]));
+  const holdings = held.map((h) => {
+    const e = exp[h.mint]; const symbol = e?.symbol || KNOWN[h.mint] || px[h.mint]?.symbol || null;
+    return { ...h, symbol, usd: usdOf(h.mint, h.amount), expected: e?.amount ?? null, tracked: !!e };
+  }).filter((h) => h.tracked || h.mint === SOL || h.symbol);
+  // expected tokens the wallet doesn't hold at all
+  for (const e of w.expected || []) if (!held.find((h) => h.mint === e.mint)) holdings.push({ mint: e.mint, symbol: e.symbol || KNOWN[e.mint] || null, amount: 0, usd: 0, expected: e.amount ?? null, tracked: true });
+  return { holdings, usd: holdings.reduce((s, h) => s + (h.usd || 0), 0) };
+}
 
-    let total = 0;
-    const wallets = (rows || []).map((w, i) => {
-      const l = live[i];
-      if (!l.ok) return { ...w, error: l.error, holdings: [], usd: null };
-      const held = [{ mint: SOL, symbol: "SOL", amount: l.sol }, ...Object.entries(l.tokens).filter(([, a]) => a > 0).map(([m, a]) => ({ mint: m, amount: a }))];
-      const exp = Object.fromEntries((w.expected || []).map((e) => [e.mint, e]));
-      const holdings = held.map((h) => {
-        const e = exp[h.mint]; const symbol = e?.symbol || KNOWN[h.mint] || px[h.mint]?.symbol || null;
-        return { ...h, symbol, usd: usdOf(h.mint, h.amount), expected: e?.amount ?? null, tracked: !!e };
-      }).filter((h) => h.tracked || h.mint === SOL || h.symbol);
-      // expected tokens the wallet doesn't hold at all
-      for (const e of w.expected || []) if (!held.find((h) => h.mint === e.mint)) holdings.push({ mint: e.mint, symbol: e.symbol || KNOWN[e.mint] || null, amount: 0, usd: 0, expected: e.amount ?? null, tracked: true });
-      const usd = holdings.reduce((s, h) => s + (h.usd || 0), 0); total += usd;
-      return { ...w, holdings, usd };
-    });
-    let supply = null;
-    try { const r = await cached("supply", () => rpc("getTokenSupply", [TG_MINT])); supply = Number(r?.value?.uiAmount) || null; } catch {}
-    const by_kind = {}; let locked_tg = 0;
-    for (const w of wallets) { const k = w.kind || "team"; by_kind[k] = by_kind[k] || { usd: 0, count: 0, tg: 0, locked_tg: 0 };
-      const tg = (w.holdings || []).find((h) => h.mint === TG_MINT)?.amount || 0;
-      by_kind[k].usd += w.usd || 0; by_kind[k].count += 1; by_kind[k].tg += tg;
-      if (w.locked) { by_kind[k].locked_tg += tg; locked_tg += tg; } }
-  return { wallets, total_usd: total, by_kind, locked_tg, tg_supply: supply, complete: wallets.every((w) => !w.error), as_of: new Date().toISOString() };
+// Used by the page, one wallet per request, so a long list can never run into the server time limit.
+export async function walletView(w) {
+  const l = await cached("bal:" + w.address, () => liveBalances(w.address));
+  const mints = [...new Set([SOL_MINT, TG_MINT, ...Object.keys(l.tokens), ...(w.expected || []).map((e) => e.mint).filter((m) => m !== SOL)])].sort();
+  const px = await cached("px:" + mints.join(","), () => prices(mints));
+  return buildView(w, l, px);
+}
+export async function tokenSupply() {
+  const r = await cached("supply", () => rpc("getTokenSupply", [TG_MINT]));
+  return Number(r?.value?.uiAmount) || null;
+}
+
+// Everything at once (the nightly snapshot job). Fine with a dedicated RPC; the page itself loads wallet by wallet.
+export async function loadWallets(db) {
+  const { data: rows, error } = await db.from("team_wallets").select("*").order("sort").order("created_at");
+  if (error) return { error: /does not exist/.test(error.message) ? "Run team_wallets.sql in Supabase first." : error.message };
+  const conc = process.env.SOLANA_RPC_URL ? 6 : 2;
+  const views = await mapLimit(rows || [], conc, (w) => walletView(w).then((v) => ({ ok: true, ...v })).catch((e) => ({ ok: false, error: e.message })));
+  const wallets = (rows || []).map((w, i) => (views[i].ok ? { ...w, holdings: views[i].holdings, usd: views[i].usd } : { ...w, error: views[i].error, holdings: [], usd: null }));
+  let supply = null; try { supply = await tokenSupply(); } catch {}
+  const agg = aggregate(wallets);
+  return { wallets, ...agg, tg_supply: supply, complete: wallets.every((w) => !w.error), as_of: new Date().toISOString() };
+}
+
+export function aggregate(wallets) {
+  const by_kind = {}; let locked_tg = 0, total_usd = 0;
+  for (const w of wallets) { const k = w.kind || "team"; by_kind[k] = by_kind[k] || { usd: 0, count: 0, tg: 0, locked_tg: 0 };
+    const tg = (w.holdings || []).find((h) => h.mint === TG_MINT)?.amount || 0;
+    by_kind[k].usd += w.usd || 0; by_kind[k].count += 1; by_kind[k].tg += tg; total_usd += w.usd || 0;
+    if (w.locked) { by_kind[k].locked_tg += tg; locked_tg += tg; } }
+  return { by_kind, locked_tg, total_usd };
 }
 
 // ---- history: one snapshot batch = one timestamp across every wallet. Only written when every wallet was read OK, so totals never dip falsely. ----
@@ -130,4 +142,20 @@ export async function history(db, days) {
     by.set(r.taken_at, p);
   }
   return { points: [...by.values()] };
+}
+
+// The page posts the numbers it just loaded (only when every wallet read OK). Addresses are checked against our own list.
+export async function saveSnapshotRows(db, rows, minGapMs) {
+  const { data: mine } = await db.from("team_wallets").select("address, kind");
+  const known = new Map((mine || []).map((w) => [w.address, w.kind || "team"]));
+  const clean = (Array.isArray(rows) ? rows : []).filter((r) => known.has(r?.address)).map((r) => ({ address: r.address, kind: known.get(r.address),
+    tg_amount: Math.max(0, Number(r.tg_amount) || 0), sol_amount: Math.max(0, Number(r.sol_amount) || 0), usd: Math.max(0, Number(r.usd) || 0) }));
+  if (!clean.length || clean.length !== known.size) return false;     // must cover every tracked wallet, so totals stay comparable
+  if (minGapMs) {
+    const { data: last } = await db.from("team_wallet_snapshots").select("taken_at").order("taken_at", { ascending: false }).limit(1);
+    if (last?.[0] && Date.now() - new Date(last[0].taken_at).getTime() < minGapMs) return false;
+  }
+  const at = new Date().toISOString();
+  const { error } = await db.from("team_wallet_snapshots").insert(clean.map((r) => ({ ...r, taken_at: at })));
+  return !error;
 }
