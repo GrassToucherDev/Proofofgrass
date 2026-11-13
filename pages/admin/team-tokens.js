@@ -22,6 +22,74 @@ const parseExpected = (t) => String(t || "").split("\n").map((l) => l.trim()).fi
 });
 const toText = (arr) => (arr || []).map((e) => [e.symbol || "", e.mint, e.amount ?? ""].join(" ").trim()).join("\n");
 
+const KCOL = { team: "#5ba622", holder: "#e8a020", other: "#7a8aa0" };
+const abbr = (n) => (n >= 1e9 ? (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : String(Math.round(n * 100) / 100));
+
+// Stacked area of cumulative totals over time, split by wallet type. Hand-drawn SVG so it stays light and phone friendly.
+function HistoryChart({ hist, metric, setMetric, days, setDays }) {
+  const [hi, setHi] = useState(null);
+  const pts = hist?.points || [];
+  const kinds = Object.keys(KIND).filter((k) => pts.some((p) => (p[metric][k] || 0) > 0));
+  const W = 600, H = 200, PX = 4, PY = 10;
+  const val = (p) => p[metric].all || 0;
+  const max = Math.max(1, ...pts.map(val));
+  const t0 = pts.length ? new Date(pts[0].t).getTime() : 0, t1 = pts.length ? new Date(pts[pts.length - 1].t).getTime() : 1;
+  const x = (p) => PX + ((new Date(p.t).getTime() - t0) / Math.max(1, t1 - t0)) * (W - PX * 2);
+  const y = (v) => H - PY - (v / max) * (H - PY * 2);
+  const layers = kinds.map((k, i) => {
+    const below = (p) => kinds.slice(0, i).reduce((s, kk) => s + (p[metric][kk] || 0), 0);
+    const top = pts.map((p) => `${x(p).toFixed(1)},${y(below(p) + (p[metric][k] || 0)).toFixed(1)}`);
+    const bot = pts.slice().reverse().map((p) => `${x(p).toFixed(1)},${y(below(p)).toFixed(1)}`);
+    return { k, d: `M${top.join("L")}L${bot.join("L")}Z` };
+  });
+  const show = hi != null && pts[hi] ? pts[hi] : pts[pts.length - 1];
+  const first = pts[0], delta = first && show ? val(show) - val(first) : 0;
+  const fmtV = (v) => (metric === "usd" ? usd(v) : fmt(v));
+  const onMove = (e) => {
+    if (pts.length < 2) return;
+    const r = e.currentTarget.getBoundingClientRect(); const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    const target = t0 + (Math.min(Math.max(cx / r.width, 0), 1)) * (t1 - t0);
+    let best = 0; pts.forEach((p, i) => { if (Math.abs(new Date(p.t).getTime() - target) < Math.abs(new Date(pts[best].t).getTime() - target)) best = i; });
+    setHi(best);
+  };
+  const chip = (on) => ({ ...btn, padding: "5px 10px", fontSize: 12, background: on ? V2.forestGreen : "#fff", color: on ? "#fff" : V2.forestGreen, fontWeight: 700 });
+  return (
+    <div style={box}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button style={chip(metric === "tg")} onClick={() => setMetric("tg")}>TOUCHGRASS</button>
+          <button style={chip(metric === "usd")} onClick={() => setMetric("usd")}>USD value</button>
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {[[7, "7d"], [30, "30d"], [90, "90d"], [365, "1y"]].map(([n, l]) => <button key={n} style={chip(days === n)} onClick={() => setDays(n)}>{l}</button>)}
+        </div>
+      </div>
+      {hist?.error ? <div style={{ color: V2.danger, fontSize: 13 }}>{hist.error}</div> : pts.length < 2 ? (
+        <div style={{ fontSize: 13, color: V2.textMuted, padding: "18px 4px", lineHeight: 1.5 }}>
+          The graph fills in as snapshots are saved: one each time you open this page (at most every 6 hours) and one every night. {pts.length === 1 ? "The first snapshot is in. Check back after the next one." : "Nothing saved yet."}
+        </div>
+      ) : (<>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+          <div><span style={{ fontSize: 22, fontWeight: 800, color: V2.forestGreen }}>{fmtV(val(show))}</span>
+            <span style={{ fontSize: 12, color: delta >= 0 ? V2.success : V2.danger, fontWeight: 700, marginLeft: 8 }}>{delta >= 0 ? "+" : "-"}{fmtV(Math.abs(delta))} since start</span></div>
+          <div style={{ fontSize: 12, color: V2.textMuted }}>{new Date(show.t).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>
+        </div>
+        <div style={{ position: "relative", marginTop: 6 }}>
+          <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block", touchAction: "pan-y" }} onMouseMove={onMove} onTouchStart={onMove} onTouchMove={onMove} onMouseLeave={() => setHi(null)}>
+            {[0, 0.5, 1].map((g) => <line key={g} x1={PX} x2={W - PX} y1={y(max * g)} y2={y(max * g)} stroke="#e3ead9" strokeWidth="1" />)}
+            {layers.map((l) => <path key={l.k} d={l.d} fill={KCOL[l.k]} fillOpacity="0.55" stroke={KCOL[l.k]} strokeWidth="1.5" />)}
+            {hi != null && <line x1={x(pts[hi])} x2={x(pts[hi])} y1={PY} y2={H - PY} stroke="#1f2d17" strokeWidth="1" strokeDasharray="3 3" />}
+          </svg>
+          <div style={{ position: "absolute", left: 4, top: 0, fontSize: 11, color: V2.textMuted }}>{metric === "usd" ? "$" + abbr(max) : abbr(max)}</div>
+        </div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6, fontSize: 12 }}>
+          {kinds.map((k) => <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 3, background: KCOL[k], display: "inline-block" }} />{KIND[k]}: <b>{fmtV(show[metric][k] || 0)}</b></span>)}
+        </div>
+      </>)}
+    </div>
+  );
+}
+
 function status(h) {
   if (h.expected == null) return null;
   const diff = h.amount - h.expected, tol = Math.max(h.expected * 0.005, 0.000001);
@@ -36,6 +104,9 @@ export default function AdminTeamTokens() {
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [hist, setHist] = useState(null);
+  const [metric, setMetric] = useState("tg");
+  const [days, setDays] = useState(30);
 
   const call = useCallback(async (method, body) => {
     setBusy(true);
@@ -46,7 +117,11 @@ export default function AdminTeamTokens() {
       setMsg(""); return j;
     } finally { setBusy(false); }
   }, [secret]);
-  const load = useCallback(async () => { const j = await call("GET"); if (j) setD(j); }, [call]);
+  const loadHist = useCallback(async (n) => {
+    try { const r = await fetch(`/api/admin/team-wallets?history=1&days=${n}`, { headers: { "x-admin-secret": secret } }); const j = await r.json().catch(() => ({})); if (r.ok) setHist(j); } catch {}
+  }, [secret]);
+  const load = useCallback(async () => { const j = await call("GET"); if (j) { setD(j); loadHist(days); } }, [call, loadHist, days]);
+  const pickDays = (n) => { setDays(n); if (d) loadHist(n); };
   const save = async () => {
     const body = { action: form.id ? "update" : "add", id: form.id, label: form.label, address: form.address, kind: form.kind, purpose: form.purpose, notes: form.notes, expected: parseExpected(form.expectedText) };
     if (await call("POST", body)) { setForm(null); load(); }
@@ -78,6 +153,8 @@ export default function AdminTeamTokens() {
             <button style={primary} onClick={() => setForm({ ...blank })}>Add wallet</button>
           </div>
         )}
+
+        {d && d.wallets.length > 0 && <HistoryChart hist={hist} metric={metric} setMetric={setMetric} days={days} setDays={pickDays} />}
 
         {d && d.wallets.length > 0 && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>

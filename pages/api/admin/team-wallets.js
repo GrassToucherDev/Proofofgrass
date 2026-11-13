@@ -1,51 +1,10 @@
-// Admin: team token tracker. Wallet list + notes live in team_wallets; balances are read live from Solana, never stored.
-// Needs x-admin-secret. GET = wallets with live balances; POST { action: add | update | delete }.
+// Admin: team token tracker. Wallet list + notes live in team_wallets; balances are read live from Solana.
+// Needs x-admin-secret. GET = wallets with live balances; GET ?history=1&days=N = totals over time; POST { action: add | update | delete }.
 import { isAdminRequest } from "../../../utils/adminApi";
 import { adminClient } from "../../../utils/wheel";
+import { loadWallets, snapshotIfDue, history, KINDS, ADDR, SOL } from "../../../utils/teamWallets";
 
-const RPC = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
-const ADDR = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-const KINDS = ["team", "holder", "other"];
-const SOL = "SOL", SOL_MINT = "So11111111111111111111111111111111111111112";
-const TG_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
-const KNOWN = { [TG_MINT]: "TOUCHGRASS", [SOL_MINT]: "SOL" };
-const PROGRAMS = ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"];
-
-async function rpc(method, params) {
-  const r = await fetch(RPC, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
-  const j = await r.json();
-  if (j.error) throw new Error(j.error.message || "rpc error");
-  return j.result;
-}
-
-async function liveBalances(address) {
-  const [sol, ...tok] = await Promise.all([
-    rpc("getBalance", [address]),
-    ...PROGRAMS.map((p) => rpc("getTokenAccountsByOwner", [address, { programId: p }, { encoding: "jsonParsed" }])),
-  ]);
-  const byMint = {};
-  for (const t of tok) for (const a of t?.value || []) {
-    const info = a.account?.data?.parsed?.info; if (!info) continue;
-    const amt = Number(info.tokenAmount?.uiAmount || 0);
-    byMint[info.mint] = (byMint[info.mint] || 0) + amt;
-  }
-  return { sol: (sol?.value || 0) / 1e9, tokens: byMint };
-}
-
-async function prices(mints) {
-  const out = {}; const list = [...new Set(mints)].slice(0, 30);
-  if (!list.length) return out;
-  try {
-    const r = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${list.join(",")}`);
-    if (!r.ok) return out;
-    const pairs = await r.json();
-    for (const p of Array.isArray(pairs) ? pairs : []) {
-      const m = p?.baseToken?.address; const usd = parseFloat(p?.priceUsd);
-      if (m && usd > 0 && (!out[m] || (p.liquidity?.usd || 0) > out[m].liq)) out[m] = { usd, liq: p.liquidity?.usd || 0, symbol: p.baseToken?.symbol };
-    }
-  } catch {}
-  return out;
-}
+export const config = { maxDuration: 30 };
 
 const cleanExpected = (arr) => (Array.isArray(arr) ? arr : []).map((e) => ({
   mint: String(e?.mint || "").trim(), symbol: String(e?.symbol || "").trim().slice(0, 24),
@@ -58,36 +17,11 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
   if (req.method === "GET") {
-    const { data: rows, error } = await db.from("team_wallets").select("*").order("sort").order("created_at");
-    if (error) return res.status(500).json({ error: /does not exist/.test(error.message) ? "Run team_wallets.sql in Supabase first." : error.message });
-    const live = await Promise.all((rows || []).map((w) => liveBalances(w.address).then((b) => ({ ok: true, ...b })).catch((e) => ({ ok: false, error: e.message }))));
-    const mints = new Set([SOL_MINT, TG_MINT]);
-    live.forEach((l) => l.ok && Object.keys(l.tokens).forEach((m) => mints.add(m)));
-    (rows || []).forEach((w) => (w.expected || []).forEach((e) => e.mint !== SOL && mints.add(e.mint)));
-    const px = await prices([...mints]);
-    const usdOf = (mint, amt) => { const p = px[mint === SOL ? SOL_MINT : mint]; return p ? amt * p.usd : null; };
-
-    let total = 0;
-    const wallets = (rows || []).map((w, i) => {
-      const l = live[i];
-      if (!l.ok) return { ...w, error: l.error, holdings: [], usd: null };
-      const held = [{ mint: SOL, symbol: "SOL", amount: l.sol }, ...Object.entries(l.tokens).filter(([, a]) => a > 0).map(([m, a]) => ({ mint: m, amount: a }))];
-      const exp = Object.fromEntries((w.expected || []).map((e) => [e.mint, e]));
-      const holdings = held.map((h) => {
-        const e = exp[h.mint]; const symbol = e?.symbol || KNOWN[h.mint] || px[h.mint]?.symbol || null;
-        return { ...h, symbol, usd: usdOf(h.mint, h.amount), expected: e?.amount ?? null, tracked: !!e };
-      }).filter((h) => h.tracked || h.mint === SOL || h.symbol);
-      // expected tokens the wallet doesn't hold at all
-      for (const e of w.expected || []) if (!held.find((h) => h.mint === e.mint)) holdings.push({ mint: e.mint, symbol: e.symbol || KNOWN[e.mint] || null, amount: 0, usd: 0, expected: e.amount ?? null, tracked: true });
-      const usd = holdings.reduce((s, h) => s + (h.usd || 0), 0); total += usd;
-      return { ...w, holdings, usd };
-    });
-    let supply = null;
-    try { const r = await rpc("getTokenSupply", [TG_MINT]); supply = Number(r?.value?.uiAmount) || null; } catch {}
-    const by_kind = {};
-    for (const w of wallets) { const k = w.kind || "team"; by_kind[k] = by_kind[k] || { usd: 0, count: 0, tg: 0 };
-      by_kind[k].usd += w.usd || 0; by_kind[k].count += 1; by_kind[k].tg += (w.holdings || []).find((h) => h.mint === TG_MINT)?.amount || 0; }
-    return res.status(200).json({ wallets, total_usd: total, by_kind, tg_supply: supply, as_of: new Date().toISOString() });
+    if (req.query.history) return res.status(200).json(await history(db, Math.min(Math.max(parseInt(req.query.days) || 30, 1), 365)));
+    const r = await loadWallets(db);
+    if (r.error) return res.status(500).json({ error: r.error });
+    await snapshotIfDue(db, r, 6 * 3600 * 1000);   // lazy snapshot when you open the page, at most every 6 hours
+    return res.status(200).json(r);
   }
 
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
