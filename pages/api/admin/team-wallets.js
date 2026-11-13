@@ -5,6 +5,7 @@ import { adminClient } from "../../../utils/wheel";
 
 const RPC = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 const ADDR = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const KINDS = ["team", "holder", "other"];
 const SOL = "SOL", SOL_MINT = "So11111111111111111111111111111111111111112";
 const TG_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const KNOWN = { [TG_MINT]: "TOUCHGRASS", [SOL_MINT]: "SOL" };
@@ -81,11 +82,16 @@ export default async function handler(req, res) {
       const usd = holdings.reduce((s, h) => s + (h.usd || 0), 0); total += usd;
       return { ...w, holdings, usd };
     });
-    return res.status(200).json({ wallets, total_usd: total, as_of: new Date().toISOString() });
+    let supply = null;
+    try { const r = await rpc("getTokenSupply", [TG_MINT]); supply = Number(r?.value?.uiAmount) || null; } catch {}
+    const by_kind = {};
+    for (const w of wallets) { const k = w.kind || "team"; by_kind[k] = by_kind[k] || { usd: 0, count: 0, tg: 0 };
+      by_kind[k].usd += w.usd || 0; by_kind[k].count += 1; by_kind[k].tg += (w.holdings || []).find((h) => h.mint === TG_MINT)?.amount || 0; }
+    return res.status(200).json({ wallets, total_usd: total, by_kind, tg_supply: supply, as_of: new Date().toISOString() });
   }
 
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-  const { action, id, label, address, purpose, notes, expected } = req.body || {};
+  const { action, id, label, address, kind, purpose, notes, expected } = req.body || {};
   if (action === "delete") {
     if (!id) return res.status(400).json({ error: "Missing id." });
     const { error } = await db.from("team_wallets").delete().eq("id", id);
@@ -95,7 +101,7 @@ export default async function handler(req, res) {
   const addr = String(address || "").trim();
   if (!String(label || "").trim()) return res.status(400).json({ error: "Give the wallet a label." });
   if (!ADDR.test(addr)) return res.status(400).json({ error: "That doesn't look like a Solana address." });
-  const row = { label: String(label).trim().slice(0, 80), address: addr, purpose: String(purpose || "").trim().slice(0, 200) || null,
+  const row = { label: String(label).trim().slice(0, 80), address: addr, kind: KINDS.includes(kind) ? kind : "team", purpose: String(purpose || "").trim().slice(0, 200) || null,
     notes: String(notes || "").trim().slice(0, 2000) || null, expected: cleanExpected(expected), updated_at: new Date().toISOString() };
   const q = action === "add" ? db.from("team_wallets").insert(row) : db.from("team_wallets").update(row).eq("id", id);
   const { error } = await q;

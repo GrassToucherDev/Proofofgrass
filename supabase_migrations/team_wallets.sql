@@ -4,6 +4,7 @@ create table if not exists public.team_wallets (
   id         uuid primary key default gen_random_uuid(),
   label      text not null,
   address    text not null unique,
+  kind       text not null default 'team',        -- team | holder | other
   purpose    text,
   notes      text,
   expected   jsonb not null default '[]'::jsonb,   -- [{ "mint": "SOL" | "<mint>", "symbol": "TOUCHGRASS", "amount": 1000000 }]
@@ -13,3 +14,6 @@ create table if not exists public.team_wallets (
 );
 alter table public.team_wallets enable row level security;
 revoke all on public.team_wallets from anon, authenticated;
+
+-- If you already ran an earlier version of this file, this adds the new column:
+alter table public.team_wallets add column if not exists kind text not null default 'team';

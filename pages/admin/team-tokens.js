@@ -11,7 +11,9 @@ const primary = { ...btn, background: V2.grassGreen, color: "#fff", border: "non
 const short = (a) => (a && a.length > 12 ? `${a.slice(0, 5)}…${a.slice(-5)}` : a);
 const fmt = (n) => Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: n >= 1000 ? 0 : 4 });
 const usd = (n) => (n == null ? "—" : `$${Number(n).toLocaleString("en-US", { maximumFractionDigits: n >= 100 ? 0 : 2 })}`);
-const blank = { id: null, label: "", address: "", purpose: "", notes: "", expectedText: "" };
+const blank = { id: null, label: "", address: "", kind: "holder", purpose: "", notes: "", expectedText: "" };
+const KIND = { team: "Team", holder: "Large holder", other: "Other" };
+const TG = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 
 // "SYMBOL mint [amount]" per line; the mint SOL means native SOL.
 const parseExpected = (t) => String(t || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
@@ -33,6 +35,7 @@ export default function AdminTeamTokens() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState(null);
+  const [filter, setFilter] = useState("all");
 
   const call = useCallback(async (method, body) => {
     setBusy(true);
@@ -45,7 +48,7 @@ export default function AdminTeamTokens() {
   }, [secret]);
   const load = useCallback(async () => { const j = await call("GET"); if (j) setD(j); }, [call]);
   const save = async () => {
-    const body = { action: form.id ? "update" : "add", id: form.id, label: form.label, address: form.address, purpose: form.purpose, notes: form.notes, expected: parseExpected(form.expectedText) };
+    const body = { action: form.id ? "update" : "add", id: form.id, label: form.label, address: form.address, kind: form.kind, purpose: form.purpose, notes: form.notes, expected: parseExpected(form.expectedText) };
     if (await call("POST", body)) { setForm(null); load(); }
   };
   const remove = async (w) => { if (!confirm(`Stop tracking "${w.label}"? This only removes it from this list, not from the blockchain.`)) return; if (await call("POST", { action: "delete", id: w.id })) load(); };
@@ -76,12 +79,21 @@ export default function AdminTeamTokens() {
           </div>
         )}
 
+        {d && d.wallets.length > 0 && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+            {[["all", "All", d.wallets.length, d.total_usd], ...Object.keys(KIND).filter((k) => d.by_kind?.[k]).map((k) => [k, KIND[k], d.by_kind[k].count, d.by_kind[k].usd])].map(([k, lb, n, v]) => (
+              <button key={k} onClick={() => setFilter(k)} style={{ ...btn, background: filter === k ? V2.grassGreen : "#fff", color: filter === k ? "#fff" : V2.forestGreen, fontWeight: 700 }}>{lb} · {n} · {usd(v)}</button>
+            ))}
+          </div>
+        )}
+
         {form && (
           <div style={box}>
             <b style={{ fontSize: 16 }}>{form.id ? "Edit wallet" : "Add wallet"}</b>
             <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
               <input style={inp} placeholder="Label (e.g. Treasury, Marketing, Dev)" value={form.label} onChange={set("label")} />
               <input style={inp} placeholder="Wallet address" value={form.address} onChange={set("address")} />
+              <select style={inp} value={form.kind} onChange={set("kind")}>{Object.entries(KIND).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
               <input style={inp} placeholder="Purpose (optional)" value={form.purpose} onChange={set("purpose")} />
               <textarea style={{ ...inp, minHeight: 70 }} placeholder="Notes (vesting, lock dates, who controls it…)" value={form.notes} onChange={set("notes")} />
               <div>
@@ -102,11 +114,11 @@ export default function AdminTeamTokens() {
           <div style={box}>No wallets yet. <button style={{ ...btn, marginLeft: 8 }} onClick={() => setForm({ ...blank })}>Add the first one</button></div>
         )}
 
-        {d && d.wallets.map((w) => (
+        {d && d.wallets.filter((w) => filter === "all" || (w.kind || "team") === filter).sort((a, b) => (b.usd || 0) - (a.usd || 0)).map((w) => (
           <div key={w.id} style={box}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: V2.forestGreen }}>{w.label}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: V2.forestGreen }}>{w.label} <span style={{ fontSize: 11, fontWeight: 700, color: V2.textMuted, border: `1px solid ${V2.borderSoft}`, borderRadius: 99, padding: "2px 8px", marginLeft: 4, verticalAlign: "middle" }}>{KIND[w.kind || "team"]}</span></div>
                 {w.purpose && <div style={{ fontSize: 13, color: V2.textMuted }}>{w.purpose}</div>}
                 <div style={{ fontSize: 12.5, marginTop: 4, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                   <code>{short(w.address)}</code>
@@ -117,7 +129,7 @@ export default function AdminTeamTokens() {
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: V2.forestGreen }}>{usd(w.usd)}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
-                  <button style={btn} onClick={() => setForm({ id: w.id, label: w.label, address: w.address, purpose: w.purpose || "", notes: w.notes || "", expectedText: toText(w.expected) })}>Edit</button>
+                  <button style={btn} onClick={() => setForm({ id: w.id, label: w.label, address: w.address, kind: w.kind || "team", purpose: w.purpose || "", notes: w.notes || "", expectedText: toText(w.expected) })}>Edit</button>
                   <button style={btn} onClick={() => remove(w)}>Remove</button>
                 </div>
               </div>
@@ -132,7 +144,7 @@ export default function AdminTeamTokens() {
                   <tbody>{w.holdings.map((h) => { const s = status(h); return (
                     <tr key={h.mint} style={{ borderTop: `1px solid ${V2.borderSoft}` }}>
                       <td style={{ padding: "6px" }}><b>{h.symbol || short(h.mint)}</b></td>
-                      <td style={{ padding: "6px", textAlign: "right" }}>{fmt(h.amount)}</td>
+                      <td style={{ padding: "6px", textAlign: "right" }}>{fmt(h.amount)}{h.mint === TG && d.tg_supply ? <div style={{ fontSize: 11, color: V2.textMuted }}>{((h.amount / d.tg_supply) * 100).toFixed(2)}% of supply</div> : null}</td>
                       <td style={{ padding: "6px", textAlign: "right", color: V2.textMuted }}>{h.expected == null ? "—" : fmt(h.expected)}</td>
                       <td style={{ padding: "6px", color: s?.c, fontWeight: 700, fontSize: 12 }}>{s ? s.t : ""}</td>
                       <td style={{ padding: "6px", textAlign: "right" }}>{usd(h.usd)}</td>
