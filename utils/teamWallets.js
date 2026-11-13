@@ -1,7 +1,7 @@
 // Shared by the admin API and the daily snapshot cron: team wallets + live Solana balances + prices.
 const RPC = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 export const ADDR = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-export const KINDS = ["team", "holder", "other"];
+export const KINDS = ["team", "holder", "friends", "other"];
 export const SOL = "SOL", SOL_MINT = "So11111111111111111111111111111111111111112";
 export const TG_MINT = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 const KNOWN = { [TG_MINT]: "TOUCHGRASS", [SOL_MINT]: "SOL" };
