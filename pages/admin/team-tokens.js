@@ -11,7 +11,7 @@ const primary = { ...btn, background: V2.grassGreen, color: "#fff", border: "non
 const short = (a) => (a && a.length > 12 ? `${a.slice(0, 5)}…${a.slice(-5)}` : a);
 const fmt = (n) => Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: n >= 1000 ? 0 : 4 });
 const usd = (n) => (n == null ? "—" : `$${Number(n).toLocaleString("en-US", { maximumFractionDigits: n >= 100 ? 0 : 2 })}`);
-const blank = { id: null, label: "", address: "", kind: "holder", purpose: "", notes: "", expectedText: "" };
+const blank = { id: null, label: "", address: "", kind: "holder", locked: false, unlock_date: "", purpose: "", notes: "", expectedText: "" };
 const KIND = { team: "Team", holder: "Large holder", other: "Other" };
 const TG = "5314GTpDziP2ZdaANnt5KJEABGXy5Nn5Kyc3SFPYpump";
 
@@ -90,6 +90,52 @@ function HistoryChart({ hist, metric, setMetric, days, setDays }) {
   );
 }
 
+const pct = (n, sup) => (sup > 0 ? (n / sup) * 100 : 0);
+const pctTxt = (p) => (p === 0 ? "0%" : p < 0.01 ? "<0.01%" : p < 1 ? p.toFixed(2) + "%" : p.toFixed(1) + "%");
+function lockInfo(w) {
+  if (!w.locked) return null;
+  if (!w.unlock_date) return { t: "Locked", c: V2.grassDark };
+  const days = Math.ceil((new Date(w.unlock_date + "T00:00:00").getTime() - Date.now()) / 86400000);
+  const when = new Date(w.unlock_date + "T00:00:00").toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+  if (days < 0) return { t: `Unlock date passed (${when})`, c: V2.warning };
+  if (days === 0) return { t: `Unlocks today (${when})`, c: V2.warning };
+  return { t: `Locked until ${when} · ${days} ${days === 1 ? "day" : "days"}`, c: days <= 30 ? V2.warning : V2.grassDark };
+}
+
+// Who holds how much of the TOUCHGRASS supply, by wallet type, with the locked share called out.
+function SupplyShare({ d }) {
+  const sup = d.tg_supply; if (!sup) return null;
+  const parts = Object.keys(KIND).filter((k) => d.by_kind?.[k]?.tg > 0).map((k) => ({ k, tg: d.by_kind[k].tg, locked: d.by_kind[k].locked_tg || 0 }));
+  const tracked = parts.reduce((s, p) => s + p.tg, 0), locked = d.locked_tg || 0;
+  return (
+    <div style={box}>
+      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", color: V2.grassGreen }}>Share of $TOUCHGRASS supply</div>
+      <div style={{ display: "flex", height: 16, borderRadius: 99, overflow: "hidden", background: "#eef2e6", margin: "10px 0" }}>
+        {parts.map((p) => <div key={p.k} title={KIND[p.k]} style={{ width: `${Math.max(pct(p.tg, sup), 0.4)}%`, background: KCOL[p.k] }} />)}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>
+        {parts.map((p) => (
+          <div key={p.k}>
+            <div style={{ fontSize: 12, color: V2.textMuted, display: "flex", alignItems: "center", gap: 5 }}><i style={{ width: 9, height: 9, borderRadius: 3, background: KCOL[p.k], display: "inline-block" }} />{KIND[p.k]}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: V2.forestGreen }}>{pctTxt(pct(p.tg, sup))}</div>
+            <div style={{ fontSize: 11.5, color: V2.textMuted }}>{abbr(p.tg)}{p.locked > 0 ? ` · ${pctTxt(pct(p.locked, sup))} locked` : ""}</div>
+          </div>
+        ))}
+        <div>
+          <div style={{ fontSize: 12, color: V2.textMuted }}>All tracked</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: V2.forestGreen }}>{pctTxt(pct(tracked, sup))}</div>
+          <div style={{ fontSize: 11.5, color: V2.textMuted }}>{abbr(tracked)} of {abbr(sup)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 12, color: V2.textMuted }}>Locked</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: V2.forestGreen }}>{pctTxt(pct(locked, sup))}</div>
+          <div style={{ fontSize: 11.5, color: V2.textMuted }}>{abbr(locked)} · unlocked tracked {pctTxt(pct(tracked - locked, sup))}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function status(h) {
   if (h.expected == null) return null;
   const diff = h.amount - h.expected, tol = Math.max(h.expected * 0.005, 0.000001);
@@ -123,7 +169,7 @@ export default function AdminTeamTokens() {
   const load = useCallback(async () => { const j = await call("GET"); if (j) { setD(j); loadHist(days); } }, [call, loadHist, days]);
   const pickDays = (n) => { setDays(n); if (d) loadHist(n); };
   const save = async () => {
-    const body = { action: form.id ? "update" : "add", id: form.id, label: form.label, address: form.address, kind: form.kind, purpose: form.purpose, notes: form.notes, expected: parseExpected(form.expectedText) };
+    const body = { action: form.id ? "update" : "add", id: form.id, label: form.label, address: form.address, kind: form.kind, locked: !!form.locked, unlock_date: form.locked ? form.unlock_date : "", purpose: form.purpose, notes: form.notes, expected: parseExpected(form.expectedText) };
     if (await call("POST", body)) { setForm(null); load(); }
   };
   const remove = async (w) => { if (!confirm(`Stop tracking "${w.label}"? This only removes it from this list, not from the blockchain.`)) return; if (await call("POST", { action: "delete", id: w.id })) load(); };
@@ -154,6 +200,8 @@ export default function AdminTeamTokens() {
           </div>
         )}
 
+        {d && d.wallets.length > 0 && <SupplyShare d={d} />}
+
         {d && d.wallets.length > 0 && <HistoryChart hist={hist} metric={metric} setMetric={setMetric} days={days} setDays={pickDays} />}
 
         {d && d.wallets.length > 0 && (
@@ -171,6 +219,15 @@ export default function AdminTeamTokens() {
               <input style={inp} placeholder="Label (e.g. Treasury, Marketing, Dev)" value={form.label} onChange={set("label")} />
               <input style={inp} placeholder="Wallet address" value={form.address} onChange={set("address")} />
               <select style={inp} value={form.kind} onChange={set("kind")}>{Object.entries(KIND).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700 }}>
+                <input type="checkbox" checked={!!form.locked} onChange={(e) => setForm((f) => ({ ...f, locked: e.target.checked }))} style={{ width: 18, height: 18 }} /> Tokens in this wallet are locked
+              </label>
+              {form.locked && (
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, margin: "0 0 4px" }}>Unlock date</div>
+                  <input type="date" style={inp} value={form.unlock_date} onChange={set("unlock_date")} />
+                </div>
+              )}
               <input style={inp} placeholder="Purpose (optional)" value={form.purpose} onChange={set("purpose")} />
               <textarea style={{ ...inp, minHeight: 70 }} placeholder="Notes (vesting, lock dates, who controls it…)" value={form.notes} onChange={set("notes")} />
               <div>
@@ -197,6 +254,7 @@ export default function AdminTeamTokens() {
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: V2.forestGreen }}>{w.label} <span style={{ fontSize: 11, fontWeight: 700, color: V2.textMuted, border: `1px solid ${V2.borderSoft}`, borderRadius: 99, padding: "2px 8px", marginLeft: 4, verticalAlign: "middle" }}>{KIND[w.kind || "team"]}</span></div>
                 {w.purpose && <div style={{ fontSize: 13, color: V2.textMuted }}>{w.purpose}</div>}
+                {lockInfo(w) && <div style={{ display: "inline-block", marginTop: 6, fontSize: 12, fontWeight: 800, color: lockInfo(w).c, border: `1.5px solid ${lockInfo(w).c}`, borderRadius: 99, padding: "2px 10px" }}>{lockInfo(w).t}</div>}
                 <div style={{ fontSize: 12.5, marginTop: 4, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                   <code>{short(w.address)}</code>
                   <button style={{ ...btn, padding: "3px 8px", fontSize: 12 }} onClick={() => copy(w.address)}>Copy</button>
@@ -206,7 +264,7 @@ export default function AdminTeamTokens() {
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: V2.forestGreen }}>{usd(w.usd)}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
-                  <button style={btn} onClick={() => setForm({ id: w.id, label: w.label, address: w.address, kind: w.kind || "team", purpose: w.purpose || "", notes: w.notes || "", expectedText: toText(w.expected) })}>Edit</button>
+                  <button style={btn} onClick={() => setForm({ id: w.id, label: w.label, address: w.address, kind: w.kind || "team", locked: !!w.locked, unlock_date: w.unlock_date || "", purpose: w.purpose || "", notes: w.notes || "", expectedText: toText(w.expected) })}>Edit</button>
                   <button style={btn} onClick={() => remove(w)}>Remove</button>
                 </div>
               </div>
