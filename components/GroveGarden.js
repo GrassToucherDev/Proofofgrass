@@ -48,10 +48,10 @@ const BEDS = [
 ];
 // Props that open a section of the Groves page when tapped (PNG sprites, always present in a grove).
 const HOT = [
-  { k: "frame",  x: 610,  y: 240, w: 130, ar: 391 / 360, act: "banners", label: "Banners" },
-  { k: "gate",   x: 255,  y: 858, w: 140, ar: 311 / 360, act: "members", label: "Invite friends" },
-  { k: "trophy", x: 1085, y: 565, w: 72,  ar: 459 / 260, act: "top",     label: "Top Groves" },
-  { k: "board",  x: 1380, y: 735, w: 130, ar: 370 / 360, act: "today",   label: "Today's proofs" },
+  { k: "frame",  x: 572,  y: 228, w: 92,  ar: 391 / 360, act: "banners", label: "Banners" },
+  { k: "gate",   x: 238,  y: 872, w: 98,  ar: 311 / 360, act: "members", label: "Invite friends" },
+  { k: "trophy", x: 1432, y: 482, w: 58,  ar: 459 / 260, act: "top",     label: "Top Groves" },
+  { k: "board",  x: 1352, y: 712, w: 96,  ar: 370 / 360, act: "today",   label: "Today's proofs" },
 ];
 const DESK = { x: 232, y: 352, w: 150 };   // sprite is 400x408
 const TREE = { x: 780, y: 330, w: 480, sc: .56 };
