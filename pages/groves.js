@@ -196,8 +196,8 @@ export default function GrovesPage() {
     .gv-tile.on{border-color:${V2.grassGreen};box-shadow:0 0 0 2px rgba(91,166,34,.18)}
     .gv-check{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:${V2.grassGreen};color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}
     .gv-lock{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:12px}
-    .gv-bar{position:sticky;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;background:#fff;border:1px solid ${V2.borderSoft};border-radius:18px;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));margin:12px 0;box-shadow:0 -2px 14px rgba(26,74,10,.12)}
-    .gv-bar-b{display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:6px 2px;border-radius:12px;cursor:pointer;font-family:${V2.fontSans};font-size:11px;font-weight:800;color:${V2.textMuted};min-width:0}
+    .gv-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;background:#f4fbec;border:1px solid ${V2.borderGreen};border-radius:14px;padding:4px;margin-top:10px}
+    .gv-bar-b{display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:5px 2px;border-radius:10px;cursor:pointer;font-family:${V2.fontSans};font-size:10.5px;font-weight:800;color:${V2.textMuted};min-width:0}
     .gv-bar-b.on{background:#e3f5d6;color:#2d6a10}
     @media(max-width:420px){.gv-primary,.gv-wide{flex-basis:100%}.gv-actions .gv-primary,.gv-actions .gv-wide{flex-basis:calc(50% - 5px);padding-left:10px;padding-right:10px}}
   `;
@@ -405,7 +405,15 @@ export default function GrovesPage() {
               <GroveGarden groveName={grove.name} members={data.members} streakDays={counted ? (streak?.streak ?? 0) : 0} slots={grove.slots} previewOrigins={router.query.garden === "origins"} forceDesk={router.query.garden === "desk"}
                 bannerUrl={bannerSrc(activeBanner)} me={username}
                 onOpen={a => { setTab(a); setTimeout(() => scrollTo("gv-tabbody"), 60); }}
-                onGift={u => act(`gift-${u}`, "/api/groves/gift", { to: u }, `Sent a shield to @${u} 🛡️`)} />
+                onGift={u => act(`gift-${u}`, "/api/groves/gift", { to: u }, `Sent a shield to @${u} 🛡️`)}>
+      <nav className="gv-bar" role="tablist" aria-label="Grove sections">
+        {[["today", "camera", "Today"], ["members", "group", "Members"], ["banners", "palette", "Banners"], ["share", "share", "Share"], ["top", "trophy", "Top"]].map(([k, ic, l]) => (
+          <button key={k} role="tab" aria-selected={tab === k} className={`gv-bar-b${tab === k ? " on" : ""}`} onClick={() => { setTab(k); scrollTo("gv-tabbody"); }}>
+            <Ico n={ic} size={22} /><span>{l}</span>
+          </button>
+        ))}
+      </nav>
+              </GroveGarden>
 
               <div id="gv-tabbody" style={{ scrollMarginTop: 80 }} />
               {tab === "today" && (<>
@@ -496,14 +504,6 @@ export default function GrovesPage() {
 
               </>)}
               {tab === "top" && boardCard}
-
-              <nav className="gv-bar" role="tablist" aria-label="Grove sections">
-                {[["today", "camera", "Today"], ["members", "group", "Members"], ["banners", "palette", "Banners"], ["share", "share", "Share"], ["top", "trophy", "Top"]].map(([k, ic, l]) => (
-                  <button key={k} role="tab" aria-selected={tab === k} className={`gv-bar-b${tab === k ? " on" : ""}`} onClick={() => { setTab(k); scrollTo("gv-tabbody"); }}>
-                    <Ico n={ic} size={26} /><span>{l}</span>
-                  </button>
-                ))}
-              </nav>
 
               <div style={{ textAlign: "center", marginBottom: 20 }}>
                 {!confirmLeave ? (
