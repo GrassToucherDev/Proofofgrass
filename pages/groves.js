@@ -14,7 +14,7 @@ import GroveBanner from "../components/GroveBanner";
 import { GroveMembers } from "../components/yard/GroveYardUI";
 import { supabase } from "../utils/supabase";
 import { renderGroveCard } from "../utils/groveShareImage";
-import { BANNER_PERMISSION_NOTE } from "../utils/groveBanners";
+import { BANNER_PERMISSION_NOTE, bannerSrc } from "../utils/groveBanners";
 
 import { withShareTags } from "../utils/shareTags";
 import Ico from "../components/Ico";
@@ -403,7 +403,10 @@ export default function GrovesPage() {
                 </div>
               </div>
 
-              <GroveGarden groveName={grove.name} members={data.members} streakDays={counted ? (streak?.streak ?? 0) : 0} slots={grove.slots} previewOrigins={router.query.garden === "origins"} forceDesk={router.query.garden === "desk"} />
+              <GroveGarden groveName={grove.name} members={data.members} streakDays={counted ? (streak?.streak ?? 0) : 0} slots={grove.slots} previewOrigins={router.query.garden === "origins"} forceDesk={router.query.garden === "desk"}
+                bannerUrl={bannerSrc(activeBanner)} me={username}
+                onOpen={a => { setTab(a); setTimeout(() => scrollTo("gv-tabs"), 60); }}
+                onGift={u => act(`gift-${u}`, "/api/groves/gift", { to: u }, `Sent a shield to @${u} 🛡️`)} />
 
               <div id="gv-tabs" className="gv-tabs" role="tablist" aria-label="Grove sections">
                 {[["today", "Today"], ["members", "Members"], ["banners", "Banners"], ["share", "Share"], ["top", "Top Groves"]].map(([k, l]) => (
