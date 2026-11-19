@@ -8,11 +8,11 @@ import Ico from "./Ico";
 
 // ---- Garden stage from the grove streak (days) ----
 const STAGES = [
-  { min: 0,  name: "Fresh soil",  note: "Lock in together to plant the first seeds." },
+  { min: 0,  name: "Fresh Soil",  note: "Lock in together to plant the first seeds." },
   { min: 3,  name: "Seedlings",   note: "The first sprouts are up." },
   { min: 7,  name: "Leafy",       note: "The beds are filling out and the yard is getting furnished." },
-  { min: 14, name: "In bloom",    note: "Flowers are opening across the yard." },
-  { min: 30, name: "Full garden", note: "A thriving garden, kept alive by the whole grove." },
+  { min: 14, name: "In Bloom",    note: "Flowers are opening across the yard." },
+  { min: 30, name: "Full Garden", note: "A thriving garden, kept alive by the whole grove." },
 ];
 export const gardenStage = (days) => { let s = 0; STAGES.forEach((st, i) => { if (days >= st.min) s = i; }); return s; };
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -207,7 +207,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
       ` }} />
       <div className="gg-head">
         <h3 className="gg-title"><Ico n="sprout" size={24} /> Grove Garden</h3>
-        <span className="gg-chip">{st.name}</span>
+        <span className="gg-chip">{st.name} – grove streak</span>
       </div>
 
       <div className="gg-scene" role="img" aria-label={`Grove garden, ${st.name}. ${done} of ${plots.length} WAGOs at work.`}>
