@@ -107,7 +107,7 @@ function Frames({ names, dur }) {
   ));
 }
 
-export default function GroveGarden({ members = [], streakDays = 0, slots = 6, groveName = "", previewOrigins = false, forceDesk = false, onOpen = null, bannerUrl = "", onGift = null, me = "" }) {
+export default function GroveGarden({ members = [], streakDays = 0, slots = 6, groveName = "", previewOrigins = false, forceDesk = false, onOpen = null, bannerUrl = "", onGift = null, me = "", children = null }) {
   const [sel, setSel] = useState("");
   const hasDesk = forceDesk || members.some((m) => m.has_screen_toucher);
   const [step, setStep] = useState(0);
@@ -326,6 +326,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         })}
       </div>
 
+      {children}
       {onOpen && !selCast && <p className="gg-tip">Tap a WAGO, the sign, gate, frame, trophy or board to open it.</p>}
       {onOpen && selCast && (
         <div className="gg-pop" role="dialog" aria-label={`@${selCast.m.username}`}>
