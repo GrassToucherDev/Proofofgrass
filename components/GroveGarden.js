@@ -46,7 +46,7 @@ const BEDS = [
   { color: "blue",   x: 1110, y: 760, w: 330, sc: .52 },
   { color: "red",    x: 800,  y: 850, w: 330, sc: .52 },
 ];
-const DESK = { x: 232, y: 352, w: 150 };   // sprite is 400x408
+const DESK = { x: 705, y: 650, w: 170 };   // sprite is 400x408
 const TREE = { x: 780, y: 330, w: 480, sc: .56 };
 const treeScale = (s) => (s >= 2 ? 1 : .88);   // the bare tree is taller than the leafy one
 const bedStages = (s) => [clamp(s, 0, 3), clamp(s - 1, 0, 3), s >= 4 ? 3 : clamp(s - 2, 0, 3)];
@@ -173,7 +173,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         .gg-pop-a{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
         .gg-pop-b{padding:8px 14px;border-radius:999px;border:1.5px solid ${V2.borderSoft};background:#fff;color:${V2.forestGreen};font-weight:800;font-size:13px;cursor:pointer;text-decoration:none;font-family:inherit}
         .gg-desk{position:absolute;transform:translate(-50%,-100%);aspect-ratio:400/408}
-        .gg-desk img{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)}
+        .gg-desk img{position:absolute;inset:0;width:100%;height:100%}
         .gg-desk-a{animation:gg-chartA 9s steps(1,end) infinite}
         .gg-desk-b{opacity:0;animation:gg-chartB 9s steps(1,end) infinite}
         @keyframes gg-chartA{0%{opacity:1}22%{opacity:0}30%{opacity:1}52%{opacity:0}60%{opacity:1}70%{opacity:0}78%{opacity:1}}
