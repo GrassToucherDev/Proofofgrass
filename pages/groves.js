@@ -14,7 +14,7 @@ import GroveBanner from "../components/GroveBanner";
 import { GroveMembers } from "../components/yard/GroveYardUI";
 import { supabase } from "../utils/supabase";
 import { renderGroveCard } from "../utils/groveShareImage";
-import { BANNER_PERMISSION_NOTE, bannerSrc } from "../utils/groveBanners";
+import { BANNER_PERMISSION_NOTE } from "../utils/groveBanners";
 
 import { withShareTags } from "../utils/shareTags";
 import Ico from "../components/Ico";
@@ -403,12 +403,12 @@ export default function GrovesPage() {
               </div>
 
               <GroveGarden groveName={grove.name} members={data.members} streakDays={counted ? (streak?.streak ?? 0) : 0} slots={grove.slots} previewOrigins={router.query.garden === "origins"} forceDesk={router.query.garden === "desk"}
-                bannerUrl={bannerSrc(activeBanner)} me={username}
+                me={username}
                 onOpen={a => { setTab(a); setTimeout(() => scrollTo("gv-tabbody"), 60); }}
                 onGift={u => act(`gift-${u}`, "/api/groves/gift", { to: u }, `Sent a shield to @${u} 🛡️`)}>
       <nav className="gv-bar" role="tablist" aria-label="Grove sections">
         {[["today", "camera", "Today"], ["members", "group", "Members"], ["banners", "palette", "Banners"], ["share", "share", "Share"], ["top", "trophy", "Top"]].map(([k, ic, l]) => (
-          <button key={k} role="tab" aria-selected={tab === k} className={`gv-bar-b${tab === k ? " on" : ""}`} onClick={() => { setTab(k); scrollTo("gv-tabbody"); }}>
+          <button key={k} role="tab" aria-selected={tab === k} aria-label={l} title={l} className={`gv-bar-b${tab === k ? " on" : ""}`} onClick={() => { setTab(k); scrollTo("gv-tabbody"); }}>
             <Ico n={ic} size={22} /><span>{l}</span>
           </button>
         ))}
