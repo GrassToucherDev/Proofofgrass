@@ -153,7 +153,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         .gg-it{position:absolute;transform:translate(-50%,-100%);pointer-events:none}
         .gg-it>img{width:100%;height:auto}
         .gg-desk{position:absolute;transform:translate(-50%,-100%);aspect-ratio:400/408}
-        .gg-desk img{position:absolute;inset:0;width:100%;height:100%}
+        .gg-desk img{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)}
         .gg-desk-a{animation:gg-chartA 9s steps(1,end) infinite}
         .gg-desk-b{opacity:0;animation:gg-chartB 9s steps(1,end) infinite}
         @keyframes gg-chartA{0%{opacity:1}22%{opacity:0}30%{opacity:1}52%{opacity:0}60%{opacity:1}70%{opacity:0}78%{opacity:1}}
@@ -215,7 +215,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
       ` }} />
       <div className="gg-head">
         <h3 className="gg-title"><Ico n="sprout" size={24} /> Grove Garden</h3>
-        <span className="gg-chip">{st.name} – grove streak</span>
+        <span className="gg-chip">{st.name} – {streakDays} day streak</span>
       </div>
 
       <div className="gg-scene" role="img" aria-label={`Grove garden, ${st.name}. ${done} of ${plots.length} WAGOs at work.`}>
