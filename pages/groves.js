@@ -198,7 +198,7 @@ export default function GrovesPage() {
     .gv-lock{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:12px}
     .gv-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;background:#f4fbec;border:1px solid ${V2.borderGreen};border-radius:14px;padding:4px;margin-top:10px}
     .gv-bar-b{display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:5px 2px;border-radius:10px;cursor:pointer;font-family:${V2.fontSans};font-size:10.5px;font-weight:800;color:${V2.textMuted};min-width:0}
-    .gv-bar-i{width:28px;height:26px;object-fit:contain}
+    .gv-bar-i{width:28px;height:28px;object-fit:contain}
     .gv-bar-b.on{background:#e3f5d6;color:#2d6a10}
     @media(max-width:420px){.gv-primary,.gv-wide{flex-basis:100%}.gv-actions .gv-primary,.gv-actions .gv-wide{flex-basis:calc(50% - 5px);padding-left:10px;padding-right:10px}}
   `;
@@ -408,7 +408,7 @@ export default function GrovesPage() {
                 onOpen={a => { setTab(a); setTimeout(() => scrollTo("gv-tabbody"), 60); }}
                 onGift={u => act(`gift-${u}`, "/api/groves/gift", { to: u }, `Sent a shield to @${u} 🛡️`)}>
       <nav className="gv-bar" role="tablist" aria-label="Grove sections">
-        {[["today", "board.png", "Today"], ["members", "gate.png", "Members"], ["banners", "frame.png", "Banners"], ["share", "sign.webp", "Share"], ["top", "trophy.png", "Top"]].map(([k, ic, l]) => (
+        {[["today", "board.png", "Today"], ["members", "gate.png", "Members"], ["banners", "frame.png", "Banners"], ["share", "sign.png", "Share"], ["top", "trophy.png", "Top"]].map(([k, ic, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} aria-label={l} title={l} className={`gv-bar-b${tab === k ? " on" : ""}`} onClick={() => { setTab(k); scrollTo("gv-tabbody"); }}>
             <img className="gv-bar-i" src={`/garden/nav/${ic}`} alt="" /><span>{l}</span>
           </button>
