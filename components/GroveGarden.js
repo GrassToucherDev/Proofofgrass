@@ -45,6 +45,7 @@ const BEDS = [
   { color: "blue",   x: 1110, y: 760, w: 330, sc: .52 },
   { color: "red",    x: 800,  y: 850, w: 330, sc: .52 },
 ];
+const DESK = { x: 790, y: 610, w: 170 };   // sprite is 400x408
 const TREE = { x: 780, y: 330, w: 480, sc: .56 };
 const treeScale = (s) => (s >= 2 ? 1 : .88);   // the bare tree is taller than the leafy one
 const bedStages = (s) => [clamp(s, 0, 3), clamp(s - 1, 0, 3), s >= 4 ? 3 : clamp(s - 2, 0, 3)];
@@ -98,7 +99,8 @@ function Frames({ names, dur }) {
   ));
 }
 
-export default function GroveGarden({ members = [], streakDays = 0, slots = 6, groveName = "", previewOrigins = false }) {
+export default function GroveGarden({ members = [], streakDays = 0, slots = 6, groveName = "", previewOrigins = false, forceDesk = false }) {
+  const hasDesk = forceDesk || members.some((m) => m.has_screen_toucher);
   const [step, setStep] = useState(0);
   const [walking, setWalking] = useState(false);
   const [still, setStill] = useState(false);
@@ -150,6 +152,12 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         .gg-scene img{image-rendering:pixelated;display:block;max-width:none}
         .gg-it{position:absolute;transform:translate(-50%,-100%);pointer-events:none}
         .gg-it>img{width:100%;height:auto}
+        .gg-desk{position:absolute;transform:translate(-50%,-100%);aspect-ratio:400/408}
+        .gg-desk img{position:absolute;inset:0;width:100%;height:100%}
+        .gg-desk-a{animation:gg-chartA 9s steps(1,end) infinite}
+        .gg-desk-b{opacity:0;animation:gg-chartB 9s steps(1,end) infinite}
+        @keyframes gg-chartA{0%{opacity:1}22%{opacity:0}30%{opacity:1}52%{opacity:0}60%{opacity:1}70%{opacity:0}78%{opacity:1}}
+        @keyframes gg-chartB{0%{opacity:0}22%{opacity:1}30%{opacity:0}52%{opacity:1}60%{opacity:0}70%{opacity:1}78%{opacity:0}}
         .gg-wago{position:absolute;pointer-events:none;transform:translate(-50%,-100%) scale(var(--gs,1));transform-origin:50% 100%;transition:left 3.2s ease-in-out,top 3.2s ease-in-out}
         .gg-wago.still{transition:none}
         .gg-flip{position:absolute;inset:0}
@@ -202,7 +210,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         @keyframes gg-flutter{0%{left:6%;top:52%}20%{left:30%;top:36%}40%{left:55%;top:48%}60%{left:78%;top:30%}80%{left:50%;top:62%}100%{left:6%;top:52%}}
         @keyframes gg-flap{0%{transform:scaleY(1)}100%{transform:scaleY(.62)}}
         @keyframes gg-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.35) drop-shadow(0 0 6px #ffd45a)}}
-        @media (prefers-reduced-motion:reduce){.gg-wago *,.gg-zzz,.gg-fly,.gg-bfly,.gg-bfly img,.gg-glow,.gg-hive{animation:none!important;transition:none!important}
+        @media (prefers-reduced-motion:reduce){.gg-desk img,.gg-wago *,.gg-zzz,.gg-fly,.gg-bfly,.gg-bfly img,.gg-glow,.gg-hive{animation:none!important;transition:none!important}
           .gg-fr{opacity:0!important}.gg-fr:first-child{opacity:1!important}}
       ` }} />
       <div className="gg-head">
@@ -225,6 +233,14 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
             {p.sign && cname && <span className="gg-sign-t"><b>{cname}</b><i>Day {streakDays}</i></span>}
           </div>
         ))}
+
+        {/* Screen Toucher holder perk: a desk whose monitor flips between a green and a red chart */}
+        {hasDesk && (
+          <div className="gg-it gg-desk" title="Screen Toucher desk" style={{ left: pw(DESK.x), top: ph(DESK.y), width: pw(DESK.w), zIndex: DESK.y }}>
+            <img className="gg-desk-a" src={`${SC}desk-up.png`} alt="" />
+            <img className="gg-desk-b" src={`${SC}desk-down.png`} alt="" />
+          </div>
+        )}
 
         {/* ambient life */}
         {[[300, 300], [560, 480], [900, 420], [1000, 640], [1400, 300], [650, 760]].map(([x, y], i) => (
