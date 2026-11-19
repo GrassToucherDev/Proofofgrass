@@ -12,6 +12,7 @@ const COVER_UNLOCKS = {
   y2k_pack:          ["marketplace_chrome_meadow","marketplace_aqua_coast","marketplace_bubble_forest","marketplace_dream_sky","marketplace_cyber_garden"],
   trenches_pack:          ["marketplace_ath_overlook","marketplace_rug_pull_ravine","marketplace_bear_market_blizzard","marketplace_moonbag_camp","marketplace_liquidity_lagoon"],
   blockchain_trails_pack: ["marketplace_bitcoin_bay","marketplace_ethereum_lake","marketplace_bnb_dunes","marketplace_robinhood_range","marketplace_solana_springs"],
+  pixel_parks_pack: ["marketplace_trailhead_dawn","marketplace_pixel_peak","marketplace_campfire_meadow","marketplace_riverside_rest","marketplace_starry_overlook"],
 };
 
 const CONSUMABLE_ITEMS = {

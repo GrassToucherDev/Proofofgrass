@@ -34,6 +34,19 @@ const CATALOGUE = [
     tags:["Retro Beach","Retro Mountain","Retro Sunflower","Retro Waterfall","Retro Night"],
   },
   {
+    id:"pixel_parks_pack", name:"Pixel Parks", category:"cosmetics",
+    status:"live", featured:false, usdPrice:5.00,
+    description:"Five 16-bit pixel art park scenes for your Proof of Grass profile, from a misty trailhead at dawn to a starry overlook at night.",
+    covers:[
+      { slug:"marketplace_trailhead_dawn", name:"Trailhead Dawn", emoji:"🌄", imageUrl:`${SUPABASE_URL}/covers/trailhead_dawn.png`, fallback:"linear-gradient(135deg,#3a1a2e,#a46e6040)" },
+      { slug:"marketplace_pixel_peak", name:"Pixel Peak", emoji:"⛰️", imageUrl:`${SUPABASE_URL}/covers/pixel_peak.png`, fallback:"linear-gradient(135deg,#0a1a30,#5586b040)" },
+      { slug:"marketplace_campfire_meadow", name:"Campfire Meadow", emoji:"🔥", imageUrl:`${SUPABASE_URL}/covers/campfire_meadow.png`, fallback:"linear-gradient(135deg,#1e1238,#72575e40)" },
+      { slug:"marketplace_riverside_rest", name:"Riverside Rest", emoji:"🌉", imageUrl:`${SUPABASE_URL}/covers/riverside_rest.png`, fallback:"linear-gradient(135deg,#1a2210,#8e7b6540)" },
+      { slug:"marketplace_starry_overlook", name:"Starry Overlook", emoji:"🌙", imageUrl:`${SUPABASE_URL}/covers/starry_overlook.png`, fallback:"linear-gradient(135deg,#0c0a24,#40345040)" },
+    ],
+    tags:["Trailhead Dawn","Pixel Peak","Campfire Meadow","Riverside Rest","Starry Overlook"],
+  },
+  {
     id:"anime_nature_pack", name:"Anime Outdoors", category:"cosmetics",
     status:"live", featured:false, usdPrice:5.00,
     description:"Five anime-inspired nature covers bringing Japanese aesthetics to your Proof of Grass profile.",
