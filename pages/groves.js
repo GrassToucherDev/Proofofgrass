@@ -383,7 +383,7 @@ export default function GrovesPage() {
                 </div>
               </div>
 
-              <GroveGarden groveName={grove.name} members={data.members} streakDays={counted ? (streak?.streak ?? 0) : 0} slots={grove.slots} previewOrigins={router.query.garden === "origins"} />
+              <GroveGarden groveName={grove.name} members={data.members} streakDays={counted ? (streak?.streak ?? 0) : 0} slots={grove.slots} previewOrigins={router.query.garden === "origins"} forceDesk={router.query.garden === "desk"} />
               {ident?.mine && <GroveToday username={username} refreshKey={data?.members?.map(m => m.locked_today ? 1 : 0).join("")} />}
 
               <div className="gv-card" id="gv-members">

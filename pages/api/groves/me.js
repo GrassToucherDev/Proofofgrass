@@ -14,5 +14,14 @@ export default async function handler(req, res) {
       if (perfect) data.perfect = perfect;
     }
   } catch (e) { console.error("[groves/me] perfect", e); }
+  // Screen Toucher holders unlock the trading desk in the garden; a failed lookup just hides it.
+  try {
+    const names = (data?.members || []).map((m) => m.username).filter(Boolean);
+    if (names.length) {
+      const { data: rows } = await adminClient().from("Profiles").select("username,has_screen_toucher").in("username", names);
+      const st = new Set((rows || []).filter((r) => r.has_screen_toucher).map((r) => String(r.username).toLowerCase()));
+      data.members = data.members.map((m) => ({ ...m, has_screen_toucher: st.has(String(m.username).toLowerCase()) }));
+    }
+  } catch (e) { console.error("[groves/me] screen_toucher", e); }
   return res.status(200).json(data);
 }
