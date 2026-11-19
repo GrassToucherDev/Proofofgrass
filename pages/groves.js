@@ -404,7 +404,7 @@ export default function GrovesPage() {
               </div>
 
               <GroveGarden groveName={grove.name} members={data.members} streakDays={counted ? (streak?.streak ?? 0) : 0} slots={grove.slots} previewOrigins={router.query.garden === "origins"} forceDesk={router.query.garden === "desk"}
-                me={username}
+                me={username} counted={counted} forceReveal={router.query.garden === "reveal"}
                 onOpen={a => { setTab(a); setTimeout(() => scrollTo("gv-tabbody"), 60); }}
                 onGift={u => act(`gift-${u}`, "/api/groves/gift", { to: u }, `Sent a shield to @${u} 🛡️`)}>
       <nav className="gv-bar" role="tablist" aria-label="Grove sections">

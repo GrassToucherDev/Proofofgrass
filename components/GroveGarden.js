@@ -100,7 +100,8 @@ function Frames({ names, dur }) {
   ));
 }
 
-export default function GroveGarden({ members = [], streakDays = 0, slots = 6, groveName = "", previewOrigins = false, forceDesk = false, onOpen = null, bannerUrl = "", onGift = null, me = "", children = null }) {
+export default function GroveGarden({ members = [], streakDays = 0, slots = 6, groveName = "", previewOrigins = false, forceDesk = false, onOpen = null, bannerUrl = "", onGift = null, me = "", children = null, counted = true, forceReveal = false }) {
+  const [reveal, setReveal] = useState(false);
   const [sel, setSel] = useState("");
   const hasDesk = forceDesk || members.some((m) => m.has_screen_toucher);
   const [step, setStep] = useState(0);
@@ -123,6 +124,22 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
   const st = STAGES[stage];
   const next = STAGES[stage + 1];
   const beds = bedStages(stage);
+  const nextBeds = next ? bedStages(stage + 1) : null;
+  // First time this grove is seen at a new stage, play a one-off reveal (remembered per grove in this browser).
+  useEffect(() => {
+    if (forceReveal) { setReveal(true); const t = setTimeout(() => setReveal(false), 6000); return () => clearTimeout(t); }
+    if (!groveName) return undefined;
+    const key = `gg_seen_stage:${groveName}`;
+    let seen = null;
+    try { const v = window.localStorage.getItem(key); seen = v == null ? null : Number(v); } catch {}
+    try { window.localStorage.setItem(key, String(stage)); } catch {}
+    if ((seen == null && stage > 0) || (seen != null && stage > seen)) {
+      setReveal(true);
+      const t = setTimeout(() => setReveal(false), 6000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [stage, groveName, forceReveal]);
   const plots = members.slice(0, Math.max(slots, 1));
   const seed = plots.length ? hash(plots[0].username) : 0;
 
@@ -164,6 +181,20 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         .gg-nav .gv-bar-b img{width:26px;height:26px;object-fit:contain}
         .gg-nav .gv-bar-b span{display:none}
         @container (min-width: 520px){.gg-nav .gv-bar-b span{display:block}}
+        .gg-reveal{position:absolute;left:50%;top:7%;transform:translateX(-50%);z-index:2100;display:flex;flex-direction:row;align-items:center;gap:8px;white-space:nowrap;background:rgba(255,255,255,.94);border:2px solid #7ac143;border-radius:16px;padding:6px 14px;box-shadow:0 6px 22px rgba(0,0,0,.25);animation:gg-rev 6s ease both;pointer-events:none;color:${V2.forestGreen}}
+        .gg-reveal b{font-size:clamp(14px,2.6cqw,20px)}
+        .gg-reveal span{display:none}
+        @container (min-width: 520px){.gg-reveal span{display:inline;font-size:12px;color:${V2.textMuted};font-weight:700}}
+        @keyframes gg-rev{0%{opacity:0;transform:translate(-50%,10px) scale(.85)}8%{opacity:1;transform:translate(-50%,0) scale(1.04)}14%{transform:translate(-50%,0) scale(1)}85%{opacity:1}100%{opacity:0}}
+        .gg-pop-in img{animation:gg-pop 1.1s cubic-bezier(.3,1.6,.5,1) both;transform-origin:50% 100%;animation-delay:inherit}
+        @keyframes gg-pop{0%{transform:scale(.55);filter:brightness(1.6)}100%{transform:scale(1);filter:none}}
+        .gg-next{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 12px;border:1px dashed ${V2.borderGreen};border-radius:14px;background:#f8fdf3}
+        .gg-next-t{display:flex;gap:2px;flex:0 0 auto}
+        .gg-next-t img{width:46px;height:auto;image-rendering:pixelated;filter:saturate(.8)}
+        .gg-next-x{min-width:0;font-size:13px;color:${V2.textBody};line-height:1.35}
+        .gg-next-x b{color:${V2.forestGreen}}
+        .gg-bar-p{height:6px;border-radius:99px;background:#e3f5d6;margin-top:6px;overflow:hidden}
+        .gg-bar-p i{display:block;height:100%;background:#7ac143;border-radius:99px}
         .gg-tip{margin:10px 0 0;font-size:12px;color:#5b6b50}
         .gg-pop{margin-top:12px;border:1px solid ${V2.borderGreen};background:#f4fbec;border-radius:14px;padding:12px 14px}
         .gg-pop-h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;position:relative;padding-right:28px}
@@ -230,7 +261,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         @keyframes gg-flutter{0%{left:6%;top:52%}20%{left:30%;top:36%}40%{left:55%;top:48%}60%{left:78%;top:30%}80%{left:50%;top:62%}100%{left:6%;top:52%}}
         @keyframes gg-flap{0%{transform:scaleY(1)}100%{transform:scaleY(.62)}}
         @keyframes gg-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.35) drop-shadow(0 0 6px #ffd45a)}}
-        @media (prefers-reduced-motion:reduce){.gg-desk img,.gg-wago *,.gg-zzz,.gg-fly,.gg-bfly,.gg-bfly img,.gg-glow,.gg-hive{animation:none!important;transition:none!important}
+        @media (prefers-reduced-motion:reduce){.gg-reveal,.gg-pop-in img,.gg-desk img,.gg-wago *,.gg-zzz,.gg-fly,.gg-bfly,.gg-bfly img,.gg-glow,.gg-hive{animation:none!important;transition:none!important}
           .gg-fr{opacity:0!important}.gg-fr:first-child{opacity:1!important}}
       ` }} />
       <div className="gg-head">
@@ -241,7 +272,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
       <div className="gg-scene" role="img" aria-label={`Grove garden, ${st.name}. ${done} of ${plots.length} WAGOs at work.`}>
         {/* the yard (z = ground line, so WAGOs walk in front of / behind things) */}
         {BEDS.map((b, i) => (
-          <div className="gg-it" key={b.color} style={{ left: pw(b.x), top: ph(b.y), width: pw(b.w * b.sc), zIndex: b.y }}>
+          <div className={`gg-it${reveal ? " gg-pop-in" : ""}`} key={b.color} style={{ left: pw(b.x), top: ph(b.y), width: pw(b.w * b.sc), zIndex: b.y, animationDelay: `${i * 0.35}s` }}>
             <img src={`${SC}bed-${b.color}-${beds[i]}.webp`} alt="" />
           </div>
         ))}
@@ -304,6 +335,13 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
             </div>
           );
         })}
+        {reveal && (
+          <div className="gg-reveal" aria-live="polite">
+            <Ico n="sprout" size={28} />
+            <b>{st.name} unlocked</b>
+            <span>{streakDays}-day grove streak</span>
+          </div>
+        )}
         {children && <div className="gg-nav">{children}</div>}
       </div>
 
@@ -327,9 +365,26 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
           <div className="gg-li" key={m.username}><b>@{m.username}</b><span>{spot.job}</span></div>
         ))}
       </div>
+      {next && nextBeds && (
+        <div className="gg-next">
+          <div className="gg-next-t" aria-hidden="true">
+            {BEDS.map((b, i) => <img key={b.color} src={`${SC}bed-${b.color}-${nextBeds[i]}.webp`} alt="" />)}
+          </div>
+          <div className="gg-next-x">
+            <b>Next: {next.name}</b> at a {next.min}-day grove streak
+            {counted && <div className="gg-bar-p" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((streakDays / next.min) * 100))}%` }} /></div>}
+          </div>
+        </div>
+      )}
       <div className="gg-foot">
-        <b>{done} of {plots.length}</b> WAGOs at work today. {st.note}
-        {next ? <> The next stage, <b>{next.name}</b>, arrives at a {next.min}-day grove streak.</> : null}
+        {counted ? (
+          <><b>{done} of {plots.length}</b> WAGOs at work today. {st.note}</>
+        ) : (() => {
+          const need = Math.max(0, 3 - members.length);
+          const mine = members.find((m) => String(m.username).toLowerCase() === String(me).toLowerCase());
+          const lead = mine ? (mine.locked_today ? "You logged today's proof!" : "You have not logged today's proof yet.") : `${done} of ${plots.length} logged today.`;
+          return <>{lead} Invite {need} {need === 1 ? "friend" : "friends"} to start your Grove streak.</>;
+        })()}
         {previewOrigins && <div className="gg-prev">Preview: sample WAGO Origins are standing in until the collection mints.</div>}
       </div>
     </div>
