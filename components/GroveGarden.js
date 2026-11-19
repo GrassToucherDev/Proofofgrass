@@ -103,7 +103,8 @@ function Frames({ names, dur }) {
 export default function GroveGarden({ members = [], streakDays = 0, slots = 6, groveName = "", previewOrigins = false, forceDesk = false, onOpen = null, bannerUrl = "", onGift = null, me = "", children = null, counted = true, forceReveal = false }) {
   const [reveal, setReveal] = useState(false);
   const [sel, setSel] = useState("");
-  const hasDesk = forceDesk || members.some((m) => m.has_screen_toucher);
+  const deskHolder = members.find((m) => m.has_screen_toucher);
+  const hasDesk = forceDesk || !!deskHolder;
   const [step, setStep] = useState(0);
   const [walking, setWalking] = useState(false);
   const [still, setStill] = useState(false);
@@ -203,6 +204,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         .gg-pop-x{position:absolute;right:0;top:-4px;border:0;background:none;font-size:22px;line-height:1;color:${V2.textMuted};cursor:pointer;padding:4px 6px}
         .gg-pop-a{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
         .gg-pop-b{padding:8px 14px;border-radius:999px;border:1.5px solid ${V2.borderSoft};background:#fff;color:${V2.forestGreen};font-weight:800;font-size:13px;cursor:pointer;text-decoration:none;font-family:inherit}
+        .gg-plaque{position:absolute;left:50%;top:100%;transform:translate(-50%,2px);white-space:nowrap;font-size:clamp(7px,1.35cqw,10px);font-weight:800;color:#5a3a16;background:#f3d9a4;border:1px solid #7e5126;border-radius:4px;padding:0 4px;pointer-events:none;line-height:1.3}
         .gg-desk{position:absolute;transform:translate(-50%,-100%);aspect-ratio:400/408}
         .gg-desk img{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)}
         .gg-desk-a{animation:gg-chartA 9s steps(1,end) infinite}
@@ -290,6 +292,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
           <div className="gg-it gg-desk" title="Screen Toucher desk" style={{ left: pw(DESK.x), top: ph(DESK.y), width: pw(DESK.w), zIndex: DESK.y }}>
             <img className="gg-desk-a" src={`${SC}desk-up.png`} alt="" />
             <img className="gg-desk-b" src={`${SC}desk-down.png`} alt="" />
+            {deskHolder && <span className="gg-plaque">@{deskHolder.username}'s desk</span>}
           </div>
         )}
 
