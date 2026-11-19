@@ -129,6 +129,7 @@ export default async function handler(req, res) {
           'marketplace_ath_overlook','marketplace_rug_pull_ravine','marketplace_bear_market_blizzard',
           'marketplace_moonbag_camp','marketplace_liquidity_lagoon',
         ],
+        pixel_parks_pack: ['marketplace_trailhead_dawn','marketplace_pixel_peak','marketplace_campfire_meadow','marketplace_riverside_rest','marketplace_starry_overlook'],
       };
 
       const coverSlugs = PACK_COVERS[pack_id] || [];

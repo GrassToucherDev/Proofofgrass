@@ -585,6 +585,17 @@ export default function FlexCardPage() {
       ],
     },
     {
+      id:"pixel_parks_pack", name:"Pixel Parks", emoji:"🏞️",
+      bg:"linear-gradient(135deg,#1a2210,#a78bfa44)",
+      covers:[
+        { slug:"marketplace_trailhead_dawn", name:"Trailhead Dawn", imageUrl:`${SUPABASE_URL}/covers/trailhead_dawn.png`, fallback:"linear-gradient(135deg,#3a1a2e,#a46e60)" },
+        { slug:"marketplace_pixel_peak", name:"Pixel Peak", imageUrl:`${SUPABASE_URL}/covers/pixel_peak.png`, fallback:"linear-gradient(135deg,#0a1a30,#5586b0)" },
+        { slug:"marketplace_campfire_meadow", name:"Campfire Meadow", imageUrl:`${SUPABASE_URL}/covers/campfire_meadow.png`, fallback:"linear-gradient(135deg,#1e1238,#72575e)" },
+        { slug:"marketplace_riverside_rest", name:"Riverside Rest", imageUrl:`${SUPABASE_URL}/covers/riverside_rest.png`, fallback:"linear-gradient(135deg,#1a2210,#8e7b65)" },
+        { slug:"marketplace_starry_overlook", name:"Starry Overlook", imageUrl:`${SUPABASE_URL}/covers/starry_overlook.png`, fallback:"linear-gradient(135deg,#0c0a24,#403450)" },
+      ],
+    },
+    {
       id:"trenches_pack", name:"The Trenches", emoji:"🌿",
       bg:"linear-gradient(135deg,#1a2d0e,#3d7a12)",
       covers:[

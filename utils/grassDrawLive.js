@@ -3,7 +3,7 @@
 export const TIER = { grass_score: 0, shield: 1, profile_pack: 2, nft: 3 };
 export const PACK_NAMES = {
   retro_covers_pack: "Retro Covers Pack", anime_nature_pack: "Anime Nature Pack",
-  y2k_pack: "Y2K Pack", trenches_pack: "Trenches Pack", blockchain_trails_pack: "Blockchain Trails Pack",
+  y2k_pack: "Y2K Pack", trenches_pack: "Trenches Pack", blockchain_trails_pack: "Blockchain Trails Pack", pixel_parks_pack: "Pixel Parks Pack",
 };
 
 export function prizeLabel(w) {
