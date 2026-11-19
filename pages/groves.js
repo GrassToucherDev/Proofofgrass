@@ -70,6 +70,7 @@ export default function GrovesPage() {
   const [cardErr, setCardErr] = useState("");
   const [newOwner, setNewOwner] = useState("");
   const [badAv, setBadAv] = useState({});
+  const [tab, setTab] = useState("today");        // in-grove tab: today | members | banners | share | top
   const cardFile = useRef(null);                 // pre-built File so share() can run synchronously (Safari)
 
   const joinCode = typeof router.query.join === "string" ? router.query.join.toLowerCase() : "";
@@ -195,8 +196,73 @@ export default function GrovesPage() {
     .gv-tile.on{border-color:${V2.grassGreen};box-shadow:0 0 0 2px rgba(91,166,34,.18)}
     .gv-check{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:${V2.grassGreen};color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}
     .gv-lock{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:12px}
-    @media(max-width:420px){.gv-primary,.gv-wide{flex-basis:100%}}
+    .gv-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 12px;margin-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .gv-tabs::-webkit-scrollbar{display:none}
+    .gv-tab{flex:0 0 auto;padding:9px 16px;border-radius:999px;border:1.5px solid ${V2.borderSoft};background:#fff;color:${V2.forestGreen};font-weight:800;font-size:14px;cursor:pointer;font-family:${V2.fontSans}}
+    .gv-tab.on{background:#2d6a10;border-color:#2d6a10;color:#fff}
+    @media(max-width:420px){.gv-primary,.gv-wide{flex-basis:100%}.gv-actions .gv-primary,.gv-actions .gv-wide{flex-basis:calc(50% - 5px);padding-left:10px;padding-right:10px}}
   `;
+
+  const boardCard = (
+    <div className="gv-card">
+      <div className="gv-h" style={{ fontSize: 20 }}><Ico inline n="🏆" size={18} />Top Groves</div>
+      <div style={{ display: "flex", gap: 8, margin: "4px 0 12px" }}>
+        {[["streak", "🔥 Streak"], ["perfect", "✨ Perfect days"]].map(([k, l]) => (
+          <button key={k} onClick={() => setBoardTab(k)} className="gv-pill"
+            style={{ border: "none", cursor: "pointer", fontWeight: 700, background: boardTab === k ? "#2d6a10" : "#e3f5d6", color: boardTab === k ? "#fff" : "#2d6a10" }}>{l}</button>
+        ))}
+      </div>
+      {boardTab === "perfect" ? (
+        <>
+          <p style={{ margin: "0 0 12px", color: V2.textMuted, fontSize: 13 }}>A perfect day is when every member locks in. Shields don't count. Groves are ranked within their size so smaller groves don't have the edge.</p>
+          {pBoard.length === 0 ? (
+            <p style={{ margin: 0, color: V2.textMuted, fontSize: 14 }}>No perfect days yet. Be the first grove where everyone locks in.</p>
+          ) : ["3-4", "5-6"].map(br => {
+            const rows = pBoard.filter(g => g.perfect.bracket === br).slice(0, 10);
+            if (!rows.length) return null;
+            return (
+              <div key={br} style={{ marginBottom: 14 }}>
+                <div style={{ fontWeight: 800, color: V2.forestGreen, fontSize: 14, margin: "6px 0" }}>{br} member groves</div>
+                {rows.map((g, i) => (
+                  <div className="gv-row" key={g.id}>
+                    <span style={{ width: 24, fontWeight: 800, color: V2.textMuted }}>{i + 1}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: V2.forestGreen, overflowWrap: "anywhere" }}>{g.name}</div>
+                      <div style={{ fontSize: 12, color: V2.textMuted }}>{g.perfect.members} members · run {g.perfect.current}d · best {g.perfect.best}d{g.perfect.tier > 0 ? ` · badge tier ${g.perfect.tier}` : ""}</div>
+                    </div>
+                    <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10" }}>✨ {g.perfect.total}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </>
+      ) : board.length === 0 ? (
+        <p style={{ margin: 0, color: V2.textMuted, fontSize: 14 }}>No groves on the board yet. Groves with 3 or more members and a running streak appear here.</p>
+      ) : board.map((g, i) => (
+        <div className="gv-row" key={g.id}>
+          <span style={{ width: 24, fontWeight: 800, color: V2.textMuted, alignSelf: "flex-start", paddingTop: 2 }}>{i + 1}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, color: V2.forestGreen, overflowWrap: "anywhere" }}>{g.name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+              {(g.member_list || []).length > 0 && (
+                <span className="gv-stack" aria-label={`Members: ${(g.member_list || []).map(m => "@" + m.username).join(", ")}`}>
+                  {g.member_list.map(m => (
+                    <span key={m.username} className="gv-mini" title={`@${m.username}`}>
+                      {m.avatar_url && !badAv[m.username] ? <img src={m.avatar_url} alt="" onError={() => setBadAv(x => ({ ...x, [m.username]: true }))} /> : <b>{m.username[0]?.toUpperCase()}</b>}
+                    </span>
+                  ))}
+                </span>
+              )}
+              <span style={{ fontSize: 13, color: V2.textMuted }}>{g.members} members</span>
+            </div>
+            <GroveMembers groveId={g.id} count={g.members} label="Members" compact />
+          </div>
+          <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10", alignSelf: "flex-start" }}>{g.streak}d</span>
+        </div>
+      ))}
+    </div>
+  );
 
   const needsSecure = username && ident && !ident.mine;
   return (
@@ -211,6 +277,9 @@ export default function GrovesPage() {
             <img src="/groves-logo.webp" alt="Groves" width={700} height={233}
               style={{ display: "block", width: "100%", maxWidth: 700, height: "auto", margin: "0 auto 8px" }} />
           </h1>
+          {grove ? (
+            <p style={{ color: V2.textBody, margin: "0 auto 16px", textAlign: "center", maxWidth: 520, lineHeight: 1.5, fontSize: 14 }}>Lock in together to grow your grove streak.</p>
+          ) : (
           <div style={{ maxWidth: 640, margin: "0 auto 22px", textAlign: "center" }}>
             <p style={{ color: V2.textBody, margin: "0 0 12px", lineHeight: 1.6 }}>
               Team up with friends to build a shared streak. A grove needs at least 3 members to count and holds up to 6.
@@ -222,6 +291,7 @@ export default function GrovesPage() {
               🌳 Browse Grove Banners
             </Link>
           </div>
+          )}
 
           {msg.text && (
             <div role={msg.type === "err" ? "alert" : "status"} className="gv-card"
@@ -293,7 +363,7 @@ export default function GrovesPage() {
             return (
             <>
               <div className="gv-card" style={{ padding: 0, overflow: "hidden" }}>
-                <GroveBanner banner={activeBanner} height={220} scrim showTag radius={0} style={{ minHeight: 200 }}>
+                <GroveBanner banner={activeBanner} height={150} scrim showTag radius={0} style={{ minHeight: 130 }}>
                   <div style={{ position: "absolute", left: 20, right: 20, top: "42%", transform: "translateY(-50%)", color: "#fff" }}>
                     <div style={{ fontFamily: V2.fontSans, fontWeight: 900, fontSize: "clamp(26px,6vw,40px)", lineHeight: 1.05, textShadow: "0 2px 8px rgba(0,0,0,.4)", overflowWrap: "anywhere" }}>{grove.name}</div>
                   </div>
@@ -318,14 +388,6 @@ export default function GrovesPage() {
                       {data.perfect.next_target ? <> · next badge at {data.perfect.next_target} perfect days ({data.perfect.bracket} member groves)</> : <> · top badge reached 🏅</>}
                     </div>
                   )}
-                  <div className="gv-avrow" aria-label="Today's participation">
-                    {data.members.map(m => (
-                      <span key={m.username} className="gv-av" title={`@${m.username}: ${m.locked_today ? "locked in" : "not yet"}`}>
-                        {avatars[m.username] && !badAv[m.username] ? <img src={avatars[m.username]} alt="" onError={() => setBadAv(x => ({ ...x, [m.username]: true }))} /> : <b>{m.username[0]?.toUpperCase()}</b>}
-                        <i className={m.locked_today ? "ok" : "no"}>{m.locked_today ? "✓" : "…"}</i>
-                      </span>
-                    ))}
-                  </div>
                   <div style={{ fontSize: 14, color: V2.textBody, margin: "16px 0 14px" }}>
                     {!counted
                       ? `${lockedN} of ${data.members.length} locked in today. Not counting yet: a grove needs at least 3 members. Invite ${Math.max(0, 3 - data.members.length)} more ${3 - data.members.length === 1 ? "friend" : "friends"} to start your grove streak.`
@@ -336,56 +398,24 @@ export default function GrovesPage() {
                   <div className="gv-actions">
                     <button className="gv-primary" onClick={shareGrove} disabled={!cardUrl}>Share Grove</button>
                     {data.members.length < grove.slots && inviteUrl && <button className="gv-btn2 gv-wide" onClick={copy}>{copied ? "Link copied!" : "Invite friends"}</button>}
-                    {others.length > 0 && <button className="gv-link" onClick={() => scrollTo("gv-members")}><Ico inline n="🛡️" size={18} />Gift a shield</button>}
+                    {others.length > 0 && <button className="gv-link" onClick={() => { setTab("members"); setTimeout(() => scrollTo("gv-tabs"), 60); }}><Ico inline n="🛡️" size={18} />Gift a shield</button>}
                   </div>
                 </div>
               </div>
 
-              <div className="gv-card" id="gv-appearance">
-                <div className="gv-h" style={{ fontSize: 20 }}>🖼️ Grove Appearance</div>
-                <p style={{ margin: "0 0 12px", fontSize: 13, color: V2.textMuted }}>Unlocked for {grove.name}</p>
-                <div className="gv-tiles">
-                  {(bn?.banners || []).map(b => {
-                    const active = b.id === activeBanner.id;
-                    return (
-                      <div key={b.id} className={`gv-tile${active ? " on" : ""}`}>
-                        <div style={{ position: "relative" }}>
-                          <GroveBanner banner={b} height={96} radius={10} />
-                          {active && <span className="gv-check" aria-label="Active banner">✓</span>}
-                          {!b.unlocked && <span className="gv-lock" aria-hidden><Ico n="🔒" size={22} /></span>}
-                        </div>
-                        <div style={{ fontWeight: 700, color: V2.forestGreen, fontSize: 14, margin: "8px 0 4px" }}>{b.name}</div>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", minHeight: 28 }}>
-                          {b.unlocked && <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10" }}>{b.is_default ? "Free" : "Unlocked"}</span>}
-                          {active && <span className="gv-pill" style={{ background: "#fff3cf", color: "#7a5a00" }}>Active</span>}
-                          {b.unlocked && !active && amOwner && (
-                            <button className="gv-btn2" disabled={busy === `eq-${b.id}`} onClick={() => act(`eq-${b.id}`, "/api/groves/banners/equip", { bannerId: b.id }, `${b.name} is now your Grove's banner.`)}>Set active banner</button>
-                          )}
-                          {!b.unlocked && (
-                            <Link className="gv-link" href={`/marketplace?tab=groves`}>{b.purchasable ? "View in Marketplace" : "Coming soon"}</Link>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {!bn && <div style={{ color: V2.textMuted, fontSize: 14 }}>Loading…</div>}
-                </div>
-                <p style={{ fontSize: 12, color: V2.textMuted, margin: "12px 0 0" }}>{BANNER_PERMISSION_NOTE}</p>
-              </div>
-
-              <div className="gv-card">
-                <div className="gv-h" style={{ fontSize: 18 }}>Share card preview</div>
-                {cardErr && <div style={{ color: "#b3261e", fontSize: 14 }}>{cardErr}</div>}
-                {cardUrl ? <img src={cardUrl} alt="Grove share card" style={{ width: "100%", borderRadius: 12, display: "block", border: `1px solid ${V2.borderSoft}` }} /> : !cardErr && <div style={{ color: V2.textMuted, fontSize: 14 }}>Building…</div>}
-                <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                  <button className="gv-primary" onClick={shareGrove} disabled={!cardUrl}>Share Grove</button>
-                  <button className="gv-btn2 gv-wide" onClick={downloadCard} disabled={!cardUrl}>Download image</button>
-                </div>
-              </div>
-
               <GroveGarden groveName={grove.name} members={data.members} streakDays={counted ? (streak?.streak ?? 0) : 0} slots={grove.slots} previewOrigins={router.query.garden === "origins"} forceDesk={router.query.garden === "desk"} />
+
+              <div id="gv-tabs" className="gv-tabs" role="tablist" aria-label="Grove sections">
+                {[["today", "Today"], ["members", "Members"], ["banners", "Banners"], ["share", "Share"], ["top", "Top Groves"]].map(([k, l]) => (
+                  <button key={k} role="tab" aria-selected={tab === k} className={`gv-tab${tab === k ? " on" : ""}`} onClick={() => setTab(k)}>{l}</button>
+                ))}
+              </div>
+
+              {tab === "today" && (<>
               {ident?.mine && <GroveToday username={username} refreshKey={data?.members?.map(m => m.locked_today ? 1 : 0).join("")} />}
 
+              </>)}
+              {tab === "members" && (<>
               <div className="gv-card" id="gv-members">
                 <div className="gv-h" style={{ fontSize: 18 }}>Members</div>
                 {data.members.map(m => {
@@ -421,6 +451,55 @@ export default function GrovesPage() {
                 </div>
               )}
 
+              </>)}
+              {tab === "banners" && (<>
+              <div className="gv-card" id="gv-appearance">
+                <div className="gv-h" style={{ fontSize: 20 }}>🖼️ Grove Appearance</div>
+                <p style={{ margin: "0 0 12px", fontSize: 13, color: V2.textMuted }}>Unlocked for {grove.name}</p>
+                <div className="gv-tiles">
+                  {(bn?.banners || []).map(b => {
+                    const active = b.id === activeBanner.id;
+                    return (
+                      <div key={b.id} className={`gv-tile${active ? " on" : ""}`}>
+                        <div style={{ position: "relative" }}>
+                          <GroveBanner banner={b} height={96} radius={10} />
+                          {active && <span className="gv-check" aria-label="Active banner">✓</span>}
+                          {!b.unlocked && <span className="gv-lock" aria-hidden><Ico n="🔒" size={22} /></span>}
+                        </div>
+                        <div style={{ fontWeight: 700, color: V2.forestGreen, fontSize: 14, margin: "8px 0 4px" }}>{b.name}</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", minHeight: 28 }}>
+                          {b.unlocked && <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10" }}>{b.is_default ? "Free" : "Unlocked"}</span>}
+                          {active && <span className="gv-pill" style={{ background: "#fff3cf", color: "#7a5a00" }}>Active</span>}
+                          {b.unlocked && !active && amOwner && (
+                            <button className="gv-btn2" disabled={busy === `eq-${b.id}`} onClick={() => act(`eq-${b.id}`, "/api/groves/banners/equip", { bannerId: b.id }, `${b.name} is now your Grove's banner.`)}>Set active banner</button>
+                          )}
+                          {!b.unlocked && (
+                            <Link className="gv-link" href={`/marketplace?tab=groves`}>{b.purchasable ? "View in Marketplace" : "Coming soon"}</Link>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {!bn && <div style={{ color: V2.textMuted, fontSize: 14 }}>Loading…</div>}
+                </div>
+                <p style={{ fontSize: 12, color: V2.textMuted, margin: "12px 0 0" }}>{BANNER_PERMISSION_NOTE}</p>
+              </div>
+
+              </>)}
+              {tab === "share" && (<>
+              <div className="gv-card">
+                <div className="gv-h" style={{ fontSize: 18 }}>Share card preview</div>
+                {cardErr && <div style={{ color: "#b3261e", fontSize: 14 }}>{cardErr}</div>}
+                {cardUrl ? <img src={cardUrl} alt="Grove share card" style={{ width: "100%", borderRadius: 12, display: "block", border: `1px solid ${V2.borderSoft}` }} /> : !cardErr && <div style={{ color: V2.textMuted, fontSize: 14 }}>Building…</div>}
+                <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                  <button className="gv-primary" onClick={shareGrove} disabled={!cardUrl}>Share Grove</button>
+                  <button className="gv-btn2 gv-wide" onClick={downloadCard} disabled={!cardUrl}>Download image</button>
+                </div>
+              </div>
+
+              </>)}
+              {tab === "top" && boardCard}
+
               <div style={{ textAlign: "center", marginBottom: 20 }}>
                 {!confirmLeave ? (
                   <button className="gv-btn2" onClick={() => { setConfirmLeave(true); setNewOwner(""); }}>Leave grove</button>
@@ -447,65 +526,8 @@ export default function GrovesPage() {
             );
           })()}
 
-          {/* Leaderboard */}
-          <div className="gv-card">
-            <div className="gv-h" style={{ fontSize: 20 }}><Ico inline n="🏆" size={18} />Top Groves</div>
-            <div style={{ display: "flex", gap: 8, margin: "4px 0 12px" }}>
-              {[["streak", "🔥 Streak"], ["perfect", "✨ Perfect days"]].map(([k, l]) => (
-                <button key={k} onClick={() => setBoardTab(k)} className="gv-pill"
-                  style={{ border: "none", cursor: "pointer", fontWeight: 700, background: boardTab === k ? "#2d6a10" : "#e3f5d6", color: boardTab === k ? "#fff" : "#2d6a10" }}>{l}</button>
-              ))}
-            </div>
-            {boardTab === "perfect" ? (
-              <>
-                <p style={{ margin: "0 0 12px", color: V2.textMuted, fontSize: 13 }}>A perfect day is when every member locks in. Shields don't count. Groves are ranked within their size so smaller groves don't have the edge.</p>
-                {pBoard.length === 0 ? (
-                  <p style={{ margin: 0, color: V2.textMuted, fontSize: 14 }}>No perfect days yet. Be the first grove where everyone locks in.</p>
-                ) : ["3-4", "5-6"].map(br => {
-                  const rows = pBoard.filter(g => g.perfect.bracket === br).slice(0, 10);
-                  if (!rows.length) return null;
-                  return (
-                    <div key={br} style={{ marginBottom: 14 }}>
-                      <div style={{ fontWeight: 800, color: V2.forestGreen, fontSize: 14, margin: "6px 0" }}>{br} member groves</div>
-                      {rows.map((g, i) => (
-                        <div className="gv-row" key={g.id}>
-                          <span style={{ width: 24, fontWeight: 800, color: V2.textMuted }}>{i + 1}</span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, color: V2.forestGreen, overflowWrap: "anywhere" }}>{g.name}</div>
-                            <div style={{ fontSize: 12, color: V2.textMuted }}>{g.perfect.members} members · run {g.perfect.current}d · best {g.perfect.best}d{g.perfect.tier > 0 ? ` · badge tier ${g.perfect.tier}` : ""}</div>
-                          </div>
-                          <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10" }}>✨ {g.perfect.total}</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
-              </>
-            ) : board.length === 0 ? (
-              <p style={{ margin: 0, color: V2.textMuted, fontSize: 14 }}>No groves on the board yet. Groves with 3 or more members and a running streak appear here.</p>
-            ) : board.map((g, i) => (
-              <div className="gv-row" key={g.id}>
-                <span style={{ width: 24, fontWeight: 800, color: V2.textMuted, alignSelf: "flex-start", paddingTop: 2 }}>{i + 1}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, color: V2.forestGreen, overflowWrap: "anywhere" }}>{g.name}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                    {(g.member_list || []).length > 0 && (
-                      <span className="gv-stack" aria-label={`Members: ${(g.member_list || []).map(m => "@" + m.username).join(", ")}`}>
-                        {g.member_list.map(m => (
-                          <span key={m.username} className="gv-mini" title={`@${m.username}`}>
-                            {m.avatar_url && !badAv[m.username] ? <img src={m.avatar_url} alt="" onError={() => setBadAv(x => ({ ...x, [m.username]: true }))} /> : <b>{m.username[0]?.toUpperCase()}</b>}
-                          </span>
-                        ))}
-                      </span>
-                    )}
-                    <span style={{ fontSize: 13, color: V2.textMuted }}>{g.members} members</span>
-                  </div>
-                  <GroveMembers groveId={g.id} count={g.members} label="Members" compact />
-                </div>
-                <span className="gv-pill" style={{ background: "#e3f5d6", color: "#2d6a10", alignSelf: "flex-start" }}>{g.streak}d</span>
-              </div>
-            ))}
-          </div>
+          {/* Leaderboard (inside the Top Groves tab when you are in a grove) */}
+          {!grove && boardCard}
         </main>
       </div>
     </>
