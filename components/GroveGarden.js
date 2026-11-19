@@ -45,7 +45,7 @@ const BEDS = [
   { color: "blue",   x: 1110, y: 760, w: 330, sc: .52 },
   { color: "red",    x: 800,  y: 850, w: 330, sc: .52 },
 ];
-const DESK = { x: 790, y: 610, w: 170 };   // sprite is 400x408
+const DESK = { x: 232, y: 352, w: 150 };   // sprite is 400x408
 const TREE = { x: 780, y: 330, w: 480, sc: .56 };
 const treeScale = (s) => (s >= 2 ? 1 : .88);   // the bare tree is taller than the leafy one
 const bedStages = (s) => [clamp(s, 0, 3), clamp(s - 1, 0, 3), s >= 4 ? 3 : clamp(s - 2, 0, 3)];
