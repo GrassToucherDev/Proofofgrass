@@ -31,27 +31,20 @@ const FIXED = [
   { k: "stump",     x: 930,  y: 580, w: 297, sc: .42, from: 0 },
   { k: "mushrooms", x: 1200, y: 600, w: 259, sc: .42, from: 0 },
   { k: "lantern",   x: 590,  y: 800, w: 206, sc: .30, from: 0, glow: 2 },
-  { k: "sign",      x: 395,  y: 800, w: 280, sc: .66, from: 0, sign: true, act: "share", label: "Share your grove" },
+  { k: "sign",      x: 395,  y: 800, w: 280, sc: .66, from: 0, sign: true },
   { k: "pots",      x: 245,  y: 745, w: 282, sc: .38, from: 1 },
   { k: "wheelbarrow", x: 1130, y: 885, w: 321, sc: .36, from: 1 },
   { k: "birdbath",  x: 270,  y: 440, w: 201, sc: .34, from: 2 },
   { k: "beehive",   x: 640,  y: 385, w: 291, sc: .40, from: 2, bob: true },
   { k: "picnic",    x: 1040, y: 690, w: 390, sc: .40, from: 3 },
   { k: "lights",    x: 950,  y: 240, w: 384, sc: .45, from: 3, glow: 3 },
-  { k: "shed",      x: 450,  y: 335, w: 322, sc: .50, from: 4, act: "members", label: "Shields and gifts" },
+  { k: "shed",      x: 450,  y: 335, w: 322, sc: .50, from: 4 },
   { k: "scarecrow", x: 1440, y: 350, w: 248, sc: .50, from: 4 },
 ];
 const BEDS = [
   { color: "yellow", x: 1330, y: 500, w: 330, sc: .52 },
   { color: "blue",   x: 1110, y: 760, w: 330, sc: .52 },
   { color: "red",    x: 800,  y: 850, w: 330, sc: .52 },
-];
-// Props that open a section of the Groves page when tapped (PNG sprites, always present in a grove).
-const HOT = [
-  { k: "frame",  x: 572,  y: 228, w: 92,  ar: 391 / 360, act: "banners", label: "Banners" },
-  { k: "gate",   x: 238,  y: 872, w: 98,  ar: 311 / 360, act: "members", label: "Invite friends" },
-  { k: "trophy", x: 1432, y: 482, w: 58,  ar: 459 / 260, act: "top",     label: "Top Groves" },
-  { k: "board",  x: 1352, y: 712, w: 96,  ar: 370 / 360, act: "today",   label: "Today's proofs" },
 ];
 const DESK = { x: 232, y: 352, w: 150 };   // sprite is 400x408
 const TREE = { x: 780, y: 330, w: 480, sc: .56 };
@@ -150,7 +143,6 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
   const done = plots.filter((m) => m.locked_today).length;
   if (!plots.length) return null;
   const cname = (groveName || "").trim();
-  const hot = (p) => (onOpen && p.act ? { role: "button", tabIndex: 0, "data-l": p.label, "aria-label": p.label, onClick: () => onOpen(p.act), onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(p.act); } } } : {});
   const tapAttrs = (u) => (onOpen ? { role: "button", tabIndex: 0, "aria-label": `@${u}`, onClick: () => setSel((x) => (x === u ? "" : u)), onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSel((x) => (x === u ? "" : u)); } } } : {});
   const selCast = cast.find((c) => c.m.username === sel);
   return (
@@ -164,18 +156,14 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         .gg-scene img{image-rendering:pixelated;display:block;max-width:none}
         .gg-it{position:absolute;transform:translate(-50%,-100%);pointer-events:none}
         .gg-it>img{width:100%;height:auto}
-        .gg-hot{pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent}
-        .gg-hot img{transition:filter .15s}
-        .gg-hot:hover img,.gg-hot:focus-visible img{filter:brightness(1.12) drop-shadow(0 0 6px rgba(255,255,200,.9))}
-        .gg-hot:focus-visible{outline:none}
-        .gg-hot::after{content:attr(data-l);position:absolute;left:50%;bottom:100%;transform:translate(-50%,-4px);background:rgba(20,40,20,.88);color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s}
-        .gg-hot:hover::after,.gg-hot:focus-visible::after{opacity:1}
-        .gg-png{position:absolute}
-        .gg-png img{display:block;width:100%;height:100%}
-        .gg-frame-in{position:absolute;left:12.2%;top:17.6%;width:70%;height:48%;overflow:hidden}
-        .gg-frame-in img{width:100%;height:100%;object-fit:cover;object-position:72% 50%}
         .gg-tap{pointer-events:auto!important;cursor:pointer;-webkit-tap-highlight-color:transparent}
         .gg-tap:focus-visible{outline:2px solid #fff;outline-offset:2px}
+        .gg-nav{position:absolute;left:50%;transform:translateX(-50%);width:min(calc(100% - 16px),340px);bottom:6px;z-index:2000}
+        .gg-nav .gv-bar{margin:0;background:rgba(255,255,255,.9);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.7);box-shadow:0 2px 8px rgba(0,0,0,.18);padding:3px}
+        .gg-nav .gv-bar-b{padding:3px 2px;gap:1px}
+        .gg-nav .gv-bar-b img{width:18px!important;height:18px!important}
+        .gg-nav .gv-bar-b span{display:none}
+        @container (min-width: 520px){.gg-nav .gv-bar-b span{display:block}}
         .gg-tip{margin:10px 0 0;font-size:12px;color:#5b6b50}
         .gg-pop{margin-top:12px;border:1px solid ${V2.borderGreen};background:#f4fbec;border-radius:14px;padding:12px 14px}
         .gg-pop-h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;position:relative;padding-right:28px}
@@ -259,18 +247,10 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         ))}
         <div className="gg-it" style={{ left: pw(TREE.x), top: ph(TREE.y), width: pw(TREE.w * TREE.sc * treeScale(stage)), zIndex: TREE.y }}><img src={`${SC}${treeSrc(stage)}.webp`} alt="" /></div>
         {FIXED.filter((p) => stage >= p.from).map((p) => (
-          <div className={`gg-it${p.glow && stage >= p.glow ? " gg-glow" : ""}${p.bob ? " gg-hive" : ""}${onOpen && p.act ? " gg-hot" : ""}`} key={p.k}
-            {...hot(p)}
+          <div className={`gg-it${p.glow && stage >= p.glow ? " gg-glow" : ""}${p.bob ? " gg-hive" : ""}`} key={p.k}
             style={{ left: pw(p.x), top: ph(p.y), width: pw(p.w * p.sc), zIndex: p.k === "pond" ? 1 : p.y }}>
             <img src={`${SC}${p.k}.webp`} alt="" />
             {p.sign && cname && <span className="gg-sign-t"><b>{cname}</b><i>Day {streakDays}</i></span>}
-          </div>
-        ))}
-
-        {onOpen && HOT.map((p) => (
-          <div key={p.k} className="gg-it gg-hot gg-png" {...hot(p)} style={{ left: pw(p.x), top: ph(p.y), width: pw(p.w), aspectRatio: `${1 / p.ar}`, zIndex: p.y }}>
-            {p.k === "frame" && bannerUrl && <span className="gg-frame-in"><img src={bannerUrl} alt="" /></span>}
-            <img src={`${SC}${p.k}.png`} alt="" style={{ position: "relative" }} />
           </div>
         ))}
 
@@ -301,7 +281,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
                 <div className="gg-flip" style={{ transform: `scaleX(${dir})` }}>
                   <img className="gg-body" style={{ height: "100%" }} src={`/garden/pix/origin-${sampleId}.png`} alt="" />
                   {spot.prop && !moving && <span className="gg-prop" style={{ left: "62%", width: spot.prop === "rod" ? "70%" : "46%" }}><img src={`${SC}${spot.prop}.webp`} alt="" /></span>}
-                </div>
+      </div>
                 {!on && <span className="gg-zzz">Zzz</span>}
                 <span className="gg-name">@{m.username}</span>
               </div>
@@ -324,10 +304,10 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
             </div>
           );
         })}
+        {children && <div className="gg-nav">{children}</div>}
       </div>
 
-      {children}
-      {onOpen && !selCast && <p className="gg-tip">Tap a WAGO, the sign, gate, frame, trophy or board to open it.</p>}
+      {onOpen && !selCast && <p className="gg-tip">Tap a WAGO to see what they are up to.</p>}
       {onOpen && selCast && (
         <div className="gg-pop" role="dialog" aria-label={`@${selCast.m.username}`}>
           <div className="gg-pop-h">
