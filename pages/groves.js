@@ -19,6 +19,7 @@ import { BANNER_PERMISSION_NOTE } from "../utils/groveBanners";
 import { withShareTags } from "../utils/shareTags";
 import Ico from "../components/Ico";
 import GroveToday from "../components/GroveToday";
+import GroveGarden from "../components/GroveGarden";
 const ERRORS = {
   already_in_grove: "You're already in a grove. Leave it first to join another.",
   cooldown: "You recently left a grove. You can join or create another after the 48-hour cooldown.",
@@ -382,6 +383,7 @@ export default function GrovesPage() {
                 </div>
               </div>
 
+              <GroveGarden members={data.members} streakDays={counted ? (streak?.streak ?? 0) : 0} slots={grove.slots} previewOrigins={router.query.garden === "origins"} />
               {ident?.mine && <GroveToday username={username} refreshKey={data?.members?.map(m => m.locked_today ? 1 : 0).join("")} />}
 
               <div className="gv-card" id="gv-members">
