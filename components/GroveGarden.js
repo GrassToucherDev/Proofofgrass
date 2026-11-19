@@ -150,7 +150,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         .gg-scene img{image-rendering:pixelated;display:block;max-width:none}
         .gg-it{position:absolute;transform:translate(-50%,-100%);pointer-events:none}
         .gg-it>img{width:100%;height:auto}
-        .gg-wago{position:absolute;pointer-events:none;transform:translate(-50%,-100%);transition:left 3.2s ease-in-out,top 3.2s ease-in-out}
+        .gg-wago{position:absolute;pointer-events:none;transform:translate(-50%,-100%) scale(var(--gs,1));transform-origin:50% 100%;transition:left 3.2s ease-in-out,top 3.2s ease-in-out}
         .gg-wago.still{transition:none}
         .gg-flip{position:absolute;inset:0}
         .gg-body{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:auto;transform-origin:50% 100%}
@@ -181,7 +181,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
           color:#5a3a1d;font-weight:900;text-align:center;line-height:1.1;overflow:hidden}
         .gg-sign-t b{font-size:.95cqw;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .gg-sign-t i{font-style:normal;font-size:.8cqw;opacity:.85;margin-top:1px}
-        @container (max-width: 560px){.gg-sign-t{display:none}}
+        @container (max-width: 560px){.gg-sign-t{display:none}.gg-wago{--gs:1.4}.gg-name{font-size:calc(clamp(8px,1.5vw,11px)/1.4)}}
         .gg-legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px 12px;margin-top:12px}
         .gg-li{display:flex;align-items:baseline;gap:6px;min-width:0;font-size:12.5px;color:${V2.textMuted}}
         .gg-li b{color:${V2.forestGreen};max-width:11ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
