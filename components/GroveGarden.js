@@ -1,7 +1,7 @@
 // components/GroveGarden.js — a passive pixel garden for a grove. Nothing to play: every member who has
 // locked in today has their WAGO out working the yard (fishing, watering, picking apples...), members who
 // haven't are napping. The garden itself grows with the grove's running streak.
-// Members without an Origin get the plain WAGO. `previewOrigins` swaps in sample WAGO Origins (?garden=origins).
+// Members without an Origin get the animated plain WAGO. `previewOrigins` swaps in sample WAGO Origins (?garden=origins).
 import { useEffect, useMemo, useState } from "react";
 import { V2 } from "../utils/v2Theme";
 import Ico from "./Ico";
@@ -10,7 +10,7 @@ import Ico from "./Ico";
 const STAGES = [
   { min: 0,  name: "Fresh soil",  note: "Lock in together to plant the first seeds." },
   { min: 3,  name: "Seedlings",   note: "The first sprouts are up." },
-  { min: 7,  name: "Leafy",       note: "The beds are filling out." },
+  { min: 7,  name: "Leafy",       note: "The beds are filling out and the yard is getting furnished." },
   { min: 14, name: "In bloom",    note: "Flowers are opening across the yard." },
   { min: 30, name: "Full garden", note: "A thriving garden, kept alive by the whole grove." },
 ];
@@ -20,37 +20,46 @@ const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 // ---- Scene geometry: everything is in the 1586 x 992 space of the ground art, placed as percentages ----
 const W = 1586, H = 992;
 const SC = "/garden/scene/";
-const PX = 3.3;                      // on-screen size of one WAGO pixel, in scene units
 const pw = (n) => `${((n / W) * 100).toFixed(3)}%`;
 const ph = (n) => `${((n / H) * 100).toFixed(3)}%`;
 
-// Props: anchor = bottom centre, native sprite size x scale.
-const PROPS = {
-  pond:      { src: "pond",      x: 420,  y: 590, w: 728, h: 424, sc: .42 },
-  bench:     { src: "bench",     x: 1150, y: 345, w: 422, h: 381, sc: .62 },
-  stump:     { src: "stump",     x: 930,  y: 580, w: 297, h: 226, sc: .42 },
-  mushrooms: { src: "mushrooms", x: 1200, y: 600, w: 259, h: 207, sc: .42 },
-  lantern:   { src: "lantern",   x: 520,  y: 800, w: 206, h: 310, sc: .30 },
-};
-const BEDS = [
-  { color: "yellow", x: 1330, y: 500, w: 330, h: 252, sc: .52 },
-  { color: "blue",   x: 1110, y: 760, w: 330, h: 252, sc: .52 },
-  { color: "red",    x: 800,  y: 850, w: 330, h: 252, sc: .52 },
+// Props: anchor = bottom centre, native sprite size x scale. `from` = garden stage at which it appears.
+const FIXED = [
+  { k: "pond",      x: 420,  y: 590, w: 728, sc: .42, from: 0 },
+  { k: "bench",     x: 1150, y: 345, w: 422, sc: .62, from: 0 },
+  { k: "stump",     x: 930,  y: 580, w: 297, sc: .42, from: 0 },
+  { k: "mushrooms", x: 1200, y: 600, w: 259, sc: .42, from: 0 },
+  { k: "lantern",   x: 590,  y: 800, w: 206, sc: .30, from: 0, glow: 2 },
+  { k: "sign",      x: 395,  y: 800, w: 280, sc: .66, from: 0, sign: true },
+  { k: "pots",      x: 245,  y: 745, w: 282, sc: .38, from: 1 },
+  { k: "wheelbarrow", x: 1130, y: 885, w: 321, sc: .36, from: 1 },
+  { k: "birdbath",  x: 270,  y: 440, w: 201, sc: .34, from: 2 },
+  { k: "beehive",   x: 640,  y: 385, w: 291, sc: .40, from: 2, bob: true },
+  { k: "picnic",    x: 1040, y: 690, w: 390, sc: .40, from: 3 },
+  { k: "lights",    x: 950,  y: 240, w: 384, sc: .45, from: 3, glow: 3 },
+  { k: "shed",      x: 450,  y: 335, w: 322, sc: .50, from: 4 },
+  { k: "scarecrow", x: 1440, y: 350, w: 248, sc: .50, from: 4 },
 ];
-const TREE = { x: 780, y: 330, w: 480, h: 538, sc: .56 };
+const BEDS = [
+  { color: "yellow", x: 1330, y: 500, w: 330, sc: .52 },
+  { color: "blue",   x: 1110, y: 760, w: 330, sc: .52 },
+  { color: "red",    x: 800,  y: 850, w: 330, sc: .52 },
+];
+const TREE = { x: 780, y: 330, w: 480, sc: .56 };
+const treeScale = (s) => (s >= 2 ? 1 : .88);   // the bare tree is taller than the leafy one
 const bedStages = (s) => [clamp(s, 0, 3), clamp(s - 1, 0, 3), s >= 4 ? 3 : clamp(s - 2, 0, 3)];
 const treeSrc = (s) => (s >= 4 ? "tree-2" : s >= 2 ? "tree-1" : "tree-0");
 
-// Where WAGOs work (feet position, which way they face, what they hold) ...
+// Where WAGOs work (feet position, which way they face, which pose, what an Origin holds) ...
 const WORK = [
-  { id: "pond1", x: 585, y: 612, face: -1, act: "fish",  prop: "rod",    job: "Fishing at the pond" },
-  { id: "bedY",  x: 1285, y: 585, face: 1,  act: "water", prop: "can",    job: "Watering the flowers" },
-  { id: "bedB",  x: 1055, y: 835, face: 1,  act: "water", prop: "can",    job: "Watering the flowers" },
-  { id: "tree",  x: 760,  y: 360, face: 1,  act: "pick",  prop: "basket", job: "Picking apples" },
-  { id: "mush",  x: 1165, y: 660, face: -1, act: "bob",   prop: "basket", job: "Foraging mushrooms" },
-  { id: "bedR",  x: 735,  y: 915, face: 1,  act: "water", prop: "can",    job: "Watering the flowers" },
-  { id: "path",  x: 330,  y: 835, face: 1,  act: "bob",   prop: null,     job: "Strolling the path" },
-  { id: "pond2", x: 300,  y: 650, face: 1,  act: "fish",  prop: "rod",    job: "Fishing at the pond" },
+  { x: 585,  y: 612, face: -1, act: "fish",  pose: "fish",   prop: "rod",    job: "Fishing at the pond" },
+  { x: 1285, y: 585, face: 1,  act: "water", pose: "water",  prop: "can",    job: "Watering the flowers" },
+  { x: 1055, y: 835, face: 1,  act: "water", pose: "water",  prop: "can",    job: "Watering the flowers" },
+  { x: 760,  y: 360, face: 1,  act: "pick",  pose: "reach",  prop: "basket", job: "Picking apples" },
+  { x: 1165, y: 660, face: -1, act: "bob",   pose: "crouch", prop: "basket", job: "Foraging mushrooms" },
+  { x: 735,  y: 915, face: 1,  act: "water", pose: "water",  prop: "can",    job: "Watering the flowers" },
+  { x: 330,  y: 850, face: 1,  act: "bob",   pose: "idle",   prop: null,     job: "Strolling the path" },
+  { x: 300,  y: 650, face: 1,  act: "fish",  pose: "fish",   prop: "rod",    job: "Fishing at the pond" },
 ];
 // ... and where they nap when they haven't locked in yet.
 const NAP = [
@@ -64,22 +73,46 @@ const NAP = [
   { x: 560,  y: 560, z: 0,   job: "Napping by the pond" },
 ];
 
-// ---- Characters (pixelated art, native sizes) ----
-const SPR_H = { awake: 34, asleep: 34, 980: 35, 583: 40, 970: 37, 376: 37, 845: 39, 269: 39, 224: 38, 248: 38, 142: 37, 606: 32 };
+// ---- Characters ----
+// Plain WAGO: pixel pose sheet (native pixel sizes). Origins: one static pixelated pose each.
+const POSE = {
+  walk0: [38, 57], walk1: [35, 58], walk2: [38, 57], walk3: [34, 57],
+  idle0: [35, 56], idle1: [35, 58], sleep: [35, 46], sit: [37, 58],
+  fish: [48, 58], water: [53, 57], reach: [41, 59], crouch: [42, 50],
+};
+const WALK = ["walk0", "walk1", "walk2", "walk3"];
+const IDLE = ["idle0", "idle1"];
+const PXW = 2.55;            // on-screen size of one WAGO-pose pixel, in scene units
+const BOX_W = 58, BOX_H = 59; // the cell every pose is centred in
+const ORIGIN_H = { 980: 35, 583: 40, 970: 37, 376: 37, 845: 39, 269: 39, 224: 38, 248: 38, 142: 37, 606: 32 };
+const PXO = 3.7;             // on-screen size of one Origin pixel
 const SAMPLE_IDS = [980, 583, 970, 376, 845, 269, 224, 248, 142, 606];
 const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
-const STEP_MS = 7000;
+const STEP_MS = 7000, WALK_MS = 3300;
 
-export default function GroveGarden({ members = [], streakDays = 0, slots = 6, previewOrigins = false }) {
+// Frame stack: a few images shown in turn (walk cycle, idle breathing).
+function Frames({ names, dur }) {
+  return names.map((n, i) => (
+    <img key={n} className="gg-fr" src={`/garden/poses/${n}.png`} alt=""
+      style={{ height: `${(POSE[n][1] / BOX_H) * 100}%`, animationDuration: `${dur}s`, animationDelay: `${(dur / names.length) * i}s` }} />
+  ));
+}
+
+export default function GroveGarden({ members = [], streakDays = 0, slots = 6, groveName = "", previewOrigins = false }) {
   const [step, setStep] = useState(0);
+  const [walking, setWalking] = useState(false);
   const [still, setStill] = useState(false);
   useEffect(() => {
     let reduce = false;
     try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch {}
     setStill(reduce);
     if (reduce) return undefined;
-    const t = setInterval(() => setStep((n) => n + 1), STEP_MS);
-    return () => clearInterval(t);
+    let tw;
+    const t = setInterval(() => {
+      setStep((n) => n + 1); setWalking(true);
+      clearTimeout(tw); tw = setTimeout(() => setWalking(false), WALK_MS);
+    }, STEP_MS);
+    return () => { clearInterval(t); clearTimeout(tw); };
   }, []);
 
   const stage = gardenStage(streakDays);
@@ -89,53 +122,51 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, p
   const plots = members.slice(0, Math.max(slots, 1));
   const seed = plots.length ? hash(plots[0].username) : 0;
 
-  // Work out, for this step, where each member is and what they're doing.
+  // Where is each member this step (and last step, so we know which way they walk)?
   const cast = useMemo(() => {
-    let napIdx = 0, workIdx = 0;
-    return plots.map((m, idx) => {
+    let workIdx = 0, napIdx = 0;
+    const base = plots.map((m, idx) => {
       const on = !!m.locked_today;
       const sampleId = previewOrigins ? SAMPLE_IDS[(seed + idx) % SAMPLE_IDS.length] : null;
-      let spot;
-      if (on) {
-        const w = WORK[(workIdx + (still ? 0 : step)) % WORK.length]; workIdx += 1;
-        spot = { ...w, z: 0 };
-      } else {
-        const n = NAP[napIdx % NAP.length]; napIdx += 1;
-        spot = { ...n, act: "nap", prop: null, face: 1 };
-      }
-      return { m, on, sampleId, spot, idx };
+      return { m, idx, on, sampleId, wi: on ? workIdx++ : -1, ni: on ? -1 : napIdx++ };
     });
+    const spotAt = (c, s) => (c.on
+      ? { ...WORK[(c.wi + (still ? 0 : s)) % WORK.length], z: 0 }
+      : { ...NAP[c.ni % NAP.length], act: "nap", pose: "sleep", prop: null, face: 1 });
+    return base.map((c) => ({ ...c, spot: spotAt(c, step), prev: step > 0 ? spotAt(c, step - 1) : null }));
   }, [plots, step, still, previewOrigins, seed]);
 
   const done = plots.filter((m) => m.locked_today).length;
   if (!plots.length) return null;
-  const treeS = TREE;
+  const cname = (groveName || "").trim();
   return (
     <div className="gv-card gg-card" id="gv-garden">
       <style dangerouslySetInnerHTML={{ __html: `
         .gg-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
         .gg-title{font-size:18px;font-weight:900;color:${V2.forestGreen};display:flex;align-items:center;gap:8px;margin:0}
         .gg-chip{font-size:12px;font-weight:800;color:${V2.forestGreen};background:#e3f5d6;padding:4px 10px;border-radius:999px}
-        .gg-scene{position:relative;width:100%;aspect-ratio:${W}/${H};border-radius:16px;overflow:hidden;border:1px solid ${V2.borderSoft};
+        .gg-scene{position:relative;width:100%;aspect-ratio:${W}/${H};border-radius:16px;overflow:hidden;border:1px solid ${V2.borderSoft};container-type:inline-size;
           background:#6a9a3c url(${SC}ground.webp) center/100% 100% no-repeat;image-rendering:pixelated}
         .gg-scene img{image-rendering:pixelated;display:block;max-width:none}
         .gg-it{position:absolute;transform:translate(-50%,-100%);pointer-events:none}
-        .gg-it img{width:100%;height:auto}
-        .gg-wago{position:absolute;pointer-events:none;transform:translate(-50%,-100%);
-          transition:left 3.2s ease-in-out,top 3.2s ease-in-out}
+        .gg-it>img{width:100%;height:auto}
+        .gg-wago{position:absolute;pointer-events:none;transform:translate(-50%,-100%);transition:left 3.2s ease-in-out,top 3.2s ease-in-out}
         .gg-wago.still{transition:none}
         .gg-flip{position:absolute;inset:0}
-        .gg-body{position:absolute;left:0;bottom:0;height:100%;width:auto;transform-origin:50% 100%}
-        .gg-walk .gg-body{animation:gg-walk .5s steps(2,end) infinite}
-        .gg-act-water .gg-body,.gg-act-pick .gg-body{animation:gg-pick 2.2s ease-in-out infinite}
-        .gg-act-fish .gg-body{animation:gg-sway 3s ease-in-out infinite}
-        .gg-act-bob .gg-body{animation:gg-bob 1.6s ease-in-out infinite}
-        .gg-act-nap .gg-body{animation:gg-nap 3.6s ease-in-out infinite;filter:brightness(.92) saturate(.85)}
+        .gg-body{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:auto;transform-origin:50% 100%}
+        .gg-fr{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:auto;opacity:0;animation:gg-frame 1s steps(1,end) infinite}
+        .gg-fr.solo{opacity:1;animation:none}
+        .gg-origin.gg-walk .gg-body{animation:gg-walk .5s steps(2,end) infinite}
+        .gg-origin.gg-act-water .gg-body,.gg-origin.gg-act-pick .gg-body{animation:gg-pick 2.2s ease-in-out infinite}
+        .gg-origin.gg-act-fish .gg-body{animation:gg-sway 3s ease-in-out infinite}
+        .gg-origin.gg-act-bob .gg-body{animation:gg-bob 1.6s ease-in-out infinite}
+        .gg-origin.gg-act-nap .gg-body{animation:gg-nap 3.6s ease-in-out infinite;filter:brightness(.92) saturate(.85)}
+        .gg-nappose .gg-fr{animation:gg-nap 3.6s ease-in-out infinite;opacity:1;filter:brightness(.94)}
         .gg-prop{position:absolute;bottom:18%}
         .gg-prop img{width:100%;height:auto}
-        .gg-act-water .gg-prop{animation:gg-tilt 2.2s ease-in-out infinite;transform-origin:30% 70%}
-        .gg-act-fish .gg-prop{animation:gg-rod 3s ease-in-out infinite;transform-origin:15% 90%}
-        .gg-act-pick .gg-prop,.gg-act-bob .gg-prop{animation:gg-bob 1.6s ease-in-out infinite}
+        .gg-origin.gg-act-water .gg-prop{animation:gg-tilt 2.2s ease-in-out infinite;transform-origin:30% 70%}
+        .gg-origin.gg-act-fish .gg-prop{animation:gg-rod 3s ease-in-out infinite;transform-origin:15% 90%}
+        .gg-origin.gg-act-pick .gg-prop,.gg-origin.gg-act-bob .gg-prop{animation:gg-bob 1.6s ease-in-out infinite}
         .gg-name{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;white-space:nowrap;
           font-size:clamp(8px,1.5vw,11px);font-weight:800;color:#fff;background:rgba(20,40,20,.72);padding:1px 6px;border-radius:999px;
           max-width:11ch;overflow:hidden;text-overflow:ellipsis}
@@ -145,6 +176,12 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, p
         .gg-bfly{position:absolute;pointer-events:none;z-index:900;animation:gg-flutter 17s linear infinite}
         .gg-bfly img{width:100%;height:auto;animation:gg-flap .5s steps(2,end) infinite}
         .gg-glow{animation:gg-glow 3.2s ease-in-out infinite}
+        .gg-hive{animation:gg-bob 2.4s ease-in-out infinite}
+        .gg-sign-t{position:absolute;left:14%;right:14%;top:14%;height:46%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+          color:#5a3a1d;font-weight:900;text-align:center;line-height:1.1;overflow:hidden}
+        .gg-sign-t b{font-size:.95cqw;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .gg-sign-t i{font-style:normal;font-size:.8cqw;opacity:.85;margin-top:1px}
+        @container (max-width: 560px){.gg-sign-t{display:none}}
         .gg-legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px 12px;margin-top:12px}
         .gg-li{display:flex;align-items:baseline;gap:6px;min-width:0;font-size:12.5px;color:${V2.textMuted}}
         .gg-li b{color:${V2.forestGreen};max-width:11ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -152,11 +189,12 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, p
         .gg-foot{margin-top:12px;font-size:13px;color:${V2.textMuted};line-height:1.45}
         .gg-foot b{color:${V2.forestGreen}}
         .gg-prev{margin-top:8px;font-size:12px;color:${V2.textMuted}}
-        @keyframes gg-walk{0%{transform:translateY(0)}50%{transform:translateY(-3.5%)}100%{transform:translateY(0)}}
-        @keyframes gg-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5%)}}
-        @keyframes gg-sway{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
-        @keyframes gg-pick{0%,100%{transform:scaleY(1)}40%{transform:scaleY(1.05) translateY(-1%)}70%{transform:scaleY(.96)}}
-        @keyframes gg-nap{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.96)}}
+        @keyframes gg-frame{0%,24.999%{opacity:1}25%,100%{opacity:0}}
+        @keyframes gg-walk{0%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3.5%)}100%{transform:translateX(-50%) translateY(0)}}
+        @keyframes gg-bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-2.5%)}}
+        @keyframes gg-sway{0%,100%{transform:translateX(-50%) rotate(-1.5deg)}50%{transform:translateX(-50%) rotate(1.5deg)}}
+        @keyframes gg-pick{0%,100%{transform:translateX(-50%) scaleY(1)}40%{transform:translateX(-50%) scaleY(1.05) translateY(-1%)}70%{transform:translateX(-50%) scaleY(.96)}}
+        @keyframes gg-nap{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(.96)}}
         @keyframes gg-tilt{0%,35%,100%{transform:rotate(0)}55%,80%{transform:rotate(-28deg)}}
         @keyframes gg-rod{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(4deg)}}
         @keyframes gg-zzz{0%,100%{opacity:.25;transform:translateY(3px)}50%{opacity:1;transform:translateY(-4px)}}
@@ -164,7 +202,8 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, p
         @keyframes gg-flutter{0%{left:6%;top:52%}20%{left:30%;top:36%}40%{left:55%;top:48%}60%{left:78%;top:30%}80%{left:50%;top:62%}100%{left:6%;top:52%}}
         @keyframes gg-flap{0%{transform:scaleY(1)}100%{transform:scaleY(.62)}}
         @keyframes gg-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.35) drop-shadow(0 0 6px #ffd45a)}}
-        @media (prefers-reduced-motion:reduce){.gg-wago,.gg-body,.gg-prop,.gg-zzz,.gg-fly,.gg-bfly,.gg-bfly img,.gg-glow{animation:none!important;transition:none!important}}
+        @media (prefers-reduced-motion:reduce){.gg-wago *,.gg-zzz,.gg-fly,.gg-bfly,.gg-bfly img,.gg-glow,.gg-hive{animation:none!important;transition:none!important}
+          .gg-fr{opacity:0!important}.gg-fr:first-child{opacity:1!important}}
       ` }} />
       <div className="gg-head">
         <h3 className="gg-title"><Ico n="sprout" size={24} /> Grove Garden</h3>
@@ -172,18 +211,20 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, p
       </div>
 
       <div className="gg-scene" role="img" aria-label={`Grove garden, ${st.name}. ${done} of ${plots.length} WAGOs at work.`}>
-        {/* props (z = their ground line, so WAGOs walk in front of / behind them) */}
-        <div className="gg-it" style={{ left: pw(PROPS.pond.x), top: ph(PROPS.pond.y), width: pw(PROPS.pond.w * PROPS.pond.sc), zIndex: 1 }}><img src={`${SC}pond.webp`} alt="" /></div>
+        {/* the yard (z = ground line, so WAGOs walk in front of / behind things) */}
         {BEDS.map((b, i) => (
           <div className="gg-it" key={b.color} style={{ left: pw(b.x), top: ph(b.y), width: pw(b.w * b.sc), zIndex: b.y }}>
             <img src={`${SC}bed-${b.color}-${beds[i]}.webp`} alt="" />
           </div>
         ))}
-        <div className="gg-it" style={{ left: pw(treeS.x), top: ph(treeS.y), width: pw(treeS.w * treeS.sc), zIndex: treeS.y }}><img src={`${SC}${treeSrc(stage)}.webp`} alt="" /></div>
-        {["bench", "stump", "mushrooms"].map((k) => (
-          <div className="gg-it" key={k} style={{ left: pw(PROPS[k].x), top: ph(PROPS[k].y), width: pw(PROPS[k].w * PROPS[k].sc), zIndex: PROPS[k].y }}><img src={`${SC}${k}.webp`} alt="" /></div>
+        <div className="gg-it" style={{ left: pw(TREE.x), top: ph(TREE.y), width: pw(TREE.w * TREE.sc * treeScale(stage)), zIndex: TREE.y }}><img src={`${SC}${treeSrc(stage)}.webp`} alt="" /></div>
+        {FIXED.filter((p) => stage >= p.from).map((p) => (
+          <div className={`gg-it${p.glow && stage >= p.glow ? " gg-glow" : ""}${p.bob ? " gg-hive" : ""}`} key={p.k}
+            style={{ left: pw(p.x), top: ph(p.y), width: pw(p.w * p.sc), zIndex: p.k === "pond" ? 1 : p.y }}>
+            <img src={`${SC}${p.k}.webp`} alt="" />
+            {p.sign && cname && <span className="gg-sign-t"><b>{cname}</b><i>Day {streakDays}</i></span>}
+          </div>
         ))}
-        <div className={`gg-it${stage >= 2 ? " gg-glow" : ""}`} style={{ left: pw(PROPS.lantern.x), top: ph(PROPS.lantern.y), width: pw(PROPS.lantern.w * PROPS.lantern.sc), zIndex: PROPS.lantern.y }}><img src={`${SC}lantern.webp`} alt="" /></div>
 
         {/* ambient life */}
         {[[300, 300], [560, 480], [900, 420], [1000, 640], [1400, 300], [650, 760]].map(([x, y], i) => (
@@ -192,20 +233,37 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, p
         {stage >= 3 && <div className="gg-bfly" style={{ width: pw(54) }}><img src={`${SC}butterfly.webp`} alt="" /></div>}
 
         {/* the WAGOs */}
-        {cast.map(({ m, on, sampleId, spot, idx }) => {
-          const key = sampleId || (on ? "awake" : "asleep");
-          const h = SPR_H[key] * PX;
-          const src = sampleId ? `/garden/pix/origin-${sampleId}.png` : `/garden/pix/wago-${on ? "awake" : "asleep"}.png`;
-          const act = spot.act;
+        {cast.map(({ m, on, sampleId, spot, prev }) => {
+          const moving = !still && walking && on && prev && (prev.x !== spot.x || prev.y !== spot.y);
+          const dir = moving ? Math.sign(spot.x - prev.x) || 1 : spot.face || 1;
           const z = spot.z || Math.round(spot.y);
-          return (
-            <div key={m.username} className={`gg-wago gg-act-${act}${still ? " still" : ""}`}
-              style={{ left: pw(spot.x), top: ph(spot.y), height: ph(h), width: pw(h * 0.9), zIndex: z }}>
-              <div className="gg-flip" style={{ transform: `scaleX(${spot.face || 1})` }}>
-                <img className="gg-body" src={src} alt="" />
-                {spot.prop && <span className="gg-prop" style={{ left: "62%", width: spot.prop === "rod" ? "70%" : "46%" }}><img src={`${SC}${spot.prop}.webp`} alt="" /></span>}
+          if (sampleId) {
+            const h = ORIGIN_H[sampleId] * PXO;
+            return (
+              <div key={m.username} className={`gg-wago gg-origin gg-act-${spot.act}${moving ? " gg-walk" : ""}${still ? " still" : ""}`}
+                style={{ left: pw(spot.x), top: ph(spot.y), height: ph(h), width: pw(h * 0.9), zIndex: z }}>
+                <div className="gg-flip" style={{ transform: `scaleX(${dir})` }}>
+                  <img className="gg-body" style={{ height: "100%" }} src={`/garden/pix/origin-${sampleId}.png`} alt="" />
+                  {spot.prop && !moving && <span className="gg-prop" style={{ left: "62%", width: spot.prop === "rod" ? "70%" : "46%" }}><img src={`${SC}${spot.prop}.webp`} alt="" /></span>}
+                </div>
+                {!on && <span className="gg-zzz">Zzz</span>}
+                <span className="gg-name">@{m.username}</span>
               </div>
-              {!on && <span className="gg-zzz">Zzz</span>}
+            );
+          }
+          // plain WAGO: real pose art
+          const napping = !on;
+          const frames = moving ? WALK : spot.pose === "idle" ? IDLE : [spot.pose];
+          const dur = moving ? 0.6 : 1.8;
+          return (
+            <div key={m.username} className={`gg-wago${still ? " still" : ""}${napping ? " gg-nappose" : ""}`}
+              style={{ left: pw(spot.x), top: ph(spot.y), height: ph(BOX_H * PXW), width: pw(BOX_W * PXW), zIndex: z }}>
+              <div className="gg-flip" style={{ transform: `scaleX(${dir})` }}>
+                {frames.length === 1
+                  ? <img className="gg-fr solo" src={`/garden/poses/${frames[0]}.png`} alt="" style={{ height: `${(POSE[frames[0]][1] / BOX_H) * 100}%` }} />
+                  : <Frames names={frames} dur={dur} />}
+              </div>
+              {napping && <span className="gg-zzz">Zzz</span>}
               <span className="gg-name">@{m.username}</span>
             </div>
           );
