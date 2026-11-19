@@ -50,7 +50,7 @@ const BEDS = [
 const HOT = [
   { k: "frame",  x: 610,  y: 240, w: 130, ar: 391 / 360, act: "banners", label: "Banners" },
   { k: "gate",   x: 255,  y: 858, w: 140, ar: 311 / 360, act: "members", label: "Invite friends" },
-  { k: "trophy", x: 1060, y: 490, w: 72,  ar: 459 / 260, act: "top",     label: "Top Groves" },
+  { k: "trophy", x: 1085, y: 565, w: 72,  ar: 459 / 260, act: "top",     label: "Top Groves" },
   { k: "board",  x: 1380, y: 735, w: 130, ar: 370 / 360, act: "today",   label: "Today's proofs" },
 ];
 const DESK = { x: 232, y: 352, w: 150 };   // sprite is 400x408
@@ -159,7 +159,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         .gg-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
         .gg-title{font-size:18px;font-weight:900;color:${V2.forestGreen};display:flex;align-items:center;gap:8px;margin:0}
         .gg-chip{font-size:12px;font-weight:800;color:${V2.forestGreen};background:#e3f5d6;padding:4px 10px;border-radius:999px}
-        .gg-scene{position:relative;width:100%;aspect-ratio:${W}/${H};border-radius:16px;overflow:hidden;border:1px solid ${V2.borderSoft};container-type:inline-size;
+        .gg-scene{position:relative;isolation:isolate;width:100%;aspect-ratio:${W}/${H};border-radius:16px;overflow:hidden;border:1px solid ${V2.borderSoft};container-type:inline-size;
           background:#6a9a3c url(${SC}ground.webp) center/100% 100% no-repeat;image-rendering:pixelated}
         .gg-scene img{image-rendering:pixelated;display:block;max-width:none}
         .gg-it{position:absolute;transform:translate(-50%,-100%);pointer-events:none}
