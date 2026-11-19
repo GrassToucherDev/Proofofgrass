@@ -161,7 +161,7 @@ export default function GroveGarden({ members = [], streakDays = 0, slots = 6, g
         .gg-nav{position:absolute;left:50%;transform:translateX(-50%);width:min(calc(100% - 16px),340px);bottom:6px;z-index:2000}
         .gg-nav .gv-bar{margin:0;background:rgba(255,255,255,.9);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.7);box-shadow:0 2px 8px rgba(0,0,0,.18);padding:3px}
         .gg-nav .gv-bar-b{padding:3px 2px;gap:1px}
-        .gg-nav .gv-bar-b img{width:18px!important;height:18px!important}
+        .gg-nav .gv-bar-b img{width:26px;height:24px;object-fit:contain}
         .gg-nav .gv-bar-b span{display:none}
         @container (min-width: 520px){.gg-nav .gv-bar-b span{display:block}}
         .gg-tip{margin:10px 0 0;font-size:12px;color:#5b6b50}
