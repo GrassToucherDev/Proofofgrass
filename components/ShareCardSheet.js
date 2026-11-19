@@ -2,7 +2,10 @@
 // render: () => Promise<dataUrl>. Used for the leaderboard rank card (badge sheet has its own copy).
 import { useState, useEffect } from "react";
 
-export default function ShareCardSheet({ title, render, caption, filename, onClose }) {
+import { withShareTags } from "../utils/shareTags";
+
+export default function ShareCardSheet({ title, render, caption: rawCaption, filename, onClose }) {
+  const caption = withShareTags(rawCaption);
   const [img, setImg] = useState(null);
   const [err, setErr] = useState(false);
   const [copied, setCopied] = useState(false);

@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { renderBadgeCard, badgeCaption } from "../../utils/badgeShareCard";
 
+import { withShareTags } from "../../utils/shareTags";
+
 export default function BadgeShareSheet({ badge, username, onClose }) {
   const [img, setImg] = useState(null);
   const [err, setErr] = useState(false);
@@ -20,7 +22,7 @@ export default function BadgeShareSheet({ badge, username, onClose }) {
     window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
   }, [onClose]);
 
-  const caption = badgeCaption(username, badge);
+  const caption = withShareTags(badgeCaption(username, badge));
   const name = `badge-${badge.id}-${badge.tier}-${username}.png`;
   const copy = async () => { try { await navigator.clipboard.writeText(caption); setCopied(true); setTimeout(() => setCopied(false), 2500); } catch {} };
   const share = async () => {

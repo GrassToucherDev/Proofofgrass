@@ -17,6 +17,15 @@ const RPC_ENDPOINT = process.env.NEXT_PUBLIC_SOLANA_RPC_URL
 export default function App({ Component, pageProps: { session, ...pageProps } }) {
   const [wallets, setWallets] = useState([]);
 
+  // Remember who sent a visitor (?ref=name) on any page, not only the home page.
+  useEffect(() => {
+    try {
+      const r = new URLSearchParams(window.location.search).get("ref");
+      const name = (r || "").toLowerCase().replace(/@/g, "").trim();
+      if (name && /^[a-z0-9_.-]{1,40}$/.test(name) && !localStorage.getItem("pog_referrer")) localStorage.setItem("pog_referrer", name);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     Promise.all([
       import("@solana/wallet-adapter-phantom"),

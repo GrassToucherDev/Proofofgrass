@@ -6,6 +6,7 @@ import { supabase } from "../../utils/supabase";
 import { resolveActiveCover, isCoverUrlReady, COVER_DEFINITIONS } from "../../utils/coverDefinitions";
 import Head from "next/head";
 import Ico from "../../components/Ico";
+import { withShareTags } from "../../utils/shareTags";
 
 const T = {
   bg:     "#080a06", bg2: "#0e100b", bg3: "#141710", bg4: "#1a1e13",
@@ -496,7 +497,7 @@ export default function FlexCardPage() {
   // Image is pre-built in useEffect above so there is ZERO async work
   // between the button tap and navigator.share() — iOS requires this.
   const flexToX = useCallback(() => {
-    const text = `Day ${streak} — ${tier.label} 🌿\n\nBuilding my outdoor legacy daily on @XTouchGrass\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nproofofgrass.app/flex/${username}`;
+    const text = withShareTags(`Day ${streak} — ${tier.label} 🌿\n\nBuilding my outdoor legacy daily on @XTouchGrass\n\nproofofgrass.app/flex/${username}`);
     const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");
     const canNativeShare = isMob
       && typeof navigator.share === "function"

@@ -211,7 +211,7 @@ export async function drawProofCard(ctx, W, H, opts) {
   if (grassL) { const gh = 190, gw = gh * grassL.width / grassL.height; ctx.drawImage(grassL, PX - 56, H - gh + 16, gw, gh); }
   if (grassR) { const gh = 190, gw = gh * grassR.width / grassR.height; ctx.drawImage(grassR, W - PX + 56 - gw, H - gh + 16, gw, gh); }
   ctx.textAlign = "center"; ctx.font = `800 24px ${NUN}`; ctx.letterSpacing = "4px";
-  const uw = ctx.measureText("PROOFOFGRASS.APP").width + 44; ctx.fillStyle = "rgba(253,246,226,.9)"; rr(ctx, W / 2 - uw / 2, H - 58, uw, 40, 20); ctx.fill();
-  ctx.fillStyle = GREEN; ctx.fillText("PROOFOFGRASS.APP", W / 2 + 2, H - 30);
+  const uw = ctx.measureText("START YOUR STREAK  ·  PROOFOFGRASS.APP").width + 44; ctx.fillStyle = "rgba(253,246,226,.9)"; rr(ctx, W / 2 - uw / 2, H - 58, uw, 40, 20); ctx.fill();
+  ctx.fillStyle = GREEN; ctx.fillText("START YOUR STREAK  ·  PROOFOFGRASS.APP", W / 2 + 2, H - 30);
   ctx.restore();
 }

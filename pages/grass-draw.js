@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Head from "next/head";
+import OgMeta, { SITE_URL } from "../components/OgMeta";
 import { supabase } from "../utils/supabase";
 import { V2, V2Styles, V2GlobalCSS } from "../utils/v2Theme";
 
@@ -264,6 +265,7 @@ export default function GrassDraw() {
         <meta name="description" content="Earn Grass Tickets and win monthly rewards in the Proof of Grass Draw." />
         <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
       </Head>
+      <OgMeta title="Grass Draw | Proof of Grass" description="Every proof earns tickets in the monthly Grass Draw. Build your streak, win real prizes." url={`${SITE_URL}/grass-draw`} />
       <style dangerouslySetInnerHTML={{ __html:css }} />
 
       <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#d4ecf7 0%,#e8f4fd 30%,#f0f8ee 100%)" }}>

@@ -6,6 +6,7 @@ import PostToCommunity from "../../components/PostToCommunity";
 import { currentTheme } from "../../utils/createCommunity";
 import { V2_TIERS } from "../../utils/v2Theme";
 import { loadImg } from "../../utils/createCards";
+import { withShareTags } from "../../utils/shareTags";
 
 
 const HOLES = {"seedling": [0.4918, 0.4978, 0.3967], "sprout": [0.4973, 0.4853, 0.3975], "rooted": [0.4939, 0.4956, 0.3826], "grounded": [0.4995, 0.4941, 0.4098], "trailhead": [0.489, 0.4973, 0.4019], "summit": [0.4984, 0.5186, 0.3817], "legend": [0.4983, 0.5204, 0.3789], "immortal": [0.4993, 0.5009, 0.3641]}; // per ring: [centre x, centre y, outer radius of the opening] as fractions of the image
@@ -136,7 +137,7 @@ export default function PFPTool() {
     a.click();
   };
 
-  const PFP_TEXT = `New profile pic from the Touch Grass PFP tool.\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nhttps://proofofgrass.app/create/pfp`;
+  const PFP_TEXT = withShareTags(`New profile pic from the Touch Grass PFP tool.\n\nhttps://proofofgrass.app/create/pfp`);
   const shareToX = async () => {
     if (!preview) return;
     const isMob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent ?? "");

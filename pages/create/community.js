@@ -5,6 +5,7 @@ import CreateShell from "../../components/CreateShell";
 import { T, CARD_SHADOW } from "../../utils/createTheme";
 import Ico from "../../components/Ico";
 import { unlockCommunity } from "../../utils/createCommunity";
+import { withShareTags } from "../../utils/shareTags";
 
 const getUsername = () => { try { const s = localStorage.getItem("pog_username"); return s ? s.replace(/@/g, "").toLowerCase().trim() : ""; } catch { return ""; } };
 const ago = (iso) => { const m = Math.max(1, Math.round((Date.now() - new Date(iso)) / 60000)); return m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`; };
@@ -64,7 +65,7 @@ export default function CommunityCreations() {
     try { await act("delete", { id: it.id }); setItems((l) => l.filter((x) => x.id !== it.id)); } catch (e) { setNote(e.message); }
   };
   const shareX = (it) => {
-    const text = `${it.caption ? it.caption + "\n\n" : ""}Made by @${it.username} on Touch Grass\n\n$TOUCHGRASS #TouchGrass #ProofOfGrass\nhttps://proofofgrass.app/create/community`;
+    const text = withShareTags(`${it.caption ? it.caption + "\n\n" : ""}Made by @${it.username} on Touch Grass\n\nhttps://proofofgrass.app/create/community`);
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
   };
 

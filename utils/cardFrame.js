@@ -60,7 +60,7 @@ export function drawFooter(ctx, W, H, a, g, { leftLabel, leftText, rightLabel = 
   if (a.grassL) { const gh = 170, gw = gh * a.grassL.width / a.grassL.height; ctx.drawImage(a.grassL, PX - 50, H - gh + 16, gw, gh); }
   if (a.grassR) { const gh = 170, gw = gh * a.grassR.width / a.grassR.height; ctx.drawImage(a.grassR, W - PX + 50 - gw, H - gh + 16, gw, gh); }
   ctx.textAlign = "center"; ctx.font = `800 20px ${NUN}`; ctx.letterSpacing = "3px";
-  const uw = ctx.measureText("PROOFOFGRASS.APP").width + 40; ctx.fillStyle = "rgba(253,246,226,.92)"; rr(ctx, cx - uw / 2, H - 56, uw, 38, 19); ctx.fill();
-  ctx.fillStyle = GREEN; ctx.fillText("PROOFOFGRASS.APP", cx + 2, H - 29); ctx.letterSpacing = "0px";
+  const uw = ctx.measureText("START YOUR STREAK  ·  PROOFOFGRASS.APP").width + 40; ctx.fillStyle = "rgba(253,246,226,.92)"; rr(ctx, cx - uw / 2, H - 56, uw, 38, 19); ctx.fill();
+  ctx.fillStyle = GREEN; ctx.fillText("START YOUR STREAK  ·  PROOFOFGRASS.APP", cx + 2, H - 29); ctx.letterSpacing = "0px";
 }
 export const todayStr = () => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });

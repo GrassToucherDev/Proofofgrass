@@ -2,6 +2,7 @@
 // Shows where people chose to share an approximate location with their daily proof.
 import { useState, useEffect, useRef, useCallback } from "react";
 import Head from "next/head";
+import OgMeta, { SITE_URL } from "../components/OgMeta";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
@@ -198,6 +199,7 @@ export default function CommunityMapPage() {
         <meta name="description" content="See where our community is getting outside." />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
       </Head>
+      <OgMeta title="Proof of Grass Map | Touch Grass" description="A live map of people touching grass around the world. Drop your proof and put your spot on the map." url={`${SITE_URL}/map`} />
       <style dangerouslySetInnerHTML={{ __html: css }} />
 
       <V2Nav username={username} onUsernameChange={setUsername} showUpload={() => router.push("/#upload")} />
