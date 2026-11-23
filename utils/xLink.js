@@ -8,6 +8,7 @@ export const X_TOKEN = "https://api.x.com/2/oauth2/token";
 export const X_ME = "https://api.x.com/2/users/me";
 export const X_SCOPES = "tweet.read users.read";
 export const X_COOKIE = "pog_x_link";
+export const X_LINK_BONUS = 100; // Grass Score, once per username and per X account
 const TTL_MS = 10 * 60 * 1000;
 
 export const b64u = (buf) => Buffer.from(buf).toString("base64url");

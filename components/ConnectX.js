@@ -4,6 +4,7 @@ import { V2, V2Styles } from "../utils/v2Theme";
 
 const MESSAGES = {
   ok: ["good", "X account connected."],
+  ok_bonus: ["good", "X account connected. +100 Grass Score added."],
   denied: ["warn", "You cancelled the X connection. Nothing was saved."],
   expired: ["warn", "That X connection timed out. Please try again."],
   signin: ["warn", "Sign in with Google again, then reconnect X."],
@@ -51,8 +52,8 @@ export default function ConnectX({ username }) {
         </div>
       ) : (
         <div>
-          <div style={{ marginBottom: 8 }}>Connect your X account so we can credit and tag the right person. This is read-only: we only see which account is yours, and can never post or follow for you.</div>
-          <a href={`/api/x/start?username=${encodeURIComponent(username)}`} style={{ ...V2Styles.btnPrimary, display: "inline-block", padding: "9px 18px", textDecoration: "none" }}>Connect X</a>
+          <div style={{ marginBottom: 8 }}>Connect your X account so we can credit and tag the right person{st.bonus ? <strong>, and get +{st.bonus} Grass Score (one time)</strong> : ""}. This is read-only: we only see which account is yours, and can never post or follow for you.</div>
+          <a href={`/api/x/start?username=${encodeURIComponent(username)}`} style={{ ...V2Styles.btnPrimary, display: "inline-block", padding: "9px 18px", textDecoration: "none" }}>{st.bonus ? `Connect X (+${st.bonus} Grass Score)` : "Connect X"}</a>
         </div>
       )}
       {note && <Note n={note} />}

@@ -14,6 +14,7 @@ vi.mock("../utils/requireOwner", () => ({
       select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: t === "username_claims" ? db.claim : db.link }) }) }),
       upsert: async (row) => { db.saved = row; return { error: db.upsertError || null }; },
     }),
+    rpc: async (fn, args) => { (db.rpcs ||= []).push([fn, args]); return db.rpcError ? { data: null, error: db.rpcError } : { data: fn === "award_x_link_bonus" ? db.bonusPaid !== false : db.bonusLeft !== false, error: null }; },
   }),
 }));
 const X = await import("../utils/xLink.js");
@@ -69,12 +70,18 @@ describe("callback", () => {
   });
   it("saves the verified X id and handle, then returns home with ok", async () => {
     const res = mkRes(); await callback(mkReq({ state, code: "abc" }), res);
-    expect(res.to).toBe("/?x_link=ok");
+    expect(res.to).toBe("/?x_link=ok_bonus");
+    expect(db.rpcs[0]).toEqual(["award_x_link_bonus", { p_username: "dave", p_x_user_id: "1234567890", p_points: 100 }]);
     expect(db.saved).toMatchObject({ username: "dave", x_user_id: "1234567890", x_username: "RealKingDave" });
     const tokenCall = globalThis.fetch.mock.calls[0]; expect(tokenCall[1].headers.authorization).toMatch(/^Basic /);
     expect(String(tokenCall[1].body)).toContain("code_verifier=");
     expect(JSON.stringify(db.saved)).not.toContain("tok");
     expect(res.h["Set-Cookie"]).toContain("Max-Age=0");
+  });
+  it("still connects when the bonus was already paid or the bonus function fails", async () => {
+    db.bonusPaid = false; let res = mkRes(); await callback(mkReq({ state, code: "abc" }), res); expect(res.to).toBe("/?x_link=ok");
+    db.bonusPaid = true; db.rpcError = { code: "42883" }; res = mkRes(); await callback(mkReq({ state, code: "abc" }), res); expect(res.to).toBe("/?x_link=ok");
+    expect(db.saved.x_user_id).toBe("1234567890");
   });
   it("rejects a wrong state, a missing cookie, a denied request and a different Google account", async () => {
     let res = mkRes(); await callback(mkReq({ state: "nope", code: "abc" }), res); expect(res.to).toBe("/?x_link=expired");

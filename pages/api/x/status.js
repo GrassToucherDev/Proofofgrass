@@ -2,7 +2,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { adminClient, cleanUsername } from "../../../utils/requireOwner";
-import { xConfig } from "../../../utils/xLink";
+import { xConfig, X_LINK_BONUS } from "../../../utils/xLink";
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -17,5 +17,7 @@ export default async function handler(req, res) {
     db.from("x_links").select("x_username").eq("username", username).maybeSingle(),
   ]);
   const mine = !!(claim && gid && claim.google_id === gid);
-  return res.status(200).json({ enabled, linked: !!link, mine, handle: mine && link ? link.x_username : null });
+  let bonus = 0;
+  if (mine) { try { const { data } = await db.rpc("x_link_bonus_available", { p_username: username }); if (data === true) bonus = X_LINK_BONUS; } catch {} }
+  return res.status(200).json({ enabled, linked: !!link, mine, handle: mine && link ? link.x_username : null, bonus });
 }

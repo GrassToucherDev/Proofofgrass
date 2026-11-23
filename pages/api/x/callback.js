@@ -4,7 +4,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { adminClient } from "../../../utils/requireOwner";
-import { xConfig, open, readCookie, cookieHeader, sameText, exchangeCode, fetchMe, X_COOKIE } from "../../../utils/xLink";
+import { X_LINK_BONUS, xConfig, open, readCookie, cookieHeader, sameText, exchangeCode, fetchMe, X_COOKIE } from "../../../utils/xLink";
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -35,5 +35,9 @@ export default async function handler(req, res) {
     console.error("[x/callback] save failed:", error.code);
     return go("failed");
   }
-  return go("ok");
+  // One-time Grass Score bonus (paid once per username and once per X account; see x_links.sql). Best effort: the link itself is already saved.
+  let paid = false;
+  try { const { data, error: bErr } = await db.rpc("award_x_link_bonus", { p_username: flow.u, p_x_user_id: me.id, p_points: X_LINK_BONUS }); if (bErr) console.error("[x/callback] bonus:", bErr.code); paid = data === true; }
+  catch (e) { console.error("[x/callback] bonus failed:", e?.message); }
+  return go(paid ? "ok_bonus" : "ok");
 }
