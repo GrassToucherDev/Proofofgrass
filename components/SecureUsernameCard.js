@@ -4,6 +4,7 @@ import InAppBrowserNote from "./InAppBrowserNote";
 import { signInWithGoogle } from "../utils/googleSignIn";
 import { useSession, signIn } from "next-auth/react";
 import { V2, V2Styles } from "../utils/v2Theme";
+import ConnectX from "./ConnectX";
 
 export default function SecureUsernameCard({ username, onClaimed }) {
   const { status } = useSession();
@@ -24,6 +25,7 @@ export default function SecureUsernameCard({ username, onClaimed }) {
     return (
       <div style={{ ...V2Styles.card, padding: "12px 16px", margin: "0 0 16px", fontSize: 14, color: V2.textSecondary }}>
         ✓ <strong>@{username}</strong> is secured to your Google account.
+        <ConnectX username={username} />
       </div>
     );
   }
